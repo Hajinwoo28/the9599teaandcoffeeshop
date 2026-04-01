@@ -122,6 +122,16 @@ STORE_SCHEDULE = {
     6: (10, 0, 19, 0),   # Sunday
 }
 
+def get_schedule_for_day(dow):
+    """Read schedule for a day from DB, falling back to STORE_SCHEDULE defaults."""
+    try:
+        entry = StoreScheduleEntry.query.filter_by(day_of_week=dow).first()
+        if entry:
+            return (entry.open_hour, entry.open_minute, entry.close_hour, entry.close_minute)
+    except Exception:
+        pass
+    return STORE_SCHEDULE.get(dow, (10, 0, 19, 0))
+
 def get_store_status():
     """
     Returns a dict:
@@ -133,7 +143,7 @@ def get_store_status():
     """
     now = get_ph_time()
     dow = now.weekday()          # 0=Mon … 6=Sun
-    oh, om, ch, cm = STORE_SCHEDULE[dow]
+    oh, om, ch, cm = get_schedule_for_day(dow)
 
     open_dt  = now.replace(hour=oh, minute=om, second=0, microsecond=0)
     close_dt = now.replace(hour=ch, minute=cm, second=0, microsecond=0)
@@ -151,15 +161,11 @@ def get_store_status():
     close_str = fmt(ch, cm)
     cutoff_str = fmt(cutoff.hour, cutoff.minute)
 
+    # Find next opening (always tomorrow relative to today)
     day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-    # If the store hasn't opened yet today, next opening is later today
-    if now < open_dt:
-        next_open_str = f"Today at {fmt(oh, om)}"
-    else:
-        # Store has already opened (or is past cutoff) — find the next day
-        next_dow = (dow + 1) % 7
-        noh, nom, _, _ = STORE_SCHEDULE[next_dow]
-        next_open_str = f"{day_names[next_dow]} at {fmt(noh, nom)}"
+    next_dow = (dow + 1) % 7
+    noh, nom, _, _ = get_schedule_for_day(next_dow)
+    next_open_str = f"{day_names[next_dow]} at {fmt(noh, nom)}"
 
     return {
         "open": is_open,
@@ -279,6 +285,15 @@ class ClosedDay(db.Model):
     __tablename__ = 'closed_days'
     id = db.Column(db.Integer, primary_key=True)
     date_str = db.Column(db.String(10), unique=True, nullable=False)  # 'YYYY-MM-DD'
+
+class StoreScheduleEntry(db.Model):
+    __tablename__ = 'store_schedule'
+    id = db.Column(db.Integer, primary_key=True)
+    day_of_week = db.Column(db.Integer, unique=True, nullable=False)  # 0=Mon … 6=Sun
+    open_hour = db.Column(db.Integer, nullable=False, default=10)
+    open_minute = db.Column(db.Integer, nullable=False, default=0)
+    close_hour = db.Column(db.Integer, nullable=False, default=19)
+    close_minute = db.Column(db.Integer, nullable=False, default=0)
 
 # ==========================================
 # 4. FRONTEND HTML TEMPLATES
@@ -2028,8 +2043,6 @@ STOREFRONT_HTML = """
         filtered.forEach(item => {
             const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
             const priceDisplay = SIZED_CATS.includes(item.category) ? `₱${item.price.toFixed(0)} / ₱${(item.price+10).toFixed(0)}` : `₱${item.price.toFixed(0)}`;
-            const style = getCardStyle(item);
-            let badgeHTML = '';
             if (style.badge === 'bestseller') badgeHTML = '<div class="badge-bestseller">⭐ BEST SELLER</div>';
             else if (style.badge === 'new') badgeHTML = '<div class="badge-new">✨ FAN FAVE</div>';
 
@@ -2142,14 +2155,14 @@ STOREFRONT_HTML = """
             // Size + sugar + ice + add-ons
             openSizeModal(name, cat, price, true, true);
         } else if (cat === 'Matcha Series') {
-            // Size + ice + add-ons (no sugar)
-            openSizeModal(name, cat, price, false, true);
+            // Size + ice only
+            openSizeModal(name, cat, price, false, false);
         } else if (cat === 'Fruit Soda') {
             // Size + ice only
             openSizeModal(name, cat, price, false, false);
         } else if (cat === 'Frappe') {
-            // Size + ice + add-ons (no sugar)
-            openSizeModal(name, cat, price, false, true);
+            // Size + ice only
+            openSizeModal(name, cat, price, false, false);
         } else if (name === 'French Fries') {
             document.getElementById('fries-modal-title').innerText = 'French Fries — Choose Flavor';
             document.querySelector('input[name="fries_flavor"][value="Plain"]').checked = true;
@@ -4183,7 +4196,7 @@ def handle_schedule():
     if request.method == 'GET':
         result = []
         for dow in range(7):
-            oh, om, ch, cm = STORE_SCHEDULE[dow]
+            oh, om, ch, cm = get_schedule_for_day(dow)
             result.append({
                 "day": dow,
                 "name": day_names[dow],
@@ -4198,13 +4211,29 @@ def handle_schedule():
         data = request.json
         for d in data:
             dow = d['day']
-            if dow in STORE_SCHEDULE:
-                STORE_SCHEDULE[dow] = (
-                    d.get('open_hour', STORE_SCHEDULE[dow][0]),
-                    d.get('open_minute', STORE_SCHEDULE[dow][1]),
-                    d.get('close_hour', STORE_SCHEDULE[dow][2]),
-                    d.get('close_minute', STORE_SCHEDULE[dow][3])
-                )
+            if dow not in range(7):
+                continue
+            oh, om, ch, cm = get_schedule_for_day(dow)
+            new_oh = d.get('open_hour', oh)
+            new_om = d.get('open_minute', om)
+            new_ch = d.get('close_hour', ch)
+            new_cm = d.get('close_minute', cm)
+            # Update in-memory fallback
+            STORE_SCHEDULE[dow] = (new_oh, new_om, new_ch, new_cm)
+            # Persist to DB
+            entry = StoreScheduleEntry.query.filter_by(day_of_week=dow).first()
+            if entry:
+                entry.open_hour = new_oh
+                entry.open_minute = new_om
+                entry.close_hour = new_ch
+                entry.close_minute = new_cm
+            else:
+                db.session.add(StoreScheduleEntry(
+                    day_of_week=dow,
+                    open_hour=new_oh, open_minute=new_om,
+                    close_hour=new_ch, close_minute=new_cm
+                ))
+        db.session.commit()
         log_audit("Schedule Updated", "Store schedule updated by admin")
         return jsonify({"status": "success"})
 
@@ -4691,6 +4720,20 @@ with app.app_context():
         except Exception as migration_err3:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err3}")
+
+        # ── 0. Seed store schedule (only if not already in DB) ──────────────
+        for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
+            existing_sched = StoreScheduleEntry.query.filter_by(day_of_week=dow).first()
+            if not existing_sched:
+                db.session.add(StoreScheduleEntry(
+                    day_of_week=dow,
+                    open_hour=oh, open_minute=om,
+                    close_hour=ch, close_minute=cm
+                ))
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # ── 1. Remove stale menu items not in the new menu ──────────────────
         valid_names = [
