@@ -118,8 +118,8 @@ STORE_SCHEDULE = {
     2: (10, 0, 19, 0),   # Wednesday
     3: (10, 0, 19, 0),   # Thursday
     4: (10, 0, 19, 0),   # Friday
-    5: (15, 0, 20, 0),   # Saturday
-    6: (15, 0, 20, 0),   # Sunday
+    5: (10, 0, 19, 0),   # Saturday
+    6: (10, 0, 19, 0),   # Sunday
 }
 
 def get_store_status():
@@ -533,10 +533,12 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .cat-tab.active{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);}
 
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px;}
-.menu-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 10px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 2px 8px rgba(13,122,106,0.06);}
+.menu-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:0 0 10px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 2px 8px rgba(13,122,106,0.06);overflow:hidden;}
 .menu-card:active{transform:scale(0.97);opacity:0.85;}
 .menu-card.oos{opacity:0.45;cursor:not-allowed;}
-.menu-letter{width:46px;height:46px;border-radius:50%;background:var(--teal-light);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--teal-dark);margin:0 auto 8px;}
+.menu-preview{width:100%;height:90px;object-fit:cover;display:block;border-radius:10px 10px 0 0;background:var(--teal-light);}
+.menu-letter{width:100%;height:90px;border-radius:10px 10px 0 0;background:var(--teal-light);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--teal-dark);}
+.menu-card-body{padding:8px 8px 0;}
 .menu-name{font-size:0.73rem;font-weight:800;color:var(--text);line-height:1.25;margin-bottom:4px;}
 .menu-price{font-size:0.78rem;font-weight:900;color:var(--teal-mid);}
 .menu-oos-tag{background:rgba(211,47,47,0.1);color:var(--red);font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:10px;margin-top:4px;display:inline-block;}
@@ -985,17 +987,37 @@ function selectCat(cat,btn){
   renderMenuGrid(cat);
 }
 
+const CATEGORY_PREVIEW_KEYWORDS={
+  'Milktea':'milk+tea+boba',
+  'Coffee':'iced+coffee+drink',
+  'Milk Series':'strawberry+milk+drink',
+  'Matcha Series':'matcha+latte+drink',
+  'Fruit Soda':'fruit+soda+drink',
+  'Frappe':'frappe+blended+drink',
+  'Snacks':'snack+food+fries',
+};
+function getPreviewUrl(item){
+  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\s+/g,'+'));
+  const fallbackKw=CATEGORY_PREVIEW_KEYWORDS[item.category]||'bubble+tea+drink';
+  return 'https://source.unsplash.com/160x90/?'+slug+','+fallbackKw;
+}
+
 function renderMenuGrid(cat){
   const grid=document.getElementById('menu-grid');
   const items=cat==='All'?menuItems:menuItems.filter(m=>m.category===cat);
   if(!items.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);">No items</div>';return;}
-  grid.innerHTML=items.map(m=>`
-    <div class="menu-card${m.is_out_of_stock?' oos':''}" onclick="${m.is_out_of_stock?'':'openCustomize('+m.id+')'}">
-      <div class="menu-letter">${escapeHTML(m.letter||'?')}</div>
-      <div class="menu-name">${escapeHTML(m.name)}</div>
-      <div class="menu-price">₱${Number(m.price).toFixed(0)}</div>
-      ${m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':''}
-    </div>`).join('');
+  grid.innerHTML=items.map(function(m){
+    const imgUrl=getPreviewUrl(m);
+    return '<div class="menu-card'+(m.is_out_of_stock?' oos':'')+'" onclick="'+(m.is_out_of_stock?'':'openCustomize('+m.id+')')+'">'+
+      '<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
+      '<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>'+
+      '<div class="menu-card-body">'+
+        '<div class="menu-name">'+escapeHTML(m.name)+'</div>'+
+        '<div class="menu-price">₱'+Number(m.price).toFixed(0)+'</div>'+
+        (m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
 function openCustomize(menuId){
@@ -1575,8 +1597,7 @@ STOREFRONT_HTML = """
         <div class="loc-info-row">
             <i class="fas fa-clock"></i>
             <div>
-                <b>Mon – Fri:</b> 10:00 AM – 7:00 PM<br>
-                <b>Sat – Sun:</b> 3:00 PM – 8:00 PM
+                <b>Every Day:</b> 10:00 AM – 7:00 PM
             </div>
         </div>
         <div class="loc-info-row">
@@ -3142,12 +3163,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 <!-- ══ BOTTOM NAV ══ -->
 <nav class="bottom-nav">
   <button class="nav-btn active" id="nb-inventory" onclick="goScreen('inventory',this)"><i class="fas fa-boxes"></i>Stock</button>
-  <div class="nav-center-wrap">
-    <div class="nav-center-btn" id="nb-finance-center" onclick="goScreen('finance',null)">
-      <i class="fas fa-chart-line"></i>
-    </div>
-  </div>
   <button class="nav-btn" id="nb-audit" onclick="goScreen('audit',this)"><i class="fas fa-shield-alt"></i>Audit</button>
+  <button class="nav-btn" id="nb-finance" onclick="goScreen('finance',this)"><i class="fas fa-chart-line"></i>Finance</button>
   <button class="nav-btn" id="nb-settings" onclick="goScreen('settings',this)"><i class="fas fa-sliders-h"></i>Settings</button>
 </nav>
 
@@ -3210,15 +3227,10 @@ document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{i
 function goScreen(name,btn){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  // Reset center finance button to default style
-  const cFinBtn=document.getElementById('nb-finance-center');
-  if(cFinBtn){cFinBtn.style.background='linear-gradient(135deg,var(--brown) 0%,var(--tan) 100%)';cFinBtn.style.boxShadow='0 4px 14px rgba(61,36,16,0.5)';}
   const scr=document.getElementById('s-'+name);
   scr.classList.add('active');
   scr.style.display='block';
   if(btn)btn.classList.add('active');
-  // Highlight center button when Finance screen is active
-  if(name==='finance'&&cFinBtn){cFinBtn.style.background='linear-gradient(135deg,var(--brown-dark) 0%,var(--brown) 100%)';cFinBtn.style.boxShadow='0 4px 18px rgba(61,36,16,0.75)';}
   if(name==='inventory')fetchInventory();
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
   if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();}
@@ -3962,8 +3974,7 @@ def storefront():
             "Closed", "🧋",
             "We're Currently Closed",
             f"9599 Tea & Coffee is not accepting orders right now.<br><br>"
-            f"<b>Mon – Fri:</b> 10:00 AM – 7:00 PM<br>"
-            f"<b>Sat – Sun:</b> 3:00 PM – 8:00 PM<br><br>"
+            f"<b>Every Day:</b> 10:00 AM – 7:00 PM<br><br>"
             f"Online orders close 1 hour before closing time.",
             f'<div class="badge">Next opening: {status["next_open"]}</div>'
         ), 403
