@@ -3686,9 +3686,12 @@ function openMenuModal(id=null,name='',price='',cat='',letter='',oos=false){
 }
 async function saveMenuItem(e){
   e.preventDefault();
-  const payload={name:document.getElementById('menu-name').value,price:parseFloat(document.getElementById('menu-price').value),category:document.getElementById('menu-category').value,letter:document.getElementById('menu-letter').value,is_out_of_stock:document.getElementById('menu-oos').checked};
+  const payload={name:document.getElementById('menu-name').value.trim(),price:parseFloat(document.getElementById('menu-price').value),category:document.getElementById('menu-category').value,letter:document.getElementById('menu-letter').value,is_out_of_stock:document.getElementById('menu-oos').checked};
   const url=editMenuId?`/api/menu/${editMenuId}`:'/api/menu',method=editMenuId?'PUT':'POST';
-  try{const r=await apiFetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(r&&r.ok){showToast('Saved','success');closeModal('menu-modal');fetchMenu();};}catch(e){showToast('Error','error');}
+  try{const r=await apiFetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(r&&r.ok){showToast('Saved','success');closeModal('menu-modal');fetchMenu();}
+  else{const d=await r.json();showToast(d.error||'Error saving item','error');}
+  }catch(e){showToast('Error','error');}
 }
 async function toggleOOS(id,state){
   try{const item=(await(await apiFetch('/api/menu')).json()).find(m=>m.id===id);if(!item)return;const r=await apiFetch(`/api/menu/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...item,is_out_of_stock:state})});if(r&&r.ok){showToast(state?'Marked OOS':'Marked In Stock','success');fetchMenu();};}catch(e){showToast('Error','error');}
@@ -4176,12 +4179,23 @@ def store_status_api():
 @app.route('/api/menu', methods=['GET', 'POST'])
 def handle_menu():
     if request.method == 'GET':
-        items = MenuItem.query.order_by(MenuItem.category, MenuItem.name).all()
-        return jsonify([{"id": i.id, "name": i.name, "price": i.price, "letter": i.letter, "category": i.category, "stock": 0 if i.is_out_of_stock else 50, "is_out_of_stock": i.is_out_of_stock} for i in items])
+        items = MenuItem.query.order_by(MenuItem.category, MenuItem.name, MenuItem.id.desc()).all()
+        # Deduplicate by name — keep the first (highest id) occurrence
+        seen_names = set()
+        unique_items = []
+        for i in items:
+            key = i.name.strip().lower()
+            if key not in seen_names:
+                seen_names.add(key)
+                unique_items.append(i)
+        return jsonify([{"id": i.id, "name": i.name, "price": i.price, "letter": i.letter, "category": i.category, "stock": 0 if i.is_out_of_stock else 50, "is_out_of_stock": i.is_out_of_stock} for i in unique_items])
     if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     if request.method == 'POST':
         data = request.json
-        new_item = MenuItem(name=data['name'], price=float(data['price']), letter=data['letter'][:2].upper(), category=data['category'], is_out_of_stock=bool(data.get('is_out_of_stock', False)))
+        existing = MenuItem.query.filter(db.func.lower(MenuItem.name) == data['name'].strip().lower()).first()
+        if existing:
+            return jsonify({"status": "error", "error": f"'{data['name']}' already exists in the menu."}), 409
+        new_item = MenuItem(name=data['name'].strip(), price=float(data['price']), letter=data['letter'][:2].upper(), category=data['category'], is_out_of_stock=bool(data.get('is_out_of_stock', False)))
         db.session.add(new_item)
         db.session.commit()
         return jsonify({"status": "success"})
@@ -4742,14 +4756,30 @@ with app.app_context():
             ('Onion Rings', 59.00, 'O', 'Snacks'),
             ('Potato Mojos', 59.00, 'P', 'Snacks'),
         ]
+        # ── Deduplicate existing menu items by name (case-insensitive, keep highest id) ──
+        try:
+            all_items = MenuItem.query.order_by(MenuItem.id.asc()).all()
+            seen = {}
+            to_delete = []
+            for item in all_items:
+                key = item.name.strip().lower()
+                if key in seen:
+                    to_delete.append(item)  # older duplicate — delete it
+                else:
+                    seen[key] = item
+            for dup in to_delete:
+                db.session.delete(dup)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         for name, price, letter, category in menu_data:
-            existing_item = MenuItem.query.filter_by(name=name).first()
+            existing_item = MenuItem.query.filter(db.func.lower(MenuItem.name) == name.strip().lower()).first()
             if not existing_item:
                 db.session.add(MenuItem(name=name, price=price, letter=letter, category=category))
             else:
-                # Migrate Matcha Frappe from Frappe to Matcha Series if needed
-                if name == 'Matcha Frappe' and existing_item.category == 'Frappe':
-                    existing_item.category = 'Matcha Series'
+                # Always sync category to the canonical seed value
+                existing_item.category = category
         try:
             db.session.commit()
         except Exception:
