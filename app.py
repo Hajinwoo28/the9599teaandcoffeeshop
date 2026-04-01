@@ -247,12 +247,12 @@ class CustomerLog(db.Model):
     __tablename__ = 'customer_logs'
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(120), nullable=False)
-    gmail = db.Column(db.String(120), nullable=False)
-    phone = db.Column(db.String(30), nullable=False, default='')
-    order_source = db.Column(db.String(30), nullable=False, default='Online')
-    order_total = db.Column(db.Float, nullable=False, default=0.0)
-    items = db.Column(db.Text, nullable=False, default='')
-    pickup_time = db.Column(db.String(50), nullable=False, default='')
+    gmail = db.Column(db.String(120), nullable=True, default='')
+    phone = db.Column(db.String(30), nullable=True, default='')
+    order_source = db.Column(db.String(30), nullable=True, default='Online')
+    order_total = db.Column(db.Float, nullable=True, default=0.0)
+    items = db.Column(db.Text, nullable=True, default='')
+    pickup_time = db.Column(db.String(50), nullable=True, default='')
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
 class PermissionRequest(db.Model):
@@ -556,6 +556,33 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .btn-checkout:active{opacity:0.85;}
 .btn-checkout:disabled{opacity:0.5;cursor:not-allowed;}
 
+/* ── TABLE LAYOUT (Live Orders screen) ── */
+.live-section{padding:12px 14px 0;}
+.live-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+.live-card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1.5px solid var(--border);}
+.live-card-title{font-size:0.82rem;font-weight:900;color:var(--teal-dark);display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:0.6px;}
+.live-card-title.perm-title{color:var(--red);}
+.btn-refresh{background:var(--red);color:#fff;border:none;padding:6px 16px;border-radius:8px;font-family:'Nunito',sans-serif;font-size:0.76rem;font-weight:900;cursor:pointer;letter-spacing:0.3px;}
+.btn-refresh:active{opacity:0.85;}
+.live-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.live-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.live-table th{padding:9px 12px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#FAFCFB;}
+.live-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);font-weight:600;}
+.live-table tr:last-child td{border-bottom:none;}
+.live-table tr:hover td{background:rgba(13,122,106,0.03);}
+.live-table .empty-row td{text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-style:italic;}
+.live-table .order-num{font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);font-size:0.85rem;white-space:nowrap;}
+.live-table .items-cell{max-width:160px;font-size:0.73rem;color:var(--muted);line-height:1.4;}
+.tbl-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.tbl-btn{padding:5px 11px;border-radius:8px;border:none;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.71rem;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;transition:opacity 0.15s;}
+.tbl-btn:active{opacity:0.8;}
+.tbl-btn.preparing{background:var(--blue);color:#fff;}
+.tbl-btn.ready{background:var(--gold);color:#0A2925;}
+.tbl-btn.complete{background:var(--green);color:#fff;}
+.tbl-btn.print{background:var(--teal-light);color:var(--teal-dark);border:1.5px solid var(--border);}
+.tbl-btn.grant{background:rgba(46,125,50,0.12);color:var(--green);border:1.5px solid rgba(46,125,50,0.25);}
+.perm-row-card{background:rgba(211,47,47,0.04);}
+
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:flex-end;justify-content:center;z-index:9000;}
 .modal-overlay.show{display:flex;}
 .modal-sheet{background:#fff;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px 30px;max-height:90vh;overflow-y:auto;animation:slideUp 0.25s ease;}
@@ -605,9 +632,11 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
   <!-- ONLINE POS -->
   <div id="s-online" class="screen active">
     <div class="page-header">
-      <h2><i class="fas fa-wifi"></i> Online Orders</h2>
-      <p>Live customer orders — refreshes every 5 seconds</p>
+      <h2><i class="fas fa-wifi"></i> Live Orders</h2>
+      <p>Refreshes every 5 seconds — tap a status button to update</p>
     </div>
+
+    <!-- Stats -->
     <div class="section">
       <div class="stat-row">
         <div class="stat-chip"><div class="stat-num" id="stat-waiting">0</div><div class="stat-lbl">Waiting</div></div>
@@ -615,20 +644,68 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
         <div class="stat-chip"><div class="stat-num" id="stat-ready">0</div><div class="stat-lbl">Ready</div></div>
       </div>
     </div>
-    <div class="filter-row">
-      <button class="filter-tab active" onclick="setFilter('All',this)">All</button>
-      <button class="filter-tab" onclick="setFilter('Waiting Confirmation',this)">⏳ Waiting</button>
-      <button class="filter-tab" onclick="setFilter('Preparing',this)">🔥 Preparing</button>
-      <button class="filter-tab" onclick="setFilter('Ready for Pickup',this)">✅ Ready</button>
-      <button class="filter-tab" onclick="setFilter('Completed',this)">🏁 Completed</button>
-      <button class="filter-tab" onclick="setFilter('Online',this)">🌐 Online</button>
-      <button class="filter-tab" onclick="setFilter('Walk-In',this)">🚶 Walk-In</button>
-    </div>
-    <div class="section" style="padding-top:10px;">
-      <div id="orders-list" class="order-list">
-        <div style="text-align:center;padding:40px 20px;color:var(--muted);font-weight:600;font-size:0.85rem;"><i class="fas fa-spinner fa-spin" style="font-size:1.4rem;display:block;margin-bottom:10px;color:var(--teal);"></i>Loading orders…</div>
+
+    <!-- Permission Requests -->
+    <div class="live-section">
+      <div class="live-card">
+        <div class="live-card-header">
+          <span class="live-card-title perm-title"><i class="fas fa-hand-paper"></i> Permission Requests</span>
+          <button class="btn-refresh" onclick="fetchPermReqs()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+        <div class="live-table-wrap">
+          <table class="live-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Code</th>
+                <th>Customer</th>
+                <th>Message</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="perm-tbody">
+              <tr class="empty-row"><td colspan="5">No pending requests</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+
+    <!-- Live Orders Table -->
+    <div class="live-section">
+      <div class="live-card">
+        <div class="live-card-header">
+          <span class="live-card-title"><i class="fas fa-receipt"></i> Active Orders</span>
+          <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;">
+            <button class="tbl-btn print active-filter" id="ftab-all" onclick="setFilter('All',this)" style="background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);">All</button>
+            <button class="tbl-btn print" id="ftab-waiting" onclick="setFilter('Waiting Confirmation',this)">⏳ Waiting</button>
+            <button class="tbl-btn print" id="ftab-preparing" onclick="setFilter('Preparing',this)">🔥 Preparing</button>
+            <button class="tbl-btn print" id="ftab-ready" onclick="setFilter('Ready for Pickup',this)">✅ Ready</button>
+            <button class="tbl-btn print" id="ftab-done" onclick="setFilter('Completed',this)">🏁 Done</button>
+          </div>
+        </div>
+        <div class="live-table-wrap">
+          <table class="live-table">
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Source</th>
+                <th>Name</th>
+                <th>Time</th>
+                <th>Total</th>
+                <th>Items</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody">
+              <tr class="empty-row"><td colspan="8">No active orders</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- WALK-IN POS -->
@@ -746,12 +823,14 @@ function goScreen(id){
 }
 
 /* ── ONLINE POS ── */
-let allOrders=[], activeFilter='All';
+let allOrders=[], activeFilter='All', knownPermCodes=new Set();
 
 function setFilter(f,btn){
   activeFilter=f;
-  document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
+  document.querySelectorAll('#ftab-all,#ftab-waiting,#ftab-preparing,#ftab-ready,#ftab-done').forEach(b=>{
+    b.style.background='';b.style.color='';b.style.borderColor='';
+  });
+  if(btn){btn.style.background='var(--teal-dark)';btn.style.color='#fff';btn.style.borderColor='var(--teal-dark)';}
   renderOrders();
 }
 
@@ -779,45 +858,43 @@ function updateStats(){
 }
 
 function renderOrders(){
-  const list=document.getElementById('orders-list');
+  const tbody=document.getElementById('orders-tbody');
   let orders=allOrders;
   if(activeFilter==='Online') orders=orders.filter(o=>o.source==='Online');
   else if(activeFilter==='Walk-In') orders=orders.filter(o=>o.source!=='Online');
   else if(activeFilter!=='All') orders=orders.filter(o=>o.status===activeFilter);
   if(!orders.length){
-    list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);font-weight:600;font-size:0.85rem;"><i class="fas fa-clipboard-list" style="font-size:2rem;display:block;margin-bottom:10px;opacity:0.3;"></i>No orders here</div>';
+    tbody.innerHTML='<tr class="empty-row"><td colspan="8">No active orders</td></tr>';
     return;
   }
-  list.innerHTML=orders.map(o=>{
+  const statusMap={
+    'Waiting Confirmation':'<span class="badge badge-waiting" style="font-size:0.67rem;">⏳ Waiting</span>',
+    'Preparing':'<span class="badge badge-preparing" style="font-size:0.67rem;">🔥 Preparing</span>',
+    'Ready for Pickup':'<span class="badge badge-ready" style="font-size:0.67rem;">✅ Ready</span>',
+    'Completed':'<span class="badge badge-completed" style="font-size:0.67rem;">🏁 Done</span>',
+  };
+  tbody.innerHTML=orders.map(o=>{
     const isOnline=o.source==='Online';
-    const statusMap={
-      'Waiting Confirmation':'<span class="badge badge-waiting">⏳ Waiting</span>',
-      'Preparing':'<span class="badge badge-preparing">🔥 Preparing</span>',
-      'Ready for Pickup':'<span class="badge badge-ready">✅ Ready</span>',
-      'Completed':'<span class="badge badge-completed">🏁 Done</span>',
-    };
-    const statusBadge=statusMap[o.status]||`<span class="badge">${escapeHTML(o.status)}</span>`;
-    const sourceBadge=isOnline?'<span class="badge badge-online">🌐 Online</span>':'<span class="badge badge-walkin">🚶 Walk-In</span>';
-    const itemRows=o.items.map(i=>{
-      const mods=[i.sweetener,i.ice].filter(v=>v&&v!=='N/A').join(', ');
-      const addons=i.addons?` • ${i.addons}`:'';
-      return `<div class="order-item-row"><span>${escapeHTML(i.foundation)} ${i.size&&i.size!=='16 oz'?'('+escapeHTML(i.size)+')':''}</span></div>${(mods||addons)?`<div class="order-item-mods">${escapeHTML(mods+addons)}</div>`:''}`;
-    }).join('');
+    const sourceBadge=isOnline
+      ?'<span class="badge badge-online" style="font-size:0.67rem;">🌐 Online</span>'
+      :'<span class="badge badge-walkin" style="font-size:0.67rem;">🚶 Walk-In</span>';
+    const statusBadge=statusMap[o.status]||`<span class="badge" style="font-size:0.67rem;">${escapeHTML(o.status)}</span>`;
+    const itemsSummary=o.items.map(i=>escapeHTML(i.foundation+(i.size&&i.size!=='16 oz'?' ('+i.size+')':''))).join(', ');
     const actions=[];
-    if(o.status==='Waiting Confirmation') actions.push(`<button class="btn-status btn-preparing" onclick="updateStatus(${o.id},'Preparing')"><i class="fas fa-fire"></i> Start Preparing</button>`);
-    if(o.status==='Preparing') actions.push(`<button class="btn-status btn-ready" onclick="updateStatus(${o.id},'Ready for Pickup')"><i class="fas fa-bell"></i> Mark Ready</button>`);
-    if(o.status==='Ready for Pickup') actions.push(`<button class="btn-status btn-complete" onclick="updateStatus(${o.id},'Completed')"><i class="fas fa-check"></i> Complete</button>`);
-    if(o.status!=='Completed') actions.push(`<button class="btn-status btn-print" onclick="printOrderReceipt(${o.id})"><i class="fas fa-print"></i></button>`);
-    return `<div class="order-card ${isOnline?'online-order':'walkin-order'}">
-      <div class="order-top">
-        <div><div class="order-code">#${escapeHTML(o.code)}</div><div class="order-name">${escapeHTML(o.name)}</div></div>
-        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">${statusBadge}${sourceBadge}</div>
-      </div>
-      <div class="order-meta"><i class="fas fa-clock" style="color:var(--teal);"></i>${escapeHTML(o.pickup_time||'Walk-In')}</div>
-      <div class="order-items">${itemRows}</div>
-      <div class="order-total"><span class="order-total-lbl">Total</span><span class="order-total-amt">₱${Number(o.total).toFixed(2)}</span></div>
-      ${actions.length?`<div class="order-actions">${actions.join('')}</div>`:''}
-    </div>`;
+    if(o.status==='Waiting Confirmation') actions.push(`<button class="tbl-btn preparing" onclick="updateStatus(${o.id},'Preparing')"><i class="fas fa-fire"></i> Prepare</button>`);
+    if(o.status==='Preparing') actions.push(`<button class="tbl-btn ready" onclick="updateStatus(${o.id},'Ready for Pickup')"><i class="fas fa-bell"></i> Ready</button>`);
+    if(o.status==='Ready for Pickup') actions.push(`<button class="tbl-btn complete" onclick="updateStatus(${o.id},'Completed')"><i class="fas fa-check"></i> Done</button>`);
+    if(o.status!=='Completed') actions.push(`<button class="tbl-btn print" onclick="printOrderReceipt(${o.id})"><i class="fas fa-print"></i></button>`);
+    return `<tr>
+      <td><span class="order-num">#${escapeHTML(o.code)}</span></td>
+      <td>${sourceBadge}</td>
+      <td style="font-weight:700;white-space:nowrap;">${escapeHTML(o.name)}</td>
+      <td style="white-space:nowrap;font-size:0.74rem;color:var(--muted);">${escapeHTML(o.pickup_time||'Walk-In')}</td>
+      <td style="white-space:nowrap;font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);">₱${Number(o.total).toFixed(2)}</td>
+      <td class="items-cell">${itemsSummary}</td>
+      <td>${statusBadge}</td>
+      <td><div class="tbl-actions">${actions.join('')}</div></td>
+    </tr>`;
   }).join('');
 }
 
@@ -826,6 +903,39 @@ async function updateStatus(orderId,status){
     const r=await fetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
     if(r.ok){showToast(`Order marked: ${status}`,'success');fetchOrders();}
     else showToast('Update failed','error');
+  }catch(e){showToast('Network error','error');}
+}
+
+/* ── PERMISSION REQUESTS (employee view) ── */
+async function fetchPermReqs(){
+  const tbody=document.getElementById('perm-tbody');
+  try{
+    const r=await fetch('/api/permission_requests');
+    if(!r.ok){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Could not load requests</td></tr>';return;}
+    const data=await r.json();
+    if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';return;}
+    // Sound alert for new codes
+    data.forEach(p=>{if(!knownPermCodes.has(p.code)){document.getElementById('emp-audio').play().catch(()=>{});knownPermCodes.add(p.code);}});
+    const badge=document.getElementById('nav-badge');
+    const permCount=data.length;
+    const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
+    const total=permCount+orderPending;
+    if(total>0){badge.textContent=total;badge.style.display='flex';}
+    tbody.innerHTML=data.map(p=>`<tr class="perm-row-card">
+      <td style="white-space:nowrap;font-size:0.74rem;color:var(--muted);">${escapeHTML(p.time)}</td>
+      <td><span style="font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);font-size:0.82rem;">${escapeHTML(p.code)}</span></td>
+      <td style="font-weight:700;">${escapeHTML(p.name)}</td>
+      <td style="font-size:0.74rem;color:var(--muted);max-width:160px;">${escapeHTML(p.message||'—')}</td>
+      <td><button class="tbl-btn grant" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')"><i class="fas fa-check-circle"></i> Grant</button></td>
+    </tr>`).join('');
+  }catch(e){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Network error</td></tr>';}
+}
+
+async function grantPerm(id,name,code){
+  try{
+    const r=await fetch(`/api/permission_requests/${id}/grant`,{method:'POST'});
+    if(r.ok){showToast(`✅ Granted for ${name}`,'success');knownPermCodes.delete(code);fetchPermReqs();}
+    else showToast('Grant failed','error');
   }catch(e){showToast('Network error','error');}
 }
 
@@ -1025,8 +1135,9 @@ function openReceiptWindow(r){
   if(w){w.document.write(html);w.document.close();}
 }
 
-setInterval(()=>{if(document.getElementById('s-online').classList.contains('active'))fetchOrders();},5000);
+setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
 fetchOrders();
+fetchPermReqs();
 </script>
 </body>
 </html>
@@ -4335,18 +4446,19 @@ def get_customer_logs():
     try:
         logs = CustomerLog.query.order_by(CustomerLog.created_at.desc()).limit(200).all()
         return jsonify([{
-            "id": l.id,
-            "name": l.full_name,
-            "gmail": l.gmail,
-            "phone": l.phone,
-            "source": l.order_source,
-            "total": l.order_total,
-            "items": l.items,
-            "pickup_time": l.pickup_time,
-            "time": l.created_at.strftime('%Y-%m-%d %I:%M %p')
+            "id":          l.id,
+            "name":        l.full_name or '',
+            "gmail":       l.gmail or '',
+            "phone":       l.phone or '',
+            "source":      l.order_source or 'Online',
+            "total":       l.order_total or 0.0,
+            "items":       l.items or '',
+            "pickup_time": l.pickup_time or '',
+            "time":        l.created_at.strftime('%Y-%m-%d %I:%M %p') if l.created_at else '—'
         } for l in logs])
     except Exception as e:
         db.session.rollback()
+        print(f"customer_logs error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/audit_logs', methods=['GET'])
@@ -4392,20 +4504,29 @@ with app.app_context():
         # Migrate: add items and pickup_time columns to customer_logs
         try:
             is_postgres = 'postgresql' in str(db.engine.url)
-            for col_name, col_def in [('items', 'TEXT NOT NULL DEFAULT '''), ('pickup_time', 'VARCHAR(50) NOT NULL DEFAULT ''')]:
+            for col_name, col_def in [
+                ("items",       "TEXT NOT NULL DEFAULT ''"),
+                ("pickup_time", "VARCHAR(50) NOT NULL DEFAULT ''"),
+                ("phone",       "VARCHAR(30) NOT NULL DEFAULT ''"),
+            ]:
                 col_exists = False
                 if is_postgres:
                     result = db.session.execute(db.text(
-                        f"SELECT COUNT(*) FROM information_schema.columns WHERE table_name='customer_logs' AND column_name='{col_name}'"
+                        f"SELECT COUNT(*) FROM information_schema.columns "
+                        f"WHERE table_name='customer_logs' AND column_name='{col_name}'"
                     )).scalar()
                     col_exists = (result > 0)
                 else:
                     cols = db.session.execute(db.text("PRAGMA table_info(customer_logs)")).fetchall()
                     col_exists = any(row[1] == col_name for row in cols)
                 if not col_exists:
-                    db.session.execute(db.text(f'ALTER TABLE customer_logs ADD COLUMN {col_name} {col_def}'))
+                    db.session.execute(db.text(
+                        f"ALTER TABLE customer_logs ADD COLUMN {col_name} {col_def}"
+                    ))
                     db.session.commit()
-                    print(f"Migration: added {col_name} column to customer_logs")
+                    print(f"Migration: added '{col_name}' column to customer_logs")
+                else:
+                    print(f"Migration: '{col_name}' already exists, skipped")
         except Exception as migration_err2:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err2}")
