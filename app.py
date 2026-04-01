@@ -289,7 +289,7 @@ LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -354,7 +354,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -419,7 +419,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -1043,8 +1043,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
     
     <style>
         :root {
@@ -1248,18 +1247,56 @@ STOREFRONT_HTML = """
 <audio id="alert-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
 {% if not session.get('customer_verified') %}
-<!-- GOOGLE LOGIN GATEKEEPER -->
+<!-- SIGN-IN GATEKEEPER -->
 <div id="login-gatekeeper" class="gate-wrapper">
     <div class="gate-card">
         <div style="width:70px; height:70px; border-radius:50%; border:2px solid var(--gold); display:flex; justify-content:center; align-items:center; margin: 0 auto 15px;">
             <img src="/static/images/9599.jpg" style="width:60px; height:60px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none'">
         </div>
         <h1 style="color:var(--text-dark); font-family:'Playfair Display',serif; font-size:2rem; line-height:1.1;">9599 Tea & Coffee</h1>
-        <p style="font-family:'Playfair Display',serif; color:var(--gold); letter-spacing:3px; font-size:0.8rem; font-weight:900; margin-bottom: 30px;">PARNE NA!</p>
-        <p style="color:var(--text-light); font-weight:500; margin-bottom: 25px; font-size: 0.95rem;">Sign in to place your order.</p>
+        <p style="font-family:'Playfair Display',serif; color:var(--gold); letter-spacing:3px; font-size:0.8rem; font-weight:900; margin-bottom: 24px;">PARNE NA!</p>
 
-        <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
-        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="continue_with" data-size="large" data-logo_alignment="left" style="display:flex; justify-content:center;"></div>
+        <!-- MANUAL SIGN-IN FORM -->
+        <div id="manual-signin-form">
+            <p style="color:var(--text-light); font-weight:500; margin-bottom: 18px; font-size: 0.9rem;">Enter your details to place an order.</p>
+            <div style="text-align:left; margin-bottom:12px;">
+                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Full Name *</label>
+                <input id="gate-name" type="text" placeholder="e.g. Juan dela Cruz" autocomplete="name"
+                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
+                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
+            <div style="text-align:left; margin-bottom:12px;">
+                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Email Address *</label>
+                <input id="gate-email" type="email" placeholder="e.g. juan@email.com" autocomplete="email"
+                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
+                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
+            <div style="text-align:left; margin-bottom:20px;">
+                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number <span style="font-weight:500; text-transform:none;">(optional)</span></label>
+                <input id="gate-phone" type="tel" placeholder="e.g. 09XX-XXX-XXXX" autocomplete="tel"
+                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
+                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
+            <button id="gate-btn" onclick="handleManualSignIn()"
+                style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px;">
+                <i class="fas fa-mug-hot"></i> Continue to Order
+            </button>
+            <div id="gate-error" style="display:none; margin-top:12px; background:#FFF0F0; color:#C0392B; padding:10px 14px; border-radius:10px; font-size:0.82rem; font-weight:700; border:1.5px solid #F5C6C6;">
+                <i class="fas fa-exclamation-circle"></i> <span id="gate-error-msg"></span>
+            </div>
+
+            {% if google_client_id and google_client_id != 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com' %}
+            <!-- Google Sign-In (only shown when a valid Client ID is configured) -->
+            <script src="https://accounts.google.com/gsi/client" async defer></script>
+            <div style="display:flex; align-items:center; gap:10px; margin:18px 0 14px;">
+                <div style="flex:1; height:1px; background:var(--border-color);"></div>
+                <span style="font-size:0.72rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:1px;">or</span>
+                <div style="flex:1; height:1px; background:var(--border-color);"></div>
+            </div>
+            <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
+            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="continue_with" data-size="large" data-logo_alignment="left" style="display:flex; justify-content:center;"></div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -1273,12 +1310,60 @@ STOREFRONT_HTML = """
         container.appendChild(toast);
         setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); }, 3200);
     }
-    
+
+    function showGateError(msg) {
+        const el = document.getElementById('gate-error');
+        document.getElementById('gate-error-msg').textContent = msg;
+        el.style.display = 'block';
+    }
+    function hideGateError() {
+        document.getElementById('gate-error').style.display = 'none';
+    }
+
+    async function handleManualSignIn() {
+        hideGateError();
+        const name  = document.getElementById('gate-name').value.trim();
+        const email = document.getElementById('gate-email').value.trim();
+        const phone = document.getElementById('gate-phone').value.trim();
+        if (!name)  { showGateError('Please enter your full name.'); return; }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showGateError('Please enter a valid email address.'); return;
+        }
+        const btn = document.getElementById('gate-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait…';
+        try {
+            const res = await fetch('/api/auth/manual', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, email, phone })
+            });
+            if (res.ok) { location.reload(); }
+            else {
+                const d = await res.json();
+                showGateError(d.error || 'Something went wrong. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-mug-hot"></i> Continue to Order';
+            }
+        } catch (e) {
+            showGateError('Connection error. Please check your internet and try again.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-mug-hot"></i> Continue to Order';
+        }
+    }
+
+    // Allow pressing Enter in any field to submit
+    ['gate-name','gate-email','gate-phone'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleManualSignIn();
+        });
+    });
+
     async function handleGoogleLogin(response) {
         try {
             const res = await fetch('/api/auth/google', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ token: response.credential }) });
             if (res.ok) location.reload();
-            else showToast("Authentication Error", "error");
+            else showToast("Google Authentication Error. Please use the form above.", "error");
         } catch (e) { showToast("Connection Error", "error"); }
     }
 </script>
@@ -1412,8 +1497,8 @@ STOREFRONT_HTML = """
             </div>
 
             <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name', '') }}" oninput="checkCheckoutStatus()">
-            <input type="email" class="name-input" id="customer-gmail" placeholder="Gmail Address *" value="{{ session.get('customer_email', '') if session.get('customer_email', '').endswith('@gmail.com') else '' }}" oninput="checkCheckoutStatus()">
-            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" oninput="checkCheckoutStatus()">
+            <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email', '') }}" oninput="checkCheckoutStatus()">
+            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number (optional)" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
 
             <label class="pickup-label">Pick-up Time *</label>
             <div class="slide-clock-wrapper" id="pickup-clock-wrapper">
@@ -2277,7 +2362,7 @@ ADMIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>9599 Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 /* ══ LOGO-BASED PALETTE ══════════════════════════════════════════
@@ -3636,7 +3721,7 @@ def storefront():
         return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
@@ -3747,6 +3832,24 @@ def google_auth():
         return jsonify({"error": "Invalid Google Token"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/auth/manual', methods=['POST'])
+@limiter.limit("30 per minute")
+def manual_auth():
+    """Manual sign-in: name + email + optional phone. No Google OAuth required."""
+    data = request.json or {}
+    name  = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    if not name:
+        return jsonify({"error": "Full name is required."}), 400
+    if not email or '@' not in email:
+        return jsonify({"error": "A valid email address is required."}), 400
+    session['customer_verified'] = True
+    session['customer_name']     = name
+    session['customer_email']    = email
+    session['customer_phone']    = phone
+    return jsonify({"status": "success"})
 
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
@@ -4229,8 +4332,22 @@ def add_expense():
 @app.route('/api/customer_logs', methods=['GET'])
 def get_customer_logs():
     if not session.get('is_admin'): return jsonify([]), 403
-    logs = CustomerLog.query.order_by(CustomerLog.created_at.desc()).limit(200).all()
-    return jsonify([{"id": l.id, "name": l.full_name, "gmail": l.gmail, "phone": l.phone, "source": l.order_source, "total": l.order_total, "items": l.items, "pickup_time": l.pickup_time, "time": l.created_at.strftime('%Y-%m-%d %I:%M %p')} for l in logs])
+    try:
+        logs = CustomerLog.query.order_by(CustomerLog.created_at.desc()).limit(200).all()
+        return jsonify([{
+            "id": l.id,
+            "name": l.full_name,
+            "gmail": l.gmail,
+            "phone": l.phone,
+            "source": l.order_source,
+            "total": l.order_total,
+            "items": l.items,
+            "pickup_time": l.pickup_time,
+            "time": l.created_at.strftime('%Y-%m-%d %I:%M %p')
+        } for l in logs])
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/audit_logs', methods=['GET'])
 def get_audit_logs():
