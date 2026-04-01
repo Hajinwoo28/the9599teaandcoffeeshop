@@ -1597,7 +1597,7 @@ STOREFRONT_HTML = """
         <div class="loc-info-row">
             <i class="fas fa-clock"></i>
             <div>
-                <b>Every Day:</b> 10:00 AM – 7:00 PM
+                <b>Every Day:</b> {{ open_time }} – {{ close_time }}
             </div>
         </div>
         <div class="loc-info-row">
@@ -3974,7 +3974,7 @@ def storefront():
             "Closed", "🧋",
             "We're Currently Closed",
             f"9599 Tea & Coffee is not accepting orders right now.<br><br>"
-            f"<b>Every Day:</b> 10:00 AM – 7:00 PM<br><br>"
+            f"<b>Today's Hours:</b> {status['open_time']} – {status['close_time']}<br><br>"
             f"Online orders close 1 hour before closing time.",
             f'<div class="badge">Next opening: {status["next_open"]}</div>'
         ), 403
