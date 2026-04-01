@@ -1224,8 +1224,8 @@ STOREFRONT_HTML = """
         .card.sold-out { opacity: 0.5; pointer-events: none; }
         .sold-out-badge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.6); display: flex; justify-content: center; align-items: center; font-weight: 900; color: var(--danger); font-size: 1.2rem; z-index: 10; letter-spacing: 2px; }
 
-        .sidebar { width: 380px; background: var(--bg-base); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 50; }
-        .cart-top-section { padding: 25px 25px 15px; flex-shrink: 0; }
+        .sidebar { width: 380px; background: var(--bg-base); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 50; overflow: hidden; }
+        .cart-top-section { padding: 25px 25px 15px; flex-shrink: 0; overflow: visible; }
         .cart-header { display: flex; align-items: center; margin-bottom: 20px; gap: 10px; }
         .cart-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--text-dark); }
         .cart-count { background: var(--gold); color: var(--text-dark); font-size: 0.8rem; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -1240,7 +1240,7 @@ STOREFRONT_HTML = """
         .time-wrapper { position: relative; }
         .time-wrapper i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-dark); font-size: 1.1rem; pointer-events: none; }
 
-        .cart-content { padding: 0 25px 15px; flex: 1; overflow-y: auto; }
+        .cart-content { padding: 0 25px 15px; flex: 1; overflow-y: auto; min-height: 0; }
         .empty-cart { margin: auto 0; text-align: center; padding: 40px 0; }
         .empty-cart-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.2; }
         .empty-cart p { font-weight: 700; font-size: 1rem; color: var(--text-light); }
@@ -1320,8 +1320,16 @@ STOREFRONT_HTML = """
         .toast.error { background-color: #C62828; }
         .toast.success { background-color: #388E3C; }
 
-        .notif-bell { cursor: pointer; position: relative; padding: 10px; border-radius: 50%; background: var(--gold-light); color: var(--gold); border: none; }
-        .notif-badge { position: absolute; top: -2px; right: -2px; background: var(--danger); color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: 800; display: none; }
+        .notif-bell { cursor: pointer; position: relative; padding: 10px; border-radius: 50%; background: var(--gold-light); color: var(--gold); border: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); transition: background 0.2s; }
+        .notif-bell:hover { background: var(--border-color); }
+        .notif-badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: white; border-radius: 50%; min-width: 18px; height: 18px; font-size: 0.65rem; font-weight: 800; display: none; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid #fff; }
+        .notif-dropdown { position: absolute; top: 48px; right: 0; background: #fff; border: 1px solid var(--border-color); border-radius: 14px; box-shadow: 0 8px 30px rgba(44,26,18,0.12); width: 300px; z-index: 9999; overflow: hidden; display: none; }
+        .notif-dropdown.open { display: block; }
+        .notif-dropdown-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border-color); font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1rem; color: var(--text-dark); }
+        .notif-list { max-height: 260px; overflow-y: auto; }
+        .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600; color: var(--text-dark); }
+        .notif-item .notif-time { font-size: 0.7rem; color: var(--text-light); margin-top: 2px; }
+        .notif-empty { padding: 20px 16px; text-align: center; color: var(--text-light); font-size: 0.82rem; font-weight: 600; }
         .gate-wrapper { display: flex; height: 100vh; width: 100vw; justify-content: center; align-items: center; background: var(--bg-base); padding: 20px; flex-direction: column; }
 
         /* ── Location Banner ── */
@@ -1383,7 +1391,7 @@ STOREFRONT_HTML = """
                     onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
             </div>
             <div style="text-align:left; margin-bottom:20px;">
-                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number <span style="font-weight:500; text-transform:none;">(optional)</span></label>
+                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number *</label>
                 <input id="gate-phone" type="tel" placeholder="e.g. 09XX-XXX-XXXX" autocomplete="tel"
                     style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
                     onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
@@ -1512,12 +1520,18 @@ STOREFRONT_HTML = """
             <span class="logo-sub">Parne Na!</span>
         </div>
     </div>
-    <div class="notif-container" style="display:flex; align-items:center; gap:10px;">
+    <div class="notif-container" style="display:flex; align-items:center; gap:10px; position:relative;">
         <div title="Find Us" onclick="openLocModal()" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--gold-light); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
             <i class="fas fa-map-marker-alt" style="color:var(--gold); font-size:16px;"></i>
         </div>
-        <div class="notif-bell" onclick="alert('Notification center ready.')">
-            <i class="fas fa-bell"></i><span class="notif-badge" id="notif-badge">0</span>
+        <button class="notif-bell" id="notif-bell-btn" onclick="toggleNotifDropdown()" title="Order Notifications">
+            <i class="fas fa-bell" style="font-size:15px;"></i><span class="notif-badge" id="notif-badge">0</span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown">
+            <div class="notif-dropdown-header">🔔 Order Updates</div>
+            <div class="notif-list" id="notif-list">
+                <div class="notif-empty">No updates yet.<br>We'll notify you when your order status changes.</div>
+            </div>
         </div>
     </div>
 </header>
@@ -1581,6 +1595,7 @@ STOREFRONT_HTML = """
         </div>
         <div class="categories" id="categories-container">
             <button class="cat-btn active" onclick="filterMenu('All', this)">☕ All</button>
+            <button class="cat-btn" onclick="filterMenu('Best Sellers', this)">⭐ Best Sellers</button>
             <button class="cat-btn" onclick="filterMenu('Milktea', this)">🧋 Milktea</button>
             <button class="cat-btn" onclick="filterMenu('Coffee', this)">☕ Coffee</button>
             <button class="cat-btn" onclick="filterMenu('Matcha Series', this)">🍵 Matcha</button>
@@ -1609,11 +1624,10 @@ STOREFRONT_HTML = """
 
             <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name', '') }}" oninput="checkCheckoutStatus()">
             <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email', '') }}" oninput="checkCheckoutStatus()">
-            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number (optional)" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
+            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
 
             <label class="pickup-label">Pick-up Time *</label>
             <div class="slide-clock-wrapper" id="pickup-clock-wrapper">
-                <div class="slide-clock-display" id="pickup-clock-display">Select Time</div>
                 <div class="slide-clock-row">
                     <div class="slide-clock-col">
                         <button class="sc-btn" onclick="adjustPickupTime('hour', 1)">▲</button>
@@ -1773,7 +1787,6 @@ STOREFRONT_HTML = """
 
         <div style="display:flex; gap:10px;">
             <button class="btn-cancel" style="flex:1;" onclick="location.reload()">Done</button>
-            <button class="btn-add" style="flex:1;" onclick="printCustomerReceipt()"><i class="fas fa-print"></i> Print Receipt</button>
         </div>
     </div>
 </div>
@@ -1824,6 +1837,44 @@ STOREFRONT_HTML = """
     let pendingPrice = 49;
     let pendingCat = '';
     let orderType = 'Dine-In';
+
+    // ── Persist cart across viewport changes ──────────────────────────────
+    function saveCartToSession() {
+        try { sessionStorage.setItem('sf_cart', JSON.stringify(cart)); sessionStorage.setItem('sf_orderType', orderType); } catch(e) {}
+    }
+    function loadCartFromSession() {
+        try {
+            const c = sessionStorage.getItem('sf_cart');
+            const ot = sessionStorage.getItem('sf_orderType');
+            if(c) cart = JSON.parse(c);
+            if(ot) { orderType = ot; setOrderType(orderType, true); }
+        } catch(e) {}
+    }
+
+    // ── Notification dropdown ─────────────────────────────────────────────
+    let notifMessages = [];
+    function toggleNotifDropdown() {
+        const dd = document.getElementById('notif-dropdown');
+        dd.classList.toggle('open');
+        if(dd.classList.contains('open')) {
+            // Clear badge when opened
+            document.getElementById('notif-badge').style.display = 'none';
+        }
+    }
+    document.addEventListener('click', function(e) {
+        const bell = document.getElementById('notif-bell-btn');
+        const dd = document.getElementById('notif-dropdown');
+        if(dd && bell && !bell.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
+    });
+    function addNotifMessage(msg) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-PH', {hour:'numeric', minute:'2-digit', hour12:true});
+        notifMessages.unshift({msg, time: timeStr});
+        const list = document.getElementById('notif-list');
+        if(list) list.innerHTML = notifMessages.map(n => `<div class="notif-item">${n.msg}<div class="notif-time">${n.time}</div></div>`).join('');
+        const badge = document.getElementById('notif-badge');
+        if(badge) { badge.style.display = 'flex'; badge.innerText = notifMessages.length; }
+    }
 
     const STORE_CLOSE_TIME = "{{ close_time }}";
 
@@ -1893,7 +1944,9 @@ STOREFRONT_HTML = """
     }
     
     document.addEventListener("DOMContentLoaded", () => { 
+        loadCartFromSession();
         fetchMenu(); 
+        updateCartUI();
         setInterval(pollCustomerOrderStatus, 3000);
         setInterval(fetchMenu, 30000); // Re-sync menu every 30s so stock changes appear automatically
     });
@@ -1918,7 +1971,14 @@ STOREFRONT_HTML = """
     function renderMenu(cat) {
         const grid = document.getElementById('menu-grid');
         grid.innerHTML = '';
-        let filtered = cat === 'All' ? menuItems : menuItems.filter(i => i.category === cat);
+        let filtered;
+        if (cat === 'All') {
+            filtered = menuItems;
+        } else if (cat === 'Best Sellers') {
+            filtered = menuItems.filter(i => getCardStyle(i).badge === 'bestseller');
+        } else {
+            filtered = menuItems.filter(i => i.category === cat);
+        }
         filtered = filtered.filter(i => !i.is_out_of_stock);
         
         if (filtered.length === 0) {
@@ -1995,10 +2055,11 @@ STOREFRONT_HTML = """
         });
     }
 
-    function setOrderType(type) {
+    function setOrderType(type, silent) {
         orderType = type;
         document.getElementById('btn-dine-in').className = type === 'Dine-In' ? 'type-btn active' : 'type-btn';
         document.getElementById('btn-take-out').className = type === 'Take-Out' ? 'type-btn active' : 'type-btn';
+        if(!silent) saveCartToSession();
     }
 
     function selectSize(size, price) {
@@ -2071,7 +2132,7 @@ STOREFRONT_HTML = """
         updateCartUI();
     }
 
-    function removeFromCart(i) { cart.splice(i,1); updateCartUI(); }
+    function removeFromCart(i) { cart.splice(i,1); saveCartToSession(); updateCartUI(); }
 
     function updateCartUI() {
         const list = document.getElementById('cart-items');
@@ -2101,6 +2162,7 @@ STOREFRONT_HTML = """
             });
         }
         document.getElementById('cart-total').innerText = `₱${total.toFixed(2)}`;
+        saveCartToSession();
         checkCheckoutStatus();
     }
 
@@ -2124,7 +2186,6 @@ STOREFRONT_HTML = """
         document.getElementById('sc-hour').innerText = hStr;
         document.getElementById('sc-min').innerText = mStr;
         document.getElementById('sc-ampm').innerText = scAmpm;
-        document.getElementById('pickup-clock-display').innerText = timeStr;
         document.getElementById('pickup-time').value = timeStr;
         checkCheckoutStatus();
     }
@@ -2302,6 +2363,7 @@ STOREFRONT_HTML = """
                 window._lastReceipt = { code, name, pickup, total, items: payload.items, source: 'Online' };
 
                 document.getElementById('success-modal').style.display = 'flex';
+                try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
                 let orders = JSON.parse(localStorage.getItem('myOrders')) || [];
                 orders.push({code, status: 'Waiting Confirmation'});
                 localStorage.setItem('myOrders', JSON.stringify(orders));
@@ -2421,7 +2483,9 @@ STOREFRONT_HTML = """
                 const loc = orders.find(o=>o.code === srv.code);
                 if(loc && loc.status !== srv.status) {
                     loc.status = srv.status; updated = true;
-                    showToast(`Order #${srv.code} is now: ${srv.status}`, "success");
+                    const msg = `Order #${srv.code} is now: ${srv.status}`;
+                    showToast(msg, "success");
+                    addNotifMessage(msg);
                     document.getElementById('status-audio').play().catch(()=>{});
                 }
             });
@@ -3611,7 +3675,7 @@ async function fetchMenu(){
     const oos=m.is_out_of_stock;
     const sb=oos?`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:800;">Out of Stock</span>`:`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:800;">In Stock</span>`;
     const tb=`<button class="btn-secondary" style="padding:4px 8px;background:${oos?'var(--green)':'var(--red)'};font-size:0.72rem;" onclick="toggleOOS(${m.id},${!oos})">${oos?'✅':'🚫'}</button>`;
-    return`<tr><td><b>${escapeHTML(m.name)}</b></td><td style="color:var(--muted);font-size:0.77rem;">${escapeHTML(m.category)}</td><td style="color:var(--brown);font-weight:800;">₱${m.price}</td><td>${sb}</td><td style="display:flex;gap:5px;flex-wrap:wrap;padding:7px 13px;"><button class="btn-secondary" style="padding:4px 8px;font-size:0.72rem;" onclick="openMenuModal(${m.id},'${escapeHTML(m.name.replace(/'/g,"\\\\'"))}',${m.price},'${escapeHTML(m.category.replace(/'/g,"\\\\'"))}','${escapeHTML(m.letter)}',${oos})">Edit</button>${tb}</td></tr>`;
+    return`<tr><td><b>${escapeHTML(m.name)}</b></td><td style="color:var(--muted);font-size:0.77rem;">${escapeHTML(m.category)}</td><td style="color:var(--brown);font-weight:800;">₱${m.price}</td><td>${sb}</td><td style="display:flex;gap:5px;flex-wrap:wrap;padding:7px 13px;"><button class="btn-secondary" style="padding:4px 8px;font-size:0.72rem;" onclick="openMenuModal(${m.id},'${escapeHTML(m.name.replace(/'/g,"\\'"))}',${m.price},'${escapeHTML(m.category.replace(/'/g,"\\'"))}','${escapeHTML(m.letter)}',${oos})">Edit</button>${tb}</td></tr>`;
   }).join('');}catch(e){tbody.innerHTML='<tr><td colspan="5" class="error-state">Network Error</td></tr>';}
 }
 function openMenuModal(id=null,name='',price='',cat='',letter='',oos=false){
@@ -4658,6 +4722,7 @@ with app.app_context():
             ('Matcha Latte', 59.00, 'ML', 'Matcha Series'),
             ('Matcha Caramel', 59.00, 'MC', 'Matcha Series'),
             ('Matcha Strawberry', 59.00, 'MS', 'Matcha Series'),
+            ('Matcha Frappe', 79.00, 'MF', 'Matcha Series'),
             # Fruit Soda
             ('Lychee Mogu Soda', 59.00, 'LM', 'Fruit Soda'),
             ('Apple Soda', 59.00, 'A', 'Fruit Soda'),
@@ -4668,7 +4733,6 @@ with app.app_context():
             ('Mocha Frappe', 79.00, 'M', 'Frappe'),
             ('Coffee Frappe', 79.00, 'C', 'Frappe'),
             ('Strawberry Frappe', 79.00, 'S', 'Frappe'),
-            ('Matcha Frappe', 79.00, 'MF', 'Frappe'),
             ('Mango Frappe', 79.00, 'MG', 'Frappe'),
             # Snacks
             ('French Fries (Plain)', 39.00, 'F', 'Snacks'),
@@ -4679,8 +4743,13 @@ with app.app_context():
             ('Potato Mojos', 59.00, 'P', 'Snacks'),
         ]
         for name, price, letter, category in menu_data:
-            if not MenuItem.query.filter_by(name=name).first():
+            existing_item = MenuItem.query.filter_by(name=name).first()
+            if not existing_item:
                 db.session.add(MenuItem(name=name, price=price, letter=letter, category=category))
+            else:
+                # Migrate Matcha Frappe from Frappe to Matcha Series if needed
+                if name == 'Matcha Frappe' and existing_item.category == 'Frappe':
+                    existing_item.category = 'Matcha Series'
         try:
             db.session.commit()
         except Exception:
