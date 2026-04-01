@@ -484,6 +484,17 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .badge-online{background:rgba(13,122,106,0.1);color:var(--teal);}
 .badge-walkin{background:rgba(21,101,192,0.1);color:var(--blue);}
 
+/* ── Status dropdown pill ── */
+.status-select{appearance:none;-webkit-appearance:none;border:none;outline:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.72rem;padding:5px 28px 5px 12px;border-radius:20px;color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:12px;min-width:110px;}
+.status-select:focus{outline:2px solid rgba(255,255,255,0.4);outline-offset:1px;}
+.status-select option{color:#111;background:#fff;font-weight:700;}
+.status-select.sel-waiting{background-color:#E65100;}
+.status-select.sel-preparing{background-color:#1565C0;}
+.status-select.sel-ready{background-color:#F9A825;color:#3E2723;}
+.status-select.sel-ready{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233E2723' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");}
+.status-select.sel-completed{background-color:#2E7D32;}
+.status-select.sel-cancelled{background-color:#B71C1C;}
+
 .order-list{display:flex;flex-direction:column;gap:10px;}
 .order-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:13px 14px;box-shadow:0 2px 8px rgba(13,122,106,0.07);}
 .order-card.online-order{border-left:4px solid var(--teal);}
@@ -867,24 +878,21 @@ function renderOrders(){
     tbody.innerHTML='<tr class="empty-row"><td colspan="8">No active orders</td></tr>';
     return;
   }
-  const statusMap={
-    'Waiting Confirmation':'<span class="badge badge-waiting" style="font-size:0.67rem;">⏳ Waiting</span>',
-    'Preparing':'<span class="badge badge-preparing" style="font-size:0.67rem;">🔥 Preparing</span>',
-    'Ready for Pickup':'<span class="badge badge-ready" style="font-size:0.67rem;">✅ Ready</span>',
-    'Completed':'<span class="badge badge-completed" style="font-size:0.67rem;">🏁 Done</span>',
-  };
+  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled'};
   tbody.innerHTML=orders.map(o=>{
     const isOnline=o.source==='Online';
     const sourceBadge=isOnline
       ?'<span class="badge badge-online" style="font-size:0.67rem;">🌐 Online</span>'
       :'<span class="badge badge-walkin" style="font-size:0.67rem;">🚶 Walk-In</span>';
-    const statusBadge=statusMap[o.status]||`<span class="badge" style="font-size:0.67rem;">${escapeHTML(o.status)}</span>`;
     const itemsSummary=o.items.map(i=>escapeHTML(i.foundation+(i.size&&i.size!=='16 oz'?' ('+i.size+')':''))).join(', ');
-    const actions=[];
-    if(o.status==='Waiting Confirmation') actions.push(`<button class="tbl-btn preparing" onclick="updateStatus(${o.id},'Preparing')"><i class="fas fa-fire"></i> Prepare</button>`);
-    if(o.status==='Preparing') actions.push(`<button class="tbl-btn ready" onclick="updateStatus(${o.id},'Ready for Pickup')"><i class="fas fa-bell"></i> Ready</button>`);
-    if(o.status==='Ready for Pickup') actions.push(`<button class="tbl-btn complete" onclick="updateStatus(${o.id},'Completed')"><i class="fas fa-check"></i> Done</button>`);
-    if(o.status!=='Completed') actions.push(`<button class="tbl-btn print" onclick="printOrderReceipt(${o.id})"><i class="fas fa-print"></i></button>`);
+    const cls=statusClass[o.status]||'sel-waiting';
+    const sel=`<select class="status-select ${cls}" onchange="updateStatus(${o.id},this.value,this)">
+      <option value="Waiting Confirmation" ${o.status==='Waiting Confirmation'?'selected':''}>⏳ Waiting</option>
+      <option value="Preparing" ${o.status==='Preparing'?'selected':''}>🔥 Preparing</option>
+      <option value="Ready for Pickup" ${o.status==='Ready for Pickup'?'selected':''}>✅ Ready</option>
+      <option value="Completed" ${o.status==='Completed'?'selected':''}>🏁 Completed</option>
+      <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
+    </select>`;
     return `<tr>
       <td><span class="order-num">#${escapeHTML(o.code)}</span></td>
       <td>${sourceBadge}</td>
@@ -892,16 +900,20 @@ function renderOrders(){
       <td style="white-space:nowrap;font-size:0.74rem;color:var(--muted);">${escapeHTML(o.pickup_time||'Walk-In')}</td>
       <td style="white-space:nowrap;font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);">₱${Number(o.total).toFixed(2)}</td>
       <td class="items-cell">${itemsSummary}</td>
-      <td>${statusBadge}</td>
-      <td><div class="tbl-actions">${actions.join('')}</div></td>
+      <td>${sel}</td>
+      <td><div class="tbl-actions"><button class="tbl-btn print" onclick="printOrderReceipt(${o.id})"><i class="fas fa-print"></i></button></div></td>
     </tr>`;
   }).join('');
 }
 
-async function updateStatus(orderId,status){
+async function updateStatus(orderId,status,selectEl){
+  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled'};
+  if(selectEl){
+    selectEl.className='status-select '+(statusClass[status]||'sel-waiting');
+  }
   try{
     const r=await fetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
-    if(r.ok){showToast(`Order marked: ${status}`,'success');fetchOrders();}
+    if(r.ok){showToast(`Status: ${status}`,'success');fetchOrders();}
     else showToast('Update failed','error');
   }catch(e){showToast('Network error','error');}
 }
@@ -1310,9 +1322,11 @@ STOREFRONT_HTML = """
         .admin-sc-sep { font-size: 1.2rem; font-weight: 900; color: #3E2723; align-self: center; }
             body { height: auto; min-height: 100vh; overflow-y: auto; }
             .main-container { flex-direction: column; height: auto; overflow: visible; }
-            .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 20px; }
+            .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 60vh; }
             .menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-            .sidebar { width: 100%; flex: none; height: auto; border-left: none; border-top: 2px solid var(--border-color); }
+            .sidebar { width: 100%; flex: none; height: auto; border-left: none; border-top: 2px solid var(--border-color); position: sticky; bottom: 0; z-index: 100; max-height: 55vh; display: flex; flex-direction: column; box-shadow: 0 -4px 20px rgba(44,26,18,0.12); }
+            .cart-top-section { flex-shrink: 0; overflow-y: auto; max-height: 35vh; }
+            .cart-content { flex: 1; overflow-y: auto; min-height: 0; max-height: 120px; }
         }
 
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
@@ -1889,9 +1903,7 @@ STOREFRONT_HTML = """
         'Matcha Frappe':               '/static/images/matcha_frappe.jpg',
         'Matcha Latte':                '/static/images/matcha_latte.jpg',
         'Matcha Strawberry':           '/static/images/matcha_strawberry.jpg',
-        'French Fries (Plain)':        '/static/images/french_fries.jpg',
-        'French Fries (Cheese)':       '/static/images/french_fries.jpg',
-        'French Fries (BBQ)':          '/static/images/french_fries.jpg',
+        'French Fries':                '/static/images/french_fries.jpg',
         'Hash Brown':                  '/static/images/hash_brown.jpg',
         'Onion Rings':                 '/static/images/onion_rings.jpg',
         'Potato Mojos':                '/static/images/potato_mojos.jpg',
@@ -1923,9 +1935,7 @@ STOREFRONT_HTML = """
         'Coffee Jelly Drink':        { em: '☕', grad: 'grad-signature', badge: 'none' },
         'French Vanilla':            { em: '🍦', grad: 'grad-default',   badge: 'none' },
         'Hazelnut':                  { em: '🌰', grad: 'grad-default',   badge: 'none' },
-        'French Fries (Plain)':      { em: '🍟', grad: 'grad-snacks',   badge: 'none' },
-        'French Fries (Cheese)':     { em: '🍟', grad: 'grad-snacks',   badge: 'none' },
-        'French Fries (BBQ)':        { em: '🍟', grad: 'grad-snacks',   badge: 'none' },
+        'French Fries':              { em: '🍟', grad: 'grad-snacks',   badge: 'none' },
         'Hash Brown':                { em: '🟫', grad: 'grad-snacks',   badge: 'none' },
         'Onion Rings':               { em: '🧅', grad: 'grad-snacks',   badge: 'none' },
         'Potato Mojos':              { em: '🥔', grad: 'grad-snacks',   badge: 'none' }
@@ -2080,6 +2090,12 @@ STOREFRONT_HTML = """
             document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
             document.getElementById('size-qty').innerText = '1';
             document.getElementById('size-modal').style.display = 'flex';
+        } else if (name === 'French Fries') {
+            // Fries — open flavor picker modal
+            document.getElementById('fries-modal-title').innerText = 'French Fries — Choose Flavor';
+            document.querySelector('input[name="fries_flavor"][value="Plain"]').checked = true;
+            document.getElementById('fries-qty').innerText = '1';
+            document.getElementById('fries-modal').style.display = 'flex';
         } else {
             // All other items (Frappe, Milk Series, Matcha, Soda, Snacks etc.) — show simple qty modal
             document.getElementById('simple-qty-name').innerText = name;
@@ -2116,7 +2132,9 @@ STOREFRONT_HTML = """
 
     function confirmFriesToCart() {
         const qty = parseInt(document.getElementById('fries-qty').innerText) || 1;
-        for(let i = 0; i < qty; i++) cart.push({name: pendingItemName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice});
+        const flavor = document.querySelector('input[name="fries_flavor"]:checked').value;
+        const displayName = `French Fries (${flavor})`;
+        for(let i = 0; i < qty; i++) cart.push({name: displayName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice});
         document.getElementById('fries-modal').style.display = 'none';
         document.getElementById('fries-qty').innerText = '1';
         updateCartUI();
@@ -2812,40 +2830,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 <!-- ══ SCREENS ══ -->
 <div class="screens">
 
-  <!-- LIVE ORDERS -->
-  <div id="s-orders" class="screen active">
-    <div class="page-header">
-      <h2><i class="fas fa-clipboard-list"></i> Live Orders</h2>
-      <p>Real-time kitchen display — auto-refreshes every 5s</p>
-    </div>
-    <div class="screen-inner" style="padding-top:28px;">
-      <div class="section">
-        <div id="perm-section">
-          <div class="perm-hdr">
-            <span class="perm-title"><i class="fas fa-hand-paper"></i> Permission Requests</span>
-            <button class="btn-secondary" style="background:var(--red);padding:5px 11px;" onclick="fetchPermReqs()">Refresh</button>
-          </div>
-          <div class="tbl-wrap" style="border:none;border-radius:0;">
-            <table class="kds-table" style="background:var(--white);min-width:380px;">
-              <thead><tr><th>Time</th><th>Code</th><th>Customer</th><th>Message</th><th>Action</th></tr></thead>
-              <tbody id="perm-tbody"><tr><td colspan="5" style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem;">Loading…</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="section">
-        <div class="tbl-wrap">
-          <table class="kds-table">
-            <thead><tr><th>Order #</th><th>Source</th><th>Name</th><th>Time</th><th>Total</th><th>Items</th><th>Status</th></tr></thead>
-            <tbody id="kds-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- INVENTORY -->
-  <div id="s-inventory" class="screen">
+  <div id="s-inventory" class="screen active">
     <div class="page-header">
       <h2><i class="fas fa-boxes"></i> Inventory</h2>
       <p>Stock levels by category — tap a tab to filter</p>
@@ -3155,8 +3141,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 <!-- ══ BOTTOM NAV ══ -->
 <nav class="bottom-nav">
-  <button class="nav-btn active" id="nb-orders" onclick="goScreen('orders',this)"><i class="fas fa-clipboard-list"></i>Orders</button>
-  <button class="nav-btn" id="nb-inventory" onclick="goScreen('inventory',this)"><i class="fas fa-boxes"></i>Stock</button>
+  <button class="nav-btn active" id="nb-inventory" onclick="goScreen('inventory',this)"><i class="fas fa-boxes"></i>Stock</button>
   <div class="nav-center-wrap">
     <div class="nav-center-btn" id="nb-finance-center" onclick="goScreen('finance',null)">
       <i class="fas fa-chart-line"></i>
@@ -3234,7 +3219,6 @@ function goScreen(name,btn){
   if(btn)btn.classList.add('active');
   // Highlight center button when Finance screen is active
   if(name==='finance'&&cFinBtn){cFinBtn.style.background='linear-gradient(135deg,var(--brown-dark) 0%,var(--brown) 100%)';cFinBtn.style.boxShadow='0 4px 18px rgba(61,36,16,0.75)';}
-  if(name==='orders'){fetchOrders();fetchPermReqs();}
   if(name==='inventory')fetchInventory();
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
   if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();}
@@ -3857,11 +3841,10 @@ renderCal();
 fetchClosedDays();
 
 /* ══ AUTO-REFRESH & INIT ══ */
-setInterval(()=>{if(document.getElementById('s-orders').classList.contains('active'))fetchOrders();},5000);
 setInterval(fetchPermReqs,5000);
 setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById('s-audit').classList.contains('active'))fetchAuditLogs();},30000);
-fetchOrders();
 fetchPermReqs();
+fetchInventory();
 </script>
 </body>
 </html>
@@ -4642,8 +4625,7 @@ with app.app_context():
             'Lychee Mogu Soda', 'Apple Soda', 'Strawberry Soda', 'Blueberry Soda',
             'Cookies and Cream Frappe', 'Mocha Frappe', 'Coffee Frappe',
             'Strawberry Frappe', 'Matcha Frappe', 'Mango Frappe',
-            'French Fries (Plain)', 'French Fries (Cheese)', 'French Fries (BBQ)',
-            'Hash Brown', 'Onion Rings', 'Potato Mojos'
+            'French Fries', 'Hash Brown', 'Onion Rings', 'Potato Mojos'
         ]
         MenuItem.query.filter(MenuItem.name.notin_(valid_names)).delete(synchronize_session=False)
         db.session.commit()
@@ -4749,9 +4731,7 @@ with app.app_context():
             ('Strawberry Frappe', 79.00, 'S', 'Frappe'),
             ('Mango Frappe', 79.00, 'MG', 'Frappe'),
             # Snacks
-            ('French Fries (Plain)', 39.00, 'F', 'Snacks'),
-            ('French Fries (Cheese)', 39.00, 'F', 'Snacks'),
-            ('French Fries (BBQ)', 39.00, 'F', 'Snacks'),
+            ('French Fries', 39.00, 'F', 'Snacks'),
             ('Hash Brown', 29.00, 'H', 'Snacks'),
             ('Onion Rings', 59.00, 'O', 'Snacks'),
             ('Potato Mojos', 59.00, 'P', 'Snacks'),
@@ -4789,9 +4769,7 @@ with app.app_context():
         recipe_data = [
             # Snacks
             ('Hash Brown', 'Hash Brown (pcs)', 1), ('Hash Brown', 'Snack Packaging', 1), ('Hash Brown', 'Cooking Oil', 20),
-            ('French Fries (Plain)', 'French Fries', 150), ('French Fries (Plain)', 'Snack Packaging', 1), ('French Fries (Plain)', 'Cooking Oil', 50),
-            ('French Fries (Cheese)', 'French Fries', 150), ('French Fries (Cheese)', 'Snack Packaging', 1), ('French Fries (Cheese)', 'Cooking Oil', 50),
-            ('French Fries (BBQ)', 'French Fries', 150), ('French Fries (BBQ)', 'Snack Packaging', 1), ('French Fries (BBQ)', 'Cooking Oil', 50),
+            ('French Fries', 'French Fries', 150), ('French Fries', 'Snack Packaging', 1), ('French Fries', 'Cooking Oil', 50),
             ('Onion Rings', 'Onion Rings', 150), ('Onion Rings', 'Snack Packaging', 1), ('Onion Rings', 'Cooking Oil', 50),
             ('Potato Mojos', 'Potato Mojos', 150), ('Potato Mojos', 'Snack Packaging', 1), ('Potato Mojos', 'Cooking Oil', 50),
             # Milktea
