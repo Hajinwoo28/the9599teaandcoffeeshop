@@ -151,11 +151,15 @@ def get_store_status():
     close_str = fmt(ch, cm)
     cutoff_str = fmt(cutoff.hour, cutoff.minute)
 
-    # Find next opening (always tomorrow relative to today)
     day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-    next_dow = (dow + 1) % 7
-    noh, nom, _, _ = STORE_SCHEDULE[next_dow]
-    next_open_str = f"{day_names[next_dow]} at {fmt(noh, nom)}"
+    # If the store hasn't opened yet today, next opening is later today
+    if now < open_dt:
+        next_open_str = f"Today at {fmt(oh, om)}"
+    else:
+        # Store has already opened (or is past cutoff) — find the next day
+        next_dow = (dow + 1) % 7
+        noh, nom, _, _ = STORE_SCHEDULE[next_dow]
+        next_open_str = f"{day_names[next_dow]} at {fmt(noh, nom)}"
 
     return {
         "open": is_open,
