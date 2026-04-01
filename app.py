@@ -1708,15 +1708,17 @@ STOREFRONT_HTML = """
 <div id="size-modal" class="modal">
     <div class="modal-content">
         <h2 id="size-modal-title">Customize</h2>
-        
-        <span class="modal-section-label">Choose Size</span>
-        <div class="size-btns">
-            <button class="size-btn selected" id="btn-size-16" onclick="selectSize('16 oz', 49)">16 oz <span class="size-btn-price">₱49</span></button>
-            <button class="size-btn" id="btn-size-22" onclick="selectSize('22 oz', 59)">22 oz <span class="size-btn-price">₱59</span></button>
+
+        <div id="size-row-section">
+            <span class="modal-section-label">Choose Size</span>
+            <div class="size-btns">
+                <button class="size-btn selected" id="btn-size-16" onclick="selectSize('16 oz')">16 oz <span class="size-btn-price" id="size-price-16">₱49</span></button>
+                <button class="size-btn" id="btn-size-22" onclick="selectSize('22 oz')">22 oz <span class="size-btn-price" id="size-price-22">₱59</span></button>
+            </div>
         </div>
 
         <div class="sel-row">
-            <div class="sel-group">
+            <div class="sel-group" id="sugar-section">
                 <span class="modal-section-label">Sugar Level</span>
                 <select id="sugar-level-select">
                     <option value="100% Sugar">100% (Normal)</option>
@@ -1735,12 +1737,14 @@ STOREFRONT_HTML = """
             </div>
         </div>
 
-        <span class="modal-section-label">Add-ons</span>
-        <div class="addon-grid">
-            <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Nata"> <span>🟡 Nata (+₱10)</span></label>
-            <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Pearl"> <span>⚫ Pearl (+₱10)</span></label>
-            <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Coffee Jelly"> <span>☕ Coffee Jelly (+₱10)</span></label>
-            <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Cloud Foam"> <span>☁️ Cloud Foam (+₱15)</span></label>
+        <div id="addon-section">
+            <span class="modal-section-label">Add-ons</span>
+            <div class="addon-grid">
+                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Nata"> <span>🟡 Nata (+₱10)</span></label>
+                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Pearl"> <span>⚫ Pearl (+₱10)</span></label>
+                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Coffee Jelly"> <span>☕ Coffee Jelly (+₱10)</span></label>
+                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Cloud Foam"> <span>☁️ Cloud Foam (+₱15)</span></label>
+            </div>
         </div>
 
         <div style="text-align:center; margin-top:18px; margin-bottom:4px;">
@@ -1821,7 +1825,7 @@ STOREFRONT_HTML = """
         </div>
 
         <div style="display:flex; gap:10px;">
-            <button class="btn-cancel" style="flex:1;" onclick="location.reload()">Done</button>
+            <button class="btn-cancel" style="flex:1;" onclick="closeSuccessAndReset()">Done</button>
         </div>
     </div>
 </div>
@@ -2018,9 +2022,9 @@ STOREFRONT_HTML = """
         }
 
         filtered.forEach(item => {
-            const priceDisplay = ['Milktea','Coffee'].includes(item.category) ? '₱49 / ₱59' : `₱${item.price.toFixed(0)}`;
+            const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
+            const priceDisplay = SIZED_CATS.includes(item.category) ? `₱${item.price.toFixed(0)} / ₱${(item.price+10).toFixed(0)}` : `₱${item.price.toFixed(0)}`;
             const style = getCardStyle(item);
-            
             let badgeHTML = '';
             if (style.badge === 'bestseller') badgeHTML = '<div class="badge-bestseller">⭐ BEST SELLER</div>';
             else if (style.badge === 'new') badgeHTML = '<div class="badge-new">✨ FAN FAVE</div>';
@@ -2064,7 +2068,8 @@ STOREFRONT_HTML = """
             return;
         }
         filtered.forEach(item => {
-            const priceDisplay = ['Milktea','Coffee'].includes(item.category) ? '₱49 / ₱59' : `₱${item.price.toFixed(0)}`;
+            const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
+            const priceDisplay = SIZED_CATS.includes(item.category) ? `₱${item.price.toFixed(0)} / ₱${(item.price+10).toFixed(0)}` : `₱${item.price.toFixed(0)}`;
             const style = getCardStyle(item);
             let badgeHTML = '';
             if (style.badge === 'bestseller') badgeHTML = '<div class="badge-bestseller">⭐ BEST SELLER</div>';
@@ -2093,10 +2098,30 @@ STOREFRONT_HTML = """
         if(!silent) saveCartToSession();
     }
 
-    function selectSize(size, price) {
+    let sizePrice16 = 49, sizePrice22 = 59;
+
+    function selectSize(size) {
+        const price = size === '16 oz' ? sizePrice16 : sizePrice22;
         pendingSize = size; pendingPrice = price;
         document.getElementById('btn-size-16').className = size === '16 oz' ? 'size-btn selected' : 'size-btn';
         document.getElementById('btn-size-22').className = size === '22 oz' ? 'size-btn selected' : 'size-btn';
+    }
+
+    function openSizeModal(name, cat, price, showSugar, showAddons) {
+        sizePrice16 = price;
+        sizePrice22 = price + 10;
+        document.getElementById('size-modal-title').innerText = name;
+        document.getElementById('size-price-16').innerText = '₱' + sizePrice16;
+        document.getElementById('size-price-22').innerText = '₱' + sizePrice22;
+        document.getElementById('size-row-section').style.display = '';
+        document.getElementById('sugar-section').style.display = showSugar ? '' : 'none';
+        document.getElementById('addon-section').style.display = showAddons ? '' : 'none';
+        document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('sugar-level-select').value = '100% Sugar';
+        document.getElementById('ice-level-select').value = 'Normal Ice';
+        document.getElementById('size-qty').innerText = '1';
+        selectSize('16 oz');
+        document.getElementById('size-modal').style.display = 'flex';
     }
 
     function addToCart(name, cat, price) {
@@ -2104,21 +2129,30 @@ STOREFRONT_HTML = """
         pendingCat = cat;
         pendingPrice = price;
 
-        if (['Milktea', 'Coffee'].includes(cat)) {
-            // Drinks with size options — open size + customize modal
-            document.getElementById('size-modal-title').innerText = name;
-            selectSize('16 oz', price);
-            document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
-            document.getElementById('size-qty').innerText = '1';
-            document.getElementById('size-modal').style.display = 'flex';
+        const DRINK_CATS = ['Milktea', 'Coffee', 'Milk Series', 'Matcha Series', 'Fruit Soda', 'Frappe'];
+
+        if (cat === 'Milktea' || cat === 'Coffee') {
+            // Size + sugar + ice + add-ons
+            openSizeModal(name, cat, price, true, true);
+        } else if (cat === 'Milk Series') {
+            // Size + sugar + ice + add-ons
+            openSizeModal(name, cat, price, true, true);
+        } else if (cat === 'Matcha Series') {
+            // Size + ice + add-ons (no sugar)
+            openSizeModal(name, cat, price, false, true);
+        } else if (cat === 'Fruit Soda') {
+            // Size + ice only
+            openSizeModal(name, cat, price, false, false);
+        } else if (cat === 'Frappe') {
+            // Size + ice + add-ons (no sugar)
+            openSizeModal(name, cat, price, false, true);
         } else if (name === 'French Fries') {
-            // Fries — open flavor picker modal
             document.getElementById('fries-modal-title').innerText = 'French Fries — Choose Flavor';
             document.querySelector('input[name="fries_flavor"][value="Plain"]').checked = true;
             document.getElementById('fries-qty').innerText = '1';
             document.getElementById('fries-modal').style.display = 'flex';
         } else {
-            // All other items (Frappe, Milk Series, Matcha, Soda, Snacks etc.) — show simple qty modal
+            // Snacks etc. — simple qty
             document.getElementById('simple-qty-name').innerText = name;
             document.getElementById('simple-qty-price').innerText = '₱' + price + ' each';
             document.getElementById('simple-qty').innerText = '1';
@@ -2126,22 +2160,22 @@ STOREFRONT_HTML = """
         }
     }
 
-    function changeModalQty(id, delta) {
-        const el = document.getElementById(id);
-        let v = parseInt(el.innerText) + delta;
-        if(v < 1) v = 1; if(v > 20) v = 20;
-        el.innerText = v;
-    }
-
     function confirmAddToCart() {
         let addons = []; let cost = 0;
-        document.querySelectorAll('.addon-checkbox').forEach(cb => {
-            if(cb.checked) { addons.push(cb.value); cost += (cb.value==='Cloud Foam'?15:10); }
-        });
+        const addonSection = document.getElementById('addon-section');
+        if (addonSection.style.display !== 'none') {
+            document.querySelectorAll('.addon-checkbox').forEach(cb => {
+                if(cb.checked) { addons.push(cb.value); cost += (cb.value==='Cloud Foam'?15:10); }
+            });
+        }
+        const sugarSection = document.getElementById('sugar-section');
+        const sugar = sugarSection.style.display !== 'none'
+            ? document.getElementById('sugar-level-select').value
+            : 'N/A';
         const qty = parseInt(document.getElementById('size-qty').innerText) || 1;
         const item = {
             name: pendingItemName, cat: pendingCat, size: pendingSize,
-            sugar: document.getElementById('sugar-level-select').value,
+            sugar: sugar,
             ice: document.getElementById('ice-level-select').value,
             addons, price: pendingPrice + cost
         };
@@ -2149,6 +2183,13 @@ STOREFRONT_HTML = """
         document.getElementById('size-modal').style.display = 'none';
         document.getElementById('size-qty').innerText = '1';
         updateCartUI();
+    }
+
+    function changeModalQty(id, delta) {
+        const el = document.getElementById(id);
+        let v = parseInt(el.innerText) + delta;
+        if(v < 1) v = 1; if(v > 20) v = 20;
+        el.innerText = v;
     }
 
     function confirmFriesToCart() {
@@ -2160,6 +2201,7 @@ STOREFRONT_HTML = """
         document.getElementById('fries-qty').innerText = '1';
         updateCartUI();
     }
+
 
     function confirmSimpleQty() {
         const qty = parseInt(document.getElementById('simple-qty').innerText) || 1;
@@ -2185,8 +2227,15 @@ STOREFRONT_HTML = """
             empty.style.display = 'none'; count.style.display = 'flex'; count.innerText = cart.length;
             cart.forEach((c, i) => {
                 total += c.price;
-                let sub = c.size==='Regular' ? '' : `${c.size} · ${c.sugar} · ${c.ice}`;
-                let adds = c.addons.length ? `<br>+ ${c.addons.join(', ')}` : '';
+                const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
+                let subParts = [];
+                if (SIZED_CATS.includes(c.cat)) {
+                    if (c.size && c.size !== 'Regular') subParts.push(c.size);
+                    if (c.sugar && c.sugar !== 'N/A') subParts.push(c.sugar);
+                    if (c.ice && c.ice !== 'N/A') subParts.push(c.ice);
+                }
+                let sub = subParts.join(' · ');
+                let adds = c.addons && c.addons.length ? `<br>+ ${c.addons.join(', ')}` : '';
                 list.innerHTML += `
                 <div class="cart-item">
                     <div>
@@ -2416,7 +2465,21 @@ STOREFRONT_HTML = """
         await submitOrder();
     }
 
-    function openReceiptWindow(r) {
+    function closeSuccessAndReset() {
+        // Hide the modal without reloading the page (reload would trigger the closed-store page)
+        document.getElementById('success-modal').style.display = 'none';
+        // Clear cart state
+        cart = [];
+        try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
+        // Reset form fields
+        ['customer-name','customer-gmail','customer-phone','pickup-time'].forEach(id => {
+            const el = document.getElementById(id); if(el) el.value = '';
+        });
+        // Re-render the cart UI
+        updateCartUI();
+    }
+
+
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-PH', {day:'numeric', month:'short', year:'numeric'});
         const timeStr = now.toLocaleTimeString('en-PH', {hour:'numeric', minute:'2-digit', hour12:true});
