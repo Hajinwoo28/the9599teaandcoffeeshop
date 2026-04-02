@@ -59,6 +59,22 @@ else:
 RAW_PIN = os.environ.get('ADMIN_PIN', '12345')
 ADMIN_PIN_HASH = generate_password_hash(RAW_PIN)
 
+RAW_EMPLOYEE_PIN = os.environ.get('EMPLOYEE_PIN', '54321')
+EMPLOYEE_PIN_HASH = generate_password_hash(RAW_EMPLOYEE_PIN)
+
+def load_pins_from_db():
+    """Override in-memory PIN hashes from DB if persisted values exist."""
+    global ADMIN_PIN_HASH, EMPLOYEE_PIN_HASH
+    try:
+        row = SystemSetting.query.filter_by(key='admin_pin_hash').first()
+        if row:
+            ADMIN_PIN_HASH = row.value
+        row = SystemSetting.query.filter_by(key='employee_pin_hash').first()
+        if row:
+            EMPLOYEE_PIN_HASH = row.value
+    except Exception:
+        pass  # DB not ready yet — will use env/default hashes
+
 token_serializer = URLSafeTimedSerializer(app.secret_key)
 
 limiter = Limiter(
@@ -295,6 +311,12 @@ class StoreScheduleEntry(db.Model):
     close_hour = db.Column(db.Integer, nullable=False, default=19)
     close_minute = db.Column(db.Integer, nullable=False, default=0)
 
+class SystemSetting(db.Model):
+    __tablename__ = 'system_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(255), nullable=False)
+
 # ==========================================
 # 4. FRONTEND HTML TEMPLATES
 # ==========================================
@@ -308,7 +330,7 @@ LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -373,7 +395,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -438,7 +460,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -1207,7 +1229,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
     
     <style>
         :root {
@@ -2656,7 +2678,7 @@ ADMIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>9599 Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 /* ══ LOGO-BASED PALETTE ══════════════════════════════════════════
@@ -3178,6 +3200,31 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
             <tbody id="menu-tbody"></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- PIN Management -->
+      <div class="section card">
+        <div class="card-title">PIN Management</div>
+        <p style="font-size:0.79rem;color:var(--muted);margin-bottom:14px;line-height:1.65;">Change the access PINs for the Admin Panel and Employee Station. You must confirm the current Admin PIN before making changes.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Admin PIN -->
+          <div style="background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px;">
+            <div style="font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;"><i class="fas fa-shield-alt" style="margin-right:5px;"></i>Admin PIN</div>
+            <input type="password" class="inp" id="current-admin-pin" placeholder="Current Admin PIN" style="background:var(--white);margin-bottom:8px;">
+            <input type="password" class="inp" id="new-admin-pin" placeholder="New Admin PIN (min 4 digits)" style="background:var(--white);margin-bottom:8px;">
+            <input type="password" class="inp" id="confirm-admin-pin" placeholder="Confirm New Admin PIN" style="background:var(--white);margin-bottom:8px;">
+            <button class="btn-primary" onclick="changeAdminPin()" style="margin-bottom:0;"><i class="fas fa-key"></i> Update Admin PIN</button>
+          </div>
+          <!-- Employee PIN -->
+          <div style="background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px;">
+            <div style="font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;"><i class="fas fa-user-tie" style="margin-right:5px;"></i>Employee Station PIN</div>
+            <input type="password" class="inp" id="admin-pin-for-emp" placeholder="Current Admin PIN" style="background:var(--white);margin-bottom:8px;">
+            <input type="password" class="inp" id="new-employee-pin" placeholder="New Employee PIN (min 4 digits)" style="background:var(--white);margin-bottom:8px;">
+            <input type="password" class="inp" id="confirm-employee-pin" placeholder="Confirm New Employee PIN" style="background:var(--white);margin-bottom:8px;">
+            <button class="btn-primary" onclick="changeEmployeePin()" style="margin-bottom:0;"><i class="fas fa-key"></i> Update Employee PIN</button>
+          </div>
+        </div>
+        <div id="pin-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
       </div>
 
       <!-- Backup -->
@@ -3868,6 +3915,46 @@ async function restoreBackup(input){
   reader.readAsText(file);input.value='';
 }
 
+/* ══ PIN MANAGEMENT ══ */
+async function changeAdminPin(){
+  const s=document.getElementById('pin-status');
+  const current=document.getElementById('current-admin-pin').value;
+  const newPin=document.getElementById('new-admin-pin').value;
+  const confirm=document.getElementById('confirm-admin-pin').value;
+  if(!current||!newPin||!confirm){s.style.color='var(--red)';s.innerText='All fields are required.';return;}
+  if(newPin.length<4){s.style.color='var(--red)';s.innerText='New PIN must be at least 4 digits.';return;}
+  if(newPin!==confirm){s.style.color='var(--red)';s.innerText='New PINs do not match.';return;}
+  try{
+    const r=await apiFetch('/api/change_pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'admin',current_pin:current,new_pin:newPin})});
+    const data=await r.json();
+    if(r&&r.ok){
+      s.style.color='var(--green)';s.innerText='✅ Admin PIN updated successfully.';
+      document.getElementById('current-admin-pin').value='';
+      document.getElementById('new-admin-pin').value='';
+      document.getElementById('confirm-admin-pin').value='';
+    }else{s.style.color='var(--red)';s.innerText='❌ '+(data.error||'Update failed.');}
+  }catch(e){s.style.color='var(--red)';s.innerText='❌ Network error.';}
+}
+async function changeEmployeePin(){
+  const s=document.getElementById('pin-status');
+  const adminPin=document.getElementById('admin-pin-for-emp').value;
+  const newPin=document.getElementById('new-employee-pin').value;
+  const confirm=document.getElementById('confirm-employee-pin').value;
+  if(!adminPin||!newPin||!confirm){s.style.color='var(--red)';s.innerText='All fields are required.';return;}
+  if(newPin.length<4){s.style.color='var(--red)';s.innerText='New PIN must be at least 4 digits.';return;}
+  if(newPin!==confirm){s.style.color='var(--red)';s.innerText='New PINs do not match.';return;}
+  try{
+    const r=await apiFetch('/api/change_pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'employee',current_pin:adminPin,new_pin:newPin})});
+    const data=await r.json();
+    if(r&&r.ok){
+      s.style.color='var(--green)';s.innerText='✅ Employee PIN updated successfully.';
+      document.getElementById('admin-pin-for-emp').value='';
+      document.getElementById('new-employee-pin').value='';
+      document.getElementById('confirm-employee-pin').value='';
+    }else{s.style.color='var(--red)';s.innerText='❌ '+(data.error||'Update failed.');}
+  }catch(e){s.style.color='var(--red)';s.innerText='❌ Network error.';}
+}
+
 /* ══ CALENDAR (CLOSED DAYS) ══ */
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 let closedDays=new Set(); // Set of 'YYYY-MM-DD' strings
@@ -3974,7 +4061,7 @@ def storefront():
         return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
@@ -4146,14 +4233,14 @@ def admin_dashboard():
     if not session.get('is_admin'): return redirect(url_for('admin_login'))
     return render_template_string(ADMIN_HTML)
 
-@app.route('/employee/login', methods=['GET', 'POST'])
+@app.route('/employee', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 def employee_login():
     if session.get('is_employee'): return redirect(url_for('employee_dashboard'))
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
-        if check_password_hash(ADMIN_PIN_HASH, pin):
+        if check_password_hash(EMPLOYEE_PIN_HASH, pin):
             session.permanent = True
             session['is_employee'] = True
             log_audit("Employee Login", "Staff logged in to employee station")
@@ -4166,7 +4253,7 @@ def employee_logout():
     session.pop('is_employee', None)
     return redirect(url_for('employee_login'))
 
-@app.route('/employee')
+@app.route('/employee/dashboard')
 def employee_dashboard():
     if not session.get('is_employee'): return redirect(url_for('employee_login'))
     return render_template_string(EMPLOYEE_HTML)
@@ -4188,6 +4275,46 @@ def generate_link():
     # Permanent token — no times embedded, schedule is enforced server-side
     token = token_serializer.dumps({'store': '9599', 'v': 2})
     return jsonify({"url": f"{request.host_url}?token={token}"})
+
+@app.route('/api/change_pin', methods=['POST'])
+def change_pin():
+    global ADMIN_PIN_HASH, EMPLOYEE_PIN_HASH
+    if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
+    data = request.json
+    pin_type = data.get('type')          # 'admin' or 'employee'
+    current_pin = data.get('current_pin', '')
+    new_pin = str(data.get('new_pin', ''))
+    if not current_pin or not new_pin:
+        return jsonify({"error": "Missing fields"}), 400
+    if len(new_pin) < 4:
+        return jsonify({"error": "PIN must be at least 4 characters"}), 400
+    # Always verify current admin PIN
+    if not check_password_hash(ADMIN_PIN_HASH, current_pin):
+        return jsonify({"error": "Current Admin PIN is incorrect"}), 401
+    new_hash = generate_password_hash(new_pin)
+    if pin_type == 'admin':
+        ADMIN_PIN_HASH = new_hash
+        _save_setting('admin_pin_hash', new_hash)
+        log_audit("Admin PIN Changed", "Admin PIN was updated")
+        return jsonify({"status": "success"})
+    elif pin_type == 'employee':
+        EMPLOYEE_PIN_HASH = new_hash
+        _save_setting('employee_pin_hash', new_hash)
+        log_audit("Employee PIN Changed", "Employee station PIN was updated")
+        return jsonify({"status": "success"})
+    return jsonify({"error": "Invalid type"}), 400
+
+def _save_setting(key, value):
+    """Upsert a key-value pair into SystemSetting."""
+    try:
+        row = SystemSetting.query.filter_by(key=key).first()
+        if row:
+            row.value = value
+        else:
+            db.session.add(SystemSetting(key=key, value=value))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 @app.route('/api/schedule', methods=['GET', 'POST'])
 def handle_schedule():
@@ -4928,6 +5055,19 @@ with app.app_context():
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+        # ── Seed default PIN hashes if not already stored ────────────────
+        try:
+            if not SystemSetting.query.filter_by(key='admin_pin_hash').first():
+                db.session.add(SystemSetting(key='admin_pin_hash', value=ADMIN_PIN_HASH))
+            if not SystemSetting.query.filter_by(key='employee_pin_hash').first():
+                db.session.add(SystemSetting(key='employee_pin_hash', value=EMPLOYEE_PIN_HASH))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # Load any saved PINs from DB into memory
+        load_pins_from_db()
 
     except Exception as e:
         print(f"DB Init Error: {e}")
