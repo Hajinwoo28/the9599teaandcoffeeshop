@@ -1040,7 +1040,7 @@ function posCardStyle(item){
   return {badge:'none'};
 }
 function getPreviewUrl(item){
-  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\\s+/g,'+'));
+  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\s+/g,'+'));
   const fallbackKw=CATEGORY_PREVIEW_KEYWORDS[item.category]||'bubble+tea+drink';
   return 'https://source.unsplash.com/160x90/?'+slug+','+fallbackKw;
 }
@@ -1059,7 +1059,7 @@ function renderMenuGrid(cat){
     const clickHandler=m.is_out_of_stock?'':'openCustomize('+m.id+')';
     const oosTag=m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'';
     const imgTag='<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" '+
-      'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
+      'onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\';">';
     const letterTag='<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>';
     return '<div class="menu-card'+oosClass+'" onclick="'+clickHandler+'">'+
       imgTag+letterTag+bs+
@@ -1201,21 +1201,21 @@ function openReceiptWindow(r){
   .divider-solid{border:none;border-top:1px solid #333;margin:10px 0;}.divider-dash{border:none;border-top:1px dashed #999;margin:10px 0;}
   table{width:100%;border-collapse:collapse;}th{text-align:left;padding:6px 8px;border-bottom:1px solid #333;font-weight:bold;}th.right{text-align:right;}
   .total-section td{padding:6px 8px;font-weight:bold;}.footer{text-align:center;font-size:0.9rem;margin-top:18px;color:#333;}.footer .est{font-size:0.78rem;color:#888;margin-top:4px;}
-  @media print{@page{margin:10mm;size:A5;}body{padding:0;}}<\\/style><\\/head>
+  @media print{@page{margin:10mm;size:A5;}body{padding:0;}}<\/style><\/head>
   <body><div class="header-section"><img src="/static/images/9599.jpg" class="logo-img" onerror="this.style.display='none'">
-  <div class="shop-name">9599 Tea &amp; Coffee<\\/div><div class="shop-tagline">Parne Na!<\\/div>
-  <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\\/div>
-  <div class="shop-meta">BIR TIN: 322-845-268-00000<\\/div><\\/div>
-  <hr class="divider-solid"><div class="center" style="font-size:1rem;font-weight:bold;letter-spacing:1px;">OFFICIAL RECEIPT<\\/div>
-  <div class="center" style="font-size:0.88rem;color:#555;margin-top:4px;">Date: ${dateStr} &nbsp;|&nbsp; Time: ${timeStr}<\\/div>
-  <hr class="divider-solid"><div style="font-size:1rem;margin-bottom:4px;"><b>Order #:<\\/b> ${r.code}<\\/div>
-  <div style="font-size:1rem;margin-bottom:4px;"><b>Customer:<\\/b> ${r.name}<\\/div>
-  <div style="font-size:1rem;margin-bottom:6px;"><b>Pick-up:<\\/b> ${r.pickup||'Walk-In'}<\\/div>
-  <hr class="divider-solid"><table><thead><tr><th>Item<\\/th><th class="right">Amount<\\/th><\\/tr><\\/thead><tbody>${rows}<\\/tbody><\\/table>
-  <hr class="divider-dash"><table class="total-section"><tr><td style="text-align:left;">Total Items: ${totalQty}<\\/td><td style="text-align:right;">&#8369;${r.total.toFixed(2)}<\\/td><\\/tr><\\/table>
-  <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\\/div><\\/div>
-  <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}<\\/script>
-  <\\/body><\\/html>`;
+  <div class="shop-name">9599 Tea &amp; Coffee<\/div><div class="shop-tagline">Parne Na!<\/div>
+  <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\/div>
+  <div class="shop-meta">BIR TIN: 322-845-268-00000<\/div><\/div>
+  <hr class="divider-solid"><div class="center" style="font-size:1rem;font-weight:bold;letter-spacing:1px;">OFFICIAL RECEIPT<\/div>
+  <div class="center" style="font-size:0.88rem;color:#555;margin-top:4px;">Date: ${dateStr} &nbsp;|&nbsp; Time: ${timeStr}<\/div>
+  <hr class="divider-solid"><div style="font-size:1rem;margin-bottom:4px;"><b>Order #:<\/b> ${r.code}<\/div>
+  <div style="font-size:1rem;margin-bottom:4px;"><b>Customer:<\/b> ${r.name}<\/div>
+  <div style="font-size:1rem;margin-bottom:6px;"><b>Pick-up:<\/b> ${r.pickup||'Walk-In'}<\/div>
+  <hr class="divider-solid"><table><thead><tr><th>Item<\/th><th class="right">Amount<\/th><\/tr><\/thead><tbody>${rows}<\/tbody><\/table>
+  <hr class="divider-dash"><table class="total-section"><tr><td style="text-align:left;">Total Items: ${totalQty}<\/td><td style="text-align:right;">&#8369;${r.total.toFixed(2)}<\/td><\/tr><\/table>
+  <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\/div><\/div>
+  <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}<\/script>
+  <\/body><\/html>`;
   const w=window.open('','_blank','width=680,height=900');
   if(w){w.document.write(html);w.document.close();}
 }
@@ -1534,7 +1534,7 @@ STOREFRONT_HTML = """
         const email = document.getElementById('gate-email').value.trim();
         const phone = document.getElementById('gate-phone').value.trim();
         if (!name)  { showGateError('Please enter your full name.'); return; }
-        if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             showGateError('Please enter a valid email address.'); return;
         }
         const btn = document.getElementById('gate-btn');
@@ -1710,9 +1710,9 @@ STOREFRONT_HTML = """
                 <div class="type-btn" id="btn-take-out" onclick="setOrderType('Take-Out')"><i class="fas fa-shopping-bag"></i> Take-Out</div>
             </div>
 
-            <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name') or '' }}" oninput="checkCheckoutStatus()">
-            <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email') or '' }}" oninput="checkCheckoutStatus()">
-            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone') or '' }}" oninput="checkCheckoutStatus()">
+            <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name', '') }}" oninput="checkCheckoutStatus()">
+            <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email', '') }}" oninput="checkCheckoutStatus()">
+            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
 
             <label class="pickup-label">Pick-up Time *</label>
             <div class="slide-clock-wrapper" id="pickup-clock-wrapper">
@@ -2615,7 +2615,7 @@ STOREFRONT_HTML = """
             9599 Tea &amp; Coffee Shop
             <div class="est">Est. ${new Date().getFullYear()} &nbsp;·&nbsp; This serves as your official receipt.</div>
         </div>
-        <script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }<\\/script>
+        <script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }<\/script>
         </body></html>`;
 
         const w = window.open('', '_blank', 'width=680,height=900');
