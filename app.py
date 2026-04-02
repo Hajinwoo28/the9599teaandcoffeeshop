@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import socket
 import threading
@@ -56,8 +57,22 @@ if os.environ.get('RENDER') or os.environ.get('DYNO'):
 else:
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-RAW_PIN = os.environ.get('ADMIN_PIN', '12345')
+# Master PIN: exactly 5 digits. Set ADMIN_PIN in the environment for production.
+RAW_PIN = (os.environ.get('ADMIN_PIN', '12345') or '12345').strip()
+if not re.fullmatch(r'\d{5}', RAW_PIN):
+    print('WARNING: ADMIN_PIN must be exactly 5 digits. Falling back to 12345 until you fix the environment variable.')
+    RAW_PIN = '12345'
 ADMIN_PIN_HASH = generate_password_hash(RAW_PIN)
+
+
+def master_pin_matches(submitted_pin):
+    """True only if submitted_pin is exactly 5 digits and matches the configured master PIN."""
+    if submitted_pin is None:
+        return False
+    s = str(submitted_pin).strip()
+    if not re.fullmatch(r'\d{5}', s):
+        return False
+    return check_password_hash(ADMIN_PIN_HASH, s)
 
 token_serializer = URLSafeTimedSerializer(app.secret_key)
 
@@ -350,11 +365,11 @@ h2{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:
   <div class="card">
     <div class="pill"><i class="fas fa-shield-alt"></i> Admin Panel</div>
     <h2>Admin Access</h2>
-    <p class="sub">Enter your master PIN to continue</p>
+    <p class="sub">Enter the 5-digit master PIN to continue</p>
     {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
     <form method="POST">
-      <label class="lbl">Master PIN</label>
-      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus>
+      <label class="lbl">Master PIN (5 digits)</label>
+      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code" title="Enter exactly 5 digits">
       <button type="submit" class="btn"><i class="fas fa-lock"></i> Login Securely</button>
     </form>
   </div>
@@ -414,12 +429,12 @@ h2{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:
   </div>
   <div class="card">
     <div class="pill"><i class="fas fa-user-tie"></i> Staff Access</div>
-    <h2>Employee Login</h2>
-    <p class="sub">Enter your staff PIN to continue</p>
+    <h2>Employee Access</h2>
+    <p class="sub">Enter the 5-digit master PIN to continue</p>
     {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
     <form method="POST">
-      <label class="lbl">Staff PIN</label>
-      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus>
+      <label class="lbl">Master PIN (5 digits)</label>
+      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code" title="Enter exactly 5 digits">
       <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
     </form>
   </div>
@@ -552,7 +567,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .cat-tab.active{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);}
 
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px;}
-.menu-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:0 0 10px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 2px 8px rgba(13,122,106,0.06);overflow:hidden;}
+.menu-card{position:relative;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:0 0 10px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 2px 8px rgba(13,122,106,0.06);overflow:hidden;}
+.menu-bs-tag{position:absolute;top:6px;left:6px;right:auto;z-index:2;background:rgba(200,168,75,0.95);color:#0A2925;font-size:0.58rem;font-weight:900;padding:3px 8px;border-radius:10px;letter-spacing:0.3px;}
 .menu-card:active{transform:scale(0.97);opacity:0.85;}
 .menu-card.oos{opacity:0.45;cursor:not-allowed;}
 .menu-preview{width:100%;height:90px;object-fit:cover;display:block;border-radius:10px 10px 0 0;background:var(--teal-light);}
@@ -995,9 +1011,9 @@ async function loadMenu(){
 }
 
 function buildCatTabs(){
-  const cats=['All',...new Set(menuItems.map(m=>m.category))];
+  const cats=['All','Best Sellers',...new Set(menuItems.map(m=>m.category))];
   const tabs=document.getElementById('cat-tabs');
-  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" onclick="selectCat('${escapeHTML(c)}',this)">${escapeHTML(c)}</button>`).join('');
+  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" onclick="selectCat(${JSON.stringify(c)},this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
 }
 
 function selectCat(cat,btn){
@@ -1015,6 +1031,13 @@ const CATEGORY_PREVIEW_KEYWORDS={
   'Frappe':'frappe+blended+drink',
   'Snacks':'snack+food+fries',
 };
+const POS_EMOJI_MAP={
+  'Taro Milktea':{badge:'bestseller'},'Okinawa Milktea':{badge:'bestseller'},'Biscoff Milktea':{badge:'bestseller'},'Caramel Macchiato':{badge:'bestseller'}
+};
+function posCardStyle(item){
+  if(POS_EMOJI_MAP[item.name]) return POS_EMOJI_MAP[item.name];
+  return {badge:'none'};
+}
 function getPreviewUrl(item){
   const slug=encodeURIComponent(item.name.toLowerCase().replace(/\s+/g,'+'));
   const fallbackKw=CATEGORY_PREVIEW_KEYWORDS[item.category]||'bubble+tea+drink';
@@ -1023,13 +1046,18 @@ function getPreviewUrl(item){
 
 function renderMenuGrid(cat){
   const grid=document.getElementById('menu-grid');
-  const items=cat==='All'?menuItems:menuItems.filter(m=>m.category===cat);
+  let items;
+  if(cat==='All') items=menuItems;
+  else if(cat==='Best Sellers') items=menuItems.filter(m=>!m.is_out_of_stock&&posCardStyle(m).badge==='bestseller');
+  else items=menuItems.filter(m=>m.category===cat);
   if(!items.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);">No items</div>';return;}
   grid.innerHTML=items.map(function(m){
     const imgUrl=getPreviewUrl(m);
+    const bs=posCardStyle(m).badge==='bestseller'?'<div class="menu-bs-tag">⭐ Best Seller</div>':'';
     return '<div class="menu-card'+(m.is_out_of_stock?' oos':'')+'" onclick="'+(m.is_out_of_stock?'':'openCustomize('+m.id+')')+'">'+
       '<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="this.style.display=\\\'none\\\';this.nextElementSibling.style.display=\\\'flex\\\';">'+
       '<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>'+
+      bs+
       '<div class="menu-card-body">'+
         '<div class="menu-name">'+escapeHTML(m.name)+'</div>'+
         '<div class="menu-price">₱'+Number(m.price).toFixed(0)+'</div>'+
@@ -1366,9 +1394,10 @@ STOREFRONT_HTML = """
             .main-container { flex-direction: column; height: auto; overflow: visible; }
             .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 60vh; }
             .menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-            .sidebar { width: 100%; flex: none; height: auto; border-left: none; border-top: 2px solid var(--border-color); position: sticky; bottom: 0; z-index: 100; max-height: 55vh; display: flex; flex-direction: column; box-shadow: 0 -4px 20px rgba(44,26,18,0.12); }
-            .cart-top-section { flex-shrink: 0; overflow-y: auto; max-height: 35vh; }
-            .cart-content { flex: 1; overflow-y: auto; min-height: 0; max-height: 120px; }
+            .sidebar { width: 100%; flex: none; height: auto; border-left: none; border-top: 2px solid var(--border-color); position: sticky; bottom: 0; z-index: 100; max-height: min(78vh, 720px); max-height: min(78dvh, 720px); display: flex; flex-direction: column; box-shadow: 0 -4px 20px rgba(44,26,18,0.12); overflow: hidden; min-height: 0; }
+            .cart-top-section { flex-shrink: 1; min-height: 0; overflow-y: auto; max-height: min(44vh, 400px); }
+            .cart-content { flex: 1 1 auto; overflow-y: auto; min-height: 0; max-height: none; }
+            .checkout-area { flex-shrink: 0; position: sticky; bottom: 0; z-index: 6; background: var(--bg-base); padding-top: 14px; padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 22px rgba(44,26,18,0.12); }
         }
 
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
@@ -4112,7 +4141,7 @@ def admin_login():
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
-        if check_password_hash(ADMIN_PIN_HASH, pin):
+        if master_pin_matches(pin):
             state = SystemState.query.first()
             if not state:
                 state = SystemState(active_session_id='', last_ping=datetime.min)
@@ -4131,7 +4160,7 @@ def admin_login():
             
             log_audit("Admin Login", "Successful login to dashboard")
             return redirect(url_for('admin_dashboard'))
-        error = "Invalid PIN. Access Denied."
+        error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -4156,12 +4185,12 @@ def employee_login():
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
-        if check_password_hash(ADMIN_PIN_HASH, pin):
+        if master_pin_matches(pin):
             session.permanent = True
             session['is_employee'] = True
             log_audit("Employee Login", "Staff logged in to employee station")
             return redirect(url_for('employee_dashboard'))
-        error = "Invalid PIN. Access Denied."
+        error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
     return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
 
 @app.route('/employee/logout')
@@ -4187,7 +4216,9 @@ def generate_link():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
     data = request.json
     pin = data.get('pin')
-    if not check_password_hash(ADMIN_PIN_HASH, pin): return jsonify({"error": "Invalid PIN"}), 401
+    if not master_pin_matches(pin):
+        err = "PIN must be exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN"
+        return jsonify({"error": err}), 401
     # Permanent token — no times embedded, schedule is enforced server-side
     token = token_serializer.dumps({'store': '9599', 'v': 2})
     return jsonify({"url": f"{request.host_url}?token={token}"})
