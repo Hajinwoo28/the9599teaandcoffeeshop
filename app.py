@@ -388,7 +388,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -453,7 +453,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -600,9 +600,9 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .cart-total-amt{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--teal-dark);}
 .name-inp{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:700;outline:none;color:var(--text);margin-bottom:8px;background:#fff;}
 .name-inp:focus{border-color:var(--teal);}
-.btn-checkout{width:100%;padding:13px;border-radius:12px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-size:0.92rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;transition:opacity 0.15s;}
-.btn-checkout:active{opacity:0.85;}
-.btn-checkout:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-checkout{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--teal) 0%,var(--teal-dark) 100%);color:#fff;font-family:'Nunito',sans-serif;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.5px;transition:all 0.15s;box-shadow:0 4px 14px rgba(9,79,68,0.35);}
+.btn-checkout:active{transform:scale(0.98);opacity:0.9;}
+.btn-checkout:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;transform:none;}
 
 /* ── TABLE LAYOUT (Live Orders screen) ── */
 .live-section{padding:12px 14px 0;}
@@ -784,7 +784,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
           </div>
           <input type="text" class="name-inp" id="customer-name" placeholder="Customer name (optional)">
           <button class="btn-checkout" onclick="checkout()" id="checkout-btn" disabled>
-            <i class="fas fa-check-circle"></i> Checkout
+            <i class="fas fa-cash-register"></i> Place Order
           </button>
         </div>
       </div>
@@ -844,12 +844,18 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
 <!-- SUCCESS MODAL -->
 <div class="success-overlay" id="success-modal">
-  <div class="success-card">
+  <div class="success-card" style="max-width:400px;width:90%;max-height:90vh;overflow-y:auto;">
     <div class="success-icon"><i class="fas fa-check"></i></div>
-    <div style="font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Order Placed!</div>
+    <div style="font-size:0.75rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Walk-In Order Placed!</div>
     <div class="success-code" id="success-code">—</div>
-    <div style="font-size:0.82rem;color:var(--muted);font-weight:600;" id="success-name"></div>
-    <div style="font-size:1rem;font-weight:900;color:var(--teal-dark);margin-top:6px;" id="success-total"></div>
+    <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-top:4px;" id="success-name"></div>
+    <!-- Order Items List -->
+    <div id="success-items-list" style="width:100%;margin:12px 0 8px;border:1.5px solid var(--teal-light);border-radius:12px;overflow:hidden;text-align:left;"></div>
+    <!-- Total -->
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:8px 12px;background:var(--teal-light);border-radius:10px;margin-bottom:12px;">
+      <span style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Total</span>
+      <span style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--teal-dark);" id="success-total">₱0.00</span>
+    </div>
     <button class="btn-done-print" onclick="printLastReceipt()"><i class="fas fa-print"></i> Print Receipt</button>
     <button class="btn-done" onclick="closeSuccessModal()">New Order</button>
   </div>
@@ -1022,51 +1028,121 @@ function selectCat(cat,btn){
   renderMenuGrid(cat);
 }
 
-const CATEGORY_PREVIEW_KEYWORDS={
-  'Milktea':'milk+tea+boba',
-  'Coffee':'iced+coffee+drink',
-  'Milk Series':'strawberry+milk+drink',
-  'Matcha Series':'matcha+latte+drink',
-  'Fruit Soda':'fruit+soda+drink',
-  'Frappe':'frappe+blended+drink',
-  'Snacks':'snack+food+fries',
+const IMAGE_MAP={
+  'Lychee Mogu Soda':'/static/images/lychee_mogu_soda.jpg',
+  'Strawberry Soda':'/static/images/strawberry_soda.jpg',
+  'Blueberry Soda':'/static/images/blueberry_soda.jpg',
+  'Apple Soda':'/static/images/green_apple_soda.jpg',
+  'Matcha Caramel':'/static/images/matcha_caramel.jpg',
+  'Matcha Frappe':'/static/images/matcha_frappe.jpg',
+  'Matcha Latte':'/static/images/matcha_latte.jpg',
+  'Matcha Strawberry':'/static/images/matcha_strawberry.jpg',
+  'French Fries':'/static/images/french_fries.jpg',
+  'Hash Brown':'/static/images/hash_brown.jpg',
+  'Onion Rings':'/static/images/onion_rings.jpg',
+  'Potato Mojos':'/static/images/potato_mojos.jpg',
+  'Blueberry Milk':'/static/images/blueberry_milk.jpg',
+  'Mango Milk':'/static/images/mango_milk.jpg',
+  'Strawberry Milk':'/static/images/strawberry_milk.jpg',
+  'Ube Milk':'/static/images/ube_milk.jpg',
+  'Hazelnut':'/static/images/hazelnut_milk.jpg',
+  'Dark Belgian Choco':'/static/images/dark_belgian_choco_milktea.jpg',
+  'Mango Frappe':'/static/images/mango_frappe.jpg',
+  'Coffee Frappe':'/static/images/coffee_frappe.jpg',
+  'Cookies and Cream Frappe':'/static/images/cookies_and_cream_frappe.jpg',
+  'Mocha Frappe':'/static/images/mocha_frappe.jpg',
+  'Strawberry Frappe':'/static/images/strawberry_frappe.jpg'
 };
-const POS_EMOJI_MAP={
-  'Taro Milktea':{badge:'bestseller'},'Okinawa Milktea':{badge:'bestseller'},'Biscoff Milktea':{badge:'bestseller'},'Caramel Macchiato':{badge:'bestseller'}
+const EMOJI_STYLE_MAP={
+  'Taro Milktea':{em:'\ud83e\uddd0',grad:'linear-gradient(135deg,#6B4A8B,#9B7ABB)',badge:'bestseller'},
+  'Okinawa Milktea':{em:'\ud83e\uddd1\u200d\ud83c\udf73',grad:'linear-gradient(135deg,#8B5A2B,#C88A3C)',badge:'bestseller'},
+  'Biscoff Milktea':{em:'\u2615',grad:'linear-gradient(135deg,#8B5A2B,#C88A3C)',badge:'bestseller'},
+  'Caramel Macchiato':{em:'\ud83c\udf6e',grad:'linear-gradient(135deg,#8B5A2B,#C88A3C)',badge:'bestseller'},
+  'Wintermelon Milktea':{em:'\ud83e\udd5b',grad:'linear-gradient(135deg,#3A5A40,#5C8A5C)',badge:'none'},
+  'Cookies and Cream Milktea':{em:'\ud83c\udf6a',grad:'linear-gradient(135deg,#4A3A6B,#6A5A8B)',badge:'none'},
+  'Matcha Milktea':{em:'\ud83c\udf75',grad:'linear-gradient(135deg,#3A5A40,#5C7C5C)',badge:'none'},
+  'Dark Belgian Choco':{em:'\ud83c\udf6b',grad:'linear-gradient(135deg,#4A2B1A,#8B5A2B)',badge:'none'},
+  'Mocha':{em:'\u2615',grad:'linear-gradient(135deg,#5A3520,#8B5A2B)',badge:'none'},
+  'Iced Americano':{em:'\ud83e\uddca',grad:'linear-gradient(135deg,#3A3A4A,#5A5A7A)',badge:'none'},
+  'Cappuccino':{em:'\u2615',grad:'linear-gradient(135deg,#8B5A2B,#C88A3C)',badge:'none'},
+  'Coffee Jelly Drink':{em:'\u2615',grad:'linear-gradient(135deg,#4A3A6B,#6A5A8B)',badge:'none'},
+  'French Vanilla':{em:'\ud83c\udf66',grad:'linear-gradient(135deg,#8B7A3A,#C8B86A)',badge:'none'},
+  'Hazelnut':{em:'\ud83e\udd5c',grad:'linear-gradient(135deg,#6B4A1A,#A67B2A)',badge:'none'},
+  'Ube Milk':{em:'\ud83e\udd6a',grad:'linear-gradient(135deg,#6B4A8B,#9B7ABB)',badge:'none'},
+  'Mango Milk':{em:'\ud83e\udd6d',grad:'linear-gradient(135deg,#8B7A1A,#C8B82A)',badge:'none'},
+  'Strawberry Milk':{em:'\ud83c\udf53',grad:'linear-gradient(135deg,#8B2B4A,#C0395A)',badge:'none'},
+  'Blueberry Milk':{em:'\ud83e\uded0',grad:'linear-gradient(135deg,#2B3A8B,#4A5ABB)',badge:'none'},
+  'Matcha Latte':{em:'\ud83c\udf75',grad:'linear-gradient(135deg,#3A5A40,#5C7C5C)',badge:'none'},
+  'Matcha Caramel':{em:'\ud83c\udf75',grad:'linear-gradient(135deg,#3A5A40,#8B7A1A)',badge:'none'},
+  'Matcha Strawberry':{em:'\ud83c\udf75',grad:'linear-gradient(135deg,#3A5A40,#8B2B4A)',badge:'none'},
+  'Matcha Frappe':{em:'\ud83c\udf75',grad:'linear-gradient(135deg,#3A5A40,#5C7C5C)',badge:'none'},
+  'Lychee Mogu Soda':{em:'\ud83c\udf79',grad:'linear-gradient(135deg,#8B2B4A,#C0395A)',badge:'none'},
+  'Apple Soda':{em:'\ud83c\udf4f',grad:'linear-gradient(135deg,#3A5A40,#5C8A5C)',badge:'none'},
+  'Strawberry Soda':{em:'\ud83c\udf53',grad:'linear-gradient(135deg,#8B2B4A,#C0395A)',badge:'none'},
+  'Blueberry Soda':{em:'\ud83e\uded0',grad:'linear-gradient(135deg,#2B3A8B,#4A5ABB)',badge:'none'},
+  'Cookies and Cream Frappe':{em:'\ud83e\udd64',grad:'linear-gradient(135deg,#4A3A6B,#6A5A8B)',badge:'none'},
+  'Mocha Frappe':{em:'\ud83e\udd64',grad:'linear-gradient(135deg,#5A3520,#8B5A2B)',badge:'none'},
+  'Coffee Frappe':{em:'\ud83e\udd64',grad:'linear-gradient(135deg,#8B5A2B,#C88A3C)',badge:'none'},
+  'Strawberry Frappe':{em:'\ud83e\udd64',grad:'linear-gradient(135deg,#8B2B4A,#C0395A)',badge:'none'},
+  'Mango Frappe':{em:'\ud83e\udd64',grad:'linear-gradient(135deg,#8B7A1A,#C8B82A)',badge:'none'},
+  'French Fries':{em:'\ud83c\udf5f',grad:'linear-gradient(135deg,#8B6A1A,#C8A82A)',badge:'none'},
+  'Hash Brown':{em:'\ud83e\udd6a',grad:'linear-gradient(135deg,#8B6A1A,#C8A82A)',badge:'none'},
+  'Onion Rings':{em:'\ud83e\uddc5',grad:'linear-gradient(135deg,#6B4A1A,#A67B2A)',badge:'none'},
+  'Potato Mojos':{em:'\ud83e\udd54',grad:'linear-gradient(135deg,#6B4A1A,#A67B2A)',badge:'none'}
 };
-function posCardStyle(item){
-  if(POS_EMOJI_MAP[item.name]) return POS_EMOJI_MAP[item.name];
-  return {badge:'none'};
-}
-function getPreviewUrl(item){
-  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\s+/g,'+'));
-  const fallbackKw=CATEGORY_PREVIEW_KEYWORDS[item.category]||'bubble+tea+drink';
-  return 'https://source.unsplash.com/160x90/?'+slug+','+fallbackKw;
+function getCardStyle(item){
+  if(EMOJI_STYLE_MAP[item.name]) return EMOJI_STYLE_MAP[item.name];
+  if(item.category==='Milktea') return {em:'\ud83e\uddd0',grad:'linear-gradient(135deg,#4A2B1A,#8B5A2B)',badge:'none'};
+  if(item.category==='Coffee') return {em:'\u2615',grad:'linear-gradient(135deg,#8B5A2B,#C88A3C)',badge:'none'};
+  if(item.category==='Matcha Series') return {em:'\ud83c\udf75',grad:'linear-gradient(135deg,#3A5A40,#5C7C5C)',badge:'none'};
+  if(item.category==='Milk Series') return {em:'\ud83e\udd5b',grad:'linear-gradient(135deg,#4A2B1A,#8B5A2B)',badge:'none'};
+  if(item.category==='Fruit Soda') return {em:'\ud83c\udf79',grad:'linear-gradient(135deg,#8B2B4A,#C0395A)',badge:'none'};
+  if(item.category==='Frappe') return {em:'\ud83e\udd64',grad:'linear-gradient(135deg,#4A3A6B,#6A5A8B)',badge:'none'};
+  if(item.category==='Snacks') return {em:'\ud83c\udf5f',grad:'linear-gradient(135deg,#6B4A1A,#A67B2A)',badge:'none'};
+  return {em:'\ud83e\uddd0',grad:'linear-gradient(135deg,#4A2B1A,#8B5A2B)',badge:'none'};
 }
 
 function renderMenuGrid(cat){
   const grid=document.getElementById('menu-grid');
   let items;
   if(cat==='All') items=menuItems;
-  else if(cat==='Best Sellers') items=menuItems.filter(m=>!m.is_out_of_stock&&posCardStyle(m).badge==='bestseller');
+  else if(cat==='Best Sellers') items=menuItems.filter(m=>!m.is_out_of_stock&&getCardStyle(m).badge==='bestseller');
   else items=menuItems.filter(m=>m.category===cat);
   if(!items.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);">No items</div>';return;}
   grid.innerHTML=items.map(function(m){
-    const imgUrl=getPreviewUrl(m);
-    const bs=posCardStyle(m).badge==='bestseller'?'<div class="menu-bs-tag">⭐ Best Seller</div>':'';
-    return '<div class="menu-card'+(m.is_out_of_stock?' oos':'')+'" onclick="'+(m.is_out_of_stock?'':'openCustomize('+m.id+')')+'">'+
-      '<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="this.style.display=\\\'none\\\';this.nextElementSibling.style.display=\\\'flex\\\';">'+
-      '<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>'+
-      bs+
+    const style=getCardStyle(m);
+    const oosClass=m.is_out_of_stock?' oos':'';
+    const clickHandler=m.is_out_of_stock?'':'openCustomize('+m.id+')';
+    const oosTag=m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'';
+    const bsTag=style.badge==='bestseller'?'<div class="menu-bs-tag">\u2B50 Best Seller</div>':'';
+    const priceLabel='\u20B1'+Number(m.price).toFixed(0)+(m.category==='Milktea'||m.category==='Coffee'?'\u2013'+(Number(m.price)+10).toFixed(0):'');
+    let imageContent;
+    if(IMAGE_MAP[m.name]){
+      imageContent='<img src="'+IMAGE_MAP[m.name]+'" style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;border-radius:10px 10px 0 0;" '+
+        'onerror="this.style.display=\'none\'">';
+    } else {
+      imageContent='';
+    }
+    const gradBg='<div style="position:absolute;inset:0;background:'+style.grad+';border-radius:10px 10px 0 0;"></div>'+
+      '<div style="position:relative;z-index:2;font-size:2.6rem;filter:drop-shadow(0 6px 10px rgba(0,0,0,0.3));">'+style.em+'</div>';
+    return '<div class="menu-card'+oosClass+'" onclick="'+clickHandler+'" style="overflow:hidden;">'+
+      '<div style="width:100%;height:100px;position:relative;display:flex;align-items:center;justify-content:center;border-radius:10px 10px 0 0;overflow:hidden;">'+
+        (IMAGE_MAP[m.name]
+          ? '<div style="position:absolute;inset:0;background:'+style.grad+';border-radius:10px 10px 0 0;"></div>'+
+            '<img src="'+IMAGE_MAP[m.name]+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px 10px 0 0;z-index:1;" '+
+            'onerror="this.style.display=\'none\'">'
+          : gradBg)+
+        bsTag.replace('<div','<div style="position:absolute;top:6px;left:6px;z-index:3;"')+
+        '<div style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.55);color:#F0C060;padding:3px 9px;border-radius:14px;font-size:0.72rem;font-weight:900;z-index:3;">'+priceLabel+'</div>'+
+      '</div>'+
       '<div class="menu-card-body">'+
         '<div class="menu-name">'+escapeHTML(m.name)+'</div>'+
-        '<div class="menu-price">₱'+Number(m.price).toFixed(0)+'</div>'+
-        (m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'')+
+        '<div class="menu-price">\u20B1'+Number(m.price).toFixed(0)+'</div>'+
+        oosTag+
       '</div>'+
     '</div>';
   }).join('');
 }
-
 function openCustomize(menuId){
   currentItem=menuItems.find(m=>m.id===menuId);
   if(!currentItem) return;
@@ -1150,23 +1226,37 @@ async function checkout(){
       window._lastWalkIn={code:data.reservation_code,name,total,items:cart.slice()};
       document.getElementById('success-code').textContent='#'+data.reservation_code;
       document.getElementById('success-name').textContent=name;
-      document.getElementById('success-total').textContent='₱'+total.toFixed(2);
+      document.getElementById('success-total').textContent='\u20B1'+total.toFixed(2);
+      // Build ordered items list
+      const itemsList=document.getElementById('success-items-list');
+      itemsList.innerHTML=cart.map((i,idx)=>{
+        const mods=[i.sugar,i.ice].filter(v=>v&&v!=='N/A').join(' \u00b7 ');
+        const addons=i.addons?' + '+i.addons:'';
+        const sizeLabel=i.size&&i.size!=='16 oz'?' ('+i.size+')':'';
+        return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 12px;border-bottom:'+(idx<cart.length-1?'1px solid var(--teal-light)':'none')+';background:'+(idx%2===0?'#fff':'var(--teal-light)') + ';">'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:0.82rem;font-weight:800;color:var(--text);">' +escapeHTML(i.foundation+sizeLabel)+'</div>'+
+            (mods||addons?'<div style="font-size:0.69rem;color:var(--muted);margin-top:2px;">'+escapeHTML(mods+addons)+'</div>':'')+
+          '</div>'+
+          '<div style="font-family:\'Playfair Display\',serif;font-weight:900;font-size:0.9rem;color:var(--teal-dark);margin-left:10px;white-space:nowrap;">\u20B1'+i.price.toFixed(2)+'</div>'+
+        '</div>';
+      }).join('');
       document.getElementById('success-modal').classList.add('show');
       cart=[];renderCart();
       document.getElementById('customer-name').value='';
     }else{
       showToast(data.error||'Order failed','error');
-      btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';
+      btn.disabled=false;btn.innerHTML='<i class="fas fa-cash-register"></i> Place Order';
     }
   }catch(e){
     showToast('Network error','error');
-    btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-cash-register"></i> Place Order';
   }
 }
 
 function closeSuccessModal(){
   document.getElementById('success-modal').classList.remove('show');
-  document.getElementById('checkout-btn').innerHTML='<i class="fas fa-check-circle"></i> Checkout';
+  document.getElementById('checkout-btn').innerHTML='<i class="fas fa-cash-register"></i> Place Order';
 }
 
 function printLastReceipt(){
@@ -1235,7 +1325,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
     
     <style>
         :root {
