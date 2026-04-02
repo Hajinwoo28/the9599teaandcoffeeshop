@@ -308,7 +308,7 @@ LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -373,7 +373,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -438,7 +438,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -853,7 +853,6 @@ function goScreen(id){
   if(id==='online') fetchOrders();
   if(id==='pos') loadMenu();
 }
-window.goScreen=goScreen;
 
 /* ── ONLINE POS ── */
 let allOrders=[], activeFilter='All', knownPermCodes=new Set();
@@ -1029,7 +1028,7 @@ function renderMenuGrid(cat){
   grid.innerHTML=items.map(function(m){
     const imgUrl=getPreviewUrl(m);
     return '<div class="menu-card'+(m.is_out_of_stock?' oos':'')+'" onclick="'+(m.is_out_of_stock?'':'openCustomize('+m.id+')')+'">'+
-      '<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'+
+      '<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="this.style.display=\\\'none\\\';this.nextElementSibling.style.display=\\\'flex\\\';">'+
       '<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>'+
       '<div class="menu-card-body">'+
         '<div class="menu-name">'+escapeHTML(m.name)+'</div>'+
@@ -1189,18 +1188,9 @@ function openReceiptWindow(r){
   if(w){w.document.write(html);w.document.close();}
 }
 
-try{
-  fetchOrders();
-  fetchPermReqs();
-  setInterval(()=>{
-    try{
-      if(document.getElementById('s-online').classList.contains('active')){
-        fetchOrders();
-        fetchPermReqs();
-      }
-    }catch(e){}
-  },5000);
-}catch(e){console.error('Init error:',e);}
+setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
+fetchOrders();
+fetchPermReqs();
 </script>
 </body>
 </html>
@@ -1217,7 +1207,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     
     <style>
         :root {
@@ -1371,6 +1361,7 @@ STOREFRONT_HTML = """
         .admin-sc-btn:hover { background: #D7CCC8; }
         .admin-sc-val { font-size: 1.2rem; font-weight: 900; color: #3E2723; min-width: 36px; text-align: center; font-family: 'Playfair Display', serif; }
         .admin-sc-sep { font-size: 1.2rem; font-weight: 900; color: #3E2723; align-self: center; }
+        @media (max-width: 768px) {
             body { height: auto; min-height: 100vh; overflow-y: auto; }
             .main-container { flex-direction: column; height: auto; overflow: visible; }
             .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 60vh; }
@@ -2053,6 +2044,8 @@ STOREFRONT_HTML = """
         filtered.forEach(item => {
             const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
             const priceDisplay = SIZED_CATS.includes(item.category) ? `₱${item.price.toFixed(0)} / ₱${(item.price+10).toFixed(0)}` : `₱${item.price.toFixed(0)}`;
+            const style = getCardStyle(item);
+            let badgeHTML = '';
             if (style.badge === 'bestseller') badgeHTML = '<div class="badge-bestseller">⭐ BEST SELLER</div>';
             else if (style.badge === 'new') badgeHTML = '<div class="badge-new">✨ FAN FAVE</div>';
 
@@ -2506,7 +2499,7 @@ STOREFRONT_HTML = """
         updateCartUI();
     }
 
-
+    function openReceiptWindow(r) {
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-PH', {day:'numeric', month:'short', year:'numeric'});
         const timeStr = now.toLocaleTimeString('en-PH', {hour:'numeric', minute:'2-digit', hour12:true});
@@ -2666,7 +2659,7 @@ ADMIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>9599 Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 /* ══ LOGO-BASED PALETTE ══════════════════════════════════════════
@@ -3984,7 +3977,7 @@ def storefront():
         return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
