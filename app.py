@@ -55,6 +55,7 @@ if os.environ.get('RENDER') or os.environ.get('DYNO'):
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 else:
+    app.config['SESSION_COOKIE_SECURE'] = False
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Master PIN: exactly 5 digits. Set ADMIN_PIN in the environment for production.
@@ -194,7 +195,6 @@ def get_store_status():
 
 def log_audit(action, details=""):
     try:
-        db.session.remove()  # clear any stale transaction before writing
         new_log = AuditLog(action=action, details=details)
         db.session.add(new_log)
         db.session.commit()
@@ -324,7 +324,7 @@ LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -389,7 +389,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -454,7 +454,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -1040,7 +1040,7 @@ function posCardStyle(item){
   return {badge:'none'};
 }
 function getPreviewUrl(item){
-  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\s+/g,'+'));
+  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\\s+/g,'+'));
   const fallbackKw=CATEGORY_PREVIEW_KEYWORDS[item.category]||'bubble+tea+drink';
   return 'https://source.unsplash.com/160x90/?'+slug+','+fallbackKw;
 }
@@ -1201,21 +1201,21 @@ function openReceiptWindow(r){
   .divider-solid{border:none;border-top:1px solid #333;margin:10px 0;}.divider-dash{border:none;border-top:1px dashed #999;margin:10px 0;}
   table{width:100%;border-collapse:collapse;}th{text-align:left;padding:6px 8px;border-bottom:1px solid #333;font-weight:bold;}th.right{text-align:right;}
   .total-section td{padding:6px 8px;font-weight:bold;}.footer{text-align:center;font-size:0.9rem;margin-top:18px;color:#333;}.footer .est{font-size:0.78rem;color:#888;margin-top:4px;}
-  @media print{@page{margin:10mm;size:A5;}body{padding:0;}}<\/style><\/head>
+  @media print{@page{margin:10mm;size:A5;}body{padding:0;}}<\\/style><\\/head>
   <body><div class="header-section"><img src="/static/images/9599.jpg" class="logo-img" onerror="this.style.display='none'">
-  <div class="shop-name">9599 Tea &amp; Coffee<\/div><div class="shop-tagline">Parne Na!<\/div>
-  <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\/div>
-  <div class="shop-meta">BIR TIN: 322-845-268-00000<\/div><\/div>
-  <hr class="divider-solid"><div class="center" style="font-size:1rem;font-weight:bold;letter-spacing:1px;">OFFICIAL RECEIPT<\/div>
-  <div class="center" style="font-size:0.88rem;color:#555;margin-top:4px;">Date: ${dateStr} &nbsp;|&nbsp; Time: ${timeStr}<\/div>
-  <hr class="divider-solid"><div style="font-size:1rem;margin-bottom:4px;"><b>Order #:<\/b> ${r.code}<\/div>
-  <div style="font-size:1rem;margin-bottom:4px;"><b>Customer:<\/b> ${r.name}<\/div>
-  <div style="font-size:1rem;margin-bottom:6px;"><b>Pick-up:<\/b> ${r.pickup||'Walk-In'}<\/div>
-  <hr class="divider-solid"><table><thead><tr><th>Item<\/th><th class="right">Amount<\/th><\/tr><\/thead><tbody>${rows}<\/tbody><\/table>
-  <hr class="divider-dash"><table class="total-section"><tr><td style="text-align:left;">Total Items: ${totalQty}<\/td><td style="text-align:right;">&#8369;${r.total.toFixed(2)}<\/td><\/tr><\/table>
-  <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\/div><\/div>
-  <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}<\/script>
-  <\/body><\/html>`;
+  <div class="shop-name">9599 Tea &amp; Coffee<\\/div><div class="shop-tagline">Parne Na!<\\/div>
+  <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\\/div>
+  <div class="shop-meta">BIR TIN: 322-845-268-00000<\\/div><\\/div>
+  <hr class="divider-solid"><div class="center" style="font-size:1rem;font-weight:bold;letter-spacing:1px;">OFFICIAL RECEIPT<\\/div>
+  <div class="center" style="font-size:0.88rem;color:#555;margin-top:4px;">Date: ${dateStr} &nbsp;|&nbsp; Time: ${timeStr}<\\/div>
+  <hr class="divider-solid"><div style="font-size:1rem;margin-bottom:4px;"><b>Order #:<\\/b> ${r.code}<\\/div>
+  <div style="font-size:1rem;margin-bottom:4px;"><b>Customer:<\\/b> ${r.name}<\\/div>
+  <div style="font-size:1rem;margin-bottom:6px;"><b>Pick-up:<\\/b> ${r.pickup||'Walk-In'}<\\/div>
+  <hr class="divider-solid"><table><thead><tr><th>Item<\\/th><th class="right">Amount<\\/th><\\/tr><\\/thead><tbody>${rows}<\\/tbody><\\/table>
+  <hr class="divider-dash"><table class="total-section"><tr><td style="text-align:left;">Total Items: ${totalQty}<\\/td><td style="text-align:right;">&#8369;${r.total.toFixed(2)}<\\/td><\\/tr><\\/table>
+  <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\\/div><\\/div>
+  <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}<\\/script>
+  <\\/body><\\/html>`;
   const w=window.open('','_blank','width=680,height=900');
   if(w){w.document.write(html);w.document.close();}
 }
@@ -1239,7 +1239,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
     
     <style>
         :root {
@@ -1534,7 +1534,7 @@ STOREFRONT_HTML = """
         const email = document.getElementById('gate-email').value.trim();
         const phone = document.getElementById('gate-phone').value.trim();
         if (!name)  { showGateError('Please enter your full name.'); return; }
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
             showGateError('Please enter a valid email address.'); return;
         }
         const btn = document.getElementById('gate-btn');
@@ -1710,9 +1710,9 @@ STOREFRONT_HTML = """
                 <div class="type-btn" id="btn-take-out" onclick="setOrderType('Take-Out')"><i class="fas fa-shopping-bag"></i> Take-Out</div>
             </div>
 
-            <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name', '') }}" oninput="checkCheckoutStatus()">
-            <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email', '') }}" oninput="checkCheckoutStatus()">
-            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
+            <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name') or '' }}" oninput="checkCheckoutStatus()">
+            <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email') or '' }}" oninput="checkCheckoutStatus()">
+            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone') or '' }}" oninput="checkCheckoutStatus()">
 
             <label class="pickup-label">Pick-up Time *</label>
             <div class="slide-clock-wrapper" id="pickup-clock-wrapper">
@@ -1968,7 +1968,7 @@ STOREFRONT_HTML = """
         if(badge) { badge.style.display = 'flex'; badge.innerText = notifMessages.length; }
     }
 
-    const STORE_CLOSE_TIME = "{{ close_time }}";
+    const STORE_CLOSE_TIME = {{ close_time | tojson }};
 
     function escapeHTML(str) { let div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
 
@@ -2615,7 +2615,7 @@ STOREFRONT_HTML = """
             9599 Tea &amp; Coffee Shop
             <div class="est">Est. ${new Date().getFullYear()} &nbsp;·&nbsp; This serves as your official receipt.</div>
         </div>
-        <script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }<\/script>
+        <script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }<\\/script>
         </body></html>`;
 
         const w = window.open('', '_blank', 'width=680,height=900');
@@ -2692,7 +2692,7 @@ ADMIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>9599 Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 /* ══ LOGO-BASED PALETTE ══════════════════════════════════════════
@@ -4010,7 +4010,7 @@ def storefront():
         return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
@@ -4205,12 +4205,7 @@ def employee_logout():
 @app.route('/employee')
 def employee_dashboard():
     if not session.get('is_employee'): return redirect(url_for('employee_login'))
-    try:
-        return render_template_string(EMPLOYEE_HTML)
-    except Exception as e:
-        print(f"Employee dashboard render error: {e}")
-        return f"<h3 style='font-family:sans-serif;text-align:center;margin-top:50px;color:#D32F2F;'>Dashboard Error: {str(e)}</h3>", 500
-
+    return render_template_string(EMPLOYEE_HTML)
 @app.route('/api/admin/ping')
 def admin_ping():
     if session.get('is_admin'):
@@ -4413,13 +4408,13 @@ def permission_status():
 
 @app.route('/api/permission_requests', methods=['GET'])
 def get_permission_requests():
-    if not session.get('is_admin') and not session.get('is_employee'): return jsonify([]), 403
+    if not session.get('is_admin'): return jsonify([]), 403
     pending = PermissionRequest.query.filter_by(granted=False).order_by(PermissionRequest.created_at.desc()).all()
     return jsonify([{"id": p.id, "code": p.request_code, "name": p.customer_name, "address": p.address, "message": p.message, "time": p.created_at.strftime('%I:%M %p')} for p in pending])
 
 @app.route('/api/permission_requests/<int:req_id>/grant', methods=['POST'])
 def grant_permission(req_id):
-    if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
+    if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     pr = PermissionRequest.query.get_or_404(req_id)
     pr.granted = True
     db.session.commit()
@@ -4519,7 +4514,7 @@ def update_order_status(order_id):
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
-    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level} for i in r.infusions]} for r in res]})
+    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source or 'Online', 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time or 'Walk-In', 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level} for i in r.infusions]} for r in res]})
 
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
