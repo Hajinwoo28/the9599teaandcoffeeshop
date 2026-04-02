@@ -55,7 +55,6 @@ if os.environ.get('RENDER') or os.environ.get('DYNO'):
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 else:
-    app.config['SESSION_COOKIE_SECURE'] = False
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Master PIN: exactly 5 digits. Set ADMIN_PIN in the environment for production.
@@ -324,7 +323,7 @@ LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -389,7 +388,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -454,7 +453,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -560,7 +559,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .pos-layout{display:flex;height:calc(100vh - var(--topbar-h) - var(--nav-h));overflow:hidden;}
 .pos-menu-area{flex:1;overflow-y:auto;padding:12px;background:var(--bg);}
 .pos-sidebar{width:300px;flex-shrink:0;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-@media(max-width:680px){.pos-layout{flex-direction:column;height:auto;overflow:visible;}.pos-menu-area{overflow:visible;padding-bottom:10px;}.pos-sidebar{width:100%;flex-shrink:0;border-left:none;border-top:2px solid var(--border);max-height:60vh;}}
+@media(max-width:680px){.pos-layout{flex-direction:column;height:auto;overflow:visible;}.pos-menu-area{overflow-y:auto;max-height:40vh;padding-bottom:10px;}.pos-sidebar{width:100%;flex-shrink:0;border-left:none;border-top:2px solid var(--border);}}
 
 .pos-cat-tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;margin-bottom:4px;}
 .pos-cat-tabs::-webkit-scrollbar{display:none;}
@@ -872,7 +871,7 @@ function goScreen(id){
 }
 
 /* ── ONLINE POS ── */
-let allOrders=[], activeFilter='All', knownPermCodes=new Set();
+let allOrders=[], activeFilter='All', knownPermCodes=new Set(), knownOrderIds=new Set();
 
 function setFilter(f,btn){
   activeFilter=f;
@@ -888,10 +887,10 @@ async function fetchOrders(){
     const r=await fetch('/api/orders');
     if(!r.ok) return;
     const data=await r.json();
-    const prev=allOrders.map(o=>o.id+':'+o.status).join('|');
     allOrders=data.orders||[];
-    const curr=allOrders.map(o=>o.id+':'+o.status).join('|');
-    if(prev&&prev!==curr) document.getElementById('emp-audio').play().catch(()=>{});
+    const hasNewOrder=knownOrderIds.size>0&&allOrders.some(o=>!knownOrderIds.has(o.id));
+    if(hasNewOrder) document.getElementById('emp-audio').play().catch(()=>{});
+    allOrders.forEach(o=>knownOrderIds.add(o.id));
     renderOrders();
     updateStats();
   }catch(e){}
@@ -1059,7 +1058,7 @@ function renderMenuGrid(cat){
     const clickHandler=m.is_out_of_stock?'':'openCustomize('+m.id+')';
     const oosTag=m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'';
     const imgTag='<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" '+
-      'onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\';">';
+      'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
     const letterTag='<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>';
     return '<div class="menu-card'+oosClass+'" onclick="'+clickHandler+'">'+
       imgTag+letterTag+bs+
@@ -1239,7 +1238,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
     
     <style>
         :root {
@@ -1342,9 +1341,9 @@ STOREFRONT_HTML = """
         .total-label { font-size: 0.9rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
         .total-amount { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--text-dark); }
 
-        .checkout-btn { width: 100%; padding: 18px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: var(--text-dark); background: var(--border-color); cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
-        .checkout-btn.active { background: var(--gold); cursor: pointer; box-shadow: 0 6px 20px rgba(200, 155, 60, 0.4); }
-        .checkout-btn.active:hover { transform: translateY(-2px); }
+        .checkout-btn { width: 100%; padding: 18px; border: 2px solid #B8A898; border-radius: 12px; font-size: 1rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
+        .checkout-btn.active { background: var(--gold); color: var(--text-dark); border-color: var(--gold); cursor: pointer; box-shadow: 0 6px 20px rgba(200, 155, 60, 0.4); }
+        .checkout-btn.active:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(200, 155, 60, 0.5); }
 
         .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(44, 26, 18, 0.7); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
         .modal-content { background: var(--bg-base); padding: 35px; border-radius: 24px; max-width: 90%; width: 400px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color); }
@@ -1968,7 +1967,7 @@ STOREFRONT_HTML = """
         if(badge) { badge.style.display = 'flex'; badge.innerText = notifMessages.length; }
     }
 
-    const STORE_CLOSE_TIME = {{ close_time | tojson }};
+    const STORE_CLOSE_TIME = "{{ close_time }}";
 
     function escapeHTML(str) { let div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
 
@@ -2692,7 +2691,7 @@ ADMIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>9599 Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 /* ══ LOGO-BASED PALETTE ══════════════════════════════════════════
@@ -4010,7 +4009,7 @@ def storefront():
         return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
@@ -4370,10 +4369,6 @@ def reserve_blend():
         for i in data['items']:
             new_inf = Infusion(reservation_id=new_res.id, foundation=i['foundation'], sweetener=i.get('sweetener','Standard'), ice_level=i.get('ice','Normal'), pearls=i.get('pearls','Take-Out'), cup_size=i.get('size','16 oz'), addons=i.get('addons',''), item_total=i['price'])
             db.session.add(new_inf)
-        # Log customer info separately
-        items_summary = ', '.join(i['foundation'] for i in data.get('items', []))
-        clog = CustomerLog(full_name=data['name'], gmail=data.get('email',''), phone=data.get('phone',''), order_source='Online', order_total=data['total'], items=items_summary, pickup_time=data.get('pickup_time',''))
-        db.session.add(clog)
         db.session.commit()
         return jsonify({"status": "success", "reservation_code": new_res.reservation_code}), 201
     except Exception as e:
@@ -4506,7 +4501,25 @@ def customer_order_status():
 def update_order_status(order_id):
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     order = Reservation.query.get_or_404(order_id)
-    order.status = request.json.get('status', 'Completed')
+    new_status = request.json.get('status', 'Completed')
+    prev_status = order.status
+    order.status = new_status
+    # Write customer record only once, when order is first marked Completed
+    if new_status == 'Completed' and prev_status != 'Completed':
+        try:
+            items_summary = ', '.join(i.foundation for i in order.infusions)
+            clog = CustomerLog(
+                full_name=order.patron_name,
+                gmail=order.patron_email,
+                phone='',
+                order_source=order.order_source,
+                order_total=order.total_investment,
+                items=items_summary,
+                pickup_time=order.pickup_time
+            )
+            db.session.add(clog)
+        except Exception:
+            pass  # Never block status update due to log failure
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -4514,7 +4527,7 @@ def update_order_status(order_id):
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
-    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source or 'Online', 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time or 'Walk-In', 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level} for i in r.infusions]} for r in res]})
+    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level} for i in r.infusions]} for r in res]})
 
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
@@ -4528,10 +4541,6 @@ def admin_manual_order():
         for i in data['items']:
             inf = Infusion(reservation_id=res.id, foundation=i['foundation'], cup_size=i.get('size','16 oz'), sweetener=i.get('sugar','N/A'), ice_level=i.get('ice','N/A'), pearls='Walk-In', addons=i.get('addons',''), item_total=i['price'])
             db.session.add(inf)
-        # Log customer info
-        items_summary = ', '.join(i['foundation'] for i in data.get('items', []))
-        clog = CustomerLog(full_name=customer_name, gmail='Walk-In', phone='Walk-In', order_source='Manual/Walk-In', order_total=data['total'], items=items_summary, pickup_time='Walk-In')
-        db.session.add(clog)
         db.session.commit()
         return jsonify({"status": "success", "reservation_code": res.reservation_code})
     except Exception as e:
