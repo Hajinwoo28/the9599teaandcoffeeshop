@@ -557,26 +557,30 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .filter-tab.active{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);}
 
 .pos-layout{display:flex;height:calc(100vh - var(--topbar-h) - var(--nav-h));overflow:hidden;}
-.pos-menu-area{flex:1;overflow-y:auto;padding:12px;background:var(--bg);}
-.pos-sidebar{width:300px;flex-shrink:0;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-@media(max-width:680px){.pos-layout{flex-direction:column;height:auto;overflow:visible;}.pos-menu-area{overflow-y:auto;max-height:40vh;padding-bottom:10px;}.pos-sidebar{width:100%;flex-shrink:0;border-left:none;border-top:2px solid var(--border);}}
+.pos-menu-area{flex:1;overflow-y:auto;padding:10px;background:var(--bg);}
+.pos-sidebar{width:260px;flex-shrink:0;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+@media(max-width:680px){
+  .pos-layout{flex-direction:column;height:calc(100vh - var(--topbar-h) - var(--nav-h));overflow:hidden;}
+  .pos-menu-area{flex:0 0 48%;overflow-y:auto;padding:8px;min-height:0;}
+  .pos-sidebar{flex:0 0 52%;width:100%;border-left:none;border-top:2px solid var(--border);min-height:0;}
+}
 
 .pos-cat-tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;margin-bottom:4px;}
 .pos-cat-tabs::-webkit-scrollbar{display:none;}
 .cat-tab{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);font-size:0.73rem;font-weight:800;color:var(--muted);cursor:pointer;transition:all 0.15s;}
 .cat-tab.active{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);}
 
-.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px;}
-.menu-card{position:relative;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:0 0 10px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 2px 8px rgba(13,122,106,0.06);overflow:hidden;}
-.menu-bs-tag{position:absolute;top:6px;left:6px;right:auto;z-index:2;background:rgba(200,168,75,0.95);color:#0A2925;font-size:0.58rem;font-weight:900;padding:3px 8px;border-radius:10px;letter-spacing:0.3px;}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
+.menu-card{position:relative;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:0 0 8px;cursor:pointer;transition:all 0.15s;text-align:center;box-shadow:0 2px 8px rgba(13,122,106,0.06);overflow:hidden;}
+.menu-bs-tag{position:absolute;top:5px;left:5px;right:auto;z-index:2;background:rgba(200,168,75,0.95);color:#0A2925;font-size:0.55rem;font-weight:900;padding:2px 7px;border-radius:10px;letter-spacing:0.3px;}
 .menu-card:active{transform:scale(0.97);opacity:0.85;}
 .menu-card.oos{opacity:0.45;cursor:not-allowed;}
-.menu-preview{width:100%;height:90px;object-fit:cover;display:block;border-radius:10px 10px 0 0;background:var(--teal-light);}
-.menu-letter{width:100%;height:90px;border-radius:10px 10px 0 0;background:var(--teal-light);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--teal-dark);}
-.menu-card-body{padding:8px 8px 0;}
-.menu-name{font-size:0.73rem;font-weight:800;color:var(--text);line-height:1.25;margin-bottom:4px;}
-.menu-price{font-size:0.78rem;font-weight:900;color:var(--teal-mid);}
-.menu-oos-tag{background:rgba(211,47,47,0.1);color:var(--red);font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:10px;margin-top:4px;display:inline-block;}
+.menu-preview{width:100%;height:72px;object-fit:cover;display:block;border-radius:10px 10px 0 0;background:var(--teal-light);}
+.menu-letter{width:100%;height:72px;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
+.menu-card-body{padding:6px 6px 0;}
+.menu-name{font-size:0.7rem;font-weight:800;color:var(--text);line-height:1.2;margin-bottom:3px;}
+.menu-price{font-size:0.75rem;font-weight:900;color:var(--teal-mid);}
+.menu-oos-tag{background:rgba(211,47,47,0.1);color:var(--red);font-size:0.58rem;font-weight:800;padding:2px 6px;border-radius:10px;margin-top:3px;display:inline-block;}
 
 .cart-header{padding:12px 14px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .cart-title{font-size:0.85rem;font-weight:900;color:var(--teal-dark);display:flex;align-items:center;gap:6px;}
@@ -594,13 +598,13 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .cart-empty{text-align:center;padding:30px 14px;color:var(--muted);font-size:0.8rem;font-weight:600;}
 .cart-empty i{font-size:2rem;display:block;margin-bottom:8px;opacity:0.3;}
 
-.cart-footer{padding:12px 14px;border-top:1.5px solid var(--border);flex-shrink:0;}
-.cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
-.cart-total-lbl{font-size:0.75rem;font-weight:800;color:var(--muted);text-transform:uppercase;}
-.cart-total-amt{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--teal-dark);}
-.name-inp{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:700;outline:none;color:var(--text);margin-bottom:8px;background:#fff;}
+.cart-footer{padding:10px 12px;border-top:1.5px solid var(--border);flex-shrink:0;}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cart-total-lbl{font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;}
+.cart-total-amt{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--teal-dark);}
+.name-inp{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;outline:none;color:var(--text);margin-bottom:7px;background:#fff;}
 .name-inp:focus{border-color:var(--teal);}
-.btn-checkout{width:100%;padding:13px;border-radius:12px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-size:0.92rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;transition:opacity 0.15s;}
+.btn-checkout{width:100%;padding:11px;border-radius:12px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;transition:opacity 0.15s;}
 .btn-checkout:active{opacity:0.85;}
 .btn-checkout:disabled{opacity:0.5;cursor:not-allowed;}
 
@@ -675,6 +679,23 @@ function playEmpBeep(){
     });
   }catch(e){}
   return Promise.resolve();
+}
+// Distinct sound for incoming permission requests (ding-dong double-bell pattern)
+function playEmpPermBeep(){
+  var ctx=_getEmpAudioCtx();if(!ctx)return;
+  try{
+    if(ctx.state==='suspended')ctx.resume();
+    [[0,330,0.18,'sine',0.35],[0.22,440,0.28,'sine',0.3],[0.6,330,0.18,'sine',0.35],[0.82,440,0.28,'sine',0.3]].forEach(function(t){
+      var osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.type=t[3];osc.frequency.value=t[1];
+      var s=ctx.currentTime+t[0];
+      gain.gain.setValueAtTime(0,s);
+      gain.gain.linearRampToValueAtTime(t[4],s+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);
+      osc.start(s);osc.stop(s+t[2]);
+    });
+  }catch(e){}
 }
 </script>
 
@@ -985,7 +1006,7 @@ async function fetchPermReqs(){
     const data=await r.json();
     if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';return;}
     // Sound alert for new codes
-    data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpBeep();knownPermCodes.add(p.code);}});
+    data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpPermBeep();knownPermCodes.add(p.code);}});
     const badge=document.getElementById('nav-badge');
     const permCount=data.length;
     const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
@@ -1043,26 +1064,65 @@ function selectCat(cat,btn){
   renderMenuGrid(cat);
 }
 
-const CATEGORY_PREVIEW_KEYWORDS={
-  'Milktea':'milk+tea+boba',
-  'Coffee':'iced+coffee+drink',
-  'Milk Series':'strawberry+milk+drink',
-  'Matcha Series':'matcha+latte+drink',
-  'Fruit Soda':'fruit+soda+drink',
-  'Frappe':'frappe+blended+drink',
-  'Snacks':'snack+food+fries',
+const CATEGORY_EMOJI_MAP={
+  'Milktea':       {em:'🧋', bg:'#EDE7F6'},
+  'Coffee':        {em:'☕', bg:'#EFEBE9'},
+  'Milk Series':   {em:'🥛', bg:'#E3F2FD'},
+  'Matcha Series': {em:'🍵', bg:'#E8F5E9'},
+  'Fruit Soda':    {em:'🍹', bg:'#FCE4EC'},
+  'Frappe':        {em:'🥤', bg:'#E0F7FA'},
+  'Snacks':        {em:'🍟', bg:'#FFF8E1'},
 };
-const POS_EMOJI_MAP={
-  'Taro Milktea':{badge:'bestseller'},'Okinawa Milktea':{badge:'bestseller'},'Biscoff Milktea':{badge:'bestseller'},'Caramel Macchiato':{badge:'bestseller'}
+const ITEM_EMOJI_OVERRIDE={
+  'Taro Milktea':'🧋','Okinawa Milktea':'🧋','Wintermelon Milktea':'🧋',
+  'Cookies and Cream Milktea':'🍪','Matcha Milktea':'🍵','Dark Belgian Choco':'🍫',
+  'Biscoff Milktea':'☕','Mocha':'☕','Caramel Macchiato':'🍮',
+  'Iced Americano':'🧊','Cappuccino':'☕','Coffee Jelly Drink':'☕',
+  'French Vanilla':'🍦','Hazelnut':'🌰','Ube Milk':'💜',
+  'Mango Milk':'🥭','Strawberry Milk':'🍓','Blueberry Milk':'🫐',
+  'Matcha Latte':'🍵','Matcha Caramel':'🍵','Matcha Strawberry':'🍵','Matcha Frappe':'🍵',
+  'Lychee Mogu Soda':'🍹','Apple Soda':'🍏','Strawberry Soda':'🍓','Blueberry Soda':'🫐',
+  'Cookies and Cream Frappe':'🍪','Mocha Frappe':'☕','Coffee Frappe':'☕',
+  'Strawberry Frappe':'🍓','Mango Frappe':'🥭',
+  'French Fries':'🍟','Hash Brown':'🟫','Onion Rings':'🧅','Potato Mojos':'🥔',
 };
-function posCardStyle(item){
-  if(POS_EMOJI_MAP[item.name]) return POS_EMOJI_MAP[item.name];
-  return {badge:'none'};
-}
-function getPreviewUrl(item){
-  const slug=encodeURIComponent(item.name.toLowerCase().replace(/\s+/g,'+'));
-  const fallbackKw=CATEGORY_PREVIEW_KEYWORDS[item.category]||'bubble+tea+drink';
-  return 'https://source.unsplash.com/160x90/?'+slug+','+fallbackKw;
+const POS_IMAGE_MAP={
+  'Lychee Mogu Soda':'/static/images/lychee_mogu_soda.jpg',
+  'Strawberry Soda':'/static/images/strawberry_soda.jpg',
+  'Blueberry Soda':'/static/images/blueberry_soda.jpg',
+  'Apple Soda':'/static/images/green_apple_soda.jpg',
+  'Matcha Caramel':'/static/images/matcha_caramel.jpg',
+  'Matcha Frappe':'/static/images/matcha_frappe.jpg',
+  'Matcha Latte':'/static/images/matcha_latte.jpg',
+  'Matcha Strawberry':'/static/images/matcha_strawberry.jpg',
+  'French Fries':'/static/images/french_fries.jpg',
+  'Hash Brown':'/static/images/hash_brown.jpg',
+  'Onion Rings':'/static/images/onion_rings.jpg',
+  'Potato Mojos':'/static/images/potato_mojos.jpg',
+  'Blueberry Milk':'/static/images/blueberry_milk.jpg',
+  'Mango Milk':'/static/images/mango_milk.jpg',
+  'Strawberry Milk':'/static/images/strawberry_milk.jpg',
+  'Ube Milk':'/static/images/ube_milk.jpg',
+  'Hazelnut':'/static/images/hazelnut_milk.jpg',
+  'Dark Belgian Choco':'/static/images/dark_belgian_choco_milktea.jpg',
+  'Mango Frappe':'/static/images/mango_frappe.jpg',
+  'Coffee Frappe':'/static/images/coffee_frappe.jpg',
+  'Cookies and Cream Frappe':'/static/images/cookies_and_cream_frappe.jpg',
+  'Mocha Frappe':'/static/images/mocha_frappe.jpg',
+  'Strawberry Frappe':'/static/images/strawberry_frappe.jpg',
+};
+const POS_BESTSELLERS=new Set(['Taro Milktea','Okinawa Milktea','Biscoff Milktea','Caramel Macchiato']);
+function posCardStyle(item){return {badge: POS_BESTSELLERS.has(item.name)?'bestseller':'none'};}
+function getPosImageTag(item){
+  if(POS_IMAGE_MAP[item.name]){
+    const cat=CATEGORY_EMOJI_MAP[item.category]||{em:'🧋',bg:'#E6F4F2'};
+    const em=ITEM_EMOJI_OVERRIDE[item.name]||cat.em;
+    return `<img class="menu-preview" src="${POS_IMAGE_MAP[item.name]}" alt="${escapeHTML(item.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` +
+           `<div class="menu-letter" style="display:none;background:${cat.bg};">${em}</div>`;
+  }
+  const cat=CATEGORY_EMOJI_MAP[item.category]||{em:'🧋',bg:'#E6F4F2'};
+  const em=ITEM_EMOJI_OVERRIDE[item.name]||cat.em;
+  return `<div class="menu-letter" style="background:${cat.bg};">${em}</div>`;
 }
 
 function renderMenuGrid(cat){
@@ -1073,15 +1133,13 @@ function renderMenuGrid(cat){
   else items=menuItems.filter(m=>m.category===cat);
   if(!items.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);">No items</div>';return;}
   grid.innerHTML=items.map(function(m){
-    const imgUrl=getPreviewUrl(m);
-    const bs=posCardStyle(m).badge==='bestseller'?'<div class="menu-bs-tag">\u2B50 Best Seller</div>':'';
+    const imgContent=getPosImageTag(m);
+    const bs=posCardStyle(m).badge==='bestseller'?'<div class="menu-bs-tag">\u2B50 Best</div>':'';
     const oosClass=m.is_out_of_stock?' oos':'';
     const clickHandler=m.is_out_of_stock?'':'openCustomize('+m.id+')';
     const oosTag=m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'';
-    const imgTag='<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="onImgErr(this)">';
-    const letterTag='<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>';
     return '<div class="menu-card'+oosClass+'" onclick="'+clickHandler+'">'+
-      imgTag+letterTag+bs+
+      imgContent+bs+
       '<div class="menu-card-body">'+
         '<div class="menu-name">'+escapeHTML(m.name)+'</div>'+
         '<div class="menu-price">\u20B1'+Number(m.price).toFixed(0)+'</div>'+
@@ -1486,20 +1544,38 @@ document.addEventListener('click', function _sfUnlock() {
     document.removeEventListener('click', _sfUnlock);
 }, { once: true });
 
-// Status-change sound: soft two-tone ascending ding (order is Preparing / Ready)
-function playStatusSound() {
+// Per-status sounds for customer order tracking
+function _sfTones(notes) {
     var ctx = _getSfAudioCtx(); if (!ctx) return;
     if (ctx.state === 'suspended') ctx.resume();
-    [[0, 880, 0.18], [0.22, 1109, 0.28]].forEach(function(t) {
+    notes.forEach(function(t) {
         var osc = ctx.createOscillator(), gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'sine'; osc.frequency.value = t[1];
+        osc.type = t[3] || 'sine'; osc.frequency.value = t[1];
         var s = ctx.currentTime + t[0];
         gain.gain.setValueAtTime(0, s);
-        gain.gain.linearRampToValueAtTime(0.35, s + 0.02);
+        gain.gain.linearRampToValueAtTime(t[4] || 0.32, s + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, s + t[2]);
         osc.start(s); osc.stop(s + t[2]);
     });
+}
+function playStatusSound(status) {
+    if (status === 'Preparing' || status === 'Preparing Order') {
+        // Two quick ascending pulses — "we are on it!"
+        _sfTones([[0, 440, 0.18], [0.22, 554, 0.22]]);
+    } else if (status === 'Ready for Pickup' || status === 'Ready for Pick-up') {
+        // Triumphant C-E-G fanfare — "come get it!"
+        _sfTones([[0, 523, 0.22], [0.24, 659, 0.22], [0.48, 784, 0.38]]);
+    } else if (status === 'Completed') {
+        // Gentle descending wrap-up chime
+        _sfTones([[0, 784, 0.2], [0.22, 659, 0.2], [0.44, 523, 0.32]]);
+    } else if (status === 'Cancelled') {
+        // Two low descending tones — somber
+        _sfTones([[0, 330, 0.22, 'triangle', 0.3], [0.28, 247, 0.3, 'triangle', 0.25]]);
+    } else {
+        // Default single ding for any other status
+        _sfTones([[0, 660, 0.25]]);
+    }
 }
 // Permission-required alert: three short urgent pulses
 function playAlertSound() {
@@ -2720,7 +2796,7 @@ function playGrantedSound() {
                     const msg = `Order #${srv.code} is now: ${srv.status}`;
                     showToast(msg, "success");
                     addNotifMessage(msg);
-                    playStatusSound();
+                    playStatusSound(srv.status);
                 }
             });
             if(updated) localStorage.setItem('myOrders', JSON.stringify(orders));
@@ -3438,6 +3514,8 @@ function getStatusClass(s){return({'Waiting Confirmation':'status-waiting','Prep
 /* ══ NOTIFICATIONS ══ */
 let adminNotifs=[],lastOrderIds=new Set(),firstLoad=true;
 function playBeep(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[0,880,0.3],[0.35,660,0.25],[0.65,780,0.35]].forEach(function(t){var osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';osc.frequency.value=t[1];var s=ctx.currentTime+t[0];gain.gain.setValueAtTime(0,s);gain.gain.linearRampToValueAtTime(0.4,s+0.02);gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);osc.start(s);osc.stop(s+t[2]);});}catch(e){}}
+// Distinct ding-dong double-bell for incoming permission requests
+function playPermBeep(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[0,330,0.18,'sine',0.35],[0.22,440,0.28,'sine',0.3],[0.6,330,0.18,'sine',0.35],[0.82,440,0.28,'sine',0.3]].forEach(function(t){var osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type=t[3];osc.frequency.value=t[1];var s=ctx.currentTime+t[0];gain.gain.setValueAtTime(0,s);gain.gain.linearRampToValueAtTime(t[4],s+0.02);gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);osc.start(s);osc.stop(s+t[2]);});}catch(e){}}
 function toggleNotif(){const p=document.getElementById('notif-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
 function clearNotifs(){adminNotifs=[];renderNotifUI();document.getElementById('notif-panel').style.display='none';}
 function addNotif(code,name,total){adminNotifs.unshift({code,name,total,time:new Date().toLocaleTimeString()});if(adminNotifs.length>20)adminNotifs.pop();renderNotifUI();playBeep();showToast(`New order from ${name} (${code})!`,'success');}
@@ -3487,7 +3565,7 @@ async function fetchPermReqs(){
     const data=await res.json();
     if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--muted);font-size:0.81rem;">No pending requests</td></tr>';}
     else{tbody.innerHTML=data.map(p=>`<tr><td style="font-size:0.75rem;">${escapeHTML(p.time)}</td><td><b style="color:var(--brown-dark);">${escapeHTML(p.code)}</b></td><td><b>${escapeHTML(p.name)}</b><br><span style="font-size:0.7rem;color:var(--muted);">${escapeHTML(p.address||'')}</span></td><td style="font-size:0.8rem;">${escapeHTML(p.message||'')}</td><td><button class="btn-primary" style="padding:5px 11px;margin-bottom:0;width:auto;" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')">✅ Grant</button></td></tr>`).join('');}
-    if(!firstPermLoad){data.forEach(p=>{if(!knownPermCodes.has(p.code)){playBeep();showToast(`🔔 Permission request from ${p.name}`,'error');}});}
+    if(!firstPermLoad){data.forEach(p=>{if(!knownPermCodes.has(p.code)){playPermBeep();showToast(`🔔 Permission request from ${p.name}`,'error');}});}
     data.forEach(p=>knownPermCodes.add(p.code));firstPermLoad=false;
   }catch(e){}
 }
