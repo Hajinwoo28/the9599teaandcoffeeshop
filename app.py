@@ -1131,19 +1131,19 @@ function updateBell(){
   // Rebuild panel list
   const list=document.getElementById('notif-list');
   if(!list) return;
-  if(!items.length){list.innerHTML='<div class="notif-empty"><i class="fas fa-check-circle" style="color:#27ae60;font-size:1.4rem;display:block;margin-bottom:6px;"></i>All caught up!</div>';return;}
+  if(!items.length){list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon"><i class="fas fa-check-circle" style="color:var(--teal-mid);"></i></div><div class="notif-empty-text">All caught up!</div><div class="notif-empty-sub">No new notifications right now</div></div>';return;}
 
   // Group by type
   const sections=[
-    {key:'order',label:'📦 Orders'},
-    {key:'perm', label:'🔑 Permission Requests'},
-    {key:'stock',label:'⚠️ Stock Alerts'},
+    {key:'order',label:'📦 Orders',cls:'order-lbl'},
+    {key:'perm', label:'🔑 Permission Requests',cls:'perm-lbl'},
+    {key:'stock',label:'⚠️ Stock Alerts',cls:'stock-lbl'},
   ];
   let html='';
   sections.forEach(sec=>{
     const group=items.filter(i=>i.type===sec.key);
     if(!group.length) return;
-    html+=`<div class="notif-section-label">${sec.label}</div>`;
+    html+=`<div class="notif-section-label ${sec.cls}">${sec.label}</div>`;
     group.forEach(n=>{
       html+=`<div class="notif-item">
         <div class="notif-icon ${n.cls}"><i class="fas ${n.icon}"></i></div>
@@ -3338,29 +3338,41 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ── Notification Bell ── */
 .bell-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.85);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:background 0.15s;flex-shrink:0;}
 .bell-btn:hover{background:rgba(255,255,255,0.18);}
-.bell-count{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:50%;min-width:17px;height:17px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);line-height:1;}
+.bell-count{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:50%;min-width:17px;height:17px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);line-height:1;animation:pulse 1.5s infinite;}
 .bell-count.show{display:flex;}
-.notif-panel{position:fixed;top:68px;right:10px;width:320px;max-width:calc(100vw - 20px);background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.22);z-index:9000;overflow:hidden;display:none;animation:notifDrop 0.18s ease;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(211,47,47,0.5);}50%{box-shadow:0 0 0 5px rgba(211,47,47,0);}}
+.notif-panel{position:fixed;top:68px;right:10px;width:350px;max-width:calc(100vw - 20px);background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.18),0 4px 16px rgba(13,122,106,0.1);z-index:9000;overflow:hidden;display:none;animation:notifDrop 0.2s cubic-bezier(0.34,1.56,0.64,1);border:1px solid rgba(13,122,106,0.12);}
 .notif-panel.open{display:block;}
-@keyframes notifDrop{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-.notif-header{background:var(--teal-dark);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;}
-.notif-header-title{font-weight:900;font-size:0.9rem;display:flex;align-items:center;gap:8px;}
-.notif-clear{background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.8);font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:20px;cursor:pointer;font-family:'Nunito',sans-serif;}
-.notif-clear:hover{background:rgba(255,255,255,0.22);}
-.notif-list{max-height:360px;overflow-y:auto;}
-.notif-item{padding:11px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:11px;cursor:default;}
+@keyframes notifDrop{from{opacity:0;transform:translateY(-12px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.notif-header{background:linear-gradient(135deg,var(--teal-dark) 0%,var(--teal-mid) 100%);color:#fff;padding:15px 16px 14px;display:flex;align-items:center;justify-content:space-between;}
+.notif-header-title{font-weight:900;font-size:0.95rem;display:flex;align-items:center;gap:9px;letter-spacing:0.2px;}
+.notif-header-title i{background:rgba(255,255,255,0.15);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;}
+.notif-clear{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:0.68rem;font-weight:800;padding:5px 12px;border-radius:20px;cursor:pointer;font-family:'Nunito',sans-serif;letter-spacing:0.3px;transition:background 0.15s;}
+.notif-clear:hover{background:rgba(255,255,255,0.28);}
+.notif-list{max-height:400px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.notif-list::-webkit-scrollbar{width:4px;}
+.notif-list::-webkit-scrollbar-track{background:transparent;}
+.notif-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.notif-item{padding:12px 16px;border-bottom:1px solid #f0f4f3;display:flex;align-items:flex-start;gap:12px;cursor:default;transition:background 0.12s;}
 .notif-item:last-child{border-bottom:none;}
-.notif-item:hover{background:#f9fafb;}
-.notif-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;margin-top:1px;}
-.notif-icon.order{background:rgba(21,101,192,0.1);color:#1565C0;}
-.notif-icon.perm{background:rgba(230,81,0,0.1);color:var(--orange);}
-.notif-icon.stock-critical{background:rgba(211,47,47,0.1);color:var(--red);}
-.notif-icon.stock-low{background:rgba(230,81,0,0.08);color:var(--orange);}
+.notif-item:hover{background:#f4faf9;}
+.notif-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;margin-top:1px;}
+.notif-icon.order{background:linear-gradient(135deg,rgba(21,101,192,0.12),rgba(21,101,192,0.06));color:#1565C0;border:1px solid rgba(21,101,192,0.15);}
+.notif-icon.perm{background:linear-gradient(135deg,rgba(230,81,0,0.12),rgba(230,81,0,0.06));color:var(--orange);border:1px solid rgba(230,81,0,0.15);}
+.notif-icon.stock-critical{background:linear-gradient(135deg,rgba(211,47,47,0.12),rgba(211,47,47,0.06));color:var(--red);border:1px solid rgba(211,47,47,0.15);}
+.notif-icon.stock-low{background:linear-gradient(135deg,rgba(230,81,0,0.1),rgba(230,81,0,0.04));color:var(--orange);border:1px solid rgba(230,81,0,0.12);}
 .notif-body{flex:1;min-width:0;}
-.notif-title{font-size:0.82rem;font-weight:800;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.notif-sub{font-size:0.72rem;color:#888;font-weight:600;margin-top:2px;}
-.notif-empty{padding:28px 16px;text-align:center;color:#aaa;font-size:0.83rem;font-weight:700;}
-.notif-section-label{padding:7px 16px 4px;font-size:0.62rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#aaa;background:#fafafa;border-bottom:1px solid #f0f0f0;}
+.notif-title{font-size:0.83rem;font-weight:800;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.notif-sub{font-size:0.73rem;color:#6b7280;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.notif-empty{padding:36px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.notif-empty-icon{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,rgba(13,122,106,0.08),rgba(13,122,106,0.03));border:1.5px solid rgba(13,122,106,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+.notif-empty-text{font-size:0.84rem;font-weight:800;color:#374151;}
+.notif-empty-sub{font-size:0.72rem;font-weight:600;color:#9ca3af;margin-top:-4px;}
+.notif-section-label{padding:8px 16px 6px;font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#9ca3af;background:#f9fbfa;border-bottom:1px solid #edf2f1;display:flex;align-items:center;gap:6px;}
+.notif-section-label::before{content:'';width:3px;height:12px;border-radius:2px;display:inline-block;}
+.notif-section-label.order-lbl::before{background:#1565C0;}
+.notif-section-label.perm-lbl::before{background:var(--orange);}
+.notif-section-label.stock-lbl::before{background:var(--red);}
 
 #s-inventory .page-header{position:relative;top:auto;}
 #s-inventory .kds-table th{position:relative;top:auto;}
@@ -5093,12 +5105,14 @@ def reserve_blend():
 
 @app.route('/api/permission_request', methods=['POST'])
 def permission_request():
-    data = request.json
-    code = data.get('code', '')
-    name = data.get('name', 'Unknown')
-    address = data.get('address', '')
-    message = data.get('message', '')
     try:
+        data = request.get_json(force=True, silent=True) or {}
+        code = data.get('code', '').strip()
+        name = (data.get('name') or 'Unknown').strip()
+        address = data.get('address', '').strip()
+        message = data.get('message', '').strip()
+        if not code:
+            return jsonify({"status": "error", "message": "Missing request code"}), 400
         existing = PermissionRequest.query.filter_by(request_code=code).first()
         if not existing:
             pr = PermissionRequest(request_code=code, customer_name=name, address=address, message=message, granted=False)
