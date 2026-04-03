@@ -5556,6 +5556,37 @@ with app.app_context():
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err5}")
 
+        # Migrate: add address, message, employee_reply columns to permission_requests
+        # These columns were added to the model but had no migration — causing INSERT failures
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            for col_name, col_def in [
+                ("address",        "VARCHAR(255) NOT NULL DEFAULT ''"),
+                ("message",        "VARCHAR(500) NOT NULL DEFAULT ''"),
+                ("employee_reply", "VARCHAR(500) DEFAULT ''"),
+            ]:
+                col_exists = False
+                if is_postgres:
+                    result = db.session.execute(db.text(
+                        f"SELECT COUNT(*) FROM information_schema.columns "
+                        f"WHERE table_name='permission_requests' AND column_name='{col_name}'"
+                    )).scalar()
+                    col_exists = (result > 0)
+                else:
+                    cols = db.session.execute(db.text("PRAGMA table_info(permission_requests)")).fetchall()
+                    col_exists = any(row[1] == col_name for row in cols)
+                if not col_exists:
+                    db.session.execute(db.text(
+                        f"ALTER TABLE permission_requests ADD COLUMN {col_name} {col_def}"
+                    ))
+                    db.session.commit()
+                    print(f"Migration: added '{col_name}' column to permission_requests")
+                else:
+                    print(f"Migration: permission_requests.{col_name} already exists, skipped")
+        except Exception as migration_err6:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_err6}")
+
         # ── 0. Seed store schedule (only if not already in DB) ──────────────
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
             existing_sched = StoreScheduleEntry.query.filter_by(day_of_week=dow).first()
