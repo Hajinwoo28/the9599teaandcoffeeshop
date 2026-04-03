@@ -288,6 +288,7 @@ class PermissionRequest(db.Model):
     address = db.Column(db.String(255), nullable=False, default='')
     message = db.Column(db.String(500), nullable=False, default='')
     granted = db.Column(db.Boolean, nullable=False, default=False)
+    employee_reply = db.Column(db.String(500), nullable=True, default='')
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
 class SystemState(db.Model):
@@ -453,40 +454,79 @@ LOCKED_HTML = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-<title>Access Locked | 9599 Tea &amp; Coffee</title>
+<title>Session Active | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;}
-body{
-  background:{% if role=='Admin' %}linear-gradient(160deg,#3D2410 0%,#7B4F2E 60%,#A0724A 100%){% else %}linear-gradient(160deg,#094F44 0%,#0D7A6A 60%,#12937E 100%){% endif %};
-  display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;
-}
-.wrap{width:100%;max-width:420px;text-align:center;}
-.icon-ring{
-  width:90px;height:90px;border-radius:50%;margin:0 auto 22px;
-  display:flex;align-items:center;justify-content:center;font-size:2.4rem;
-  background:rgba(255,255,255,0.08);border:3px solid rgba(255,255,255,0.2);
-}
-h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:900;color:#fff;margin-bottom:10px;}
-p{font-size:0.92rem;color:rgba(255,255,255,0.75);line-height:1.6;margin-bottom:24px;}
-.badge{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);
-  color:rgba(255,255,255,0.9);font-size:0.78rem;font-weight:800;
-  padding:8px 18px;border-radius:30px;letter-spacing:0.5px;
-}
+{% if role=='Admin' %}
+:root{--accent:#7B4F2E;--accent-dark:#3D2410;--accent-mid:#A0724A;--accent-light:#F0EDE4;--accent-border:#E2DAC8;--btn-grad:linear-gradient(135deg,#7B4F2E 0%,#3D2410 100%);--pill-bg:#3D2410;--pill-color:#C4A882;--inp-focus:#7B4F2E;--inp-color:#3D2410;}
+{% else %}
+:root{--accent:#0D7A6A;--accent-dark:#094F44;--accent-mid:#12937E;--accent-light:#F0F5F4;--accent-border:#D0E4E0;--btn-grad:linear-gradient(135deg,#0D7A6A 0%,#094F44 100%);--pill-bg:#094F44;--pill-color:#C8A84B;--inp-focus:#0D7A6A;--inp-color:#0A2925;}
+{% endif %}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent;}
+body{background:linear-gradient(160deg,var(--accent-dark) 0%,var(--accent) 60%,var(--accent-mid) 100%);display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
+.wrap{width:100%;max-width:390px;}
+.logo-area{text-align:center;margin-bottom:22px;}
+.logo-img-wrap{width:68px;height:68px;border-radius:50%;background:var(--accent-light);border:3px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.25);}
+.logo-img-wrap img{width:100%;height:100%;object-fit:cover;}
+.logo-area h1{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:#fff;letter-spacing:0.3px;}
+.logo-area p{font-size:0.68rem;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
+.card{background:var(--accent-light);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);padding:28px 24px;}
+.alert-row{display:flex;align-items:flex-start;gap:12px;background:rgba(200,80,60,0.09);border:1.5px solid rgba(200,80,60,0.25);border-radius:12px;padding:13px 14px;margin-bottom:20px;}
+.alert-icon{font-size:1.3rem;flex-shrink:0;margin-top:1px;}
+.alert-text{font-size:0.82rem;font-weight:700;color:#7B2A1A;line-height:1.5;}
+.alert-text b{display:block;font-size:0.88rem;margin-bottom:2px;color:#5C1A0E;}
+.divider{display:flex;align-items:center;gap:10px;margin:18px 0;}
+.divider hr{flex:1;border:none;border-top:1.5px solid var(--accent-border);}
+.divider span{font-size:0.68rem;font-weight:800;color:#9E8E80;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--pill-bg);color:var(--pill-color);font-size:0.64rem;font-weight:800;padding:4px 11px;border-radius:20px;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;}
+.section-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--inp-color);margin-bottom:3px;}
+.section-sub{font-size:0.78rem;color:#8D7060;font-weight:600;margin-bottom:18px;}
+.lbl{font-size:0.66rem;font-weight:800;color:#8D7060;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:block;}
+.inp{width:100%;padding:12px;border:2px solid var(--accent-border);border-radius:12px;font-size:1.5rem;text-align:center;letter-spacing:10px;margin-bottom:14px;outline:none;font-weight:900;color:var(--inp-color);background:#fff;font-family:'Nunito',sans-serif;transition:border-color 0.2s;}
+.inp:focus{border-color:var(--inp-focus);}
+.btn{width:100%;background:var(--btn-grad);color:#fff;border:none;padding:12px;border-radius:12px;font-weight:800;font-size:0.92rem;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:9px;font-family:'Nunito',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,0.25);transition:opacity 0.2s;}
+.btn:hover{opacity:0.9;}
+.err{background:#FFF0F0;color:#C0392B;padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:700;margin-bottom:14px;border:1.5px solid #F5C6C6;display:flex;align-items:center;gap:8px;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="icon-ring">🔒</div>
-  <h1>{{ role }} Panel Locked</h1>
-  <p>
-    This panel is currently active on another device.<br>
-    Please log out from that device first, or wait for the session to expire.
-  </p>
-  <div class="badge"><i class="fas fa-shield-alt"></i> Single-Device Access Only</div>
+  <div class="logo-area">
+    <div class="logo-img-wrap">
+      <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+    </div>
+    <h1>9599 Tea &amp; Coffee</h1>
+    <p>Parne Na! — Management System</p>
+  </div>
+  <div class="card">
+
+    <div class="alert-row">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-text">
+        <b>{{ role }} panel is active on another device</b>
+        Another device is currently logged in to this panel. Enter the 5-digit PIN below to take over the session and access this device.
+      </div>
+    </div>
+
+    <div class="divider"><hr><span>Take over session</span><hr></div>
+
+    <div class="pill"><i class="fas fa-key"></i> PIN Required</div>
+    <div class="section-title">Enter Master PIN</div>
+    <p class="section-sub">Enter the correct PIN to sign in and end the other session.</p>
+
+    {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+
+    <form method="POST" action="{{ action_url }}">
+      <input type="hidden" name="force" value="1">
+      <label class="lbl">Master PIN (5 digits)</label>
+      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus
+             maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric"
+             autocomplete="one-time-code" title="Enter exactly 5 digits">
+      <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Take Over &amp; Sign In</button>
+    </form>
+
+  </div>
 </div>
 </body>
 </html>
@@ -705,6 +745,41 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .success-code{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--teal-dark);letter-spacing:2px;margin:8px 0;}
 .btn-done{width:100%;padding:13px;border-radius:12px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-weight:900;font-size:0.92rem;cursor:pointer;margin-top:14px;}
 .btn-done-print{width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--teal-dark);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;}
+/* ── Stock Alerts screen ── */
+.sa-header{padding:20px 16px 14px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:50;}
+.sa-header h2{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--text);}
+.sa-header p{font-size:0.77rem;color:var(--muted);font-weight:600;margin-top:3px;}
+.sa-body{padding:14px 14px 20px;}
+.sa-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);}
+.sa-card.critical{border-color:rgba(211,47,47,0.35);background:rgba(211,47,47,0.04);}
+.sa-card.low{border-color:rgba(230,81,0,0.35);background:rgba(230,81,0,0.04);}
+.sa-card.medium{border-color:rgba(21,101,192,0.25);background:rgba(21,101,192,0.04);}
+.sa-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+.sa-dot.critical{background:var(--red);}
+.sa-dot.low{background:var(--orange);}
+.sa-dot.medium{background:var(--blue);}
+.sa-info{flex:1;min-width:0;}
+.sa-name{font-weight:800;font-size:0.88rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sa-lvl{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;}
+.sa-lvl.critical{color:var(--red);}
+.sa-lvl.low{color:var(--orange);}
+.sa-lvl.medium{color:var(--blue);}
+.sa-qty{font-size:0.9rem;font-weight:900;color:var(--text);text-align:right;flex-shrink:0;}
+.sa-unit{font-size:0.68rem;font-weight:700;color:var(--muted);display:block;text-align:right;}
+.sa-all-good{background:rgba(46,125,50,0.07);border:1.5px solid rgba(46,125,50,0.25);border-radius:var(--radius);padding:18px;display:flex;align-items:center;gap:12px;font-weight:800;font-size:0.88rem;color:var(--green);}
+.sa-refresh-btn{display:flex;align-items:center;gap:6px;background:var(--teal-dark);color:#fff;border:none;padding:8px 16px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;margin-left:auto;}
+.nav-badge-stock{position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
+.grant-reply-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:flex-end;justify-content:center;z-index:9200;}
+.grant-reply-overlay.show{display:flex;}
+.grant-reply-sheet{background:#fff;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:22px 20px 32px;animation:slideUp 0.25s ease;}
+.grant-reply-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--teal-dark);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.grant-reply-sub{font-size:0.78rem;color:var(--muted);font-weight:600;margin-bottom:14px;line-height:1.5;}
+.grant-reply-textarea{width:100%;min-height:90px;padding:11px 13px;border:1.5px solid var(--border);border-radius:12px;font-family:'Nunito',sans-serif;font-size:0.85rem;font-weight:600;color:var(--text);resize:vertical;outline:none;margin-bottom:14px;}
+.grant-reply-textarea:focus{border-color:var(--teal);}
+.grant-reply-actions{display:flex;gap:8px;}
+.btn-grant-skip{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.84rem;cursor:pointer;}
+.btn-grant-send{flex:2;padding:12px;border-radius:12px;border:none;background:var(--green);color:#fff;font-family:'Nunito',sans-serif;font-weight:900;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity 0.15s;}
+.btn-grant-send:active{opacity:0.85;}
 </style>
 </head>
 <body>
@@ -761,9 +836,24 @@ function playEmpPermBeep(){
   </div>
   <div class="topbar-right">
     <div id="clock" class="clock-chip">00:00 AM</div>
+    <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()" title="Notifications">
+      <i class="fas fa-bell"></i>
+      <span class="bell-count" id="bell-count"></span>
+    </button>
     <a href="/employee/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
   </div>
 </header>
+
+<!-- NOTIFICATION PANEL -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-header">
+    <div class="notif-header-title"><i class="fas fa-bell"></i> Notifications</div>
+    <button class="notif-clear" onclick="clearNotifs()">Clear all</button>
+  </div>
+  <div class="notif-list" id="notif-list">
+    <div class="notif-empty">No new notifications</div>
+  </div>
+</div>
 
 <div class="screens">
 
@@ -881,6 +971,34 @@ function playEmpPermBeep(){
     </div>
   </div>
 
+  <!-- STOCK ALERTS SCREEN -->
+  <div id="s-stock" class="screen">
+    <div class="sa-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <h2><i class="fas fa-boxes" style="color:var(--teal);margin-right:6px;"></i>Stock Alerts</h2>
+          <p>Live from admin inventory — updates every 60 seconds</p>
+        </div>
+        <button class="sa-refresh-btn" onclick="fetchStockAlerts()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+    </div>
+    <div class="sa-body">
+      <!-- Summary chips -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="background:rgba(211,47,47,0.08);border:1.5px solid rgba(211,47,47,0.3);border-radius:20px;padding:5px 14px;font-size:0.74rem;font-weight:800;color:var(--red);display:flex;align-items:center;gap:5px;">
+          <span id="sa-count-critical">0</span> Out of Stock
+        </div>
+        <div style="background:rgba(230,81,0,0.08);border:1.5px solid rgba(230,81,0,0.3);border-radius:20px;padding:5px 14px;font-size:0.74rem;font-weight:800;color:var(--orange);display:flex;align-items:center;gap:5px;">
+          <span id="sa-count-low">0</span> Running Low
+        </div>
+        <div style="background:rgba(21,101,192,0.07);border:1.5px solid rgba(21,101,192,0.2);border-radius:20px;padding:5px 14px;font-size:0.74rem;font-weight:800;color:var(--blue);display:flex;align-items:center;gap:5px;">
+          <span id="sa-count-medium">0</span> Getting Low
+        </div>
+      </div>
+      <div id="sa-list"><div style="color:var(--muted);font-size:0.84rem;font-weight:600;padding:10px 0;"><i class="fas fa-spinner fa-spin"></i> Loading stock data…</div></div>
+    </div>
+  </div>
+
 </div>
 
 <nav class="bottom-nav">
@@ -891,6 +1009,13 @@ function playEmpPermBeep(){
   <button class="nav-btn" id="nav-pos" onclick="goScreen('pos')">
     <i class="fas fa-cash-register"></i>
     Walk-In POS
+  </button>
+  <button class="nav-btn" id="nav-stock" onclick="goScreen('stock')">
+    <div class="nav-icon-wrap" style="position:relative;display:inline-block;">
+      <i class="fas fa-boxes"></i>
+      <span class="nav-badge-stock" id="stock-nav-badge"></span>
+    </div>
+    Stock Alert
   </button>
 </nav>
 
@@ -959,6 +1084,160 @@ function goScreen(id){
   document.getElementById('nav-'+id).classList.add('active');
   if(id==='online') fetchOrders();
   if(id==='pos') loadMenu();
+  if(id==='stock') fetchStockAlerts();
+}
+
+/* ── NOTIFICATION BELL ── */
+let _notifDismissed=new Set(); // ids of dismissed notifications
+let _bellStockItems=[];        // latest low/critical stock from fetchStockAlerts
+let _bellPermItems=[];         // latest pending permission requests
+
+function _notifId(type,key){return type+':'+key;}
+
+function updateBell(){
+  const items=[];
+
+  // 1. Orders waiting confirmation
+  allOrders.filter(o=>o.status==='Waiting Confirmation').forEach(o=>{
+    const id=_notifId('order',o.id);
+    if(!_notifDismissed.has(id))
+      items.push({id,type:'order',icon:'fa-shopping-bag',cls:'order',
+        title:`New Order #${o.code}`,sub:o.name+' — ₱'+Number(o.total).toFixed(2)});
+  });
+
+  // 2. Permission requests
+  _bellPermItems.forEach(p=>{
+    const id=_notifId('perm',p.code);
+    if(!_notifDismissed.has(id))
+      items.push({id,type:'perm',icon:'fa-hand-paper',cls:'perm',
+        title:`Permission: ${p.name}`,sub:p.message||'Requesting store access'});
+  });
+
+  // 3. Critical / low stock
+  _bellStockItems.filter(i=>i.level==='critical'||i.level==='low').forEach(i=>{
+    const id=_notifId('stock',i.name);
+    if(!_notifDismissed.has(id))
+      items.push({id,type:'stock',icon:i.level==='critical'?'fa-times-circle':'fa-exclamation-triangle',
+        cls:'stock-'+i.level,
+        title:`${i.level==='critical'?'Out of Stock':'Low Stock'}: ${i.name}`,
+        sub:`${i.stock} ${i.unit} remaining`});
+  });
+
+  // Update badge
+  const cnt=document.getElementById('bell-count');
+  if(items.length>0){cnt.textContent=items.length>99?'99+':items.length;cnt.classList.add('show');}
+  else{cnt.classList.remove('show');}
+
+  // Rebuild panel list
+  const list=document.getElementById('notif-list');
+  if(!list) return;
+  if(!items.length){list.innerHTML='<div class="notif-empty"><i class="fas fa-check-circle" style="color:#27ae60;font-size:1.4rem;display:block;margin-bottom:6px;"></i>All caught up!</div>';return;}
+
+  // Group by type
+  const sections=[
+    {key:'order',label:'📦 Orders'},
+    {key:'perm', label:'🔑 Permission Requests'},
+    {key:'stock',label:'⚠️ Stock Alerts'},
+  ];
+  let html='';
+  sections.forEach(sec=>{
+    const group=items.filter(i=>i.type===sec.key);
+    if(!group.length) return;
+    html+=`<div class="notif-section-label">${sec.label}</div>`;
+    group.forEach(n=>{
+      html+=`<div class="notif-item">
+        <div class="notif-icon ${n.cls}"><i class="fas ${n.icon}"></i></div>
+        <div class="notif-body">
+          <div class="notif-title">${escapeHTML(n.title)}</div>
+          <div class="notif-sub">${escapeHTML(n.sub)}</div>
+        </div>
+        <button onclick="dismissNotif('${n.id}')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:0.8rem;padding:2px 4px;flex-shrink:0;" title="Dismiss"><i class="fas fa-times"></i></button>
+      </div>`;
+    });
+  });
+  list.innerHTML=html;
+}
+
+function toggleNotifPanel(){
+  const panel=document.getElementById('notif-panel');
+  panel.classList.toggle('open');
+}
+
+function dismissNotif(id){
+  _notifDismissed.add(id);
+  updateBell();
+}
+
+function clearNotifs(){
+  // Dismiss everything currently visible
+  allOrders.filter(o=>o.status==='Waiting Confirmation').forEach(o=>_notifDismissed.add(_notifId('order',o.id)));
+  _bellPermItems.forEach(p=>_notifDismissed.add(_notifId('perm',p.code)));
+  _bellStockItems.filter(i=>i.level==='critical'||i.level==='low').forEach(i=>_notifDismissed.add(_notifId('stock',i.name)));
+  updateBell();
+  document.getElementById('notif-panel').classList.remove('open');
+}
+
+// Close panel when clicking outside
+document.addEventListener('click',function(e){
+  const panel=document.getElementById('notif-panel');
+  const btn=document.getElementById('bell-btn');
+  if(panel&&btn&&!panel.contains(e.target)&&!btn.contains(e.target))
+    panel.classList.remove('open');
+});
+
+
+
+/* ── STOCK ALERTS ── */
+async function fetchStockAlerts(){
+  const el=document.getElementById('sa-list');
+  const badge=document.getElementById('stock-nav-badge');
+  try{
+    const r=await fetch('/api/finance/low_stock');
+    if(!r.ok){if(el)el.innerHTML='<div style="color:var(--red);font-size:0.84rem;font-weight:700;">Failed to load stock data.</div>';return;}
+    const data=await r.json();
+    _bellStockItems=data;
+    updateBell();
+
+    // Update summary chips (only if stock screen is in DOM)
+    const criticalCount=data.filter(i=>i.level==='critical').length;
+    const lowCount=data.filter(i=>i.level==='low').length;
+    const mediumCount=data.filter(i=>i.level==='medium').length;
+    const ccEl=document.getElementById('sa-count-critical');
+    const lcEl=document.getElementById('sa-count-low');
+    const mcEl=document.getElementById('sa-count-medium');
+    if(ccEl)ccEl.textContent=criticalCount;
+    if(lcEl)lcEl.textContent=lowCount;
+    if(mcEl)mcEl.textContent=mediumCount;
+
+    // Update stock nav badge
+    const urgent=criticalCount+lowCount;
+    if(badge){
+      if(urgent>0){badge.textContent=urgent>99?'99+':urgent;badge.style.display='flex';}
+      else{badge.style.display='none';}
+    }
+
+    if(!el) return;
+    if(!data.length){
+      el.innerHTML='<div class="sa-all-good"><i class="fas fa-check-circle" style="font-size:1.4rem;"></i><div><div style="font-size:0.88rem;font-weight:800;">All ingredients are well-stocked!</div><div style="font-size:0.75rem;color:var(--muted);font-weight:600;margin-top:2px;">No action needed right now.</div></div></div>';
+      return;
+    }
+
+    const levelLabel={critical:'Out of Stock',low:'Running Low',medium:'Getting Low'};
+    el.innerHTML=data.map(item=>`
+      <div class="sa-card ${item.level}">
+        <div class="sa-dot ${item.level}"></div>
+        <div class="sa-info">
+          <div class="sa-name">${escapeHTML(item.name)}</div>
+          <div class="sa-lvl ${item.level}">${levelLabel[item.level]||item.level}</div>
+        </div>
+        <div>
+          <div class="sa-qty">${item.stock%1===0?item.stock:item.stock.toFixed(1)}</div>
+          <span class="sa-unit">${escapeHTML(item.unit)}</span>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    if(el)el.innerHTML='<div style="color:var(--red);font-size:0.84rem;font-weight:700;"><i class="fas fa-exclamation-triangle"></i> Could not reach server.</div>';
+  }
 }
 
 /* ── ONLINE POS ── */
@@ -984,6 +1263,7 @@ async function fetchOrders(){
     allOrders.forEach(o=>knownOrderIds.add(o.id));
     renderOrders();
     updateStats();
+    updateBell();
   }catch(e){}
 }
 
@@ -1053,9 +1333,10 @@ async function fetchPermReqs(){
     const r=await fetch('/api/permission_requests');
     if(!r.ok){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Could not load requests</td></tr>';return;}
     const data=await r.json();
-    if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';return;}
+    if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';_bellPermItems=[];updateBell();return;}
     // Sound alert for new codes
     data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpPermBeep();knownPermCodes.add(p.code);}});
+    _bellPermItems=data;
     const badge=document.getElementById('nav-badge');
     const permCount=data.length;
     const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
@@ -1068,21 +1349,42 @@ async function fetchPermReqs(){
       <td style="font-size:0.74rem;color:var(--muted);max-width:160px;">${escapeHTML(p.message||'—')}</td>
       <td><button class="tbl-btn grant" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')"><i class="fas fa-check-circle"></i> Grant</button></td>
     </tr>`).join('');
+    updateBell();
   }catch(e){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Network error</td></tr>';}
 }
 
 async function grantPerm(id,name,code){
+  // Open a reply modal so the employee can send a message to the customer
+  window._grantPendingId=id;
+  window._grantPendingName=name;
+  window._grantPendingCode=code;
+  document.getElementById('grant-customer-name').innerText=name;
+  document.getElementById('grant-reply-text').value='';
+  document.getElementById('grant-reply-overlay').classList.add('show');
+}
+
+async function submitGrantWithReply(){
+  const id=window._grantPendingId,name=window._grantPendingName,code=window._grantPendingCode;
+  const reply=document.getElementById('grant-reply-text').value.trim();
   try{
-    const r=await fetch(`/api/permission_requests/${id}/grant`,{method:'POST'});
-    if(r.ok){showToast(`✅ Granted for ${name}`,'success');knownPermCodes.delete(code);fetchPermReqs();}
-    else showToast('Grant failed','error');
+    const r=await fetch(`/api/permission_requests/${id}/grant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reply_message:reply})});
+    if(r.ok){
+      showToast(`✅ Granted for ${name}`,'success');
+      knownPermCodes.delete(code);
+      closeGrantModal();
+      fetchPermReqs();
+    } else showToast('Grant failed','error');
   }catch(e){showToast('Network error','error');}
+}
+
+function closeGrantModal(){
+  document.getElementById('grant-reply-overlay').classList.remove('show');
 }
 
 function printOrderReceipt(orderId){
   const o=allOrders.find(x=>x.id===orderId);
   if(!o) return;
-  openReceiptWindow({code:o.code,name:o.name,pickup:o.pickup_time,total:o.total,items:o.items.map(i=>({foundation:i.foundation,size:i.size,price:o.total/o.items.length,addons:i.addons,sweetener:i.sweetener,ice:i.ice}))});
+  openReceiptWindow({code:o.code,name:o.name,pickup:o.pickup_time,total:o.total,items:o.items.map(i=>({foundation:i.foundation,size:i.size,price:i.item_total,addons:i.addons,sweetener:i.sweetener,ice:i.ice}))});
 }
 
 /* ── WALK-IN POS ── */
@@ -1104,7 +1406,7 @@ async function loadMenu(){
 function buildCatTabs(){
   const cats=['All','Best Sellers',...new Set(menuItems.map(m=>m.category))];
   const tabs=document.getElementById('cat-tabs');
-  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" onclick="selectCat(${JSON.stringify(c)},this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
+  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" data-cat="${escapeHTML(c)}" onclick="selectCat(this.dataset.cat,this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
 }
 
 function selectCat(cat,btn){
@@ -1350,9 +1652,29 @@ function openReceiptWindow(r){
 
 setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
 setInterval(()=>fetch('/api/employee/ping'),30000);
+setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
 fetchOrders();
 fetchPermReqs();
+fetchStockAlerts(); // pre-load badge count on startup
 </script>
+
+<!-- GRANT REPLY MODAL -->
+<div class="grant-reply-overlay" id="grant-reply-overlay">
+  <div class="grant-reply-sheet">
+    <div style="width:40px;height:4px;background:var(--border);border-radius:3px;margin:0 auto 16px;"></div>
+    <div class="grant-reply-title"><i class="fas fa-comment-dots" style="color:var(--teal);"></i> Message to Customer</div>
+    <div class="grant-reply-sub">
+      You're about to grant permission to <b id="grant-customer-name"></b>.<br>
+      Optionally, send them a message before they place their order.
+    </div>
+    <textarea class="grant-reply-textarea" id="grant-reply-text" placeholder="e.g. Hi! Please make sure your pickup time is accurate. Thank you! 🧋"></textarea>
+    <div class="grant-reply-actions">
+      <button class="btn-grant-skip" onclick="closeGrantModal()">Cancel</button>
+      <button class="btn-grant-send" onclick="submitGrantWithReply()"><i class="fas fa-check-circle"></i> Grant &amp; Send</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
 """
@@ -2628,8 +2950,18 @@ function playGrantedSound() {
                 clearInterval(permPoll); permPoll = null;
                 document.getElementById('perm-send-btn').style.display = 'none';
                 document.getElementById('perm-place-btn').style.display = 'inline-flex';
-                document.getElementById('perm-send-status').style.color = '#388E3C';
-                document.getElementById('perm-send-status').innerText = '✅ Permission Granted! You may now place your order.';
+                const replyMsg = data.reply_message && data.reply_message.trim();
+                const statusEl = document.getElementById('perm-send-status');
+                statusEl.style.color = '#388E3C';
+                if(replyMsg) {
+                    statusEl.innerHTML = '✅ <b>Permission Granted!</b> You may now place your order.<br><br>'
+                        + '<div style="background:#F1F8F1;border:1px solid #A5D6A7;border-radius:10px;padding:10px 13px;margin-top:4px;font-size:0.85rem;color:#2E7D32;line-height:1.5;">'
+                        + '<span style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;color:#1B5E20;">📣 Message from the staff:</span>'
+                        + escapeHTML(replyMsg)
+                        + '</div>';
+                } else {
+                    statusEl.innerText = '✅ Permission Granted! You may now place your order.';
+                }
                 playGrantedSound();
             }
         } catch(e){}
@@ -3003,6 +3335,35 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .kds-table th{background:var(--cream);color:var(--muted);position:sticky;top:0;font-weight:900;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;}
 .kds-table tbody tr:hover{background:#FAF6F0;}
 .kds-badge{font-size:0.68rem;padding:2px 8px;border-radius:20px;font-weight:800;}
+/* ── Notification Bell ── */
+.bell-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.85);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:background 0.15s;flex-shrink:0;}
+.bell-btn:hover{background:rgba(255,255,255,0.18);}
+.bell-count{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:50%;min-width:17px;height:17px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);line-height:1;}
+.bell-count.show{display:flex;}
+.notif-panel{position:fixed;top:68px;right:10px;width:320px;max-width:calc(100vw - 20px);background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.22);z-index:9000;overflow:hidden;display:none;animation:notifDrop 0.18s ease;}
+.notif-panel.open{display:block;}
+@keyframes notifDrop{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.notif-header{background:var(--teal-dark);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;}
+.notif-header-title{font-weight:900;font-size:0.9rem;display:flex;align-items:center;gap:8px;}
+.notif-clear{background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.8);font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:20px;cursor:pointer;font-family:'Nunito',sans-serif;}
+.notif-clear:hover{background:rgba(255,255,255,0.22);}
+.notif-list{max-height:360px;overflow-y:auto;}
+.notif-item{padding:11px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:11px;cursor:default;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item:hover{background:#f9fafb;}
+.notif-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;margin-top:1px;}
+.notif-icon.order{background:rgba(21,101,192,0.1);color:#1565C0;}
+.notif-icon.perm{background:rgba(230,81,0,0.1);color:var(--orange);}
+.notif-icon.stock-critical{background:rgba(211,47,47,0.1);color:var(--red);}
+.notif-icon.stock-low{background:rgba(230,81,0,0.08);color:var(--orange);}
+.notif-body{flex:1;min-width:0;}
+.notif-title{font-size:0.82rem;font-weight:800;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.notif-sub{font-size:0.72rem;color:#888;font-weight:600;margin-top:2px;}
+.notif-empty{padding:28px 16px;text-align:center;color:#aaa;font-size:0.83rem;font-weight:700;}
+.notif-section-label{padding:7px 16px 4px;font-size:0.62rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#aaa;background:#fafafa;border-bottom:1px solid #f0f0f0;}
+
+#s-inventory .page-header{position:relative;top:auto;}
+#s-inventory .kds-table th{position:relative;top:auto;}
 
 /* ── BUTTONS ── */
 .btn-primary{background:linear-gradient(135deg,var(--brown) 0%,var(--brown-dark) 100%);color:var(--cream);border:none;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer;width:100%;margin-bottom:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;box-shadow:0 3px 12px rgba(61,36,16,0.3);transition:opacity 0.2s;}
@@ -4215,6 +4576,8 @@ def _get_state():
 def check_admin_session():
     # ── /admin: lock to the device that owns the active admin session ────────
     if request.path == '/admin':
+        if request.method == 'POST' and request.form.get('force') == '1':
+            return  # let the route handle force takeover
         state = _get_state()
         if state:
             try:
@@ -4222,13 +4585,15 @@ def check_admin_session():
                 ping   = state.last_ping
                 if active and _session_active(ping):
                     if active != session.get('admin_id'):
-                        return render_template_string(LOCKED_HTML, role='Admin'), 403
+                        return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
             except Exception:
                 pass
         return  # no active lock — /admin route shows its own login form
 
     # ── /employee: lock to the device that owns the active employee session ──
     if request.path == '/employee':
+        if request.method == 'POST' and request.form.get('force') == '1':
+            return  # let the route handle force takeover
         state = _get_state()
         if state:
             try:
@@ -4236,7 +4601,7 @@ def check_admin_session():
                 ping   = getattr(state, 'employee_last_ping', None)
                 if active and _session_active(ping):
                     if active != session.get('employee_id'):
-                        return render_template_string(LOCKED_HTML, role='Employee'), 403
+                        return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
             except Exception:
                 pass
         return  # no active lock — /employee route shows its own login form
@@ -4254,7 +4619,7 @@ def check_admin_session():
                 if _session_active(state.last_ping) and state.active_session_id != session.get('admin_id'):
                     if request.path.startswith('/api'):
                         return jsonify({"error": "Unauthorized"}), 403
-                    return render_template_string(LOCKED_HTML, role='Admin'), 403
+                    return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
             except Exception:
                 pass
 
@@ -4403,25 +4768,29 @@ def admin_login():
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
+        force = request.form.get('force') == '1'
         if master_pin_matches(pin):
             state = SystemState.query.first()
             if not state:
                 state = SystemState(active_session_id='', last_ping=datetime.min,
                                     active_employee_session_id='', employee_last_ping=datetime.min)
                 db.session.add(state)
-            # Block if another device already holds an active admin session
-            if state.active_session_id and _session_active(state.last_ping):
+            # Block if another device holds an active session — unless force takeover
+            if not force and state.active_session_id and _session_active(state.last_ping):
                 if state.active_session_id != session.get('admin_id'):
-                    return render_template_string(LOCKED_HTML, role='Admin'), 403
+                    return render_template_string(LOCKED_HTML, role='Admin', action_url='/login', error=None), 200
             session.permanent = True
             session['is_admin'] = True
             session['admin_id'] = str(uuid.uuid4())
             state.active_session_id = session['admin_id']
             state.last_ping = datetime.utcnow()
             db.session.commit()
-            log_audit("Admin Login", "Successful login to dashboard")
+            log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login to dashboard")
             return redirect(url_for('admin_dashboard'))
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+        # If wrong PIN was entered on the force/locked page, show locked page again with error
+        if request.form.get('force') == '1':
+            return render_template_string(LOCKED_HTML, role='Admin', action_url='/login', error=error), 200
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -4442,25 +4811,28 @@ def admin_dashboard():
         error = None
         if request.method == 'POST':
             pin = request.form.get('pin')
+            force = request.form.get('force') == '1'
             if master_pin_matches(pin):
                 state = SystemState.query.first()
                 if not state:
                     state = SystemState(active_session_id='', last_ping=datetime.min,
                                         active_employee_session_id='', employee_last_ping=datetime.min)
                     db.session.add(state)
-                # Block if another device already holds an active admin session
-                if state.active_session_id and _session_active(state.last_ping):
+                # Block if another device holds an active session — unless force takeover
+                if not force and state.active_session_id and _session_active(state.last_ping):
                     if state.active_session_id != session.get('admin_id'):
-                        return render_template_string(LOCKED_HTML, role='Admin'), 403
+                        return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
                 session.permanent = True
                 session['is_admin'] = True
                 session['admin_id'] = str(uuid.uuid4())
                 state.active_session_id = session['admin_id']
                 state.last_ping = datetime.utcnow()
                 db.session.commit()
-                log_audit("Admin Login", "Successful login to dashboard")
+                log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login to dashboard")
                 return redirect(url_for('admin_dashboard'))
             error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+            if request.form.get('force') == '1':
+                return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=error), 200
         return render_template_string(LOGIN_HTML, error=error)
     return render_template_string(ADMIN_HTML)
 
@@ -4471,25 +4843,28 @@ def employee_login():
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
+        force = request.form.get('force') == '1'
         if master_pin_matches(pin):
             state = SystemState.query.first()
             if not state:
                 state = SystemState(active_session_id='', last_ping=datetime.min,
                                     active_employee_session_id='', employee_last_ping=datetime.min)
                 db.session.add(state)
-            # Block if another device already holds an active employee session
-            if state.active_employee_session_id and _session_active(state.employee_last_ping):
+            # Block if another device holds an active session — unless force takeover
+            if not force and state.active_employee_session_id and _session_active(state.employee_last_ping):
                 if state.active_employee_session_id != session.get('employee_id'):
-                    return render_template_string(LOCKED_HTML, role='Employee'), 403
+                    return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee/login', error=None), 200
             session.permanent = True
             session['is_employee'] = True
             session['employee_id'] = str(uuid.uuid4())
             state.active_employee_session_id = session['employee_id']
             state.employee_last_ping = datetime.utcnow()
             db.session.commit()
-            log_audit("Employee Login", "Staff logged in to employee station")
+            log_audit("Employee Login", f"{'Force takeover — ' if force else ''}Staff logged in to employee station")
             return redirect(url_for('employee_dashboard'))
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+        if request.form.get('force') == '1':
+            return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee/login', error=error), 200
     return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
 
 @app.route('/employee/logout')
@@ -4510,25 +4885,28 @@ def employee_dashboard():
         error = None
         if request.method == 'POST':
             pin = request.form.get('pin')
+            force = request.form.get('force') == '1'
             if master_pin_matches(pin):
                 state = SystemState.query.first()
                 if not state:
                     state = SystemState(active_session_id='', last_ping=datetime.min,
                                         active_employee_session_id='', employee_last_ping=datetime.min)
                     db.session.add(state)
-                # Block if another device already holds an active employee session
-                if state.active_employee_session_id and _session_active(state.employee_last_ping):
+                # Block if another device holds an active session — unless force takeover
+                if not force and state.active_employee_session_id and _session_active(state.employee_last_ping):
                     if state.active_employee_session_id != session.get('employee_id'):
-                        return render_template_string(LOCKED_HTML, role='Employee'), 403
+                        return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
                 session.permanent = True
                 session['is_employee'] = True
                 session['employee_id'] = str(uuid.uuid4())
                 state.active_employee_session_id = session['employee_id']
                 state.employee_last_ping = datetime.utcnow()
                 db.session.commit()
-                log_audit("Employee Login", "Staff logged in to employee station")
+                log_audit("Employee Login", f"{'Force takeover — ' if force else ''}Staff logged in to employee station")
                 return redirect(url_for('employee_dashboard'))
             error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+            if request.form.get('force') == '1':
+                return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=error), 200
         return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
     return render_template_string(EMPLOYEE_HTML)
 
@@ -4736,8 +5114,8 @@ def permission_status():
     code = request.args.get('code', '')
     pr = PermissionRequest.query.filter_by(request_code=code).first()
     if pr:
-        return jsonify({"granted": pr.granted})
-    return jsonify({"granted": False})
+        return jsonify({"granted": pr.granted, "reply_message": pr.employee_reply or ''})
+    return jsonify({"granted": False, "reply_message": ''})
 
 @app.route('/api/permission_requests', methods=['GET'])
 def get_permission_requests():
@@ -4749,7 +5127,10 @@ def get_permission_requests():
 def grant_permission(req_id):
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     pr = PermissionRequest.query.get_or_404(req_id)
+    data = request.json or {}
+    reply = (data.get('reply_message') or '').strip()
     pr.granted = True
+    pr.employee_reply = reply
     db.session.commit()
     log_audit("Permission Granted", f"Code: {pr.request_code} for {pr.customer_name}")
     return jsonify({"status": "success"})
@@ -4865,7 +5246,7 @@ def update_order_status(order_id):
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
-    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level} for i in r.infusions]} for r in res]})
+    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions]} for r in res]})
 
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
@@ -4940,7 +5321,7 @@ def finance_bestsellers():
 
 @app.route('/api/finance/low_stock', methods=['GET'])
 def finance_low_stock():
-    if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
+    if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"error": "Unauthorized"}), 403
     ings = Ingredient.query.order_by(Ingredient.stock).all()
     result = []
     for ing in ings:
