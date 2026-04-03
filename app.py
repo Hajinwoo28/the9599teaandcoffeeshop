@@ -656,7 +656,27 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 </head>
 <body>
 <div id="toast-container"></div>
-<audio id="emp-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<script>
+var _empAudioCtx=null;
+function _getEmpAudioCtx(){if(!_empAudioCtx){try{_empAudioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return _empAudioCtx;}
+function playEmpBeep(){
+  var ctx=_getEmpAudioCtx();if(!ctx)return Promise.resolve();
+  try{
+    if(ctx.state==='suspended')ctx.resume();
+    [[0,880,0.3],[0.35,660,0.25],[0.65,780,0.35]].forEach(function(t){
+      var osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.type='sine';osc.frequency.value=t[1];
+      var s=ctx.currentTime+t[0];
+      gain.gain.setValueAtTime(0,s);
+      gain.gain.linearRampToValueAtTime(0.4,s+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);
+      osc.start(s);osc.stop(s+t[2]);
+    });
+  }catch(e){}
+  return Promise.resolve();
+}
+</script>
 
 <header class="topbar">
   <div class="topbar-left">
@@ -890,7 +910,7 @@ async function fetchOrders(){
     const data=await r.json();
     allOrders=data.orders||[];
     const hasNewOrder=knownOrderIds.size>0&&allOrders.some(o=>!knownOrderIds.has(o.id));
-    if(hasNewOrder) document.getElementById('emp-audio').play().catch(()=>{});
+    if(hasNewOrder) playEmpBeep();
     allOrders.forEach(o=>knownOrderIds.add(o.id));
     renderOrders();
     updateStats();
@@ -965,7 +985,7 @@ async function fetchPermReqs(){
     const data=await r.json();
     if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';return;}
     // Sound alert for new codes
-    data.forEach(p=>{if(!knownPermCodes.has(p.code)){document.getElementById('emp-audio').play().catch(()=>{});knownPermCodes.add(p.code);}});
+    data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpBeep();knownPermCodes.add(p.code);}});
     const badge=document.getElementById('nav-badge');
     const permCount=data.length;
     const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
@@ -1014,7 +1034,7 @@ async function loadMenu(){
 function buildCatTabs(){
   const cats=['All','Best Sellers',...new Set(menuItems.map(m=>m.category))];
   const tabs=document.getElementById('cat-tabs');
-  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" data-cat="${escapeHTML(c)}" onclick="selectCat(this.dataset.cat,this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
+  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" onclick="selectCat(${JSON.stringify(c)},this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
 }
 
 function selectCat(cat,btn){
