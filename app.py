@@ -1014,7 +1014,7 @@ async function loadMenu(){
 function buildCatTabs(){
   const cats=['All','Best Sellers',...new Set(menuItems.map(m=>m.category))];
   const tabs=document.getElementById('cat-tabs');
-  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" onclick="selectCat('${c.replace(/'/g,"\\'").replace(/\\/g,"\\\\").replace(/"/g,"&quot;")}',this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
+  tabs.innerHTML=cats.map((c,i)=>`<button class="cat-tab${i===0?' active':''}" data-cat="${escapeHTML(c)}" onclick="selectCat(this.dataset.cat,this)">${c==='Best Sellers'?'⭐ ':''}${escapeHTML(c)}</button>`).join('');
 }
 
 function selectCat(cat,btn){
