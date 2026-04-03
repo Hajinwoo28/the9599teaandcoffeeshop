@@ -1470,8 +1470,68 @@ STOREFRONT_HTML = """
 <body>
 
 <div id="toast-container"></div>
-<audio id="status-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-<audio id="alert-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<script>
+// ── Synthesized audio (no external files, works across browsers) ──────────
+var _sfAudioCtx = null;
+function _getSfAudioCtx() {
+    if (!_sfAudioCtx) {
+        try { _sfAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+    return _sfAudioCtx;
+}
+// Unlock AudioContext on first user interaction (required by browser autoplay policy)
+document.addEventListener('click', function _sfUnlock() {
+    var ctx = _getSfAudioCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    document.removeEventListener('click', _sfUnlock);
+}, { once: true });
+
+// Status-change sound: soft two-tone ascending ding (order is Preparing / Ready)
+function playStatusSound() {
+    var ctx = _getSfAudioCtx(); if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    [[0, 880, 0.18], [0.22, 1109, 0.28]].forEach(function(t) {
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = t[1];
+        var s = ctx.currentTime + t[0];
+        gain.gain.setValueAtTime(0, s);
+        gain.gain.linearRampToValueAtTime(0.35, s + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, s + t[2]);
+        osc.start(s); osc.stop(s + t[2]);
+    });
+}
+// Permission-required alert: three short urgent pulses
+function playAlertSound() {
+    var ctx = _getSfAudioCtx(); if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    [0, 0.18, 0.36].forEach(function(offset) {
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'square'; osc.frequency.value = 520;
+        var s = ctx.currentTime + offset;
+        gain.gain.setValueAtTime(0, s);
+        gain.gain.linearRampToValueAtTime(0.25, s + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, s + 0.12);
+        osc.start(s); osc.stop(s + 0.12);
+    });
+}
+// Permission-granted sound: happy ascending three-note chime
+function playGrantedSound() {
+    var ctx = _getSfAudioCtx(); if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    [[0, 523, 0.2], [0.18, 659, 0.2], [0.36, 784, 0.35]].forEach(function(t) {
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = t[1];
+        var s = ctx.currentTime + t[0];
+        gain.gain.setValueAtTime(0, s);
+        gain.gain.linearRampToValueAtTime(0.3, s + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, s + t[2]);
+        osc.start(s); osc.stop(s + t[2]);
+    });
+}
+</script>
 
 {% if not session.get('customer_verified') %}
 <!-- SIGN-IN GATEKEEPER -->
@@ -2442,7 +2502,7 @@ STOREFRONT_HTML = """
                 document.getElementById('perm-place-btn').style.display = 'inline-flex';
                 document.getElementById('perm-send-status').style.color = '#388E3C';
                 document.getElementById('perm-send-status').innerText = '✅ Permission Granted! You may now place your order.';
-                document.getElementById('alert-audio').play().catch(()=>{});
+                playGrantedSound();
             }
         } catch(e){}
     }
@@ -2466,7 +2526,7 @@ STOREFRONT_HTML = """
 
         const totalItems = cart.length;
         if(totalItems >= 5 && !permissionGranted) {
-            document.getElementById('alert-audio').play().catch(()=>{});
+            playAlertSound();
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
             document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || 'Customer';
             document.getElementById('perm-address-input').value = '';
@@ -2660,7 +2720,7 @@ STOREFRONT_HTML = """
                     const msg = `Order #${srv.code} is now: ${srv.status}`;
                     showToast(msg, "success");
                     addNotifMessage(msg);
-                    document.getElementById('status-audio').play().catch(()=>{});
+                    playStatusSound();
                 }
             });
             if(updated) localStorage.setItem('myOrders', JSON.stringify(orders));
@@ -2950,7 +3010,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 </head>
 <body>
 <div id="toast-container"></div>
-<audio id="admin-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
 <!-- ══ TOPBAR ══ -->
 <header class="topbar">
@@ -3378,7 +3437,7 @@ function getStatusClass(s){return({'Waiting Confirmation':'status-waiting','Prep
 
 /* ══ NOTIFICATIONS ══ */
 let adminNotifs=[],lastOrderIds=new Set(),firstLoad=true;
-function playBeep(){try{document.getElementById('admin-audio').play().catch(()=>{});}catch(e){}}
+function playBeep(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[0,880,0.3],[0.35,660,0.25],[0.65,780,0.35]].forEach(function(t){var osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';osc.frequency.value=t[1];var s=ctx.currentTime+t[0];gain.gain.setValueAtTime(0,s);gain.gain.linearRampToValueAtTime(0.4,s+0.02);gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);osc.start(s);osc.stop(s+t[2]);});}catch(e){}}
 function toggleNotif(){const p=document.getElementById('notif-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
 function clearNotifs(){adminNotifs=[];renderNotifUI();document.getElementById('notif-panel').style.display='none';}
 function addNotif(code,name,total){adminNotifs.unshift({code,name,total,time:new Date().toLocaleTimeString()});if(adminNotifs.length>20)adminNotifs.pop();renderNotifUI();playBeep();showToast(`New order from ${name} (${code})!`,'success');}
