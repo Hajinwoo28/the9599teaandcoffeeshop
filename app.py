@@ -295,6 +295,8 @@ class SystemState(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     active_session_id = db.Column(db.String(100))
     last_ping = db.Column(db.DateTime)
+    active_employee_session_id = db.Column(db.String(100))
+    employee_last_ping = db.Column(db.DateTime)
 
 class ClosedDay(db.Model):
     __tablename__ = 'closed_days'
@@ -438,6 +440,53 @@ h2{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:
       <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
     </form>
   </div>
+</div>
+</body>
+</html>
+"""
+
+
+LOCKED_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
+<title>Access Locked | 9599 Tea &amp; Coffee</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;}
+body{
+  background:{% if role=='Admin' %}linear-gradient(160deg,#3D2410 0%,#7B4F2E 60%,#A0724A 100%){% else %}linear-gradient(160deg,#094F44 0%,#0D7A6A 60%,#12937E 100%){% endif %};
+  display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;
+}
+.wrap{width:100%;max-width:420px;text-align:center;}
+.icon-ring{
+  width:90px;height:90px;border-radius:50%;margin:0 auto 22px;
+  display:flex;align-items:center;justify-content:center;font-size:2.4rem;
+  background:rgba(255,255,255,0.08);border:3px solid rgba(255,255,255,0.2);
+}
+h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:900;color:#fff;margin-bottom:10px;}
+p{font-size:0.92rem;color:rgba(255,255,255,0.75);line-height:1.6;margin-bottom:24px;}
+.badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);
+  color:rgba(255,255,255,0.9);font-size:0.78rem;font-weight:800;
+  padding:8px 18px;border-radius:30px;letter-spacing:0.5px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="icon-ring">🔒</div>
+  <h1>{{ role }} Panel Locked</h1>
+  <p>
+    This panel is currently active on another device.<br>
+    Please log out from that device first, or wait for the session to expire.
+  </p>
+  <div class="badge"><i class="fas fa-shield-alt"></i> Single-Device Access Only</div>
 </div>
 </body>
 </html>
@@ -1300,6 +1349,7 @@ function openReceiptWindow(r){
 }
 
 setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
+setInterval(()=>fetch('/api/employee/ping'),30000);
 fetchOrders();
 fetchPermReqs();
 </script>
@@ -4141,27 +4191,44 @@ fetchInventory();
 # 5. REST API ROUTES & FLASK LOGIC
 # ==========================================
 
+SESSION_TIMEOUT = 90  # seconds of inactivity before a device lock expires
+
+def _session_active(last_ping):
+    """True if a ping arrived within SESSION_TIMEOUT seconds."""
+    if last_ping is None or last_ping == datetime.min:
+        return False
+    return (datetime.utcnow() - last_ping).total_seconds() < SESSION_TIMEOUT
+
 @app.before_request
 def check_admin_session():
-    # /admin and /employee handle their own inline PIN login — don't intercept them.
-    # Only guard API endpoints and any future sub-routes.
-    if request.path == '/admin' or request.path == '/employee':
-        return  # let the route handler show its own login form
+    state = SystemState.query.first()
 
+    # ── /admin: lock to the device that owns the active admin session ────────
+    if request.path == '/admin':
+        if state and state.active_session_id and _session_active(state.last_ping):
+            if state.active_session_id != session.get('admin_id'):
+                return render_template_string(LOCKED_HTML, role='Admin'), 403
+        return  # no active lock — /admin route shows its own login form
+
+    # ── /employee: lock to the device that owns the active employee session ──
+    if request.path == '/employee':
+        if state and state.active_employee_session_id and _session_active(state.employee_last_ping):
+            if state.active_employee_session_id != session.get('employee_id'):
+                return render_template_string(LOCKED_HTML, role='Employee'), 403
+        return  # no active lock — /employee route shows its own login form
+
+    # ── Guard admin API routes ────────────────────────────────────────────────
     if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
-        # Must have a valid PIN-authenticated session
         if not session.get('is_admin') or not session.get('admin_id'):
             if request.path.startswith('/api'):
                 return jsonify({"error": "Unauthorized"}), 403
             return redirect(url_for('admin_dashboard'))
-        # Block concurrent sessions (only one admin at a time)
-        state = SystemState.query.first()
+        # Kick out if another device has since taken over the session
         if state and state.active_session_id:
-            if state.last_ping and (datetime.utcnow() - state.last_ping).total_seconds() < 60:
-                if state.active_session_id != session.get('admin_id'):
-                    if request.path.startswith('/api'):
-                        return jsonify({"error": "Unauthorized"}), 403
-                    return "<h3 style='font-family:sans-serif; text-align:center; margin-top:50px;'>The employee only can access the admin site.</h3>", 403
+            if _session_active(state.last_ping) and state.active_session_id != session.get('admin_id'):
+                if request.path.startswith('/api'):
+                    return jsonify({"error": "Unauthorized"}), 403
+                return render_template_string(LOCKED_HTML, role='Admin'), 403
 
 @app.route('/')
 def storefront():
@@ -4311,20 +4378,19 @@ def admin_login():
         if master_pin_matches(pin):
             state = SystemState.query.first()
             if not state:
-                state = SystemState(active_session_id='', last_ping=datetime.min)
+                state = SystemState(active_session_id='', last_ping=datetime.min,
+                                    active_employee_session_id='', employee_last_ping=datetime.min)
                 db.session.add(state)
-            
-            if state.last_ping and (datetime.utcnow() - state.last_ping).total_seconds() < 60:
-                if state.active_session_id and state.active_session_id != session.get('admin_id'):
-                    return "<h3 style='font-family:sans-serif; text-align:center; margin-top:50px;'>The employee only can access the admin site.</h3>", 403
-
+            # Block if another device already holds an active admin session
+            if state.active_session_id and _session_active(state.last_ping):
+                if state.active_session_id != session.get('admin_id'):
+                    return render_template_string(LOCKED_HTML, role='Admin'), 403
             session.permanent = True
             session['is_admin'] = True
             session['admin_id'] = str(uuid.uuid4())
             state.active_session_id = session['admin_id']
             state.last_ping = datetime.utcnow()
             db.session.commit()
-            
             log_audit("Admin Login", "Successful login to dashboard")
             return redirect(url_for('admin_dashboard'))
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
@@ -4337,6 +4403,7 @@ def admin_logout():
     state = SystemState.query.first()
     if state and state.active_session_id == admin_id:
         state.active_session_id = ''
+        state.last_ping = datetime.min
         db.session.commit()
     return redirect(url_for('admin_login'))
 
@@ -4350,11 +4417,13 @@ def admin_dashboard():
             if master_pin_matches(pin):
                 state = SystemState.query.first()
                 if not state:
-                    state = SystemState(active_session_id='', last_ping=datetime.min)
+                    state = SystemState(active_session_id='', last_ping=datetime.min,
+                                        active_employee_session_id='', employee_last_ping=datetime.min)
                     db.session.add(state)
-                if state.last_ping and (datetime.utcnow() - state.last_ping).total_seconds() < 60:
-                    if state.active_session_id and state.active_session_id != session.get('admin_id'):
-                        return "<h3 style='font-family:sans-serif; text-align:center; margin-top:50px;'>The employee only can access the admin site.</h3>", 403
+                # Block if another device already holds an active admin session
+                if state.active_session_id and _session_active(state.last_ping):
+                    if state.active_session_id != session.get('admin_id'):
+                        return render_template_string(LOCKED_HTML, role='Admin'), 403
                 session.permanent = True
                 session['is_admin'] = True
                 session['admin_id'] = str(uuid.uuid4())
@@ -4375,8 +4444,21 @@ def employee_login():
     if request.method == 'POST':
         pin = request.form.get('pin')
         if master_pin_matches(pin):
+            state = SystemState.query.first()
+            if not state:
+                state = SystemState(active_session_id='', last_ping=datetime.min,
+                                    active_employee_session_id='', employee_last_ping=datetime.min)
+                db.session.add(state)
+            # Block if another device already holds an active employee session
+            if state.active_employee_session_id and _session_active(state.employee_last_ping):
+                if state.active_employee_session_id != session.get('employee_id'):
+                    return render_template_string(LOCKED_HTML, role='Employee'), 403
             session.permanent = True
             session['is_employee'] = True
+            session['employee_id'] = str(uuid.uuid4())
+            state.active_employee_session_id = session['employee_id']
+            state.employee_last_ping = datetime.utcnow()
+            db.session.commit()
             log_audit("Employee Login", "Staff logged in to employee station")
             return redirect(url_for('employee_dashboard'))
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
@@ -4385,6 +4467,12 @@ def employee_login():
 @app.route('/employee/logout')
 def employee_logout():
     session.pop('is_employee', None)
+    employee_id = session.pop('employee_id', None)
+    state = SystemState.query.first()
+    if state and state.active_employee_session_id == employee_id:
+        state.active_employee_session_id = ''
+        state.employee_last_ping = datetime.min
+        db.session.commit()
     return redirect(url_for('employee_login'))
 
 @app.route('/employee', methods=['GET', 'POST'])
@@ -4395,13 +4483,27 @@ def employee_dashboard():
         if request.method == 'POST':
             pin = request.form.get('pin')
             if master_pin_matches(pin):
+                state = SystemState.query.first()
+                if not state:
+                    state = SystemState(active_session_id='', last_ping=datetime.min,
+                                        active_employee_session_id='', employee_last_ping=datetime.min)
+                    db.session.add(state)
+                # Block if another device already holds an active employee session
+                if state.active_employee_session_id and _session_active(state.employee_last_ping):
+                    if state.active_employee_session_id != session.get('employee_id'):
+                        return render_template_string(LOCKED_HTML, role='Employee'), 403
                 session.permanent = True
                 session['is_employee'] = True
+                session['employee_id'] = str(uuid.uuid4())
+                state.active_employee_session_id = session['employee_id']
+                state.employee_last_ping = datetime.utcnow()
+                db.session.commit()
                 log_audit("Employee Login", "Staff logged in to employee station")
                 return redirect(url_for('employee_dashboard'))
             error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
         return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
     return render_template_string(EMPLOYEE_HTML)
+
 @app.route('/api/admin/ping')
 def admin_ping():
     if session.get('is_admin'):
@@ -4410,6 +4512,17 @@ def admin_ping():
             state.last_ping = datetime.utcnow()
             db.session.commit()
     return jsonify({"status": "ok"})
+
+@app.route('/api/employee/ping')
+def employee_ping():
+    if session.get('is_employee'):
+        state = SystemState.query.first()
+        if state and state.active_employee_session_id == session.get('employee_id'):
+            state.employee_last_ping = datetime.utcnow()
+            db.session.commit()
+    return jsonify({"status": "ok"})
+
+
 
 @app.route('/api/generate_link', methods=['POST'])
 def generate_link():
@@ -4989,6 +5102,35 @@ with app.app_context():
         except Exception as migration_err4:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err4}")
+
+        # Migrate: add employee session columns to system_state
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            for col_name, col_def in [
+                ("active_employee_session_id", "VARCHAR(100)"),
+                ("employee_last_ping",         "DATETIME"),
+            ]:
+                col_exists = False
+                if is_postgres:
+                    result = db.session.execute(db.text(
+                        f"SELECT COUNT(*) FROM information_schema.columns "
+                        f"WHERE table_name='system_state' AND column_name='{col_name}'"
+                    )).scalar()
+                    col_exists = (result > 0)
+                else:
+                    cols = db.session.execute(db.text("PRAGMA table_info(system_state)")).fetchall()
+                    col_exists = any(row[1] == col_name for row in cols)
+                if not col_exists:
+                    db.session.execute(db.text(
+                        f"ALTER TABLE system_state ADD COLUMN {col_name} {col_def}"
+                    ))
+                    db.session.commit()
+                    print(f"Migration: added '{col_name}' column to system_state")
+                else:
+                    print(f"Migration: system_state.{col_name} already exists, skipped")
+        except Exception as migration_err5:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_err5}")
 
         # ── 0. Seed store schedule (only if not already in DB) ──────────────
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
