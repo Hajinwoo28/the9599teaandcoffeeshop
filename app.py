@@ -1389,39 +1389,39 @@ STOREFRONT_HTML = """
         .sold-out-badge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.6); display: flex; justify-content: center; align-items: center; font-weight: 900; color: var(--danger); font-size: 1.2rem; z-index: 10; letter-spacing: 2px; }
 
         .sidebar { width: 380px; background: var(--bg-base); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 50; overflow: hidden; }
-        .cart-top-section { padding: 14px 18px 10px; flex-shrink: 0; overflow: visible; }
-        .cart-header { display: flex; align-items: center; margin-bottom: 12px; gap: 10px; }
-        .cart-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 900; color: var(--text-dark); }
+        .cart-top-section { padding: 25px 25px 15px; flex-shrink: 0; overflow: visible; }
+        .cart-header { display: flex; align-items: center; margin-bottom: 20px; gap: 10px; }
+        .cart-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--text-dark); }
         .cart-count { background: var(--gold); color: var(--text-dark); font-size: 0.8rem; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
-        .order-type { display: flex; background: var(--gold-light); border-radius: 12px; padding: 4px; gap: 5px; margin-bottom: 10px; border: 1px solid var(--border-color); }
-        .type-btn { flex: 1; padding: 8px; text-align: center; font-weight: 700; font-size: 0.82rem; border-radius: 8px; cursor: pointer; color: var(--text-light); transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .order-type { display: flex; background: var(--gold-light); border-radius: 12px; padding: 5px; gap: 5px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+        .type-btn { flex: 1; padding: 10px; text-align: center; font-weight: 700; font-size: 0.85rem; border-radius: 8px; cursor: pointer; color: var(--text-light); transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .type-btn.active { background: var(--text-dark); color: var(--gold); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
-        .name-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.88rem; font-weight: 700; outline: none; margin-bottom: 10px; color: var(--text-dark); background: var(--card-bg); font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .name-input { width: 100%; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.95rem; font-weight: 700; outline: none; margin-bottom: 15px; color: var(--text-dark); background: var(--card-bg); font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .name-input:focus { border-color: var(--gold); }
-        .pickup-label { font-size: 0.72rem; font-weight: 800; color: var(--text-light); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        .pickup-label { font-size: 0.75rem; font-weight: 800; color: var(--text-light); margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 1px; }
         .time-wrapper { position: relative; }
         .time-wrapper i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-dark); font-size: 1.1rem; pointer-events: none; }
 
-        .cart-content { padding: 0 18px 10px; flex: 1; overflow-y: auto; min-height: 0; }
+        .cart-content { padding: 0 25px 15px; flex: 1; overflow-y: auto; min-height: 0; }
         .empty-cart { margin: auto 0; text-align: center; padding: 40px 0; }
         .empty-cart-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.2; }
         .empty-cart p { font-weight: 700; font-size: 1rem; color: var(--text-light); }
 
-        .cart-item { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; padding: 12px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(44, 26, 18, 0.03); }
-        .cart-item-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 900; color: var(--text-dark); margin-bottom: 3px; }
+        .cart-item { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; padding: 16px; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(44, 26, 18, 0.03); }
+        .cart-item-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 900; color: var(--text-dark); margin-bottom: 4px; }
         .cart-item-sub { font-size: 0.75rem; color: var(--text-light); font-weight: 500; line-height: 1.4; }
         .cart-item-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%; }
-        .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 1rem; }
+        .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 1.1rem; }
         .cart-item-del { margin-top: 10px; font-size: 0.8rem; color: var(--danger); cursor: pointer; font-weight: 700; }
 
-        .checkout-area { padding: 12px 18px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
-        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .total-label { font-size: 0.85rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
-        .total-amount { font-family: 'Playfair Display', serif; font-size: 1.55rem; font-weight: 900; color: var(--text-dark); }
+        .checkout-area { padding: 20px 25px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
+        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .total-label { font-size: 0.9rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+        .total-amount { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--text-dark); }
 
-        .checkout-btn { width: 100%; padding: 14px; border: 2px solid #B8A898; border-radius: 12px; font-size: 0.95rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
+        .checkout-btn { width: 100%; padding: 18px; border: 2px solid #B8A898; border-radius: 12px; font-size: 1rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
         .checkout-btn.active { background: var(--gold); color: var(--text-dark); border-color: var(--gold); cursor: pointer; box-shadow: 0 6px 20px rgba(200, 155, 60, 0.4); }
         .checkout-btn.active:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(200, 155, 60, 0.5); }
 
@@ -1454,14 +1454,14 @@ STOREFRONT_HTML = """
         .btn-cancel { flex: 1; background: var(--border-color); color: var(--text-dark); border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .btn-add { flex: 2; background: var(--gold); color: var(--text-dark); border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 1rem; }
 
-        .slide-clock-wrapper { background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
-        .slide-clock-display { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 900; color: var(--gold); text-align: center; margin-bottom: 8px; letter-spacing: 2px; }
+        .slide-clock-wrapper { background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 15px; }
+        .slide-clock-display { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--gold); text-align: center; margin-bottom: 12px; letter-spacing: 2px; }
         .slide-clock-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .slide-clock-col { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-        .sc-btn { background: var(--gold-light); border: 1px solid var(--border-color); border-radius: 6px; width: 32px; height: 24px; font-size: 0.75rem; cursor: pointer; font-weight: 800; color: var(--text-dark); transition: background 0.15s; }
+        .slide-clock-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .sc-btn { background: var(--gold-light); border: 1px solid var(--border-color); border-radius: 6px; width: 36px; height: 28px; font-size: 0.8rem; cursor: pointer; font-weight: 800; color: var(--text-dark); transition: background 0.15s; }
         .sc-btn:hover { background: var(--gold); }
-        .sc-val { font-size: 1.2rem; font-weight: 900; color: var(--text-dark); min-width: 36px; text-align: center; font-family: 'Playfair Display', serif; }
-        .sc-sep { font-size: 1.2rem; font-weight: 900; color: var(--text-dark); align-self: center; padding-bottom: 4px; }
+        .sc-val { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); min-width: 40px; text-align: center; font-family: 'Playfair Display', serif; }
+        .sc-sep { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); align-self: center; padding-bottom: 4px; }
 
         .admin-slide-clock-wrapper { background: #FDFBF7; border: 1.5px solid #D7CCC8; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px; }
         .admin-slide-clock-label { font-size: 0.75rem; font-weight: 800; color: #8D6E63; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
@@ -4335,9 +4335,31 @@ def admin_logout():
         db.session.commit()
     return redirect(url_for('admin_login'))
 
-@app.route('/admin')
+@app.route('/admin', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def admin_dashboard():
-    if not session.get('is_admin'): return redirect(url_for('admin_login'))
+    if not session.get('is_admin'):
+        error = None
+        if request.method == 'POST':
+            pin = request.form.get('pin')
+            if master_pin_matches(pin):
+                state = SystemState.query.first()
+                if not state:
+                    state = SystemState(active_session_id='', last_ping=datetime.min)
+                    db.session.add(state)
+                if state.last_ping and (datetime.utcnow() - state.last_ping).total_seconds() < 60:
+                    if state.active_session_id and state.active_session_id != session.get('admin_id'):
+                        return "<h3 style='font-family:sans-serif; text-align:center; margin-top:50px;'>The employee only can access the admin site.</h3>", 403
+                session.permanent = True
+                session['is_admin'] = True
+                session['admin_id'] = str(uuid.uuid4())
+                state.active_session_id = session['admin_id']
+                state.last_ping = datetime.utcnow()
+                db.session.commit()
+                log_audit("Admin Login", "Successful login to dashboard")
+                return redirect(url_for('admin_dashboard'))
+            error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+        return render_template_string(LOGIN_HTML, error=error)
     return render_template_string(ADMIN_HTML)
 
 @app.route('/employee/login', methods=['GET', 'POST'])
@@ -4360,9 +4382,20 @@ def employee_logout():
     session.pop('is_employee', None)
     return redirect(url_for('employee_login'))
 
-@app.route('/employee')
+@app.route('/employee', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def employee_dashboard():
-    if not session.get('is_employee'): return redirect(url_for('employee_login'))
+    if not session.get('is_employee'):
+        error = None
+        if request.method == 'POST':
+            pin = request.form.get('pin')
+            if master_pin_matches(pin):
+                session.permanent = True
+                session['is_employee'] = True
+                log_audit("Employee Login", "Staff logged in to employee station")
+                return redirect(url_for('employee_dashboard'))
+            error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+        return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
     return render_template_string(EMPLOYEE_HTML)
 @app.route('/api/admin/ping')
 def admin_ping():
