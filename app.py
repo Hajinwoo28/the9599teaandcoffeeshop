@@ -4403,13 +4403,13 @@ def permission_status():
 
 @app.route('/api/permission_requests', methods=['GET'])
 def get_permission_requests():
-    if not session.get('is_admin'): return jsonify([]), 403
+    if not session.get('is_admin') and not session.get('is_employee'): return jsonify([]), 403
     pending = PermissionRequest.query.filter_by(granted=False).order_by(PermissionRequest.created_at.desc()).all()
     return jsonify([{"id": p.id, "code": p.request_code, "name": p.customer_name, "address": p.address, "message": p.message, "time": p.created_at.strftime('%I:%M %p')} for p in pending])
 
 @app.route('/api/permission_requests/<int:req_id>/grant', methods=['POST'])
 def grant_permission(req_id):
-    if not session.get('is_admin'): return jsonify({"status": "error"}), 403
+    if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     pr = PermissionRequest.query.get_or_404(req_id)
     pr.granted = True
     db.session.commit()
@@ -4767,6 +4767,31 @@ with app.app_context():
         except Exception as migration_err3:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err3}")
+
+        # Migrate: add order_source column to reservations (critical — used in /api/orders query)
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='reservations' AND column_name='order_source'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
+                col_exists = any(row[1] == 'order_source' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    "ALTER TABLE reservations ADD COLUMN order_source VARCHAR(30) DEFAULT 'Online'"
+                ))
+                db.session.commit()
+                print("Migration: added order_source column to reservations")
+            else:
+                print("Migration: reservations.order_source already exists, skipped")
+        except Exception as migration_err4:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_err4}")
 
         # ── 0. Seed store schedule (only if not already in DB) ──────────────
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
