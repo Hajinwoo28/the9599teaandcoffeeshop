@@ -323,7 +323,7 @@ LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -388,7 +388,7 @@ EMPLOYEE_LOGIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Login | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
@@ -453,7 +453,7 @@ EMPLOYEE_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E; --teal-light:#E6F4F2;
@@ -559,7 +559,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .pos-layout{display:flex;height:calc(100vh - var(--topbar-h) - var(--nav-h));overflow:hidden;}
 .pos-menu-area{flex:1;overflow-y:auto;padding:12px;background:var(--bg);}
 .pos-sidebar{width:300px;flex-shrink:0;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-@media(max-width:680px){.pos-layout{flex-direction:column;height:auto;overflow:visible;}.pos-menu-area{overflow-y:auto;max-height:40vh;padding-bottom:10px;}.pos-sidebar{width:100%;flex-shrink:0;border-left:none;border-top:2px solid var(--border);}}
+@media(max-width:680px){.pos-layout{flex-direction:column;height:auto;overflow:visible;}.pos-menu-area{overflow:visible;padding-bottom:10px;}.pos-sidebar{width:100%;flex-shrink:0;border-left:none;border-top:2px solid var(--border);max-height:60vh;}}
 
 .pos-cat-tabs{display:flex;gap:5px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;margin-bottom:4px;}
 .pos-cat-tabs::-webkit-scrollbar{display:none;}
@@ -656,7 +656,9 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 </head>
 <body>
 <div id="toast-container"></div>
-<audio id="emp-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<script>
+function playBeepEmp(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.setValueAtTime(880,ctx.currentTime);g.gain.setValueAtTime(0.4,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.35);o.start(ctx.currentTime);o.stop(ctx.currentTime+0.35);}catch(e){}}
+</script>
 
 <header class="topbar">
   <div class="topbar-left">
@@ -857,7 +859,6 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
 <script>
 function escapeHTML(s){const d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
-function onImgErr(el){el.style.display='none';if(el.nextElementSibling)el.nextElementSibling.style.display='flex';}
 function showToast(msg,type='info'){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=msg;c.appendChild(t);setTimeout(()=>t.remove(),3200);}
 
 (function tickClock(){const el=document.getElementById('clock');if(el){const now=new Date();const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();const h12=h%12||12;const ap=h<12?'AM':'PM';el.textContent=`${h12}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ap}`;}setTimeout(tickClock,1000);})();
@@ -872,7 +873,7 @@ function goScreen(id){
 }
 
 /* ── ONLINE POS ── */
-let allOrders=[], activeFilter='All', knownPermCodes=new Set(), knownOrderIds=new Set();
+let allOrders=[], activeFilter='All', knownPermCodes=new Set();
 
 function setFilter(f,btn){
   activeFilter=f;
@@ -888,10 +889,10 @@ async function fetchOrders(){
     const r=await fetch('/api/orders');
     if(!r.ok) return;
     const data=await r.json();
+    const prev=allOrders.map(o=>o.id+':'+o.status).join('|');
     allOrders=data.orders||[];
-    const hasNewOrder=knownOrderIds.size>0&&allOrders.some(o=>!knownOrderIds.has(o.id));
-    if(hasNewOrder) document.getElementById('emp-audio').play().catch(()=>{});
-    allOrders.forEach(o=>knownOrderIds.add(o.id));
+    const curr=allOrders.map(o=>o.id+':'+o.status).join('|');
+    if(prev&&prev!==curr) playBeepEmp();
     renderOrders();
     updateStats();
   }catch(e){}
@@ -965,7 +966,7 @@ async function fetchPermReqs(){
     const data=await r.json();
     if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';return;}
     // Sound alert for new codes
-    data.forEach(p=>{if(!knownPermCodes.has(p.code)){document.getElementById('emp-audio').play().catch(()=>{});knownPermCodes.add(p.code);}});
+    data.forEach(p=>{if(!knownPermCodes.has(p.code)){playBeepEmp();knownPermCodes.add(p.code);}});
     const badge=document.getElementById('nav-badge');
     const permCount=data.length;
     const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
@@ -1058,7 +1059,8 @@ function renderMenuGrid(cat){
     const oosClass=m.is_out_of_stock?' oos':'';
     const clickHandler=m.is_out_of_stock?'':'openCustomize('+m.id+')';
     const oosTag=m.is_out_of_stock?'<div class="menu-oos-tag">Out of Stock</div>':'';
-    const imgTag='<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" onerror="onImgErr(this)">';
+    const imgTag='<img class="menu-preview" src="'+imgUrl+'" alt="'+escapeHTML(m.name)+'" '+
+      'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
     const letterTag='<div class="menu-letter" style="display:none;">'+escapeHTML(m.letter||'?')+'</div>';
     return '<div class="menu-card'+oosClass+'" onclick="'+clickHandler+'">'+
       imgTag+letterTag+bs+
@@ -1238,7 +1240,7 @@ STOREFRONT_HTML = """
     <title>Order Here | 9599 Tea & Coffee</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
     
     <style>
         :root {
@@ -1309,39 +1311,39 @@ STOREFRONT_HTML = """
         .sold-out-badge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.6); display: flex; justify-content: center; align-items: center; font-weight: 900; color: var(--danger); font-size: 1.2rem; z-index: 10; letter-spacing: 2px; }
 
         .sidebar { width: 380px; background: var(--bg-base); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 50; overflow: hidden; }
-        .cart-top-section { padding: 25px 25px 15px; flex-shrink: 0; overflow: visible; }
-        .cart-header { display: flex; align-items: center; margin-bottom: 20px; gap: 10px; }
-        .cart-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--text-dark); }
+        .cart-top-section { padding: 14px 18px 10px; flex-shrink: 0; overflow: visible; }
+        .cart-header { display: flex; align-items: center; margin-bottom: 12px; gap: 10px; }
+        .cart-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 900; color: var(--text-dark); }
         .cart-count { background: var(--gold); color: var(--text-dark); font-size: 0.8rem; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
-        .order-type { display: flex; background: var(--gold-light); border-radius: 12px; padding: 5px; gap: 5px; margin-bottom: 15px; border: 1px solid var(--border-color); }
-        .type-btn { flex: 1; padding: 10px; text-align: center; font-weight: 700; font-size: 0.85rem; border-radius: 8px; cursor: pointer; color: var(--text-light); transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .order-type { display: flex; background: var(--gold-light); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 10px; border: 1px solid var(--border-color); }
+        .type-btn { flex: 1; padding: 7px; text-align: center; font-weight: 700; font-size: 0.82rem; border-radius: 8px; cursor: pointer; color: var(--text-light); transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px; }
         .type-btn.active { background: var(--text-dark); color: var(--gold); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
-        .name-input { width: 100%; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.95rem; font-weight: 700; outline: none; margin-bottom: 15px; color: var(--text-dark); background: var(--card-bg); font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .name-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.9rem; font-weight: 700; outline: none; margin-bottom: 10px; color: var(--text-dark); background: var(--card-bg); font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .name-input:focus { border-color: var(--gold); }
-        .pickup-label { font-size: 0.75rem; font-weight: 800; color: var(--text-light); margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        .pickup-label { font-size: 0.72rem; font-weight: 800; color: var(--text-light); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 1px; }
         .time-wrapper { position: relative; }
-        .time-wrapper i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-dark); font-size: 1.1rem; pointer-events: none; }
+        .time-wrapper i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-dark); font-size: 1rem; pointer-events: none; }
 
-        .cart-content { padding: 0 25px 15px; flex: 1; overflow-y: auto; min-height: 0; }
-        .empty-cart { margin: auto 0; text-align: center; padding: 40px 0; }
-        .empty-cart-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.2; }
-        .empty-cart p { font-weight: 700; font-size: 1rem; color: var(--text-light); }
+        .cart-content { padding: 0 18px 10px; flex: 1; overflow-y: auto; min-height: 0; }
+        .empty-cart { margin: auto 0; text-align: center; padding: 30px 0; }
+        .empty-cart-icon { font-size: 2.2rem; margin-bottom: 10px; opacity: 0.2; }
+        .empty-cart p { font-weight: 700; font-size: 0.9rem; color: var(--text-light); }
 
-        .cart-item { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; padding: 16px; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(44, 26, 18, 0.03); }
-        .cart-item-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 900; color: var(--text-dark); margin-bottom: 4px; }
-        .cart-item-sub { font-size: 0.75rem; color: var(--text-light); font-weight: 500; line-height: 1.4; }
+        .cart-item { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; padding: 12px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(44, 26, 18, 0.03); }
+        .cart-item-name { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 900; color: var(--text-dark); margin-bottom: 3px; }
+        .cart-item-sub { font-size: 0.7rem; color: var(--text-light); font-weight: 500; line-height: 1.4; }
         .cart-item-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%; }
-        .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 1.1rem; }
-        .cart-item-del { margin-top: 10px; font-size: 0.8rem; color: var(--danger); cursor: pointer; font-weight: 700; }
+        .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 0.95rem; }
+        .cart-item-del { margin-top: 8px; font-size: 0.78rem; color: var(--danger); cursor: pointer; font-weight: 700; }
 
-        .checkout-area { padding: 20px 25px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
-        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .total-label { font-size: 0.9rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
-        .total-amount { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--text-dark); }
+        .checkout-area { padding: 12px 18px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
+        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .total-label { font-size: 0.82rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+        .total-amount { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 900; color: var(--text-dark); }
 
-        .checkout-btn { width: 100%; padding: 18px; border: 2px solid #B8A898; border-radius: 12px; font-size: 1rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
+        .checkout-btn { width: 100%; padding: 13px; border: 2px solid #B8A898; border-radius: 12px; font-size: 0.95rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
         .checkout-btn.active { background: var(--gold); color: var(--text-dark); border-color: var(--gold); cursor: pointer; box-shadow: 0 6px 20px rgba(200, 155, 60, 0.4); }
         .checkout-btn.active:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(200, 155, 60, 0.5); }
 
@@ -1374,14 +1376,14 @@ STOREFRONT_HTML = """
         .btn-cancel { flex: 1; background: var(--border-color); color: var(--text-dark); border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .btn-add { flex: 2; background: var(--gold); color: var(--text-dark); border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 1rem; }
 
-        .slide-clock-wrapper { background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 15px; }
-        .slide-clock-display { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--gold); text-align: center; margin-bottom: 12px; letter-spacing: 2px; }
+        .slide-clock-wrapper { background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+        .slide-clock-display { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 900; color: var(--gold); text-align: center; margin-bottom: 8px; letter-spacing: 2px; }
         .slide-clock-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .slide-clock-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .sc-btn { background: var(--gold-light); border: 1px solid var(--border-color); border-radius: 6px; width: 36px; height: 28px; font-size: 0.8rem; cursor: pointer; font-weight: 800; color: var(--text-dark); transition: background 0.15s; }
+        .slide-clock-col { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .sc-btn { background: var(--gold-light); border: 1px solid var(--border-color); border-radius: 6px; width: 32px; height: 24px; font-size: 0.75rem; cursor: pointer; font-weight: 800; color: var(--text-dark); transition: background 0.15s; }
         .sc-btn:hover { background: var(--gold); }
-        .sc-val { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); min-width: 40px; text-align: center; font-family: 'Playfair Display', serif; }
-        .sc-sep { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); align-self: center; padding-bottom: 4px; }
+        .sc-val { font-size: 1.25rem; font-weight: 900; color: var(--text-dark); min-width: 36px; text-align: center; font-family: 'Playfair Display', serif; }
+        .sc-sep { font-size: 1.25rem; font-weight: 900; color: var(--text-dark); align-self: center; padding-bottom: 4px; }
 
         .admin-slide-clock-wrapper { background: #FDFBF7; border: 1.5px solid #D7CCC8; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px; }
         .admin-slide-clock-label { font-size: 0.75rem; font-weight: 800; color: #8D6E63; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
@@ -1450,8 +1452,9 @@ STOREFRONT_HTML = """
 <body>
 
 <div id="toast-container"></div>
-<audio id="status-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-<audio id="alert-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<script>
+function playBeepSF(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.setValueAtTime(880,ctx.currentTime);g.gain.setValueAtTime(0.4,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.35);o.start(ctx.currentTime);o.stop(ctx.currentTime+0.35);}catch(e){}}
+</script>
 
 {% if not session.get('customer_verified') %}
 <!-- SIGN-IN GATEKEEPER -->
@@ -2422,7 +2425,7 @@ STOREFRONT_HTML = """
                 document.getElementById('perm-place-btn').style.display = 'inline-flex';
                 document.getElementById('perm-send-status').style.color = '#388E3C';
                 document.getElementById('perm-send-status').innerText = '✅ Permission Granted! You may now place your order.';
-                document.getElementById('alert-audio').play().catch(()=>{});
+                playBeepSF();
             }
         } catch(e){}
     }
@@ -2446,7 +2449,7 @@ STOREFRONT_HTML = """
 
         const totalItems = cart.length;
         if(totalItems >= 5 && !permissionGranted) {
-            document.getElementById('alert-audio').play().catch(()=>{});
+            playBeepSF();
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
             document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || 'Customer';
             document.getElementById('perm-address-input').value = '';
@@ -2640,7 +2643,7 @@ STOREFRONT_HTML = """
                     const msg = `Order #${srv.code} is now: ${srv.status}`;
                     showToast(msg, "success");
                     addNotifMessage(msg);
-                    document.getElementById('status-audio').play().catch(()=>{});
+                    playBeepSF();
                 }
             });
             if(updated) localStorage.setItem('myOrders', JSON.stringify(orders));
@@ -2691,8 +2694,8 @@ ADMIN_HTML = """
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>9599 Admin Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 /* ══ LOGO-BASED PALETTE ══════════════════════════════════════════
    #7B4F2E  --brown       primary warm brown (logo text)
@@ -2930,7 +2933,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 </head>
 <body>
 <div id="toast-container"></div>
-<audio id="admin-audio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<script>
+function playBeep(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.setValueAtTime(880,ctx.currentTime);g.gain.setValueAtTime(0.4,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.35);o.start(ctx.currentTime);o.stop(ctx.currentTime+0.35);}catch(e){}}
+</script>
 
 <!-- ══ TOPBAR ══ -->
 <header class="topbar">
@@ -3358,7 +3363,7 @@ function getStatusClass(s){return({'Waiting Confirmation':'status-waiting','Prep
 
 /* ══ NOTIFICATIONS ══ */
 let adminNotifs=[],lastOrderIds=new Set(),firstLoad=true;
-function playBeep(){try{document.getElementById('admin-audio').play().catch(()=>{});}catch(e){}}
+function playBeep(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.setValueAtTime(880,ctx.currentTime);g.gain.setValueAtTime(0.4,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.35);o.start(ctx.currentTime);o.stop(ctx.currentTime+0.35);}catch(e){}}
 function toggleNotif(){const p=document.getElementById('notif-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
 function clearNotifs(){adminNotifs=[];renderNotifUI();document.getElementById('notif-panel').style.display='none';}
 function addNotif(code,name,total){adminNotifs.unshift({code,name,total,time:new Date().toLocaleTimeString()});if(adminNotifs.length>20)adminNotifs.pop();renderNotifUI();playBeep();showToast(`New order from ${name} (${code})!`,'success');}
@@ -4009,7 +4014,7 @@ def storefront():
         return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
