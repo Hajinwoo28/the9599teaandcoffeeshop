@@ -4143,12 +4143,17 @@ fetchInventory();
 
 @app.before_request
 def check_admin_session():
+    # /admin and /employee handle their own inline PIN login — don't intercept them.
+    # Only guard API endpoints and any future sub-routes.
+    if request.path == '/admin' or request.path == '/employee':
+        return  # let the route handler show its own login form
+
     if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
         # Must have a valid PIN-authenticated session
         if not session.get('is_admin') or not session.get('admin_id'):
             if request.path.startswith('/api'):
                 return jsonify({"error": "Unauthorized"}), 403
-            return redirect(url_for('admin_login'))
+            return redirect(url_for('admin_dashboard'))
         # Block concurrent sessions (only one admin at a time)
         state = SystemState.query.first()
         if state and state.active_session_id:
