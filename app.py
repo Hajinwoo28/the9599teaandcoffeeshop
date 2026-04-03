@@ -4195,40 +4195,68 @@ SESSION_TIMEOUT = 90  # seconds of inactivity before a device lock expires
 
 def _session_active(last_ping):
     """True if a ping arrived within SESSION_TIMEOUT seconds."""
-    if last_ping is None or last_ping == datetime.min:
+    if last_ping is None:
+        return False
+    try:
+        if last_ping == datetime.min:
+            return False
+    except Exception:
         return False
     return (datetime.utcnow() - last_ping).total_seconds() < SESSION_TIMEOUT
 
+def _get_state():
+    """Safely fetch SystemState row; returns None on any DB error."""
+    try:
+        return SystemState.query.first()
+    except Exception:
+        return None
+
 @app.before_request
 def check_admin_session():
-    state = SystemState.query.first()
-
     # ── /admin: lock to the device that owns the active admin session ────────
     if request.path == '/admin':
-        if state and state.active_session_id and _session_active(state.last_ping):
-            if state.active_session_id != session.get('admin_id'):
-                return render_template_string(LOCKED_HTML, role='Admin'), 403
+        state = _get_state()
+        if state:
+            try:
+                active = state.active_session_id
+                ping   = state.last_ping
+                if active and _session_active(ping):
+                    if active != session.get('admin_id'):
+                        return render_template_string(LOCKED_HTML, role='Admin'), 403
+            except Exception:
+                pass
         return  # no active lock — /admin route shows its own login form
 
     # ── /employee: lock to the device that owns the active employee session ──
     if request.path == '/employee':
-        if state and state.active_employee_session_id and _session_active(state.employee_last_ping):
-            if state.active_employee_session_id != session.get('employee_id'):
-                return render_template_string(LOCKED_HTML, role='Employee'), 403
+        state = _get_state()
+        if state:
+            try:
+                active = getattr(state, 'active_employee_session_id', None)
+                ping   = getattr(state, 'employee_last_ping', None)
+                if active and _session_active(ping):
+                    if active != session.get('employee_id'):
+                        return render_template_string(LOCKED_HTML, role='Employee'), 403
+            except Exception:
+                pass
         return  # no active lock — /employee route shows its own login form
 
-    # ── Guard admin API routes ────────────────────────────────────────────────
+    # ── Guard admin API routes and sub-paths ─────────────────────────────────
     if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
         if not session.get('is_admin') or not session.get('admin_id'):
             if request.path.startswith('/api'):
                 return jsonify({"error": "Unauthorized"}), 403
             return redirect(url_for('admin_dashboard'))
         # Kick out if another device has since taken over the session
-        if state and state.active_session_id:
-            if _session_active(state.last_ping) and state.active_session_id != session.get('admin_id'):
-                if request.path.startswith('/api'):
-                    return jsonify({"error": "Unauthorized"}), 403
-                return render_template_string(LOCKED_HTML, role='Admin'), 403
+        state = _get_state()
+        if state:
+            try:
+                if _session_active(state.last_ping) and state.active_session_id != session.get('admin_id'):
+                    if request.path.startswith('/api'):
+                        return jsonify({"error": "Unauthorized"}), 403
+                    return render_template_string(LOCKED_HTML, role='Admin'), 403
+            except Exception:
+                pass
 
 @app.route('/')
 def storefront():
@@ -5106,9 +5134,10 @@ with app.app_context():
         # Migrate: add employee session columns to system_state
         try:
             is_postgres = 'postgresql' in str(db.engine.url)
+            ts_type = "TIMESTAMP" if is_postgres else "DATETIME"
             for col_name, col_def in [
                 ("active_employee_session_id", "VARCHAR(100)"),
-                ("employee_last_ping",         "DATETIME"),
+                ("employee_last_ping",         ts_type),
             ]:
                 col_exists = False
                 if is_postgres:
