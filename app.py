@@ -1615,6 +1615,20 @@ async function checkout(){
   if(!name){showToast('Please enter the customer name','error');return;}
   const btn=document.getElementById('checkout-btn');
   btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Processing…';
+  // ── Store hours check: employees can checkout until actual closing time ──
+  try{
+    const sr=await fetch('/api/store_status');
+    const ss=await sr.json();
+    // ss.open = before 1-hr cutoff; ss.closing_soon = within last hour before close
+    // Employees are allowed to place walk-in orders during BOTH windows.
+    const storeActuallyOpen=ss.open||ss.closing_soon;
+    if(!storeActuallyOpen){
+      showToast('Walk-in orders are only accepted during store hours ('+ss.open_time+' – '+ss.close_time+')','error');
+      btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';
+      return;
+    }
+  }catch(e){/* If status check fails, let the server guard catch it */}
+  // ── End store hours check ──────────────────────────────────────
   const total=cart.reduce((s,i)=>s+i.price,0);
   const payload={customer_name:name,total,items:cart.map(i=>({foundation:i.foundation,size:i.size,sugar:i.sugar,ice:i.ice,addons:i.addons,price:i.price}))};
   try{
@@ -5305,6 +5319,28 @@ def api_orders():
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"error": "Unauthorized"}), 403
+
+    # ── Store hours guard for walk-in POS ────────────────────────────────
+    # Employees may place walk-in orders from open_time up to actual close_time
+    # (unlike the online storefront which cuts off 1 hour early).
+    now = get_ph_time()
+    today_str = now.strftime('%Y-%m-%d')
+    if ClosedDay.query.filter_by(date_str=today_str).first():
+        return jsonify({"error": "The store is marked closed today. No walk-in orders can be placed."}), 403
+    dow = now.weekday()
+    oh, om, ch, cm = get_schedule_for_day(dow)
+    def _fmt(h, m):
+        suffix = 'AM' if h < 12 else 'PM'
+        return f"{h % 12 or 12}:{m:02d} {suffix}"
+    open_dt  = now.replace(hour=oh, minute=om, second=0, microsecond=0)
+    close_dt = now.replace(hour=ch, minute=cm, second=0, microsecond=0)
+    if not (open_dt <= now < close_dt):
+        return jsonify({
+            "error": f"Walk-in orders are only accepted during store hours "
+                     f"({_fmt(oh, om)} – {_fmt(ch, cm)}). The store is currently closed."
+        }), 403
+    # ── End store hours guard ────────────────────────────────────────────
+
     data = request.json
     customer_name = data.get('customer_name', 'Walk-In')
     try:
