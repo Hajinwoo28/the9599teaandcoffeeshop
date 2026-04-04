@@ -216,6 +216,7 @@ class Reservation(db.Model):
     pickup_time = db.Column(db.String(50), nullable=False)
     order_source = db.Column(db.String(30), default='Online') 
     created_at = db.Column(db.DateTime, default=get_ph_time)
+    cancel_reason = db.Column(db.String(300), nullable=True, default='')
     infusions = db.relationship('Infusion', backref='reservation', lazy=True, cascade="all, delete-orphan")
 
 class Infusion(db.Model):
@@ -1102,6 +1103,35 @@ function playEmpPermBeep(){
   </div>
 </div>
 
+<!-- CANCEL REASON MODAL -->
+<div class="success-overlay" id="cancel-reason-modal" style="display:none;">
+  <div class="success-card" style="max-width:380px;padding:28px 24px;">
+    <div style="font-size:2rem;margin-bottom:6px;">❌</div>
+    <div style="font-size:0.85rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Cancel Order</div>
+    <div style="font-size:0.8rem;color:var(--muted);font-weight:600;margin-bottom:18px;line-height:1.5;">Select a reason so the customer is informed why their order was cancelled.</div>
+    <div style="width:100%;text-align:left;margin-bottom:10px;">
+      <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Cancellation Reason</label>
+      <select id="cancel-reason-select" onchange="onCancelReasonChange(this.value)"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.86rem;font-weight:700;color:var(--text);background:var(--bg);outline:none;">
+        <option value="Out of Stock">🚫 Out of Stock</option>
+        <option value="Item Unavailable">⚠️ Item Unavailable</option>
+        <option value="Store Closing Early">🕐 Store Closing Early</option>
+        <option value="Customer Requested Cancellation">👤 Customer Requested Cancellation</option>
+        <option value="Other">✏️ Other (specify below)</option>
+      </select>
+    </div>
+    <div id="cancel-reason-custom-wrap" style="width:100%;text-align:left;margin-bottom:14px;display:none;">
+      <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Custom Reason</label>
+      <input id="cancel-reason-custom" type="text" placeholder="e.g. Machine breakdown, ingredient issue…"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;color:var(--text);background:#fff;outline:none;">
+    </div>
+    <div style="display:flex;gap:10px;width:100%;">
+      <button onclick="closeCancelReasonModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;">Keep Order</button>
+      <button onclick="confirmCancelOrder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--red);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;"><i class="fas fa-times-circle"></i> Confirm Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- SUCCESS MODAL -->
 <div class="success-overlay" id="success-modal">
   <div class="success-card">
@@ -1361,6 +1391,16 @@ function renderOrders(){
 
 async function updateStatus(orderId,status,selectEl){
   const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled'};
+  if(status === 'Cancelled'){
+    // Show cancellation reason modal before updating
+    window._pendingCancelOrderId = orderId;
+    window._pendingCancelSelectEl = selectEl;
+    document.getElementById('cancel-reason-select').value = 'Out of Stock';
+    document.getElementById('cancel-reason-custom').value = '';
+    document.getElementById('cancel-reason-custom-wrap').style.display = 'none';
+    document.getElementById('cancel-reason-modal').style.display = 'flex';
+    return;
+  }
   if(selectEl){
     selectEl.className='status-select '+(statusClass[status]||'sel-waiting');
   }
@@ -1369,6 +1409,32 @@ async function updateStatus(orderId,status,selectEl){
     if(r.ok){showToast(`Status: ${status}`,'success');fetchOrders();}
     else showToast('Update failed','error');
   }catch(e){showToast('Network error','error');}
+}
+
+function onCancelReasonChange(val){
+  document.getElementById('cancel-reason-custom-wrap').style.display = val === 'Other' ? 'block' : 'none';
+}
+
+async function confirmCancelOrder(){
+  const orderId=window._pendingCancelOrderId;
+  const selectEl=window._pendingCancelSelectEl;
+  const reasonSel=document.getElementById('cancel-reason-select').value;
+  const customReason=document.getElementById('cancel-reason-custom').value.trim();
+  const cancel_reason = reasonSel === 'Other' ? (customReason || 'Cancelled by store') : reasonSel;
+  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled'};
+  document.getElementById('cancel-reason-modal').style.display='none';
+  if(selectEl){ selectEl.className='status-select sel-cancelled'; }
+  try{
+    const r=await fetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Cancelled',cancel_reason})});
+    if(r.ok){showToast(`Order cancelled: ${cancel_reason}`,'success');fetchOrders();}
+    else showToast('Update failed','error');
+  }catch(e){showToast('Network error','error');}
+}
+
+function closeCancelReasonModal(){
+  document.getElementById('cancel-reason-modal').style.display='none';
+  // Revert the select back to the previous status
+  fetchOrders();
 }
 
 /* ── PERMISSION REQUESTS (employee view) ── */
@@ -1767,6 +1833,8 @@ STOREFRONT_HTML = """
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     
     <style>
         :root {
@@ -1923,15 +1991,81 @@ STOREFRONT_HTML = """
         @media (max-width: 768px) {
             body { height: auto; min-height: 100vh; overflow-y: auto; }
             .main-container { flex-direction: column; height: auto; overflow: visible; }
-            .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 60vh; }
-            .menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-            .sidebar { width: 100%; flex: none; height: auto; border-left: none; border-top: 2px solid var(--border-color); position: sticky; bottom: 0; z-index: 100; max-height: min(78vh, 720px); max-height: min(78dvh, 720px); display: flex; flex-direction: column; box-shadow: 0 -4px 20px rgba(44,26,18,0.12); overflow: hidden; min-height: 0; }
-            .cart-top-section { flex-shrink: 1; min-height: 0; overflow-y: auto; max-height: min(44vh, 400px); }
+            .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 110px; }
+            .menu-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+            /* ── Collapsible order panel ── */
+            .sidebar {
+                width: 100%; flex: none; border-left: none;
+                position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+                display: flex; flex-direction: column;
+                background: var(--bg-base);
+                border-top: 2px solid var(--border-color);
+                box-shadow: 0 -4px 24px rgba(44,26,18,0.18);
+                max-height: 90px;          /* collapsed: just the toggle bar + total */
+                transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+                overflow: hidden;
+            }
+            .sidebar.mobile-expanded {
+                max-height: min(82vh, 680px);
+                max-height: min(82dvh, 680px);
+            }
+
+            /* Toggle handle – shown only on mobile */
+            .mobile-cart-toggle {
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 10px 20px 6px;
+                cursor: pointer;
+                flex-shrink: 0;
+                user-select: none;
+            }
+            .mobile-cart-toggle-left { display: flex; align-items: center; gap: 10px; }
+            .mobile-cart-toggle-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1rem; color: var(--text-dark); }
+            .mobile-cart-toggle-badge {
+                background: var(--gold); color: #fff; border-radius: 20px;
+                font-size: 0.7rem; font-weight: 900; padding: 2px 8px;
+                min-width: 22px; text-align: center;
+            }
+            .mobile-cart-chevron { font-size: 0.9rem; color: var(--text-light); transition: transform 0.3s; }
+            .sidebar.mobile-expanded .mobile-cart-chevron { transform: rotate(180deg); }
+
+            /* Scrollable inner area when expanded */
+            .cart-top-section { flex-shrink: 1; min-height: 0; overflow-y: auto; max-height: min(38vh, 330px); padding: 0 20px 10px; }
             .cart-content { flex: 1 1 auto; overflow-y: auto; min-height: 0; max-height: none; }
-            .checkout-area { flex-shrink: 0; position: sticky; bottom: 0; z-index: 6; background: var(--bg-base); padding-top: 14px; padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 22px rgba(44,26,18,0.12); }
+            .checkout-area {
+                flex-shrink: 0; z-index: 6; background: var(--bg-base);
+                padding: 10px 20px max(12px, env(safe-area-inset-bottom, 0px));
+                box-shadow: 0 -4px 12px rgba(44,26,18,0.08);
+            }
         }
 
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .mobile-cart-toggle { display: none; } /* hidden on desktop */
+
+        /* ── Geolocation button ── */
+        .geo-btn {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--gold);
+            background: var(--gold-light); color: var(--gold); font-weight: 800; font-size: 0.82rem;
+            cursor: pointer; font-family: 'DM Sans', sans-serif; margin-bottom: 10px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .geo-btn:hover { background: var(--gold); color: #fff; }
+        .geo-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .geo-status { font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; min-height: 16px; color: var(--text-light); text-align: center; }
+        .geo-map-wrap { border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border-color); margin-bottom: 10px; display: none; }
+        .geo-map-wrap .leaflet-container { height: 150px; width: 100%; }
+        .geo-addr { font-size: 0.75rem; font-weight: 700; color: var(--text-dark); padding: 7px 10px; background: var(--gold-light); border-top: 1px solid var(--border-color); line-height: 1.4; }
+
+        /* ── VPN Blocked Modal ── */
+        #vpn-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        #vpn-modal.show { display: flex; }
+        .vpn-sheet { background: #fff; border-radius: 20px; padding: 32px 28px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .vpn-icon { font-size: 3rem; margin-bottom: 10px; }
+        .vpn-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--danger); margin-bottom: 10px; }
+        .vpn-body { font-size: 0.88rem; font-weight: 600; color: var(--text-light); line-height: 1.6; margin-bottom: 22px; }
+        .vpn-body b { color: var(--text-dark); }
+        .vpn-close-btn { background: var(--danger); color: #fff; border: none; border-radius: 12px; padding: 12px 28px; font-weight: 800; font-size: 0.9rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
         .toast { background-color: #3E2723; color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
         .toast.error { background-color: #C62828; }
         .toast.success { background-color: #388E3C; }
@@ -1954,6 +2088,11 @@ STOREFRONT_HTML = """
         .location-banner i { font-size: 1rem; color: var(--gold); }
         .location-banner span { letter-spacing: 0.3px; }
         .location-banner .loc-pill { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px 12px; font-size: 0.78rem; border: 1px solid rgba(255,255,255,0.3); }
+        .hours-strip { background: #FDF8F0; border-bottom: 1px solid #EDE0CC; padding: 7px 20px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 0.8rem; font-weight: 700; flex-wrap: wrap; flex-shrink: 0; }
+        .hours-strip i { color: #C8922A; font-size: 0.88rem; }
+        .hours-label { color: #8D6E63; font-weight: 700; }
+        .hours-range { color: #4E342E; font-weight: 900; font-family: 'Playfair Display', serif; font-size: 0.85rem; letter-spacing: 0.3px; }
+        .hours-note { color: #A1887F; font-size: 0.74rem; font-weight: 600; }
 
         /* ── Location Modal ── */
         .loc-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-end; justify-content: center; z-index: 9999; }
@@ -2203,6 +2342,14 @@ function playGrantedSound() {
     <span class="loc-pill"><i class="fas fa-directions" style="margin-right:4px;"></i>Get Directions</span>
 </div>
 
+<!-- Store Hours Strip -->
+<div class="hours-strip">
+    <i class="fas fa-clock"></i>
+    <span class="hours-label">Today's Hours:</span>
+    <span class="hours-range">{{ open_time }} – {{ actual_close_time }}</span>
+    <span class="hours-note">· Online orders until {{ close_time }}</span>
+</div>
+
 <!-- Header -->
 <header>
     <div class="logo-area">
@@ -2218,6 +2365,10 @@ function playGrantedSound() {
         <div title="Find Us" onclick="openLocModal()" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--gold-light); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
             <i class="fas fa-map-marker-alt" style="color:var(--gold); font-size:16px;"></i>
         </div>
+        <button class="notif-bell" id="basket-btn" onclick="toggleMobileCart()" title="View Your Order" style="position:relative;">
+            <i class="fas fa-shopping-basket" style="font-size:15px;"></i>
+            <span class="notif-badge" id="basket-badge" style="display:none;">0</span>
+        </button>
         <button class="notif-bell" id="notif-bell-btn" onclick="toggleNotifDropdown()" title="Order Notifications">
             <i class="fas fa-bell" style="font-size:15px;"></i><span class="notif-badge" id="notif-badge">0</span>
         </button>
@@ -2255,7 +2406,8 @@ function playGrantedSound() {
         <div class="loc-info-row">
             <i class="fas fa-clock"></i>
             <div>
-                <b>Every Day:</b> {{ open_time }} – {{ close_time }}
+                <b>Store Hours:</b> {{ open_time }} – {{ actual_close_time }}<br>
+                <span style="font-size:0.82rem; color:#A1887F;">Online ordering closes at {{ close_time }}</span>
             </div>
         </div>
         <div class="loc-info-row">
@@ -2303,9 +2455,17 @@ function playGrantedSound() {
     </div>
 
     <!-- Sidebar Cart -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
+        <!-- Mobile-only toggle handle -->
+        <div class="mobile-cart-toggle" id="mobile-cart-toggle" onclick="toggleMobileCart()">
+            <div class="mobile-cart-toggle-left">
+                <span class="mobile-cart-toggle-title">Your Order</span>
+                <span class="mobile-cart-toggle-badge" id="mobile-cart-count">0</span>
+            </div>
+            <i class="fas fa-chevron-up mobile-cart-chevron" id="mobile-cart-chevron"></i>
+        </div>
         <div class="cart-top-section">
-            <div class="cart-header">
+            <div class="cart-header" style="display:none;">
                 <div class="cart-title">Your Order</div>
                 <div class="cart-count" id="cart-count">0</div>
             </div>
@@ -2318,6 +2478,18 @@ function playGrantedSound() {
             <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name', '') }}" oninput="checkCheckoutStatus()">
             <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email', '') }}" oninput="checkCheckoutStatus()">
             <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
+
+            <!-- Geolocation -->
+            <button class="geo-btn" id="geo-btn" onclick="useMyLocation()">
+                <i class="fas fa-map-marker-alt"></i> Use my current location
+            </button>
+            <div class="geo-status" id="geo-status"></div>
+            <div class="geo-map-wrap" id="geo-map-wrap">
+                <div id="geo-map"></div>
+                <div class="geo-addr" id="geo-addr"></div>
+            </div>
+            <input type="hidden" id="customer-lat" value="">
+            <input type="hidden" id="customer-lng" value="">
 
             <label class="pickup-label">Pick-up Time *</label>
             <div class="slide-clock-wrapper" id="pickup-clock-wrapper">
@@ -2500,9 +2672,61 @@ function playGrantedSound() {
             <div style="text-align:center; margin-top:10px; font-size:0.72rem; color:var(--text-light);">Thank you for your order! 🧋</div>
         </div>
 
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:10px; flex-direction:column;">
+            <button class="btn-add" style="width:100%; background:var(--gold); color:#fff;" onclick="openUpdateOrderModal()">
+                <i class="fas fa-edit"></i> Add / Update My Order
+            </button>
             <button class="btn-cancel" style="flex:1;" onclick="closeSuccessAndReset()">Done</button>
         </div>
+    </div>
+</div>
+
+<!-- Order Update Request Modal -->
+<div id="update-order-modal" class="modal">
+    <div class="modal-content" style="text-align:center; max-width:440px;">
+        <div style="font-size:2.2rem; margin-bottom:8px;">✏️</div>
+        <h2 style="margin-bottom:6px;">Add / Update Your Order</h2>
+        <p style="color:var(--text-light); font-weight:600; font-size:0.85rem; margin-bottom:16px; line-height:1.5;">
+            Send a request to the employee. They'll review it and approve your changes.
+        </p>
+
+        <div style="font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:900; color:var(--gold); margin-bottom:16px; border:2px dashed var(--gold); padding:10px 16px; border-radius:12px; background:var(--gold-light); letter-spacing:3px;" id="update-code-display"></div>
+
+        <div id="update-form-section" style="text-align:left;">
+            <div style="margin-bottom:10px;">
+                <label class="pickup-label">Your Name</label>
+                <input type="text" id="update-name-display" class="name-input" readonly style="background:var(--gold-light); cursor:default; margin-bottom:0;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label class="pickup-label">What would you like to add or change? <span style="color:var(--danger);">*</span></label>
+                <textarea id="update-message-input" class="name-input" rows="3"
+                    placeholder="e.g. Please add 1 Taro Milktea (16oz, less ice) and change my Mocha to Iced Americano."
+                    style="resize:none; line-height:1.5;"></textarea>
+            </div>
+
+            <div id="update-send-status" style="font-size:0.85rem; font-weight:700; margin-bottom:12px; min-height:20px;"></div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="btn-cancel" onclick="closeUpdateOrderModal()">Cancel</button>
+                <button class="btn-add" id="update-send-btn" onclick="sendUpdateRequest()">
+                    <i class="fas fa-paper-plane"></i> Send Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VPN Blocked Modal -->
+<div id="vpn-modal">
+    <div class="vpn-sheet">
+        <div class="vpn-icon">🛡️</div>
+        <div class="vpn-title">VPN Detected</div>
+        <div class="vpn-body">
+            We've detected that you're using a <b>VPN or proxy</b>.<br><br>
+            To keep our ordering system fair and secure, online orders are only accepted from <b>real network connections</b>.<br><br>
+            Please <b>disable your VPN</b> and try again.
+        </div>
+        <button class="vpn-close-btn" onclick="document.getElementById('vpn-modal').classList.remove('show')">Got it</button>
     </div>
 </div>
 
@@ -2947,8 +3171,26 @@ function playGrantedSound() {
             });
         }
         document.getElementById('cart-total').innerText = `₱${total.toFixed(2)}`;
+        // Sync mobile badge
+        const mobileBadge = document.getElementById('mobile-cart-count');
+        if (mobileBadge) mobileBadge.innerText = cart.length;
+        // Sync basket badge in header
+        const basketBadge = document.getElementById('basket-badge');
+        if (basketBadge) {
+            basketBadge.innerText = cart.length;
+            basketBadge.style.display = cart.length > 0 ? 'flex' : 'none';
+        }
         saveCartToSession();
         checkCheckoutStatus();
+    }
+
+    function toggleMobileCart() {
+        const sidebar = document.getElementById('sidebar');
+        if (window.innerWidth <= 768) {
+            sidebar.classList.toggle('mobile-expanded');
+        } else {
+            sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     function checkCheckoutStatus() {
@@ -3019,6 +3261,84 @@ function playGrantedSound() {
         if(permPoll) { clearInterval(permPoll); permPoll = null; }
     }
 
+    let updatePermPoll = null;
+
+    function openUpdateOrderModal() {
+        const code = document.getElementById('display-code').innerText.trim();
+        const name = document.getElementById('customer-name').value.trim() || 'Customer';
+        document.getElementById('update-code-display').innerText = code;
+        document.getElementById('update-name-display').value = name;
+        document.getElementById('update-message-input').value = '';
+        document.getElementById('update-send-status').innerText = '';
+        document.getElementById('update-send-btn').disabled = false;
+        document.getElementById('update-send-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
+        document.getElementById('update-form-section').style.display = 'block';
+        document.getElementById('update-order-modal').style.display = 'flex';
+    }
+
+    function closeUpdateOrderModal() {
+        document.getElementById('update-order-modal').style.display = 'none';
+        if(updatePermPoll) { clearInterval(updatePermPoll); updatePermPoll = null; }
+    }
+
+    async function sendUpdateRequest() {
+        const message = document.getElementById('update-message-input').value.trim();
+        if(!message) {
+            const s = document.getElementById('update-send-status');
+            s.style.color = 'var(--danger)';
+            s.innerText = 'Please describe what you want to add or change.';
+            return;
+        }
+        const code = document.getElementById('update-code-display').innerText.trim();
+        const name = document.getElementById('update-name-display').value.trim() || 'Customer';
+        const requestCode = 'UPD-' + code + '-' + Math.floor(Math.random()*9000+1000);
+        const payload = {
+            name,
+            address: 'Order #' + code,
+            message: '[UPDATE REQUEST for order ' + code + '] ' + message,
+            code: requestCode
+        };
+        const btn = document.getElementById('update-send-btn');
+        const stat = document.getElementById('update-send-status');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        stat.style.color = 'var(--text-light)'; stat.innerText = '';
+        try {
+            const res = await fetch('/api/permission_request', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+            if(res.ok) {
+                stat.style.color = '#2E7D32';
+                stat.innerText = '✅ Request sent! Waiting for employee approval…';
+                updatePermPoll = setInterval(() => checkUpdateStatus(requestCode), 3000);
+            } else {
+                stat.style.color = 'var(--danger)';
+                stat.innerText = 'Error sending request. Please try again.';
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
+            }
+        } catch(e) {
+            stat.style.color = 'var(--danger)'; stat.innerText = 'Network error. Please try again.';
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
+        }
+    }
+
+    async function checkUpdateStatus(code) {
+        try {
+            const res = await fetch(`/api/permission_status?code=${encodeURIComponent(code)}`);
+            const data = await res.json();
+            if(data.granted) {
+                clearInterval(updatePermPoll); updatePermPoll = null;
+                const stat = document.getElementById('update-send-status');
+                const replyMsg = data.reply_message && data.reply_message.trim();
+                stat.style.color = '#2E7D32';
+                stat.innerHTML = '✅ <b>Update approved!</b>'
+                    + (replyMsg ? '<br><div style="background:#F1F8F1;border:1px solid #A5D6A7;border-radius:10px;padding:10px 13px;margin-top:8px;font-size:0.85rem;color:#2E7D32;line-height:1.5;">'
+                        + '<span style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;color:#1B5E20;">📣 From the staff:</span>'
+                        + escapeHTML(replyMsg) + '</div>' : '');
+                document.getElementById('update-send-btn').style.display = 'none';
+                addNotifMessage('✅ Your order update request was approved!');
+                playGrantedSound();
+            }
+        } catch(e){}
+    }
+
     async function sendPermissionRequest() {
         const address = document.getElementById('perm-address-input').value.trim();
         const message = document.getElementById('perm-message-input').value.trim();
@@ -3082,25 +3402,125 @@ function playGrantedSound() {
         } catch(e){}
     }
 
+    // ── Geolocation & map ────────────────────────────────────────────────────
+    let geoMap = null;
+    let geoMarker = null;
+
+    function useMyLocation() {
+        const btn = document.getElementById('geo-btn');
+        const status = document.getElementById('geo-status');
+        if (!navigator.geolocation) {
+            status.style.color = 'var(--danger)';
+            status.innerText = '⚠️ Geolocation is not supported by your browser.';
+            return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location…';
+        status.style.color = 'var(--text-light)';
+        status.innerText = 'Requesting permission…';
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                document.getElementById('customer-lat').value = lat;
+                document.getElementById('customer-lng').value = lng;
+                status.style.color = '#2E7D32';
+                status.innerText = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Location set';
+
+                // Show map
+                const wrap = document.getElementById('geo-map-wrap');
+                wrap.style.display = 'block';
+                if (!geoMap) {
+                    geoMap = L.map('geo-map', { zoomControl: true, attributionControl: false }).setView([lat, lng], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(geoMap);
+                    geoMarker = L.marker([lat, lng], { draggable: true }).addTo(geoMap);
+                    geoMarker.on('dragend', async function() {
+                        const p = geoMarker.getLatLng();
+                        document.getElementById('customer-lat').value = p.lat;
+                        document.getElementById('customer-lng').value = p.lng;
+                        await reverseGeocode(p.lat, p.lng);
+                    });
+                } else {
+                    geoMap.setView([lat, lng], 16);
+                    geoMarker.setLatLng([lat, lng]);
+                }
+                // Force map to render correctly after display:block
+                setTimeout(() => geoMap.invalidateSize(), 100);
+                await reverseGeocode(lat, lng);
+            },
+            (err) => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use my current location';
+                status.style.color = 'var(--danger)';
+                const msgs = {1:'Permission denied. Please allow location access.', 2:'Unable to determine location.', 3:'Location request timed out.'};
+                status.innerText = '⚠️ ' + (msgs[err.code] || 'Could not get location.');
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+        );
+    }
+
+    async function reverseGeocode(lat, lng) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+                headers: { 'Accept-Language': 'en' }
+            });
+            const data = await res.json();
+            const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            document.getElementById('geo-addr').innerText = '📍 ' + addr;
+        } catch(e) {
+            document.getElementById('geo-addr').innerText = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+    }
+
+    // ── VPN / Proxy detection ────────────────────────────────────────────────
+    async function checkForVPN() {
+        try {
+            const res = await fetch('https://ip-api.com/json?fields=status,proxy,hosting,message', { cache: 'no-store' });
+            if (!res.ok) return false; // fail open — don't block if the service is down
+            const data = await res.json();
+            if (data.status !== 'success') return false;
+            return data.proxy === true || data.hosting === true;
+        } catch(e) {
+            return false; // fail open on network error
+        }
+    }
+
     async function submitOrder() {
         if(cart.length === 0) return;
-        
+
+        // ── VPN / proxy check ────────────────────────────────────────────────
+        const btn = document.getElementById('checkout-btn');
+        btn.innerHTML = '<i class="fas fa-shield-alt"></i> Checking connection…'; btn.disabled = true;
+        const isVPN = await checkForVPN();
+        if (isVPN) {
+            btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
+            document.getElementById('vpn-modal').classList.add('show');
+            return;
+        }
+        btn.innerHTML = 'Processing...';
+        // ── end VPN check ────────────────────────────────────────────────────
+
         let tStr = document.getElementById('pickup-time').value.trim();
         let pTimeMins = parseTimeStr(tStr);
         let closeMins = parseTimeStr(STORE_CLOSE_TIME);
 
         if(pTimeMins === -1) {
             showToast("Please enter a valid time (e.g. 2:30 PM)", "error");
+            btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             return;
         }
 
         if(pTimeMins > closeMins) {
             showToast("Store is closed at this time.", "error");
+            btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             return;
         }
 
         const totalItems = cart.length;
         if(totalItems >= 5 && !permissionGranted) {
+            btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             playAlertSound();
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
             document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || 'Customer';
@@ -3115,15 +3535,14 @@ function playGrantedSound() {
             return;
         }
 
-        const btn = document.getElementById('checkout-btn');
-        btn.innerHTML = 'Processing...'; btn.disabled = true;
-        
         const payload = {
             name: document.getElementById('customer-name').value,
             email: document.getElementById('customer-gmail').value,
             phone: document.getElementById('customer-phone').value,
             pickup_time: tStr,
             total: cart.reduce((s,i)=>s+i.price, 0),
+            customer_lat: document.getElementById('customer-lat').value || null,
+            customer_lng: document.getElementById('customer-lng').value || null,
             items: cart.map(i => ({ foundation: i.name, size: i.size, sweetener: i.sugar, ice: i.ice, waterTemp: i.waterTemp||'', addons: i.addons.join(', '), pearls: orderType, price: i.price }))
         };
         try {
@@ -3292,14 +3711,44 @@ function playGrantedSound() {
                 const loc = orders.find(o=>o.code === srv.code);
                 if(loc && loc.status !== srv.status) {
                     loc.status = srv.status; updated = true;
-                    const msg = `Order #${srv.code} is now: ${srv.status}`;
-                    showToast(msg, "success");
-                    addNotifMessage(msg);
+                    let msg;
+                    if(srv.status === 'Cancelled') {
+                        const reason = srv.cancel_reason && srv.cancel_reason.trim()
+                            ? srv.cancel_reason
+                            : 'No reason provided';
+                        msg = `❌ Order #${srv.code} was cancelled. Reason: ${reason}`;
+                        showToast(msg, "error");
+                        addNotifMessage(msg);
+                        // Show a prominent cancellation banner
+                        showCancellationBanner(srv.code, reason);
+                    } else {
+                        msg = `Order #${srv.code} is now: ${srv.status}`;
+                        showToast(msg, "success");
+                        addNotifMessage(msg);
+                    }
                     playStatusSound(srv.status);
                 }
             });
             if(updated) localStorage.setItem('myOrders', JSON.stringify(orders));
         } catch(e) {}
+    }
+
+    function showCancellationBanner(code, reason) {
+        // Remove any existing banner
+        const existing = document.getElementById('cancel-banner');
+        if(existing) existing.remove();
+        const banner = document.createElement('div');
+        banner.id = 'cancel-banner';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#C62828;color:#fff;padding:16px 20px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:flex-start;gap:14px;font-family:\'DM Sans\',sans-serif;';
+        banner.innerHTML = `
+            <div style="font-size:1.8rem;flex-shrink:0;">❌</div>
+            <div style="flex:1;">
+                <div style="font-weight:800;font-size:1rem;margin-bottom:3px;">Order #${code} has been cancelled</div>
+                <div style="font-size:0.88rem;opacity:0.9;font-weight:600;">Reason: ${escapeHTML(reason)}</div>
+                <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. Please contact the shop for assistance.</div>
+            </div>
+            <button onclick="document.getElementById('cancel-banner').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;font-family:\'DM Sans\',sans-serif;flex-shrink:0;">✕ Close</button>`;
+        document.body.prepend(banner);
     }
 
     // ── Location Modal ──────────────────────────────────────────────────────
@@ -4857,6 +5306,7 @@ def storefront():
         STOREFRONT_HTML,
         open_time=status["open_time"],
         close_time=status["cutoff_time"],   # cutoff = 1h before actual close
+        actual_close_time=status["close_time"],
         google_client_id=GOOGLE_CLIENT_ID
     )
 
@@ -5350,15 +5800,20 @@ def restore_data():
 def customer_order_status():
     codes = request.args.get('codes', '').split(',')
     orders = Reservation.query.filter(Reservation.reservation_code.in_(codes)).all()
-    return jsonify([{'code': o.reservation_code, 'status': o.status} for o in orders])
+    return jsonify([{'code': o.reservation_code, 'status': o.status, 'cancel_reason': o.cancel_reason or ''} for o in orders])
 
 @app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
 def update_order_status(order_id):
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     order = Reservation.query.get_or_404(order_id)
     new_status = request.json.get('status', 'Completed')
+    cancel_reason = request.json.get('cancel_reason', '').strip()
     prev_status = order.status
     order.status = new_status
+    if new_status == 'Cancelled':
+        order.cancel_reason = cancel_reason
+    else:
+        order.cancel_reason = ''
     # Write customer record only once, when order is first marked Completed
     if new_status == 'Completed' and prev_status != 'Completed':
         try:
@@ -5644,6 +6099,31 @@ with app.app_context():
         except Exception as migration_err3:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err3}")
+
+        # Migrate: add cancel_reason column to reservations
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='reservations' AND column_name='cancel_reason'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
+                col_exists = any(row[1] == 'cancel_reason' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    "ALTER TABLE reservations ADD COLUMN cancel_reason VARCHAR(300) DEFAULT ''"
+                ))
+                db.session.commit()
+                print("Migration: added cancel_reason column to reservations")
+            else:
+                print("Migration: reservations.cancel_reason already exists, skipped")
+        except Exception as migration_cancel_err:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_cancel_err}")
 
         # Migrate: add order_source column to reservations (critical — used in /api/orders query)
         try:
