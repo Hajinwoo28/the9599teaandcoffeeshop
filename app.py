@@ -1506,6 +1506,15 @@ const POS_IMAGE_MAP={
   'Cookies and Cream Frappe':'/static/images/cookies_and_cream_frappe.jpg',
   'Mocha Frappe':'/static/images/mocha_frappe.jpg',
   'Strawberry Frappe':'/static/images/strawberry_frappe.jpg',
+  'Biscoff Milktea':'/static/images/biscoff_milktea.jpg',
+  'Cappuccino':'/static/images/cappuccino.jpg',
+  'Caramel Macchiato':'/static/images/caramel_macchiato.jpg',
+  'Cookies and Cream Milktea':'/static/images/cookies_and_cream_milktea.jpg',
+  'French Vanilla':'/static/images/french_vanilla.jpg',
+  'Mocha':'/static/images/mocha.jpg',
+  'Okinawa Milktea':'/static/images/okinawa_milktea.jpg',
+  'Taro Milktea':'/static/images/taro_milktea.jpg',
+  'Wintermelon Milktea':'/static/images/wintermelon_milktea.jpg',
 };
 const POS_BESTSELLERS=new Set(['Taro Milktea','Okinawa Milktea','Biscoff Milktea','Caramel Macchiato']);
 function posCardStyle(item){return {badge: POS_BESTSELLERS.has(item.name)?'bestseller':'none'};}
@@ -2606,7 +2615,16 @@ function playGrantedSound() {
         'Coffee Frappe':               '/static/images/coffee_frappe.jpg',
         'Cookies and Cream Frappe':    '/static/images/cookies_and_cream_frappe.jpg',
         'Mocha Frappe':                '/static/images/mocha_frappe.jpg',
-        'Strawberry Frappe':           '/static/images/strawberry_frappe.jpg'
+        'Strawberry Frappe':           '/static/images/strawberry_frappe.jpg',
+        'Biscoff Milktea':             '/static/images/biscoff_milktea.jpg',
+        'Cappuccino':                  '/static/images/cappuccino.jpg',
+        'Caramel Macchiato':           '/static/images/caramel_macchiato.jpg',
+        'Cookies and Cream Milktea':   '/static/images/cookies_and_cream_milktea.jpg',
+        'French Vanilla':              '/static/images/french_vanilla.jpg',
+        'Mocha':                       '/static/images/mocha.jpg',
+        'Okinawa Milktea':             '/static/images/okinawa_milktea.jpg',
+        'Taro Milktea':                '/static/images/taro_milktea.jpg',
+        'Wintermelon Milktea':         '/static/images/wintermelon_milktea.jpg'
     };
 
     const EMOJI_MAP = {
