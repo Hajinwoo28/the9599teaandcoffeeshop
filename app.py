@@ -2716,6 +2716,47 @@ function playGrantedSound() {
     </div>
 </div>
 
+<!-- My Order Modal (basket button) -->
+<div id="my-order-modal" class="modal">
+    <div class="modal-content" style="text-align:center; max-width:460px;">
+        <div style="font-size:2.2rem; margin-bottom:8px;">🧾</div>
+        <h2 style="margin-bottom:4px;">Your Order</h2>
+        <p style="color:var(--text-light); font-weight:600; font-size:0.82rem; margin-bottom:14px;">Here's the summary of your current order.</p>
+
+        <!-- Order code badge -->
+        <div id="mo-code" style="font-family:'Playfair Display',serif; font-size:2rem; font-weight:900; color:var(--gold); margin-bottom:14px; border:2px dashed var(--gold); padding:12px 16px; border-radius:12px; background:var(--gold-light); letter-spacing:4px;"></div>
+
+        <!-- Status badge -->
+        <div id="mo-status-badge" style="display:inline-block; padding:5px 16px; border-radius:20px; font-size:0.78rem; font-weight:800; letter-spacing:0.5px; margin-bottom:14px;"></div>
+
+        <!-- Loading -->
+        <div id="mo-loading" style="padding:20px 0; color:var(--text-light); font-weight:600; font-size:0.85rem;"><i class="fas fa-spinner fa-spin"></i> Loading order details…</div>
+
+        <!-- Order details -->
+        <div id="mo-details" style="display:none; background:#FAFAFA; border:1px solid var(--border-color); border-radius:10px; padding:14px 16px; text-align:left; font-size:0.82rem; margin-bottom:14px; line-height:1.6;">
+            <div id="mo-info" style="margin-bottom:8px; color:var(--text-light);"></div>
+            <div style="border-top:1px dashed var(--border-color); margin-bottom:8px;"></div>
+            <div id="mo-items"></div>
+            <div style="border-top:1px dashed var(--border-color); margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; font-weight:800;">
+                <span>TOTAL</span><span id="mo-total"></span>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div id="mo-error" style="display:none; color:var(--danger); font-weight:700; font-size:0.85rem; margin-bottom:14px;"></div>
+
+        <!-- Cancelled reason -->
+        <div id="mo-cancel-reason" style="display:none; background:#FFF3F3; border:1px solid #FFCDD2; border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#C62828; font-weight:600; margin-bottom:14px; text-align:left;"></div>
+
+        <div style="display:flex; gap:10px; flex-direction:column;">
+            <button class="btn-add" id="mo-update-btn" style="width:100%; background:var(--gold); color:#fff; display:none;" onclick="openUpdateOrderModalFromBasket()">
+                <i class="fas fa-edit"></i> Add / Update My Order
+            </button>
+            <button class="btn-cancel" onclick="document.getElementById('my-order-modal').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+
 <!-- VPN Blocked Modal -->
 <div id="vpn-modal">
     <div class="vpn-sheet">
@@ -3185,12 +3226,116 @@ function playGrantedSound() {
     }
 
     function toggleMobileCart() {
+        // If the customer has a placed order, show the My Order modal instead
+        try {
+            const orders = JSON.parse(localStorage.getItem('myOrders')) || [];
+            if (orders.length > 0) {
+                openMyOrderModal(orders[orders.length - 1].code);
+                return;
+            }
+        } catch(e) {}
+        // No placed order — fall back to opening the sidebar cart
         const sidebar = document.getElementById('sidebar');
         if (window.innerWidth <= 768) {
             sidebar.classList.toggle('mobile-expanded');
         } else {
             sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+    }
+
+    async function openMyOrderModal(code) {
+        const modal = document.getElementById('my-order-modal');
+        modal.style.display = 'flex';
+        // Reset state
+        document.getElementById('mo-code').innerText = code;
+        document.getElementById('mo-loading').style.display = 'block';
+        document.getElementById('mo-details').style.display = 'none';
+        document.getElementById('mo-error').style.display = 'none';
+        document.getElementById('mo-cancel-reason').style.display = 'none';
+        document.getElementById('mo-update-btn').style.display = 'none';
+        document.getElementById('mo-status-badge').innerText = '';
+        document.getElementById('mo-status-badge').style.background = 'transparent';
+
+        try {
+            const res = await fetch('/api/customer/order_detail?code=' + encodeURIComponent(code));
+            const data = await res.json();
+            document.getElementById('mo-loading').style.display = 'none';
+
+            if (!res.ok || data.error) {
+                document.getElementById('mo-error').style.display = 'block';
+                document.getElementById('mo-error').innerText = data.error || 'Could not load order details.';
+                return;
+            }
+
+            // Status badge
+            const badge = document.getElementById('mo-status-badge');
+            const statusColors = {
+                'Waiting Confirmation': { bg: '#FFF8E1', color: '#F57F17' },
+                'Confirmed': { bg: '#E8F5E9', color: '#2E7D32' },
+                'Ready': { bg: '#E3F2FD', color: '#1565C0' },
+                'Completed': { bg: '#F3E5F5', color: '#6A1B9A' },
+                'Cancelled': { bg: '#FFEBEE', color: '#C62828' },
+            };
+            const sc = statusColors[data.status] || { bg: '#F5F5F5', color: '#555' };
+            badge.innerText = data.status;
+            badge.style.background = sc.bg;
+            badge.style.color = sc.color;
+            badge.style.border = '1.5px solid ' + sc.color + '44';
+
+            // Info row
+            document.getElementById('mo-info').innerHTML =
+                `<div style="margin-bottom:4px;"><b>Name:</b> ${escapeHTML(data.name)}</div>` +
+                `<div><b>Pick-up:</b> ${escapeHTML(data.pickup_time)}</div>`;
+
+            // Items
+            document.getElementById('mo-items').innerHTML = (data.items || []).map(i => {
+                const mods = [i.sweetener, i.ice].filter(v => v && v !== 'N/A').join(', ');
+                const addons = i.addons ? ' +' + i.addons : '';
+                const detail = i.size && i.size !== 'Regular' ? ` (${i.size})` : '';
+                return `<div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span>${escapeHTML(i.foundation + detail)}${mods ? '<br><span style="font-size:0.72rem; color:#888;">' + escapeHTML(mods + addons) + '</span>' : ''}</span>
+                    <span style="font-weight:700; white-space:nowrap; padding-left:8px;">₱${parseFloat(i.item_total).toFixed(2)}</span>
+                </div>`;
+            }).join('');
+
+            document.getElementById('mo-total').innerText = '₱' + parseFloat(data.total).toFixed(2);
+            document.getElementById('mo-details').style.display = 'block';
+
+            // Cancelled reason
+            if (data.status === 'Cancelled' && data.cancel_reason) {
+                const cr = document.getElementById('mo-cancel-reason');
+                cr.style.display = 'block';
+                cr.innerHTML = '<b>Reason:</b> ' + escapeHTML(data.cancel_reason);
+            }
+
+            // Show update button only for active orders
+            if (['Waiting Confirmation', 'Confirmed'].includes(data.status)) {
+                const btn = document.getElementById('mo-update-btn');
+                btn.style.display = 'flex';
+                btn.dataset.code = code;
+                btn.dataset.name = data.name;
+            }
+        } catch(e) {
+            document.getElementById('mo-loading').style.display = 'none';
+            document.getElementById('mo-error').style.display = 'block';
+            document.getElementById('mo-error').innerText = 'Connection error. Please try again.';
+        }
+    }
+
+    function openUpdateOrderModalFromBasket() {
+        const btn = document.getElementById('mo-update-btn');
+        const code = btn.dataset.code || '';
+        const name = btn.dataset.name || 'Customer';
+        // Close the my-order modal, pre-fill and open the update modal
+        document.getElementById('my-order-modal').style.display = 'none';
+        document.getElementById('update-code-display').innerText = code;
+        document.getElementById('update-name-display').value = name;
+        document.getElementById('update-message-input').value = '';
+        document.getElementById('update-send-status').innerText = '';
+        document.getElementById('update-send-btn').disabled = false;
+        document.getElementById('update-send-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
+        document.getElementById('update-form-section').style.display = 'block';
+        document.getElementById('update-order-modal').style.display = 'flex';
     }
 
     function checkCheckoutStatus() {
@@ -5801,6 +5946,36 @@ def customer_order_status():
     codes = request.args.get('codes', '').split(',')
     orders = Reservation.query.filter(Reservation.reservation_code.in_(codes)).all()
     return jsonify([{'code': o.reservation_code, 'status': o.status, 'cancel_reason': o.cancel_reason or ''} for o in orders])
+
+@app.route('/api/customer/order_detail')
+def customer_order_detail():
+    """Return full order details for a given reservation code (no auth required — customer-facing)."""
+    code = request.args.get('code', '').strip().upper()
+    if not code:
+        return jsonify({'error': 'No code provided'}), 400
+    order = Reservation.query.filter_by(reservation_code=code).first()
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    items = [
+        {
+            'foundation': i.foundation,
+            'size': i.cup_size,
+            'sweetener': i.sweetener,
+            'ice': i.ice_level,
+            'addons': i.addons,
+            'item_total': i.item_total
+        }
+        for i in order.infusions
+    ]
+    return jsonify({
+        'code': order.reservation_code,
+        'name': order.patron_name,
+        'pickup_time': order.pickup_time,
+        'total': order.total_investment,
+        'status': order.status,
+        'cancel_reason': order.cancel_reason or '',
+        'items': items
+    })
 
 @app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
 def update_order_status(order_id):
