@@ -1084,6 +1084,11 @@ function playEmpPermBeep(){
       <button class="opt-btn selected" onclick="selOpt('ice','Normal Ice',this)">Normal Ice</button>
       <button class="opt-btn" onclick="selOpt('ice','Extra Ice',this)">Extra Ice</button>
     </div>
+    <span class="modal-label" id="lbl-water-temp" style="display:none;">Water Temperature</span>
+    <div class="option-row" id="opt-water-temp" style="display:none;">
+      <button class="opt-btn selected" onclick="selOpt('waterTemp','Cold',this)">🧊 Cold</button>
+      <button class="opt-btn" onclick="selOpt('waterTemp','Hot',this)">🔥 Hot</button>
+    </div>
     <span class="modal-label">Add-ons <span style="color:var(--teal);font-size:0.65rem;">(+₱10 each)</span></span>
     <div class="option-row" id="opt-addons">
       <button class="opt-btn" onclick="toggleAddon('Pearls',this)">🧋 Pearls</button>
@@ -1539,16 +1544,21 @@ function renderMenuGrid(cat){
     '</div>';
   }).join('');
 }
+const WATER_TEMP_ITEMS=['Iced Americano','Cappuccino'];
 function openCustomize(menuId){
   currentItem=menuItems.find(m=>m.id===menuId);
   if(!currentItem) return;
-  currentOpts={size:'16 oz',sugar:'100%',ice:'Normal Ice',addons:[]};
+  currentOpts={size:'16 oz',sugar:'100%',ice:'Normal Ice',addons:[],waterTemp:'Cold'};
   document.getElementById('modal-item-name').textContent=currentItem.name;
   ['opt-size','opt-sugar','opt-ice'].forEach(id=>document.querySelectorAll(`#${id} .opt-btn`).forEach(b=>b.classList.remove('selected')));
   document.querySelectorAll('#opt-addons .opt-btn').forEach(b=>b.classList.remove('selected'));
   const sizeBtn=document.querySelector('#opt-size .opt-btn');if(sizeBtn)sizeBtn.classList.add('selected');
   document.querySelectorAll('#opt-sugar .opt-btn').forEach(b=>{if(b.textContent.trim()==='100%')b.classList.add('selected');});
   document.querySelectorAll('#opt-ice .opt-btn').forEach(b=>{if(b.textContent.includes('Normal'))b.classList.add('selected');});
+  const showWT=WATER_TEMP_ITEMS.includes(currentItem.name);
+  document.getElementById('lbl-water-temp').style.display=showWT?'':'none';
+  document.getElementById('opt-water-temp').style.display=showWT?'':'none';
+  if(showWT){document.querySelectorAll('#opt-water-temp .opt-btn').forEach((b,i)=>{b.classList.toggle('selected',i===0);});currentOpts.waterTemp='Cold';}
   document.getElementById('customize-modal').classList.add('show');
 }
 
@@ -1572,7 +1582,7 @@ function addToCart(){
   const sizeSur=SIZE_SURCHARGE[currentOpts.size]||0;
   const addonSur=currentOpts.addons.length*ADD_ON_PRICE;
   const price=currentItem.price+sizeSur+addonSur;
-  cart.push({id:Date.now(),menuId:currentItem.id,foundation:currentItem.name,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,addons:currentOpts.addons.join(', '),price});
+  cart.push({id:Date.now(),menuId:currentItem.id,foundation:currentItem.name,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price});
   closeCustomizeModal();
   renderCart();
   showToast(`${currentItem.name} added!`,'success');
@@ -1590,7 +1600,7 @@ function renderCart(){
   }
   const total=cart.reduce((s,i)=>s+i.price,0);
   el.innerHTML=cart.map(i=>{
-    const mods=[i.sugar,i.ice].filter(v=>v&&v!=='N/A').join(', ');
+    const mods=[i.sugar,i.ice,i.waterTemp].filter(v=>v&&v!=='N/A').join(', ');
     const addons=i.addons?` • ${i.addons}`:'';
     return `<div class="cart-item">
       <div class="cart-item-info">
@@ -1630,7 +1640,7 @@ async function checkout(){
   }catch(e){/* If status check fails, let the server guard catch it */}
   // ── End store hours check ──────────────────────────────────────
   const total=cart.reduce((s,i)=>s+i.price,0);
-  const payload={customer_name:name,total,items:cart.map(i=>({foundation:i.foundation,size:i.size,sugar:i.sugar,ice:i.ice,addons:i.addons,price:i.price}))};
+  const payload={customer_name:name,total,items:cart.map(i=>({foundation:i.foundation,size:i.size,sugar:i.sugar,ice:i.ice,waterTemp:i.waterTemp||'',addons:i.addons,price:i.price}))};
   try{
     const r=await fetch('/api/admin/manual_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await r.json();
@@ -2372,6 +2382,24 @@ function playGrantedSound() {
                 </select>
             </div>
         </div>
+        <div class="sel-row" id="water-temp-section" style="display:none;">
+            <div class="sel-group" style="width:100%;">
+                <span class="modal-section-label">Water Temperature</span>
+                <select id="water-temp-select">
+                    <option value="Cold">🧊 Cold</option>
+                    <option value="Hot">🔥 Hot</option>
+                </select>
+            </div>
+        </div>
+        <div class="sel-row" id="water-temp-section" style="display:none;">
+            <div class="sel-group" style="width:100%;">
+                <span class="modal-section-label">Water Temperature</span>
+                <select id="water-temp-select">
+                    <option value="Cold">🧊 Cold</option>
+                    <option value="Hot">🔥 Hot</option>
+                </select>
+            </div>
+        </div>
 
         <div id="addon-section">
             <span class="modal-section-label">Add-ons</span>
@@ -2756,6 +2784,9 @@ function playGrantedSound() {
         document.getElementById('sugar-level-select').value = '100% Sugar';
         document.getElementById('ice-level-select').value = 'Normal Ice';
         document.getElementById('size-qty').innerText = '1';
+        const showWT = ['Iced Americano','Cappuccino'].includes(name);
+        document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
+        document.getElementById('water-temp-select').value = 'Cold';
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
     }
@@ -2808,11 +2839,16 @@ function playGrantedSound() {
         const sugar = sugarSection.style.display !== 'none'
             ? document.getElementById('sugar-level-select').value
             : 'N/A';
+        const waterTempSection = document.getElementById('water-temp-section');
+        const waterTemp = waterTempSection.style.display !== 'none'
+            ? document.getElementById('water-temp-select').value
+            : '';
         const qty = parseInt(document.getElementById('size-qty').innerText) || 1;
         const item = {
             name: pendingItemName, cat: pendingCat, size: pendingSize,
             sugar: sugar,
             ice: document.getElementById('ice-level-select').value,
+            waterTemp: waterTemp,
             addons, price: pendingPrice + cost
         };
         for(let i = 0; i < qty; i++) cart.push({...item});
@@ -2869,6 +2905,7 @@ function playGrantedSound() {
                     if (c.size && c.size !== 'Regular') subParts.push(c.size);
                     if (c.sugar && c.sugar !== 'N/A') subParts.push(c.sugar);
                     if (c.ice && c.ice !== 'N/A') subParts.push(c.ice);
+                    if (c.waterTemp) subParts.push(c.waterTemp);
                 }
                 let sub = subParts.join(' · ');
                 let adds = c.addons && c.addons.length ? `<br>+ ${c.addons.join(', ')}` : '';
@@ -3063,7 +3100,7 @@ function playGrantedSound() {
             phone: document.getElementById('customer-phone').value,
             pickup_time: tStr,
             total: cart.reduce((s,i)=>s+i.price, 0),
-            items: cart.map(i => ({ foundation: i.name, size: i.size, sweetener: i.sugar, ice: i.ice, addons: i.addons.join(', '), pearls: orderType, price: i.price }))
+            items: cart.map(i => ({ foundation: i.name, size: i.size, sweetener: i.sugar, ice: i.ice, waterTemp: i.waterTemp||'', addons: i.addons.join(', '), pearls: orderType, price: i.price }))
         };
         try {
             const res = await fetch('/reserve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
@@ -3928,6 +3965,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <div class="option-grid" id="qo-sugar-opts"></div>
     <div class="opt-section-label">Ice Level</div>
     <div class="option-grid" id="qo-ice-opts"></div>
+    <div class="opt-section-label" id="qo-water-temp-label" style="display:none;">Water Temperature</div>
+    <div class="option-grid" id="qo-water-temp-opts" style="display:none;"></div>
     <div class="opt-section-label">Add-ons</div>
     <div id="qo-addon-opts" style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;"></div>
     <button class="btn-primary" onclick="confirmQO()"><i class="fas fa-cart-plus"></i> Add to Cart</button>
@@ -4056,7 +4095,7 @@ const QO_SIZES=[{label:'16 oz',price:49},{label:'22 oz',price:59}];
 const QO_SUGARS=['100% Sugar','75% Sugar','50% Sugar','0% Sugar'];
 const QO_ICE=['Normal Ice','Less Ice','No Ice'];
 const QO_ADDONS=[{name:'Nata',cost:10},{name:'Pearl',cost:10},{name:'Coffee Jelly',cost:10},{name:'Cloud Foam',cost:15}];
-let selSize=QO_SIZES[0],selSugar=QO_SUGARS[0],selIce=QO_ICE[0],selAddons=[];
+let selSize=QO_SIZES[0],selSugar=QO_SUGARS[0],selIce=QO_ICE[0],selAddons=[],selWaterTemp='';
 
 async function fetchQOMenu(){const r=await apiFetch('/api/menu');if(!r||!r.ok)return;qoMenu=await r.json();renderQOMenu();}
 function renderQOMenu(){
@@ -4074,17 +4113,22 @@ function openQOModal(id){
   selSugar=QO_SUGARS[0];
   document.getElementById('qo-ice-opts').innerHTML=isSnack?'':QO_ICE.map((s,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'ice',${i})">${s}</button>`).join('');
   selIce=QO_ICE[0];selAddons=[];
+  const showQOWT=['Iced Americano','Cappuccino'].includes(qoPending.name)&&!isSnack;
+  document.getElementById('qo-water-temp-label').style.display=showQOWT?'':'none';
+  document.getElementById('qo-water-temp-opts').style.display=showQOWT?'':'none';
+  document.getElementById('qo-water-temp-opts').innerHTML=showQOWT?['Cold','Hot'].map((t,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'waterTemp',${i})">${t==='Cold'?'🧊':'🔥'} ${t}</button>`).join(''):'';
+  selWaterTemp=showQOWT?'Cold':'';
   document.getElementById('qo-addon-opts').innerHTML=isSnack?'':QO_ADDONS.map((a,i)=>`<label style="display:flex;align-items:center;gap:9px;padding:8px;border:1.5px solid var(--cream-dark);border-radius:9px;cursor:pointer;"><input type="checkbox" class="qo-ac" data-i="${i}" style="width:16px;height:16px;accent-color:var(--brown);"> ${a.name} <span style="color:var(--muted);font-size:0.76rem;">+₱${a.cost}</span></label>`).join('');
   document.getElementById('qo-modal').style.display='flex';
 }
-function selQOOpt(btn,type,idx){btn.parentElement.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');if(type==='size')selSize=QO_SIZES[idx];if(type==='sugar')selSugar=QO_SUGARS[idx];if(type==='ice')selIce=QO_ICE[idx];}
+function selQOOpt(btn,type,idx){btn.parentElement.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');if(type==='size')selSize=QO_SIZES[idx];if(type==='sugar')selSugar=QO_SUGARS[idx];if(type==='ice')selIce=QO_ICE[idx];if(type==='waterTemp')selWaterTemp=['Cold','Hot'][idx];}
 function confirmQO(){
   selAddons=[];document.querySelectorAll('.qo-ac:checked').forEach(cb=>{selAddons.push(QO_ADDONS[parseInt(cb.dataset.i)]);});
   const isSnack=qoPending.category==='Snacks';
   const base=isSnack?qoPending.price:selSize.price;
   const total=base+selAddons.reduce((s,a)=>s+a.cost,0);
-  const detail=isSnack?'':`${selSize.label} · ${selSugar} · ${selIce}${selAddons.length?' · '+selAddons.map(a=>a.name).join(', '):''}`;
-  qoCart.push({id:qoPending.id,name:qoPending.name,category:qoPending.category,price:total,detail,qty:1});
+  const detail=isSnack?'':`${selSize.label} · ${selSugar} · ${selIce}${selWaterTemp?' · '+selWaterTemp:''}${selAddons.length?' · '+selAddons.map(a=>a.name).join(', '):''}`;
+  qoCart.push({id:qoPending.id,name:qoPending.name,category:qoPending.category,price:total,detail,waterTemp:selWaterTemp,qty:1});
   closeModal('qo-modal');renderQOCart();showToast(qoPending.name+' added','success');
 }
 function renderQOCart(){
