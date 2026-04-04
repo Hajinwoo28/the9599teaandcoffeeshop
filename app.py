@@ -3739,7 +3739,7 @@ function playGrantedSound() {
         if(existing) existing.remove();
         const banner = document.createElement('div');
         banner.id = 'cancel-banner';
-        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#C62828;color:#fff;padding:16px 20px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:flex-start;gap:14px;font-family:\'DM Sans\',sans-serif;';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#C62828;color:#fff;padding:16px 20px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:flex-start;gap:14px;';
         banner.innerHTML = `
             <div style="font-size:1.8rem;flex-shrink:0;">❌</div>
             <div style="flex:1;">
@@ -3747,7 +3747,7 @@ function playGrantedSound() {
                 <div style="font-size:0.88rem;opacity:0.9;font-weight:600;">Reason: ${escapeHTML(reason)}</div>
                 <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. Please contact the shop for assistance.</div>
             </div>
-            <button onclick="document.getElementById('cancel-banner').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;font-family:\'DM Sans\',sans-serif;flex-shrink:0;">✕ Close</button>`;
+            <button onclick="document.getElementById('cancel-banner').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;flex-shrink:0;">✕ Close</button>`;
         document.body.prepend(banner);
     }
 
