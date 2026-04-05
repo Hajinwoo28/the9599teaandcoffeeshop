@@ -1207,20 +1207,6 @@ function playEmpPermBeep(){
       <div style="font-size:1.4rem;margin-bottom:6px;">🕐</div>
       <div style="font-size:0.88rem;font-weight:800;color:var(--teal-dark);margin-bottom:4px;">Waiting for Customer</div>
       <div style="font-size:0.78rem;color:var(--muted);font-weight:600;line-height:1.5;">The customer has been notified. This modal will close once they decide.</div>
-      <!-- Customer tracking link — shown after notify so staff can share it -->
-      <div id="cancel-awaiting-link-wrap" style="margin-top:12px;display:none;">
-        <div style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">📱 Share this link with the customer</div>
-        <div style="display:flex;gap:6px;align-items:center;background:#f0f7f5;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;">
-          <span id="cancel-awaiting-link-text" style="font-size:0.72rem;font-weight:700;color:var(--teal-dark);flex:1;word-break:break-all;text-align:left;"></span>
-          <button onclick="copyCustomerLink()" title="Copy link"
-            style="flex-shrink:0;background:var(--teal-dark);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:0.72rem;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">
-            <i class="fas fa-copy"></i>
-          </button>
-        </div>
-        <div style="margin-top:5px;font-size:0.7rem;color:var(--muted);font-weight:600;">
-          Customer can open this on their phone to see the decision prompt.
-        </div>
-      </div>
       <div id="cancel-awaiting-poll-status" style="margin-top:10px;font-size:0.75rem;color:var(--muted);font-weight:600;"></div>
     </div>
 
@@ -1576,14 +1562,6 @@ function onCancelReasonChange(val){
   document.getElementById('cancel-notify-btn').style.display = isStockReason ? 'flex' : 'none';
 }
 
-function copyCustomerLink(){
-  const txt = document.getElementById('cancel-awaiting-link-text').innerText;
-  navigator.clipboard.writeText(txt).then(()=>showToast('Link copied!','success')).catch(()=>{
-    // Fallback for older browsers
-    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Link copied!','success');
-  });
-}
-
 async function notifyCustomerAboutItems(){
   const orderId = window._pendingCancelOrderId;
   const reason = document.getElementById('cancel-reason-select').value;
@@ -1606,13 +1584,6 @@ async function notifyCustomerAboutItems(){
       document.getElementById('cancel-action-btns').style.display = 'none';
       document.getElementById('cancel-item-picker-wrap').style.display = 'none';
       document.getElementById('cancel-awaiting-wrap').style.display = 'block';
-      // Build and display the customer-facing tracking URL
-      const orderCode = (window._pendingCancelOrder || {}).code || '';
-      if(orderCode){
-        const trackUrl = window.location.origin + '/?code=' + encodeURIComponent(orderCode);
-        document.getElementById('cancel-awaiting-link-text').innerText = trackUrl;
-        document.getElementById('cancel-awaiting-link-wrap').style.display = 'block';
-      }
       fetchOrders();
       startWaitingForCustomerDecision(orderId);
     } else {
@@ -1675,7 +1646,6 @@ async function confirmCancelOrder(){
 
 function closeCancelReasonModal(){
   document.getElementById('cancel-reason-modal').style.display='none';
-  document.getElementById('cancel-awaiting-link-wrap').style.display='none';
   if(_waitDecisionPoll){clearInterval(_waitDecisionPoll);_waitDecisionPoll=null;}
   fetchOrders();
 }
@@ -4847,22 +4817,32 @@ function playGrantedSound() {
 
     // ── "Track My Order" manual lookup ──────────────────────────────────────
     function openTrackModal() {
-        document.getElementById('track-order-modal').style.display = 'flex';
-        setTimeout(() => document.getElementById('track-code-input').focus(), 100);
-    }
-    function closeTrackModal() {
-        document.getElementById('track-order-modal').style.display = 'none';
+        const modal = document.getElementById('track-order-modal');
+        if (!modal) return;
+        modal.style.cssText = 'display:flex !important; position:fixed; inset:0; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9800; align-items:center; justify-content:center; padding:20px;';
         document.getElementById('track-code-input').value = '';
         document.getElementById('track-code-error').style.display = 'none';
+        const btn = document.getElementById('track-submit-btn');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search"></i> Track Order';
+        setTimeout(() => { try { document.getElementById('track-code-input').focus(); } catch(e){} }, 150);
+    }
+
+    function closeTrackModal() {
+        const modal = document.getElementById('track-order-modal');
+        if (modal) modal.style.cssText = 'display:none; position:fixed; inset:0;';
     }
 
     async function submitTrackCode() {
-        const raw = document.getElementById('track-code-input').value.trim().toUpperCase();
+        const input = document.getElementById('track-code-input');
+        const raw = input.value.trim().toUpperCase();
         const errEl = document.getElementById('track-code-error');
         errEl.style.display = 'none';
-        if (!raw) { errEl.innerText = 'Please enter your order code.'; errEl.style.display = 'block'; return; }
-
-        // Verify the code exists on the server
+        if (!raw) {
+            errEl.innerText = 'Please enter your order code.';
+            errEl.style.display = 'block';
+            return;
+        }
         const btn = document.getElementById('track-submit-btn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…';
@@ -4870,27 +4850,26 @@ function playGrantedSound() {
             const res = await fetch('/api/customer/order_detail?code=' + encodeURIComponent(raw));
             const data = await res.json();
             if (!res.ok || data.error) {
-                errEl.innerText = 'Order not found. Please check the code and try again.';
+                errEl.innerText = 'Order not found. Please check your code and try again.';
                 errEl.style.display = 'block';
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-search"></i> Track Order';
                 return;
             }
-            // Inject into localStorage
+            // Inject into localStorage so polling picks it up
             let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-            if (!orders.find(o => o.code === raw)) {
+            const existing = orders.find(o => o.code === raw);
+            if (!existing) {
                 orders.push({ code: raw, status: data.status || 'Waiting Confirmation' });
             } else {
-                orders.forEach(o => { if (o.code === raw) o.status = data.status || o.status; });
+                existing.status = data.status || existing.status;
             }
             localStorage.setItem('myOrders', JSON.stringify(orders));
             closeTrackModal();
-            showToast('✅ Order #' + raw + ' is now being tracked!', 'success');
-            // Immediately check for pending item queries
+            showToast('✅ Now tracking Order #' + raw, 'success');
+            // Immediately check for a pending item query on this order
             _activeItemQuery = null;
-            await checkItemAvailabilityQuery();
-            // Also open the My Order modal so they see their order details
-            setTimeout(() => openMyOrderModal(raw), 400);
+            checkItemAvailabilityQuery();
         } catch(e) {
             errEl.innerText = 'Connection error. Please try again.';
             errEl.style.display = 'block';
@@ -4901,7 +4880,7 @@ function playGrantedSound() {
 </script>
 
 <!-- ── Track My Order Floating Button ────────────────────────────────── -->
-<button onclick="openTrackModal()"
+<button id="track-order-fab" onclick="openTrackModal()"
     style="position:fixed; bottom:90px; right:18px; z-index:9500;
            background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff;
            border:none; border-radius:50px; padding:11px 18px;
@@ -4913,41 +4892,42 @@ function playGrantedSound() {
 </button>
 
 <!-- ── Track My Order Modal ──────────────────────────────────────────── -->
-<div id="track-order-modal" style="display:none; position:fixed; inset:0;
-     background:rgba(0,0,0,0.55); z-index:9800; align-items:center;
-     justify-content:center; padding:20px;">
+<div id="track-order-modal"
+    style="display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+           background:rgba(0,0,0,0.55); z-index:9800; align-items:center;
+           justify-content:center; padding:20px;">
   <div style="background:#fff; border-radius:20px; padding:28px 24px;
               max-width:380px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3);
               text-align:center; position:relative;">
     <button onclick="closeTrackModal()"
         style="position:absolute; top:14px; right:16px; background:none; border:none;
-               font-size:1.2rem; cursor:pointer; color:#aaa;">✕</button>
+               font-size:1.2rem; cursor:pointer; color:#aaa; line-height:1;">✕</button>
     <div style="width:52px;height:52px;border-radius:50%;background:#FFF8E1;
-                border:2px solid #C8A84B; display:flex; align-items:center;
-                justify-content:center; margin:0 auto 14px; font-size:1.5rem;">🧾</div>
-    <h2 style="font-family:'Playfair Display',serif; font-size:1.25rem;
-               font-weight:900; color:#3E2723; margin-bottom:4px;">Track My Order</h2>
-    <p style="font-size:0.82rem; font-weight:600; color:#795548; margin-bottom:18px; line-height:1.5;">
-        Enter the order code from your receipt to track your order status and receive staff notifications.
+                border:2px solid #C8A84B;display:flex;align-items:center;
+                justify-content:center;margin:0 auto 14px;font-size:1.5rem;">🧾</div>
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.25rem;
+               font-weight:900;color:#3E2723;margin-bottom:6px;">Track My Order</h2>
+    <p style="font-size:0.82rem;font-weight:600;color:#795548;margin-bottom:18px;line-height:1.5;">
+        Enter the order code from your receipt to receive staff notifications.
     </p>
     <input id="track-code-input" type="text" placeholder="e.g. A1B2C3D4"
-        maxlength="10"
-        style="width:100%; padding:13px; border:2px solid #D7CCC8; border-radius:12px;
-               font-size:1.4rem; text-align:center; letter-spacing:6px; font-weight:900;
-               color:#3E2723; font-family:'Nunito',sans-serif; outline:none;
-               text-transform:uppercase; margin-bottom:10px; background:#FAFAFA;"
-        onfocus="this.style.borderColor='#C8A84B'" onblur="this.style.borderColor='#D7CCC8'"
-        onkeydown="if(event.key==='Enter') submitTrackCode()">
+        maxlength="10" autocomplete="off" spellcheck="false"
+        style="width:100%;padding:13px;border:2px solid #D7CCC8;border-radius:12px;
+               font-size:1.35rem;text-align:center;letter-spacing:5px;font-weight:900;
+               color:#3E2723;font-family:'Nunito',sans-serif;outline:none;
+               text-transform:uppercase;margin-bottom:10px;background:#FAFAFA;
+               display:block;box-sizing:border-box;"
+        oninput="this.value=this.value.toUpperCase()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();submitTrackCode();}">
     <div id="track-code-error"
-        style="display:none; background:#FFF0F0; color:#C62828; border:1.5px solid #FFCDD2;
-               border-radius:10px; padding:9px 12px; font-size:0.8rem; font-weight:700;
-               margin-bottom:10px; text-align:left;">
-    </div>
+        style="display:none;background:#FFF0F0;color:#C62828;border:1.5px solid #FFCDD2;
+               border-radius:10px;padding:9px 12px;font-size:0.8rem;font-weight:700;
+               margin-bottom:10px;text-align:left;"></div>
     <button id="track-submit-btn" onclick="submitTrackCode()"
-        style="width:100%; padding:13px; border-radius:12px; border:none;
-               background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff;
-               font-family:'Nunito',sans-serif; font-weight:800; font-size:0.95rem;
-               cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px;
+        style="width:100%;padding:13px;border-radius:12px;border:none;
+               background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;
+               font-family:'Nunito',sans-serif;font-weight:800;font-size:0.95rem;
+               cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
                box-shadow:0 4px 14px rgba(92,51,23,0.3);">
         <i class="fas fa-search"></i> Track Order
     </button>
