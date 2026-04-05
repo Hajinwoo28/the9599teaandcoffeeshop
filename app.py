@@ -634,27 +634,16 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .logout-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:800;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
 .logout-btn:hover{background:rgba(255,255,255,0.15);}
 
-.nav-badge{position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
+.bottom-nav{height:var(--nav-h);background:var(--teal-dark);border-top:2px solid var(--teal-mid);display:flex;align-items:stretch;flex-shrink:0;z-index:100;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.62rem;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;padding:8px 4px;transition:color 0.15s,background 0.15s;}
+.nav-btn i{font-size:1.2rem;}
+.nav-btn.active{color:var(--gold);background:rgba(200,168,75,0.1);}
+.nav-btn:hover:not(.active){color:rgba(255,255,255,0.8);}
+.nav-badge{position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
 .nav-icon-wrap{position:relative;display:inline-block;}
-/* ── HAMBURGER & DROPDOWN NAV ── */
-.hamburger-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(200,168,75,0.35);color:rgba(255,255,255,0.75);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;transition:background 0.15s;}
-.hamburger-btn:hover,.hamburger-btn.open{background:rgba(200,168,75,0.2);color:var(--gold);}
-.nav-dropdown{display:none;position:fixed;top:var(--topbar-h);left:0;right:0;background:#fff;z-index:200;border-bottom:3px solid var(--border);box-shadow:0 14px 40px rgba(9,79,68,0.18);}
-.nav-dropdown.open{display:block;}
-.nav-drop-item{position:relative;display:flex;align-items:center;gap:14px;width:100%;padding:19px 24px;border:none;background:#fff;cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:900;color:var(--text);letter-spacing:1.5px;text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);transition:background 0.15s;}
-.nav-drop-item:last-child{border-bottom:none;}
-.nav-drop-item:hover{background:var(--teal-light);}
-.nav-drop-item.active{color:var(--teal-dark);background:var(--teal-light);}
-.nav-drop-item i{width:20px;font-size:1rem;color:var(--teal-mid);opacity:0.7;}
-.nav-drop-item.active i{opacity:1;color:var(--teal-dark);}
-.nav-drop-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--teal-dark);display:none;}
-.nav-drop-item.active .nav-drop-bar{display:block;}
-.nav-drop-badge{background:var(--red);color:#fff;border-radius:20px;font-size:0.62rem;font-weight:900;padding:2px 7px;margin-left:auto;}
-.nav-overlay{display:none;position:fixed;inset:0;top:var(--topbar-h);z-index:199;background:rgba(9,79,68,0.2);}
-.nav-overlay.open{display:block;}
 
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 20px;}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 calc(var(--nav-h)+12px);}
 .screen.active{display:block;}
 
 .page-header{padding:20px 16px 14px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:50;}
@@ -952,34 +941,8 @@ function playEmpPermBeep(){
       <span class="bell-count" id="bell-count"></span>
     </button>
     <a href="/employee/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    <button class="hamburger-btn" id="emp-hamburger-btn" onclick="toggleEmpNav()" aria-label="Navigation menu">
-      <i class="fas fa-bars" id="emp-hamburger-icon"></i>
-    </button>
   </div>
 </header>
-
-<!-- ══ DROPDOWN NAV ══ -->
-<div class="nav-overlay" id="emp-nav-overlay" onclick="closeEmpNav()"></div>
-<div class="nav-dropdown" id="emp-nav-dropdown">
-  <button class="nav-drop-item active" id="nav-online" onclick="goScreen('online')">
-    <span class="nav-drop-bar"></span>
-    <span class="nav-icon-wrap"><i class="fas fa-wifi"></i><span class="nav-badge" id="nav-badge" style="display:none;"></span></span>
-    Online POS
-  </button>
-  <button class="nav-drop-item" id="nav-pos" onclick="goScreen('pos')">
-    <span class="nav-drop-bar"></span>
-    <i class="fas fa-cash-register"></i>
-    Walk-In POS
-  </button>
-  <button class="nav-drop-item" id="nav-stock" onclick="goScreen('stock')">
-    <span class="nav-drop-bar"></span>
-    <span class="nav-icon-wrap" style="position:relative;display:inline-block;">
-      <i class="fas fa-boxes"></i>
-      <span class="nav-badge-stock" id="stock-nav-badge"></span>
-    </span>
-    Stock Alert
-  </button>
-</div>
 
 <!-- NOTIFICATION PANEL -->
 <div class="notif-panel" id="notif-panel">
@@ -1138,6 +1101,23 @@ function playEmpPermBeep(){
 
 </div>
 
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-online" onclick="goScreen('online')">
+    <div class="nav-icon-wrap"><i class="fas fa-wifi"></i><span class="nav-badge" id="nav-badge" style="display:none;"></span></div>
+    Online POS
+  </button>
+  <button class="nav-btn" id="nav-pos" onclick="goScreen('pos')">
+    <i class="fas fa-cash-register"></i>
+    Walk-In POS
+  </button>
+  <button class="nav-btn" id="nav-stock" onclick="goScreen('stock')">
+    <div class="nav-icon-wrap" style="position:relative;display:inline-block;">
+      <i class="fas fa-boxes"></i>
+      <span class="nav-badge-stock" id="stock-nav-badge"></span>
+    </div>
+    Stock Alert
+  </button>
+</nav>
 
 <!-- CUSTOMISE MODAL -->
 <div class="modal-overlay" id="customize-modal">
@@ -1268,33 +1248,12 @@ function showToast(msg,type='info'){const c=document.getElementById('toast-conta
 
 function goScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-drop-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('s-'+id).classList.add('active');
-  const nd=document.getElementById('nav-'+id);
-  if(nd)nd.classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
   if(id==='online') fetchOrders();
   if(id==='pos') loadMenu();
   if(id==='stock') fetchStockAlerts();
-  closeEmpNav();
-}
-function toggleEmpNav(){
-  const dd=document.getElementById('emp-nav-dropdown');
-  const ov=document.getElementById('emp-nav-overlay');
-  const hb=document.getElementById('emp-hamburger-btn');
-  const ic=document.getElementById('emp-hamburger-icon');
-  const isOpen=dd.classList.contains('open');
-  dd.classList.toggle('open',!isOpen);
-  ov.classList.toggle('open',!isOpen);
-  hb.classList.toggle('open',!isOpen);
-  ic.className=isOpen?'fas fa-bars':'fas fa-times';
-}
-function closeEmpNav(){
-  document.getElementById('emp-nav-dropdown').classList.remove('open');
-  document.getElementById('emp-nav-overlay').classList.remove('open');
-  const hb=document.getElementById('emp-hamburger-btn');
-  if(hb)hb.classList.remove('open');
-  const ic=document.getElementById('emp-hamburger-icon');
-  if(ic)ic.className='fas fa-bars';
 }
 
 /* ── NOTIFICATION BELL ── */
@@ -5112,7 +5071,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── SCREENS ── */
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 calc(var(--nav-h)+12px);}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 20px;}
 .screen.active{display:block;}
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
@@ -5123,12 +5082,21 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.76rem;color:var(--tan);margin-top:3px;}
 
-/* ── BOTTOM NAV ── */
-.bottom-nav{height:var(--nav-h);background:var(--brown-dark);border-top:2px solid var(--brown);display:flex;flex-shrink:0;position:relative;z-index:100;}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--tan);font-size:9px;font-weight:800;letter-spacing:0.3px;border:none;background:transparent;transition:color 0.15s;padding:0;opacity:0.65;}
-.nav-btn i{font-size:18px;}
-.nav-btn.active{color:var(--cream);opacity:1;}
-.nav-btn.active i{transform:scale(1.1);}
+/* ── DROPDOWN NAV ── */
+.hamburger-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.35);color:var(--tan);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;transition:background 0.15s;}
+.hamburger-btn:hover,.hamburger-btn.open{background:rgba(196,168,130,0.22);color:var(--cream);}
+.nav-dropdown{display:none;position:fixed;top:var(--topbar-h);left:0;right:0;background:#fff;z-index:200;border-bottom:3px solid var(--cream-dark);box-shadow:0 14px 40px rgba(61,36,16,0.18);}
+.nav-dropdown.open{display:block;}
+.nav-drop-item{position:relative;display:flex;align-items:center;gap:14px;width:100%;padding:19px 24px;border:none;background:#fff;cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:900;color:var(--text);letter-spacing:1.5px;text-transform:uppercase;text-align:left;border-bottom:1px solid var(--cream-dark);transition:background 0.15s;}
+.nav-drop-item:last-child{border-bottom:none;}
+.nav-drop-item:hover{background:var(--cream);}
+.nav-drop-item.active{color:var(--brown-dark);background:var(--cream);}
+.nav-drop-item i{width:20px;font-size:1rem;color:var(--brown);opacity:0.7;}
+.nav-drop-item.active i{opacity:1;color:var(--brown-dark);}
+.nav-drop-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brown-dark);display:none;}
+.nav-drop-item.active .nav-drop-bar{display:block;}
+.nav-overlay{display:none;position:fixed;inset:0;top:var(--topbar-h);z-index:199;background:rgba(61,36,16,0.2);}
+.nav-overlay.open{display:block;}
 .nav-center-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
 .nav-center-btn{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--brown) 0%,var(--tan) 100%);display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:20px;border:3px solid var(--brown-dark);box-shadow:0 4px 14px rgba(61,36,16,0.5);cursor:pointer;position:absolute;top:-18px;left:50%;transform:translateX(-50%);}
 
@@ -5362,8 +5330,32 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <div style="text-align:center;color:var(--muted);padding:18px;font-size:0.81rem;font-weight:600;">No notifications</div>
       </div>
     </div>
+    <button class="hamburger-btn" id="admin-hamburger-btn" onclick="toggleAdminNav()" aria-label="Navigation menu">
+      <i class="fas fa-bars" id="admin-hamburger-icon"></i>
+    </button>
   </div>
 </header>
+
+<!-- ══ DROPDOWN NAV ══ -->
+<div class="nav-overlay" id="admin-nav-overlay" onclick="closeAdminNav()"></div>
+<div class="nav-dropdown" id="admin-nav-dropdown">
+  <button class="nav-drop-item active" id="nd-inventory" onclick="goScreen('inventory')">
+    <span class="nav-drop-bar"></span>
+    <i class="fas fa-boxes"></i> Stock
+  </button>
+  <button class="nav-drop-item" id="nd-audit" onclick="goScreen('audit')">
+    <span class="nav-drop-bar"></span>
+    <i class="fas fa-shield-alt"></i> Audit
+  </button>
+  <button class="nav-drop-item" id="nd-finance" onclick="goScreen('finance')">
+    <span class="nav-drop-bar"></span>
+    <i class="fas fa-chart-line"></i> Finance
+  </button>
+  <button class="nav-drop-item" id="nd-settings" onclick="goScreen('settings')">
+    <span class="nav-drop-bar"></span>
+    <i class="fas fa-sliders-h"></i> Settings
+  </button>
+</div>
 
 <!-- ══ SCREENS ══ -->
 <div class="screens">
@@ -5677,13 +5669,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 </div><!-- /screens -->
 
-<!-- ══ BOTTOM NAV ══ -->
-<nav class="bottom-nav">
-  <button class="nav-btn active" id="nb-inventory" onclick="goScreen('inventory',this)"><i class="fas fa-boxes"></i>Stock</button>
-  <button class="nav-btn" id="nb-audit" onclick="goScreen('audit',this)"><i class="fas fa-shield-alt"></i>Audit</button>
-  <button class="nav-btn" id="nb-finance" onclick="goScreen('finance',this)"><i class="fas fa-chart-line"></i>Finance</button>
-  <button class="nav-btn" id="nb-settings" onclick="goScreen('settings',this)"><i class="fas fa-sliders-h"></i>Settings</button>
-</nav>
 
 <!-- ══ MODALS ══ -->
 <div id="qo-modal" class="modal">
@@ -5743,17 +5728,40 @@ function closeModal(id){document.getElementById(id).style.display='none';}
 document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.style.display='none';});});
 
 /* ══ SCREEN NAV ══ */
-function goScreen(name,btn){
+function goScreen(name){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-drop-item').forEach(b=>b.classList.remove('active'));
   const scr=document.getElementById('s-'+name);
   scr.classList.add('active');
   scr.style.display='block';
-  if(btn)btn.classList.add('active');
+  const nd=document.getElementById('nd-'+name);
+  if(nd)nd.classList.add('active');
   if(name==='inventory')fetchInventory();
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
   if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();}
   if(name==='audit'){auditPage=1;fetchAuditLogs();}
+  closeAdminNav();
+}
+function toggleAdminNav(){
+  const dd=document.getElementById('admin-nav-dropdown');
+  const ov=document.getElementById('admin-nav-overlay');
+  const hb=document.getElementById('admin-hamburger-btn');
+  const ic=document.getElementById('admin-hamburger-icon');
+  const isOpen=dd.classList.contains('open');
+  dd.classList.toggle('open',!isOpen);
+  ov.classList.toggle('open',!isOpen);
+  hb.classList.toggle('open',!isOpen);
+  ic.className=isOpen?'fas fa-bars':'fas fa-times';
+}
+function closeAdminNav(){
+  const dd=document.getElementById('admin-nav-dropdown');
+  const ov=document.getElementById('admin-nav-overlay');
+  const hb=document.getElementById('admin-hamburger-btn');
+  const ic=document.getElementById('admin-hamburger-icon');
+  if(dd)dd.classList.remove('open');
+  if(ov)ov.classList.remove('open');
+  if(hb)hb.classList.remove('open');
+  if(ic)ic.className='fas fa-bars';
 }
 
 /* ══ HELPERS ══ */
