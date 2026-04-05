@@ -229,6 +229,7 @@ class Reservation(db.Model):
     reservation_code = db.Column(db.String(8), unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:8].upper())
     patron_name = db.Column(db.String(100), nullable=False)
     patron_email = db.Column(db.String(120), nullable=False)
+    patron_phone = db.Column(db.String(30), nullable=True, default='')
     total_investment = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='Waiting Confirmation')
     pickup_time = db.Column(db.String(50), nullable=False)
@@ -4362,11 +4363,12 @@ function playGrantedSound() {
                     const isOOS = /out.of.stock|unavailable|item.unavail/i.test(reason);
 
                     if(srv.status === 'Awaiting Customer') {
-                        // Staff flagged items as OOS and is waiting for the customer's decision
-                        // Immediately check for the pending query and show the decision modal
-                        showToast('⚠️ Action needed — one or more items in your order may be unavailable!', 'error');
-                        addNotifMessage('⚠️ Please check your order — a staff member needs your decision.');
-                        checkItemAvailabilityQuery(); // fire immediately, don't wait for the 5-s interval
+                        // Save localStorage FIRST so checkItemAvailabilityQuery sees the updated status,
+                        // then clear any stale guard and directly show the modal using the known order code.
+                        localStorage.setItem('myOrders', JSON.stringify(orders));
+                        updated = false; // prevent a redundant double-save at end of forEach
+                        _activeItemQuery = null; // clear stale guard so the modal always fires fresh
+                        showUnavailableModalForOrder(srv.code);
                     } else if(srv.status === 'Cancelled') {
                         if(isOOS) {
                             // Admin cancelled directly with OOS reason — show recovery modal
@@ -4548,6 +4550,27 @@ function playGrantedSound() {
 
 <script>
     let _activeItemQuery = null;
+
+    // ── Direct modal trigger (bypasses stale _activeItemQuery guard) ──────────
+    async function showUnavailableModalForOrder(orderCode) {
+        try {
+            const res = await fetch('/api/item_query/' + encodeURIComponent(orderCode));
+            const data = await res.json();
+            if(data.pending) {
+                _activeItemQuery = data;
+                showItemQueryModal(data, orderCode);
+            } else {
+                // Query not ready yet (race with server) — fallback to polling
+                showToast('⚠️ Action needed — one or more items in your order may be unavailable!', 'error');
+                addNotifMessage('⚠️ Please check your order — a staff member needs your decision.');
+                checkItemAvailabilityQuery();
+            }
+        } catch(e) {
+            showToast('⚠️ Action needed — one or more items in your order may be unavailable!', 'error');
+            addNotifMessage('⚠️ Please check your order — a staff member needs your decision.');
+            checkItemAvailabilityQuery();
+        }
+    }
 
     async function checkItemAvailabilityQuery() {
         const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
@@ -6680,7 +6703,7 @@ def handle_inventory():
 def reserve_blend():
     data = request.json
     try:
-        new_res = Reservation(patron_name=data['name'], patron_email=data.get('email',''), total_investment=data['total'], pickup_time=data['pickup_time'], order_source="Online", status="Waiting Confirmation")
+        new_res = Reservation(patron_name=data['name'], patron_email=data.get('email',''), patron_phone=data.get('phone',''), total_investment=data['total'], pickup_time=data['pickup_time'], order_source="Online", status="Waiting Confirmation")
         db.session.add(new_res)
         db.session.flush()
         for i in data['items']:
@@ -7037,7 +7060,7 @@ def update_order_status(order_id):
             clog = CustomerLog(
                 full_name=order.patron_name,
                 gmail=order.patron_email,
-                phone='',
+                phone=order.patron_phone or '',
                 order_source=order.order_source,
                 order_total=order.total_investment,
                 items=items_summary,
@@ -7401,6 +7424,31 @@ with app.app_context():
         except Exception as migration_err4:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err4}")
+
+        # Migrate: add patron_phone column to reservations (fixes missing phone in Finance customer records)
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='reservations' AND column_name='patron_phone'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
+                col_exists = any(row[1] == 'patron_phone' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    "ALTER TABLE reservations ADD COLUMN patron_phone VARCHAR(30) DEFAULT ''"
+                ))
+                db.session.commit()
+                print("Migration: added patron_phone column to reservations")
+            else:
+                print("Migration: reservations.patron_phone already exists, skipped")
+        except Exception as migration_patron_phone:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_patron_phone}")
 
         # Migrate: add employee session columns to system_state
         try:
