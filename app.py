@@ -2943,7 +2943,7 @@ function playGrantedSound() {
                     <option value="0% Sugar">0% (No Sugar)</option>
                 </select>
             </div>
-            <div class="sel-group">
+            <div class="sel-group" id="ice-level-section">
                 <span class="modal-section-label">Ice Level</span>
                 <select id="ice-level-select">
                     <option value="Normal Ice">Normal Ice</option>
@@ -2955,16 +2955,7 @@ function playGrantedSound() {
         <div class="sel-row" id="water-temp-section" style="display:none;">
             <div class="sel-group" style="width:100%;">
                 <span class="modal-section-label">Water Temperature</span>
-                <select id="water-temp-select">
-                    <option value="Cold">🧊 Cold</option>
-                    <option value="Hot">🔥 Hot</option>
-                </select>
-            </div>
-        </div>
-        <div class="sel-row" id="water-temp-section" style="display:none;">
-            <div class="sel-group" style="width:100%;">
-                <span class="modal-section-label">Water Temperature</span>
-                <select id="water-temp-select">
+                <select id="water-temp-select" onchange="onWaterTempChange(this.value)">
                     <option value="Cold">🧊 Cold</option>
                     <option value="Hot">🔥 Hot</option>
                 </select>
@@ -2977,7 +2968,6 @@ function playGrantedSound() {
                 <label class="addon-label" id="addon-nata"><input type="checkbox" class="addon-checkbox" value="Nata"> <span>🟡 Nata (+₱10)</span></label>
                 <label class="addon-label" id="addon-pearl"><input type="checkbox" class="addon-checkbox" value="Pearl"> <span>⚫ Pearl (+₱10)</span></label>
                 <label class="addon-label" id="addon-coffee-jelly"><input type="checkbox" class="addon-checkbox" value="Coffee Jelly"> <span>☕ Coffee Jelly (+₱10)</span></label>
-                <label class="addon-label" id="addon-cloud-foam"><input type="checkbox" class="addon-checkbox" value="Cloud Foam"> <span>☁️ Cloud Foam (+₱15)</span></label>
             </div>
         </div>
 
@@ -3353,6 +3343,16 @@ function playGrantedSound() {
         checkItemAvailabilityQuery();
     });
 
+    function onWaterTempChange(val) {
+        const iceSection = document.getElementById('ice-level-section');
+        if (val === 'Hot') {
+            iceSection.style.display = 'none';
+        } else {
+            iceSection.style.display = '';
+            document.getElementById('ice-level-select').value = 'Normal Ice';
+        }
+    }
+
     function showToast(msg, type='info') {
         const t = document.createElement('div');
         t.className = `toast ${type}`;
@@ -3484,7 +3484,7 @@ function playGrantedSound() {
         document.getElementById('sugar-section').style.display = showSugar ? '' : 'none';
         document.getElementById('addon-section').style.display = showAddons ? '' : 'none';
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
-        const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly','Cloud Foam':'addon-cloud-foam'};
+        const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
         Object.entries(addonVisMap).forEach(([val,id])=>{const el=document.getElementById(id);if(el)el.style.display=(allowedAddons&&!allowedAddons.includes(val))?'none':'';});
         document.getElementById('sugar-level-select').value = '100% Sugar';
         document.getElementById('ice-level-select').value = 'Normal Ice';
@@ -3492,6 +3492,9 @@ function playGrantedSound() {
         const showWT = ['Iced Americano','Cappuccino'].includes(name);
         document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
         document.getElementById('water-temp-select').value = 'Cold';
+        // Default: Cold = ice shown; Hot = ice hidden
+        document.getElementById('ice-level-section').style.display = '';
+        document.getElementById('ice-level-select').value = 'Normal Ice';
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
     }
@@ -3510,14 +3513,14 @@ function playGrantedSound() {
             // Size + sugar + ice + add-ons
             openSizeModal(name, cat, price, true, true);
         } else if (cat === 'Matcha Series') {
-            // Size + ice only
-            openSizeModal(name, cat, price, false, false);
+            // Size + ice + add-ons (no sugar)
+            openSizeModal(name, cat, price, false, true);
         } else if (cat === 'Fruit Soda') {
             // Size + ice + Nata add-on only (no sugar)
             openSizeModal(name, cat, price, false, true, ['Nata']);
         } else if (cat === 'Frappe') {
-            // Size + ice only
-            openSizeModal(name, cat, price, false, false);
+            // Size + ice + add-ons (no sugar)
+            openSizeModal(name, cat, price, false, true);
         } else if (name === 'French Fries') {
             document.getElementById('fries-modal-title').innerText = 'French Fries — Choose Flavor';
             document.querySelector('input[name="fries_flavor"][value="Sour Cream"]').checked = true;
@@ -3537,7 +3540,7 @@ function playGrantedSound() {
         const addonSection = document.getElementById('addon-section');
         if (addonSection.style.display !== 'none') {
             document.querySelectorAll('.addon-checkbox').forEach(cb => {
-                if(cb.checked) { addons.push(cb.value); cost += (cb.value==='Cloud Foam'?15:10); }
+                if(cb.checked) { addons.push(cb.value); cost += 10; }
             });
         }
         const sugarSection = document.getElementById('sugar-section');
@@ -3552,7 +3555,7 @@ function playGrantedSound() {
         const item = {
             name: pendingItemName, cat: pendingCat, size: pendingSize,
             sugar: sugar,
-            ice: document.getElementById('ice-level-select').value,
+            ice: document.getElementById('ice-level-section').style.display === 'none' ? 'N/A' : document.getElementById('ice-level-select').value,
             waterTemp: waterTemp,
             addons, price: pendingPrice + cost
         };
@@ -4226,7 +4229,10 @@ function playGrantedSound() {
             playAlertSound();
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
             document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || '{{ session.get("customer_name","Customer") }}';
-            document.getElementById('perm-address-input').value = '';
+            // Auto-fill address from geolocation if already captured
+            const _geoEl = document.getElementById('geo-addr');
+            const _geoText = _geoEl ? _geoEl.innerText.replace(/^📍\s*/, '').trim() : '';
+            document.getElementById('perm-address-input').value = _geoText;
             document.getElementById('perm-message-input').value = '';
             document.getElementById('perm-send-status').innerText = '';
             document.getElementById('perm-send-btn').disabled = false;
@@ -5590,7 +5596,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <div class="option-grid" id="qo-size-opts"></div>
     <div class="opt-section-label" id="qo-sugar-label">Sugar Level</div>
     <div class="option-grid" id="qo-sugar-opts"></div>
-    <div class="opt-section-label">Ice Level</div>
+    <div class="opt-section-label" id="qo-ice-label">Ice Level</div>
     <div class="option-grid" id="qo-ice-opts"></div>
     <div class="opt-section-label" id="qo-water-temp-label" style="display:none;">Water Temperature</div>
     <div class="option-grid" id="qo-water-temp-opts" style="display:none;"></div>
@@ -5721,7 +5727,7 @@ let qoMenu=[],qoCart=[],qoPending=null;
 const QO_SIZES=[{label:'16 oz',price:49},{label:'22 oz',price:59}];
 const QO_SUGARS=['100% Sugar','75% Sugar','50% Sugar','0% Sugar'];
 const QO_ICE=['Normal Ice','Less Ice','No Ice'];
-const QO_ADDONS=[{name:'Nata',cost:10},{name:'Pearl',cost:10},{name:'Coffee Jelly',cost:10},{name:'Cloud Foam',cost:15}];
+const QO_ADDONS=[{name:'Nata',cost:10},{name:'Pearl',cost:10},{name:'Coffee Jelly',cost:10}];
 let selSize=QO_SIZES[0],selSugar=QO_SUGARS[0],selIce=QO_ICE[0],selAddons=[],selWaterTemp='';
 
 async function fetchQOMenu(){const r=await apiFetch('/api/menu');if(!r||!r.ok)return;qoMenu=await r.json();renderQOMenu();}
@@ -5748,11 +5754,14 @@ function openQOModal(id){
   document.getElementById('qo-water-temp-opts').style.display=showQOWT?'':'none';
   document.getElementById('qo-water-temp-opts').innerHTML=showQOWT?['Cold','Hot'].map((t,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'waterTemp',${i})">${t==='Cold'?'🧊':'🔥'} ${t}</button>`).join(''):'';
   selWaterTemp=showQOWT?'Cold':'';
+  // Ice level always visible when first opened (defaults to Cold)
+  document.getElementById('qo-ice-label').style.display=isSnack?'none':'';
+  document.getElementById('qo-ice-opts').style.display=isSnack?'none':'';
   const visibleQOAddons=isFruitSoda?QO_ADDONS.filter(a=>a.name==='Nata'):QO_ADDONS;
   document.getElementById('qo-addon-opts').innerHTML=isSnack?'':visibleQOAddons.map((a,i)=>`<label style="display:flex;align-items:center;gap:9px;padding:8px;border:1.5px solid var(--cream-dark);border-radius:9px;cursor:pointer;"><input type="checkbox" class="qo-ac" data-i="${QO_ADDONS.indexOf(a)}" style="width:16px;height:16px;accent-color:var(--brown);"> ${a.name} <span style="color:var(--muted);font-size:0.76rem;">+₱${a.cost}</span></label>`).join('');
   document.getElementById('qo-modal').style.display='flex';
 }
-function selQOOpt(btn,type,idx){btn.parentElement.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');if(type==='size')selSize=QO_SIZES[idx];if(type==='sugar')selSugar=QO_SUGARS[idx];if(type==='ice')selIce=QO_ICE[idx];if(type==='waterTemp')selWaterTemp=['Cold','Hot'][idx];}
+function selQOOpt(btn,type,idx){btn.parentElement.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');if(type==='size')selSize=QO_SIZES[idx];if(type==='sugar')selSugar=QO_SUGARS[idx];if(type==='ice')selIce=QO_ICE[idx];if(type==='waterTemp'){selWaterTemp=['Cold','Hot'][idx];const isHot=selWaterTemp==='Hot';document.getElementById('qo-ice-label').style.display=isHot?'none':'';document.getElementById('qo-ice-opts').style.display=isHot?'none':'';if(isHot)selIce='N/A';}}
 function confirmQO(){
   selAddons=[];document.querySelectorAll('.qo-ac:checked').forEach(cb=>{selAddons.push(QO_ADDONS[parseInt(cb.dataset.i)]);});
   const isSnack=qoPending.category==='Snacks';
