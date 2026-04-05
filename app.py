@@ -5,6 +5,7 @@ import socket
 import threading
 import json
 import io
+import queue
 import requests
 from flask import (
     Flask, 
@@ -202,8 +203,25 @@ def log_audit(action, details=""):
         print(f"Audit Log Failed: {str(e)}")
 
 # ==========================================
-# 3. DATABASE MODELS
+# SSE — REAL-TIME PUSH TO ADMIN PANEL
 # ==========================================
+
+_sse_subscribers = []   # list of queue.Queue, one per connected admin tab
+_sse_lock = threading.Lock()
+
+def push_event(event_type, data=None):
+    """Broadcast an SSE event to every connected admin client."""
+    msg = f"event: {event_type}\ndata: {json.dumps(data or {})}\n\n"
+    with _sse_lock:
+        dead = []
+        for q in _sse_subscribers:
+            try:
+                q.put_nowait(msg)
+            except queue.Full:
+                dead.append(q)
+        for q in dead:
+            _sse_subscribers.remove(q)
+
 
 class Reservation(db.Model):
     __tablename__ = 'reservations'
@@ -1065,12 +1083,12 @@ function playEmpPermBeep(){
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-item-name">Customize</div>
-    <span class="modal-label">Size</span>
+    <span class="modal-label" id="lbl-size">Size</span>
     <div class="option-row" id="opt-size">
       <button class="opt-btn selected" onclick="selOpt('size','16 oz',this)">16 oz</button>
       <button class="opt-btn" onclick="selOpt('size','22 oz',this)">22 oz</button>
     </div>
-    <span class="modal-label">Sugar Level</span>
+    <span class="modal-label" id="lbl-sugar">Sugar Level</span>
     <div class="option-row" id="opt-sugar">
       <button class="opt-btn" onclick="selOpt('sugar','0%',this)">0%</button>
       <button class="opt-btn" onclick="selOpt('sugar','25%',this)">25%</button>
@@ -1078,7 +1096,7 @@ function playEmpPermBeep(){
       <button class="opt-btn" onclick="selOpt('sugar','75%',this)">75%</button>
       <button class="opt-btn selected" onclick="selOpt('sugar','100%',this)">100%</button>
     </div>
-    <span class="modal-label">Ice Level</span>
+    <span class="modal-label" id="lbl-ice">Ice Level</span>
     <div class="option-row" id="opt-ice">
       <button class="opt-btn" onclick="selOpt('ice','No Ice',this)">No Ice</button>
       <button class="opt-btn" onclick="selOpt('ice','Less Ice',this)">Less Ice</button>
@@ -1090,11 +1108,11 @@ function playEmpPermBeep(){
       <button class="opt-btn selected" onclick="selOpt('waterTemp','Cold',this)">🧊 Cold</button>
       <button class="opt-btn" onclick="selOpt('waterTemp','Hot',this)">🔥 Hot</button>
     </div>
-    <span class="modal-label">Add-ons <span style="color:var(--teal);font-size:0.65rem;">(+₱10 each)</span></span>
+    <span class="modal-label" id="lbl-addons">Add-ons <span style="color:var(--teal);font-size:0.65rem;">(+₱10 each)</span></span>
     <div class="option-row" id="opt-addons">
-      <button class="opt-btn" onclick="toggleAddon('Pearls',this)">🧋 Pearls</button>
-      <button class="opt-btn" onclick="toggleAddon('Nata',this)">🟡 Nata</button>
-      <button class="opt-btn" onclick="toggleAddon('Coffee Jelly',this)">☕ Coffee Jelly</button>
+      <button class="opt-btn" id="eaddon-pearls" onclick="toggleAddon('Pearls',this)">🧋 Pearls</button>
+      <button class="opt-btn" id="eaddon-nata" onclick="toggleAddon('Nata',this)">🟡 Nata</button>
+      <button class="opt-btn" id="eaddon-coffee-jelly" onclick="toggleAddon('Coffee Jelly',this)">☕ Coffee Jelly</button>
     </div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeCustomizeModal()">Cancel</button>
@@ -1637,6 +1655,16 @@ function openCustomize(menuId){
   document.getElementById('lbl-water-temp').style.display=showWT?'':'none';
   document.getElementById('opt-water-temp').style.display=showWT?'':'none';
   if(showWT){document.querySelectorAll('#opt-water-temp .opt-btn').forEach((b,i)=>{b.classList.toggle('selected',i===0);});currentOpts.waterTemp='Cold';}
+  const isSnack=currentItem.category==='Snacks';
+  const isFruitSoda=currentItem.category==='Fruit Soda';
+  ['lbl-size','opt-size','lbl-sugar','opt-sugar','lbl-ice','opt-ice','lbl-addons','opt-addons'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(isSnack){el.style.display='none';return;}
+    if(isFruitSoda&&(id==='lbl-sugar'||id==='opt-sugar')){el.style.display='none';return;}
+    el.style.display='';
+  });
+  const allowedEmpAddons=isFruitSoda?['Nata']:null;
+  [{id:'eaddon-pearls',name:'Pearls'},{id:'eaddon-nata',name:'Nata'},{id:'eaddon-coffee-jelly',name:'Coffee Jelly'}].forEach(({id,name})=>{const el=document.getElementById(id);if(el)el.style.display=(allowedEmpAddons&&!allowedEmpAddons.includes(name))?'none':'';});
   document.getElementById('customize-modal').classList.add('show');
 }
 
@@ -2223,12 +2251,28 @@ function playGrantedSound() {
                     style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
                     onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
             </div>
-            <div style="text-align:left; margin-bottom:20px;">
+            <div style="text-align:left; margin-bottom:16px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number *</label>
                 <input id="gate-phone" type="tel" placeholder="e.g. 09XX-XXX-XXXX" autocomplete="tel"
                     style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
                     onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
             </div>
+
+            <!-- Location (required) -->
+            <div style="text-align:left; margin-bottom:20px;">
+                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:7px;">Your Location <span style="color:#C0392B;">*</span></label>
+                <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button"
+                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.93rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; transition:opacity 0.2s; box-shadow:0 3px 12px rgba(13,74,61,0.3);">
+                    <i class="fas fa-map-marker-alt"></i> Use My Current Location
+                </button>
+                <input type="hidden" id="gate-lat" value="">
+                <input type="hidden" id="gate-lng" value="">
+                <div id="gate-geo-status" style="margin-top:8px; font-size:0.82rem; font-weight:700; color:var(--text-light); min-height:18px;"></div>
+                <div id="gate-geo-note" style="margin-top:6px; font-size:0.75rem; color:#C0392B; font-weight:700; display:none;">
+                    <i class="fas fa-exclamation-circle"></i> Location is required to continue.
+                </div>
+            </div>
+
             <button id="gate-btn" onclick="handleManualSignIn()"
                 style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px;">
                 <i class="fas fa-mug-hot"></i> Continue to Order
@@ -2272,15 +2316,69 @@ function playGrantedSound() {
         document.getElementById('gate-error').style.display = 'none';
     }
 
+    // ── Gate geolocation ─────────────────────────────────────────────────────
+    function gateUseMyLocation() {
+        const btn    = document.getElementById('gate-geo-btn');
+        const status = document.getElementById('gate-geo-status');
+        const note   = document.getElementById('gate-geo-note');
+        note.style.display = 'none';
+
+        if (!navigator.geolocation) {
+            status.style.color = '#C0392B';
+            status.innerText   = '⚠️ Geolocation is not supported by your browser.';
+            return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location…';
+        status.style.color  = 'var(--text-light)';
+        status.innerText    = 'Requesting permission…';
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                document.getElementById('gate-lat').value = lat;
+                document.getElementById('gate-lng').value = lng;
+                status.style.color = '#2E7D32';
+                status.innerText   = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
+                btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Confirmed ✓';
+                // Try reverse geocode for a friendly address label
+                try {
+                    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers:{'Accept-Language':'en'} });
+                    const d = await r.json();
+                    if (d.display_name) status.innerText = '📍 ' + d.display_name;
+                } catch(_) {}
+            },
+            (err) => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
+                status.style.color = '#C0392B';
+                const msgs = {1:'Permission denied. Please allow location access in your browser.', 2:'Unable to determine your location.', 3:'Location request timed out.'};
+                status.innerText = '⚠️ ' + (msgs[err.code] || 'Could not get location.');
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+        );
+    }
+
     async function handleManualSignIn() {
         hideGateError();
         const name  = document.getElementById('gate-name').value.trim();
         const email = document.getElementById('gate-email').value.trim();
         const phone = document.getElementById('gate-phone').value.trim();
+        const lat   = document.getElementById('gate-lat').value.trim();
+        const lng   = document.getElementById('gate-lng').value.trim();
+
         if (!name)  { showGateError('Please enter your full name.'); return; }
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             showGateError('Please enter a valid email address.'); return;
         }
+        if (!lat || !lng) {
+            document.getElementById('gate-geo-note').style.display = 'block';
+            document.getElementById('gate-geo-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showGateError('Please use your current location before continuing.'); return;
+        }
+
         const btn = document.getElementById('gate-btn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait…';
@@ -2288,7 +2386,7 @@ function playGrantedSound() {
             const res = await fetch('/api/auth/manual', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, email, phone })
+                body: JSON.stringify({ name, email, phone, lat, lng })
             });
             if (res.ok) { location.reload(); }
             else {
@@ -2588,10 +2686,10 @@ function playGrantedSound() {
         <div id="addon-section">
             <span class="modal-section-label">Add-ons</span>
             <div class="addon-grid">
-                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Nata"> <span>🟡 Nata (+₱10)</span></label>
-                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Pearl"> <span>⚫ Pearl (+₱10)</span></label>
-                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Coffee Jelly"> <span>☕ Coffee Jelly (+₱10)</span></label>
-                <label class="addon-label"><input type="checkbox" class="addon-checkbox" value="Cloud Foam"> <span>☁️ Cloud Foam (+₱15)</span></label>
+                <label class="addon-label" id="addon-nata"><input type="checkbox" class="addon-checkbox" value="Nata"> <span>🟡 Nata (+₱10)</span></label>
+                <label class="addon-label" id="addon-pearl"><input type="checkbox" class="addon-checkbox" value="Pearl"> <span>⚫ Pearl (+₱10)</span></label>
+                <label class="addon-label" id="addon-coffee-jelly"><input type="checkbox" class="addon-checkbox" value="Coffee Jelly"> <span>☕ Coffee Jelly (+₱10)</span></label>
+                <label class="addon-label" id="addon-cloud-foam"><input type="checkbox" class="addon-checkbox" value="Cloud Foam"> <span>☁️ Cloud Foam (+₱15)</span></label>
             </div>
         </div>
 
@@ -2615,7 +2713,7 @@ function playGrantedSound() {
     <div class="modal-content">
         <h2 id="fries-modal-title">Select Flavor</h2>
         <div class="sel-row" style="flex-direction:column; gap:15px; margin-top:20px;">
-            <label class="addon-label"><input type="radio" name="fries_flavor" value="Plain" checked> <span>Plain</span></label>
+            <label class="addon-label"><input type="radio" name="fries_flavor" value="Sour Cream" checked> <span>Sour Cream</span></label>
             <label class="addon-label"><input type="radio" name="fries_flavor" value="Cheese"> <span>Cheese</span></label>
             <label class="addon-label"><input type="radio" name="fries_flavor" value="Barbeque"> <span>Barbeque</span></label>
         </div>
@@ -3060,7 +3158,7 @@ function playGrantedSound() {
         document.getElementById('btn-size-22').className = size === '22 oz' ? 'size-btn selected' : 'size-btn';
     }
 
-    function openSizeModal(name, cat, price, showSugar, showAddons) {
+    function openSizeModal(name, cat, price, showSugar, showAddons, allowedAddons) {
         sizePrice16 = price;
         sizePrice22 = price + 10;
         document.getElementById('size-modal-title').innerText = name;
@@ -3070,6 +3168,8 @@ function playGrantedSound() {
         document.getElementById('sugar-section').style.display = showSugar ? '' : 'none';
         document.getElementById('addon-section').style.display = showAddons ? '' : 'none';
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
+        const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly','Cloud Foam':'addon-cloud-foam'};
+        Object.entries(addonVisMap).forEach(([val,id])=>{const el=document.getElementById(id);if(el)el.style.display=(allowedAddons&&!allowedAddons.includes(val))?'none':'';});
         document.getElementById('sugar-level-select').value = '100% Sugar';
         document.getElementById('ice-level-select').value = 'Normal Ice';
         document.getElementById('size-qty').innerText = '1';
@@ -3097,14 +3197,14 @@ function playGrantedSound() {
             // Size + ice only
             openSizeModal(name, cat, price, false, false);
         } else if (cat === 'Fruit Soda') {
-            // Size + ice only
-            openSizeModal(name, cat, price, false, false);
+            // Size + ice + Nata add-on only (no sugar)
+            openSizeModal(name, cat, price, false, true, ['Nata']);
         } else if (cat === 'Frappe') {
             // Size + ice only
             openSizeModal(name, cat, price, false, false);
         } else if (name === 'French Fries') {
             document.getElementById('fries-modal-title').innerText = 'French Fries — Choose Flavor';
-            document.querySelector('input[name="fries_flavor"][value="Plain"]').checked = true;
+            document.querySelector('input[name="fries_flavor"][value="Sour Cream"]').checked = true;
             document.getElementById('fries-qty').innerText = '1';
             document.getElementById('fries-modal').style.display = 'flex';
         } else {
@@ -4579,7 +4679,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <div class="modal-title" id="qo-modal-title">Choose Options</div>
     <div class="opt-section-label">Size</div>
     <div class="option-grid" id="qo-size-opts"></div>
-    <div class="opt-section-label">Sugar Level</div>
+    <div class="opt-section-label" id="qo-sugar-label">Sugar Level</div>
     <div class="option-grid" id="qo-sugar-opts"></div>
     <div class="opt-section-label">Ice Level</div>
     <div class="option-grid" id="qo-ice-opts"></div>
@@ -4724,10 +4824,13 @@ function renderQOMenu(){
 function openQOModal(id){
   qoPending=qoMenu.find(m=>m.id===id);if(!qoPending)return;
   const isSnack=qoPending.category==='Snacks';
+  const isFruitSoda=qoPending.category==='Fruit Soda';
+  const hideSugar=isSnack||isFruitSoda;
   document.getElementById('qo-modal-title').innerText=qoPending.name;
   document.getElementById('qo-size-opts').innerHTML=isSnack?'<p style="color:var(--muted);font-size:0.81rem;font-weight:600;">Fixed portion</p>':QO_SIZES.map((s,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'size',${i})">${s.label} — ₱${s.price}</button>`).join('');
   selSize=QO_SIZES[0];
-  document.getElementById('qo-sugar-opts').innerHTML=isSnack?'':QO_SUGARS.map((s,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'sugar',${i})">${s}</button>`).join('');
+  document.getElementById('qo-sugar-label').style.display=hideSugar?'none':'';
+  document.getElementById('qo-sugar-opts').innerHTML=hideSugar?'':QO_SUGARS.map((s,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'sugar',${i})">${s}</button>`).join('');
   selSugar=QO_SUGARS[0];
   document.getElementById('qo-ice-opts').innerHTML=isSnack?'':QO_ICE.map((s,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'ice',${i})">${s}</button>`).join('');
   selIce=QO_ICE[0];selAddons=[];
@@ -4736,7 +4839,8 @@ function openQOModal(id){
   document.getElementById('qo-water-temp-opts').style.display=showQOWT?'':'none';
   document.getElementById('qo-water-temp-opts').innerHTML=showQOWT?['Cold','Hot'].map((t,i)=>`<button class="opt-btn ${i===0?'sel':''}" onclick="selQOOpt(this,'waterTemp',${i})">${t==='Cold'?'🧊':'🔥'} ${t}</button>`).join(''):'';
   selWaterTemp=showQOWT?'Cold':'';
-  document.getElementById('qo-addon-opts').innerHTML=isSnack?'':QO_ADDONS.map((a,i)=>`<label style="display:flex;align-items:center;gap:9px;padding:8px;border:1.5px solid var(--cream-dark);border-radius:9px;cursor:pointer;"><input type="checkbox" class="qo-ac" data-i="${i}" style="width:16px;height:16px;accent-color:var(--brown);"> ${a.name} <span style="color:var(--muted);font-size:0.76rem;">+₱${a.cost}</span></label>`).join('');
+  const visibleQOAddons=isFruitSoda?QO_ADDONS.filter(a=>a.name==='Nata'):QO_ADDONS;
+  document.getElementById('qo-addon-opts').innerHTML=isSnack?'':visibleQOAddons.map((a,i)=>`<label style="display:flex;align-items:center;gap:9px;padding:8px;border:1.5px solid var(--cream-dark);border-radius:9px;cursor:pointer;"><input type="checkbox" class="qo-ac" data-i="${QO_ADDONS.indexOf(a)}" style="width:16px;height:16px;accent-color:var(--brown);"> ${a.name} <span style="color:var(--muted);font-size:0.76rem;">+₱${a.cost}</span></label>`).join('');
   document.getElementById('qo-modal').style.display='flex';
 }
 function selQOOpt(btn,type,idx){btn.parentElement.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');if(type==='size')selSize=QO_SIZES[idx];if(type==='sugar')selSugar=QO_SUGARS[idx];if(type==='ice')selIce=QO_ICE[idx];if(type==='waterTemp')selWaterTemp=['Cold','Hot'][idx];}
@@ -5266,8 +5370,57 @@ renderCal();
 fetchClosedDays();
 
 /* ══ AUTO-REFRESH & INIT ══ */
-setInterval(fetchPermReqs,5000);
+/* ══ SSE REAL-TIME CONNECTION ══ */
+let _sseSource = null, _sseFallbackTimer = null, _sseRetryTimer = null;
+
+function connectSSE() {
+  if (_sseSource) { try { _sseSource.close(); } catch(e){} _sseSource = null; }
+  _sseSource = new EventSource('/api/stream');
+
+  _sseSource.addEventListener('connected', () => {
+    // SSE live — clear any pending retry
+    if (_sseRetryTimer) { clearTimeout(_sseRetryTimer); _sseRetryTimer = null; }
+  });
+
+  _sseSource.addEventListener('ping', () => {}); // keepalive — no action needed
+
+  _sseSource.addEventListener('order_new', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      addNotif(d.code, d.name, d.total);
+    } catch(_) {}
+    fetchOrders();
+  });
+
+  _sseSource.addEventListener('order_status', () => {
+    fetchOrders();
+  });
+
+  _sseSource.addEventListener('perm_new', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      playPermBeep();
+      showToast(`🔔 Permission request from ${d.name}`, 'error');
+    } catch(_) {}
+    fetchPermReqs();
+  });
+
+  _sseSource.onerror = () => {
+    try { _sseSource.close(); } catch(e){}
+    _sseSource = null;
+    // Reconnect after 5 s
+    if (!_sseRetryTimer) _sseRetryTimer = setTimeout(connectSSE, 5000);
+  };
+}
+
+connectSSE();
+
+// Safety-net fallback: re-fetch every 30 s in case SSE misses anything
+setInterval(fetchOrders, 30000);
+setInterval(fetchPermReqs, 30000);
 setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById('s-audit').classList.contains('active'))fetchAuditLogs();},30000);
+
+// Initial data load on page open
 fetchPermReqs();
 fetchInventory();
 </script>
@@ -5476,19 +5629,25 @@ def google_auth():
 @app.route('/api/auth/manual', methods=['POST'])
 @limiter.limit("30 per minute")
 def manual_auth():
-    """Manual sign-in: name + email + optional phone. No Google OAuth required."""
+    """Manual sign-in: name + email + optional phone + required location. No Google OAuth required."""
     data = request.json or {}
     name  = (data.get('name') or '').strip()
     email = (data.get('email') or '').strip()
     phone = (data.get('phone') or '').strip()
+    lat   = (data.get('lat') or '').strip()
+    lng   = (data.get('lng') or '').strip()
     if not name:
         return jsonify({"error": "Full name is required."}), 400
     if not email or '@' not in email:
         return jsonify({"error": "A valid email address is required."}), 400
+    if not lat or not lng:
+        return jsonify({"error": "Location is required. Please use 'Use My Current Location'."}), 400
     session['customer_verified'] = True
     session['customer_name']     = name
     session['customer_email']    = email
     session['customer_phone']    = phone
+    session['customer_lat']      = lat
+    session['customer_lng']      = lng
     return jsonify({"status": "success"})
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -5815,6 +5974,7 @@ def reserve_blend():
             new_inf = Infusion(reservation_id=new_res.id, foundation=i['foundation'], sweetener=i.get('sweetener','Standard'), ice_level=i.get('ice','Normal'), pearls=i.get('pearls','Take-Out'), cup_size=i.get('size','16 oz'), addons=i.get('addons',''), item_total=i['price'])
             db.session.add(new_inf)
         db.session.commit()
+        push_event('order_new', {'code': new_res.reservation_code, 'name': data['name'], 'total': data['total']})
         return jsonify({"status": "success", "reservation_code": new_res.reservation_code}), 201
     except Exception as e:
         db.session.rollback()
@@ -5835,6 +5995,7 @@ def permission_request():
             pr = PermissionRequest(request_code=code, customer_name=name, address=address, message=message, granted=False)
             db.session.add(pr)
             db.session.commit()
+            push_event('perm_new', {'code': code, 'name': name})
         return jsonify({"status": "ok"})
     except Exception as e:
         db.session.rollback()
@@ -6006,7 +6167,42 @@ def update_order_status(order_id):
         except Exception:
             pass  # Never block status update due to log failure
     db.session.commit()
+    push_event('order_status', {'id': order_id, 'status': new_status})
     return jsonify({"status": "success"})
+
+@app.route('/api/stream')
+def sse_stream():
+    """Server-Sent Events endpoint — pushes real-time updates to the admin panel."""
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    q = queue.Queue(maxsize=30)
+    with _sse_lock:
+        _sse_subscribers.append(q)
+
+    def generate():
+        try:
+            # Initial handshake so the client knows the connection is live
+            yield "event: connected\ndata: {}\n\n"
+            while True:
+                try:
+                    msg = q.get(timeout=20)
+                    yield msg
+                except queue.Empty:
+                    # Keepalive ping every 20 s to prevent proxy timeouts
+                    yield "event: ping\ndata: {}\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            with _sse_lock:
+                if q in _sse_subscribers:
+                    _sse_subscribers.remove(q)
+
+    resp = Response(generate(), mimetype='text/event-stream')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['X-Accel-Buffering'] = 'no'      # disable nginx buffering
+    resp.headers['Connection'] = 'keep-alive'
+    return resp
 
 @app.route('/api/orders')
 def api_orders():
@@ -6049,6 +6245,7 @@ def admin_manual_order():
             inf = Infusion(reservation_id=res.id, foundation=i['foundation'], cup_size=i.get('size','16 oz'), sweetener=i.get('sugar','N/A'), ice_level=i.get('ice','N/A'), pearls='Walk-In', addons=i.get('addons',''), item_total=i['price'])
             db.session.add(inf)
         db.session.commit()
+        push_event('order_new', {'code': res.reservation_code, 'name': customer_name, 'total': data['total']})
         return jsonify({"status": "success", "reservation_code": res.reservation_code})
     except Exception as e:
         db.session.rollback()
