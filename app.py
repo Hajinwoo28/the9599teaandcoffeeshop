@@ -3151,8 +3151,8 @@ function playGrantedSound() {
         <div style="font-size:2.5rem; margin-bottom:10px;">🛑</div>
         <h2 style="color:var(--danger); margin-bottom:8px;">Order Limit Reached</h2>
         <p style="color:var(--text-light); font-size:0.9rem; font-weight:600; margin-bottom:18px; line-height:1.5;">
-            You can only order up to <b style="color:var(--text-dark);">5 items</b> at once.<br>
-            To order 5 or more, please request permission from the admin.
+            You can only order up to <b style="color:var(--text-dark);">2 items</b> at once.<br>
+            To order 2 or more, please request permission from the admin.
         </p>
 
         <div id="perm-request-code" style="font-family:'Playfair Display',serif; font-size:1.4rem; font-weight:900; color:var(--text-dark); margin-bottom:18px; border:2px dashed var(--border-color); padding:10px 16px; border-radius:12px; background:var(--gold-light); letter-spacing:3px;"></div>
@@ -4222,7 +4222,7 @@ function playGrantedSound() {
         }
 
         const totalItems = cart.length;
-        if(totalItems >= 5 && !permissionGranted) {
+        if(totalItems >= 2 && !permissionGranted) {
             btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             playAlertSound();
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
@@ -7291,7 +7291,7 @@ def sse_stream():
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
-    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) > 5, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions]} for r in res]})
+    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) >= 2, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions]} for r in res]})
 
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
