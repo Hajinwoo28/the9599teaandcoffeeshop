@@ -5071,7 +5071,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── SCREENS ── */
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 20px;}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 calc(var(--nav-h)+12px);}
 .screen.active{display:block;}
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
@@ -5082,27 +5082,24 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.76rem;color:var(--tan);margin-top:3px;}
 
-/* ── DROPDOWN NAV ── */
-.hamburger-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.35);color:var(--tan);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;transition:background 0.15s;}
-.hamburger-btn:hover,.hamburger-btn.open{background:rgba(196,168,130,0.22);color:var(--cream);}
-.nav-dropdown{display:none;position:fixed;top:var(--topbar-h);left:0;right:0;background:#fff;z-index:200;border-bottom:3px solid var(--cream-dark);box-shadow:0 14px 40px rgba(61,36,16,0.18);}
-.nav-dropdown.open{display:block;}
-.nav-drop-item{position:relative;display:flex;align-items:center;gap:14px;width:100%;padding:19px 24px;border:none;background:#fff;cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:900;color:var(--text);letter-spacing:1.5px;text-transform:uppercase;text-align:left;border-bottom:1px solid var(--cream-dark);transition:background 0.15s;}
-.nav-drop-item:last-child{border-bottom:none;}
-.nav-drop-item:hover{background:var(--cream);}
-.nav-drop-item.active{color:var(--brown-dark);background:var(--cream);}
-.nav-drop-item i{width:20px;font-size:1rem;color:var(--brown);opacity:0.7;}
-.nav-drop-item.active i{opacity:1;color:var(--brown-dark);}
-.nav-drop-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brown-dark);display:none;}
-.nav-drop-item.active .nav-drop-bar{display:block;}
-.nav-overlay{display:none;position:fixed;inset:0;top:var(--topbar-h);z-index:199;background:rgba(61,36,16,0.2);}
-.nav-overlay.open{display:block;}
+/* ── BOTTOM NAV ── */
+.bottom-nav{height:var(--nav-h);background:var(--brown-dark);border-top:2px solid var(--brown);display:flex;flex-shrink:0;position:relative;z-index:100;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--tan);font-size:9px;font-weight:800;letter-spacing:0.3px;border:none;background:transparent;transition:color 0.15s;padding:0;opacity:0.65;}
+.nav-btn i{font-size:18px;}
+.nav-btn.active{color:var(--cream);opacity:1;}
+.nav-btn.active i{transform:scale(1.1);}
 .nav-center-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
 .nav-center-btn{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--brown) 0%,var(--tan) 100%);display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:20px;border:3px solid var(--brown-dark);box-shadow:0 4px 14px rgba(61,36,16,0.5);cursor:pointer;position:absolute;top:-18px;left:50%;transform:translateX(-50%);}
 
-/* ── CARDS ── */
-.card{background:var(--white);border-radius:var(--radius);padding:16px;border:1px solid var(--cream-dark);box-shadow:var(--shadow);}
-.card-title{font-size:0.7rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+/* ── SETTINGS DROPDOWN ROWS ── */
+.settings-drop-item{border-bottom:1px solid var(--cream-dark);}
+.settings-drop-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:17px 18px;background:#fff;border:none;cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:background 0.15s;gap:10px;}
+.settings-drop-header:hover{background:var(--cream);}
+.settings-drop-title{font-size:0.82rem;font-weight:900;color:var(--text);letter-spacing:1.2px;text-transform:uppercase;}
+.settings-drop-chevron{color:var(--muted);font-size:0.78rem;flex-shrink:0;transition:transform 0.25s ease;}
+.settings-drop-chevron.open{transform:rotate(180deg);}
+.settings-drop-body{display:none;padding:0 18px 18px;border-top:1px solid var(--cream-dark);background:var(--cream);}
+.settings-drop-body.open{display:block;}
 
 /* ── STAT CARDS ── */
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:28px 14px 14px;}
@@ -5330,32 +5327,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <div style="text-align:center;color:var(--muted);padding:18px;font-size:0.81rem;font-weight:600;">No notifications</div>
       </div>
     </div>
-    <button class="hamburger-btn" id="admin-hamburger-btn" onclick="toggleAdminNav()" aria-label="Navigation menu">
-      <i class="fas fa-bars" id="admin-hamburger-icon"></i>
-    </button>
   </div>
 </header>
-
-<!-- ══ DROPDOWN NAV ══ -->
-<div class="nav-overlay" id="admin-nav-overlay" onclick="closeAdminNav()"></div>
-<div class="nav-dropdown" id="admin-nav-dropdown">
-  <button class="nav-drop-item active" id="nd-inventory" onclick="goScreen('inventory')">
-    <span class="nav-drop-bar"></span>
-    <i class="fas fa-boxes"></i> Stock
-  </button>
-  <button class="nav-drop-item" id="nd-audit" onclick="goScreen('audit')">
-    <span class="nav-drop-bar"></span>
-    <i class="fas fa-shield-alt"></i> Audit
-  </button>
-  <button class="nav-drop-item" id="nd-finance" onclick="goScreen('finance')">
-    <span class="nav-drop-bar"></span>
-    <i class="fas fa-chart-line"></i> Finance
-  </button>
-  <button class="nav-drop-item" id="nd-settings" onclick="goScreen('settings')">
-    <span class="nav-drop-bar"></span>
-    <i class="fas fa-sliders-h"></i> Settings
-  </button>
-</div>
 
 <!-- ══ SCREENS ══ -->
 <div class="screens">
@@ -5546,81 +5519,119 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     </div>
     <div class="screen-inner">
 
-      <!-- Store Link -->
-      <div class="section card">
-        <div class="card-title">Store Link Generator</div>
-        <div style="background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px;">
-          <p style="font-size:0.79rem;color:var(--muted);line-height:1.65;margin-bottom:11px;">Generate a <b style="color:var(--brown-dark);">permanent</b> ordering link for customers. The system uses the schedule below to open/close automatically.</p>
-          <input type="password" class="inp" id="store-pin" placeholder="Enter Master PIN" style="background:var(--white);">
-          <button class="btn-primary" onclick="generateLink()" style="margin-bottom:9px;"><i class="fas fa-link"></i> Generate Permanent Link</button>
-          <div style="position:relative;">
-            <input type="text" class="inp" id="posLink" style="background:var(--white);padding-right:74px;font-size:0.74rem;color:var(--brown-dark);margin-bottom:0;" readonly placeholder="Link will appear here…">
-            <div style="position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;gap:4px;">
-              <button onclick="copyLink()" style="background:var(--brown);border:none;border-radius:6px;color:var(--cream);width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-copy" style="font-size:11px;"></i></button>
-              <button onclick="openLink()" style="background:#1a73e8;border:none;border-radius:6px;color:#fff;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-external-link-alt" style="font-size:11px;"></i></button>
+      <!-- Settings Dropdown List -->
+      <div class="section" style="margin-bottom:0;">
+        <div style="background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);">
+
+          <!-- ① Store Link Generator -->
+          <div class="settings-drop-item" id="sdrop-slg">
+            <button class="settings-drop-header" onclick="toggleSettingsDrop('slg')">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-link" style="width:16px;color:var(--brown);"></i>
+                <span class="settings-drop-title">Store Link Generator</span>
+              </span>
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-slg"></i>
+            </button>
+            <div class="settings-drop-body" id="body-slg">
+              <div style="background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px;margin-bottom:13px;">
+                <p style="font-size:0.79rem;color:var(--muted);line-height:1.65;margin-bottom:11px;">Generate a <b style="color:var(--brown-dark);">permanent</b> ordering link for customers. The system uses the schedule below to open/close automatically.</p>
+                <input type="password" class="inp" id="store-pin" placeholder="Enter Master PIN" style="background:var(--white);">
+                <button class="btn-primary" onclick="generateLink()" style="margin-bottom:9px;"><i class="fas fa-link"></i> Generate Permanent Link</button>
+                <div style="position:relative;">
+                  <input type="text" class="inp" id="posLink" style="background:var(--white);padding-right:74px;font-size:0.74rem;color:var(--brown-dark);margin-bottom:0;" readonly placeholder="Link will appear here…">
+                  <div style="position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;gap:4px;">
+                    <button onclick="copyLink()" style="background:var(--brown);border:none;border-radius:6px;color:var(--cream);width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-copy" style="font-size:11px;"></i></button>
+                    <button onclick="openLink()" style="background:#1a73e8;border:none;border-radius:6px;color:#fff;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-external-link-alt" style="font-size:11px;"></i></button>
+                  </div>
+                </div>
+              </div>
+              <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
+                <div style="background:var(--brown-dark);color:var(--cream);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+                  <button onclick="calPrev()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-left"></i></button>
+                  <span id="cal-title" style="font-family:'Playfair Display',serif;font-weight:900;font-size:0.95rem;letter-spacing:0.5px;">APRIL 2025</span>
+                  <button onclick="calNext()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div style="padding:8px 6px;">
+                  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px;">
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SUN</div>
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">MON</div>
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">TUE</div>
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">WED</div>
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">THU</div>
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">FRI</div>
+                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SAT</div>
+                  </div>
+                  <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;"></div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <!-- Calendar Widget -->
-        <div style="margin-top:14px;background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
-          <div style="background:var(--brown-dark);color:var(--cream);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-            <button onclick="calPrev()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-left"></i></button>
-            <span id="cal-title" style="font-family:'Playfair Display',serif;font-weight:900;font-size:0.95rem;letter-spacing:0.5px;">APRIL 2025</span>
-            <button onclick="calNext()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-right"></i></button>
-          </div>
-          <div style="padding:8px 6px;">
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px;">
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SUN</div>
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">MON</div>
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">TUE</div>
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">WED</div>
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">THU</div>
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">FRI</div>
-              <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SAT</div>
+
+          <!-- ② Store Schedule -->
+          <div class="settings-drop-item" id="sdrop-sched">
+            <button class="settings-drop-header" onclick="toggleSettingsDrop('sched')">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-clock" style="width:16px;color:var(--brown);"></i>
+                <span class="settings-drop-title">Store Schedule</span>
+              </span>
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-sched"></i>
+            </button>
+            <div class="settings-drop-body" id="body-sched">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+                <button class="btn-primary" style="width:auto;margin-bottom:0;padding:8px 16px;" onclick="saveSchedule()"><i class="fas fa-save"></i> Save</button>
+              </div>
+              <div class="schedule-grid" id="schedule-grid">
+                <div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;">Loading schedule…</div>
+              </div>
+              <div id="sched-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
             </div>
-            <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;"></div>
           </div>
-        </div>
-      </div>
 
-      <!-- Store Schedule -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-          <span class="card-title" style="margin:0;">Store Schedule</span>
-          <button class="btn-primary" style="width:auto;margin-bottom:0;padding:8px 16px;" onclick="saveSchedule()"><i class="fas fa-save"></i> Save</button>
-        </div>
-        <div class="schedule-grid" id="schedule-grid">
-          <div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;">Loading schedule…</div>
-        </div>
-        <div id="sched-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
-      </div>
+          <!-- ③ Menu Management -->
+          <div class="settings-drop-item" id="sdrop-menu">
+            <button class="settings-drop-header" onclick="toggleSettingsDrop('menu')">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-utensils" style="width:16px;color:var(--brown);"></i>
+                <span class="settings-drop-title">Menu Management</span>
+              </span>
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-menu"></i>
+            </button>
+            <div class="settings-drop-body" id="body-menu">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                <button class="btn-secondary" onclick="openMenuModal()"><i class="fas fa-plus"></i> Add Item</button>
+              </div>
+              <div class="tbl-wrap">
+                <table class="kds-table">
+                  <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+                  <tbody id="menu-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-      <!-- Menu Management -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <span class="card-title" style="margin:0;">Menu Management</span>
-          <button class="btn-secondary" onclick="openMenuModal()"><i class="fas fa-plus"></i> Add Item</button>
-        </div>
-        <div class="tbl-wrap">
-          <table class="kds-table">
-            <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
-            <tbody id="menu-tbody"></tbody>
-          </table>
-        </div>
-      </div>
+          <!-- ④ Backup & Recovery -->
+          <div class="settings-drop-item" id="sdrop-backup" style="border-bottom:none;">
+            <button class="settings-drop-header" onclick="toggleSettingsDrop('backup')">
+              <span style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-database" style="width:16px;color:var(--brown);"></i>
+                <span class="settings-drop-title">Backup &amp; Recovery</span>
+              </span>
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-backup"></i>
+            </button>
+            <div class="settings-drop-body" id="body-backup">
+              <p style="font-size:0.79rem;color:var(--muted);margin-bottom:13px;line-height:1.65;">Download or restore a full backup of all orders, menu, inventory and customer data.</p>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <button onclick="downloadBackup()" class="btn-primary" style="margin-bottom:0;"><i class="fas fa-download"></i> Download Backup</button>
+                <label style="width:100%;padding:12px;background:var(--brown-mid);color:var(--cream);border-radius:12px;font-weight:800;font-size:0.87rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:'Nunito',sans-serif;">
+                  <i class="fas fa-upload"></i> Restore from Backup
+                  <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
+                </label>
+              </div>
+              <div id="backup-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
+            </div>
+          </div>
 
-      <!-- Backup -->
-      <div class="section card">
-        <div class="card-title">Backup &amp; Recovery</div>
-        <p style="font-size:0.79rem;color:var(--muted);margin-bottom:13px;line-height:1.65;">Download or restore a full backup of all orders, menu, inventory and customer data.</p>
-        <div style="display:flex;flex-direction:column;gap:9px;">
-          <button onclick="downloadBackup()" class="btn-primary" style="margin-bottom:0;"><i class="fas fa-download"></i> Download Backup</button>
-          <label style="width:100%;padding:12px;background:var(--brown-mid);color:var(--cream);border-radius:12px;font-weight:800;font-size:0.87rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:'Nunito',sans-serif;">
-            <i class="fas fa-upload"></i> Restore from Backup
-            <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
-          </label>
         </div>
-        <div id="backup-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
       </div>
 
       <!-- Lock / Reload -->
@@ -5669,6 +5680,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 </div><!-- /screens -->
 
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nb-inventory" onclick="goScreen('inventory',this)"><i class="fas fa-boxes"></i>Stock</button>
+  <button class="nav-btn" id="nb-audit" onclick="goScreen('audit',this)"><i class="fas fa-shield-alt"></i>Audit</button>
+  <button class="nav-btn" id="nb-finance" onclick="goScreen('finance',this)"><i class="fas fa-chart-line"></i>Finance</button>
+  <button class="nav-btn" id="nb-settings" onclick="goScreen('settings',this)"><i class="fas fa-sliders-h"></i>Settings</button>
+</nav>
 
 <!-- ══ MODALS ══ -->
 <div id="qo-modal" class="modal">
@@ -5727,41 +5745,27 @@ async function apiFetch(url,opts={}){const r=await fetch(url,opts);if(r.status==
 function closeModal(id){document.getElementById(id).style.display='none';}
 document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.style.display='none';});});
 
+/* ══ SETTINGS SECTION TOGGLE ══ */
+function toggleSettingsDrop(key){
+  const body=document.getElementById('body-'+key);
+  const chev=document.getElementById('chev-'+key);
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  chev.classList.toggle('open',!isOpen);
+}
+
 /* ══ SCREEN NAV ══ */
-function goScreen(name){
+function goScreen(name,btn){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
-  document.querySelectorAll('.nav-drop-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   const scr=document.getElementById('s-'+name);
   scr.classList.add('active');
   scr.style.display='block';
-  const nd=document.getElementById('nd-'+name);
-  if(nd)nd.classList.add('active');
+  if(btn)btn.classList.add('active');
   if(name==='inventory')fetchInventory();
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
   if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();}
   if(name==='audit'){auditPage=1;fetchAuditLogs();}
-  closeAdminNav();
-}
-function toggleAdminNav(){
-  const dd=document.getElementById('admin-nav-dropdown');
-  const ov=document.getElementById('admin-nav-overlay');
-  const hb=document.getElementById('admin-hamburger-btn');
-  const ic=document.getElementById('admin-hamburger-icon');
-  const isOpen=dd.classList.contains('open');
-  dd.classList.toggle('open',!isOpen);
-  ov.classList.toggle('open',!isOpen);
-  hb.classList.toggle('open',!isOpen);
-  ic.className=isOpen?'fas fa-bars':'fas fa-times';
-}
-function closeAdminNav(){
-  const dd=document.getElementById('admin-nav-dropdown');
-  const ov=document.getElementById('admin-nav-overlay');
-  const hb=document.getElementById('admin-hamburger-btn');
-  const ic=document.getElementById('admin-hamburger-icon');
-  if(dd)dd.classList.remove('open');
-  if(ov)ov.classList.remove('open');
-  if(hb)hb.classList.remove('open');
-  if(ic)ic.className='fas fa-bars';
 }
 
 /* ══ HELPERS ══ */
