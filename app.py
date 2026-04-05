@@ -4358,19 +4358,28 @@ function playGrantedSound() {
                 const loc = orders.find(o=>o.code === srv.code);
                 if(loc && loc.status !== srv.status) {
                     loc.status = srv.status; updated = true;
-                    let msg;
-                    if(srv.status === 'Cancelled') {
-                        const reason = srv.cancel_reason && srv.cancel_reason.trim()
-                            ? srv.cancel_reason
-                            : 'No reason provided';
-                        msg = `❌ Order #${srv.code} was cancelled. Reason: ${reason}`;
-                        showToast(msg, "error");
-                        addNotifMessage(msg);
-                        // Show a prominent cancellation banner
-                        showCancellationBanner(srv.code, reason);
+                    const reason = (srv.cancel_reason || '').trim();
+                    const isOOS = /out.of.stock|unavailable|item.unavail/i.test(reason);
+
+                    if(srv.status === 'Awaiting Customer') {
+                        // Staff flagged items as OOS and is waiting for the customer's decision
+                        // Immediately check for the pending query and show the decision modal
+                        showToast('⚠️ Action needed — one or more items in your order may be unavailable!', 'error');
+                        addNotifMessage('⚠️ Please check your order — a staff member needs your decision.');
+                        checkItemAvailabilityQuery(); // fire immediately, don't wait for the 5-s interval
+                    } else if(srv.status === 'Cancelled') {
+                        if(isOOS) {
+                            // Admin cancelled directly with OOS reason — show recovery modal
+                            showOOSCancelModal(srv.code, reason);
+                        } else {
+                            const msg = `❌ Order #${srv.code} was cancelled. Reason: ${reason || 'No reason provided'}`;
+                            showToast(msg, 'error');
+                            addNotifMessage(msg);
+                            showCancellationBanner(srv.code, reason || 'No reason provided');
+                        }
                     } else {
-                        msg = `Order #${srv.code} is now: ${srv.status}`;
-                        showToast(msg, "success");
+                        const msg = `Order #${srv.code} is now: ${srv.status}`;
+                        showToast(msg, 'success');
                         addNotifMessage(msg);
                     }
                     playStatusSound(srv.status);
@@ -4380,8 +4389,32 @@ function playGrantedSound() {
         } catch(e) {}
     }
 
+    // ── OOS-cancel recovery modal (admin directly cancelled with OOS reason) ──
+    function showOOSCancelModal(code, reason) {
+        const el = document.getElementById('oos-cancel-modal');
+        if(!el) return;
+        document.getElementById('oos-cancel-code').innerText = '#' + code;
+        document.getElementById('oos-cancel-reason').innerText = reason;
+        el.style.display = 'flex';
+        addNotifMessage('⚠️ Your order was cancelled due to an item being out of stock. You can reorder or choose a replacement.');
+        showToast('⚠️ An item in your order is out of stock — please see the notification.', 'error');
+    }
+
+    function closeOOSCancelModal() {
+        const el = document.getElementById('oos-cancel-modal');
+        if(el) el.style.display = 'none';
+    }
+
+    function oosReorderNow() {
+        closeOOSCancelModal();
+        // Scroll the customer back to the menu grid so they can pick replacements
+        const menuArea = document.querySelector('.menu-area');
+        if(menuArea) menuArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Show a helpful nudge toast
+        setTimeout(() => showToast('👆 Browse the menu and place a new order!', 'success'), 400);
+    }
+
     function showCancellationBanner(code, reason) {
-        // Remove any existing banner
         const existing = document.getElementById('cancel-banner');
         if(existing) existing.remove();
         const banner = document.createElement('div');
@@ -4390,7 +4423,7 @@ function playGrantedSound() {
         banner.innerHTML = `
             <div style="font-size:1.8rem;flex-shrink:0;">❌</div>
             <div style="flex:1;">
-                <div style="font-weight:800;font-size:1rem;margin-bottom:3px;">Order #${code} has been cancelled</div>
+                <div style="font-weight:800;font-size:1rem;margin-bottom:3px;">Order #${escapeHTML(code)} has been cancelled</div>
                 <div style="font-size:0.88rem;opacity:0.9;font-weight:600;">Reason: ${escapeHTML(reason)}</div>
                 <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. Please contact the shop for assistance.</div>
             </div>
@@ -4429,27 +4462,87 @@ function playGrantedSound() {
 </script>
 
 <!-- ── Item Availability Decision Modal (customer) ─────────────────── -->
-<div id="item-query-modal" class="modal" style="display:none;">
-    <div class="modal-content" style="text-align:center; max-width:440px;">
-        <div style="font-size:2.5rem; margin-bottom:8px;">⚠️</div>
-        <h2 style="margin-bottom:6px; color:var(--danger); font-size:1.5rem;">Item Unavailable</h2>
+<div id="item-query-modal" class="modal" style="display:none; z-index:9600;">
+    <div class="modal-content" style="text-align:center; max-width:460px; padding:30px 26px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:#FFF3E0;border:2px solid #FFB74D;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:1.6rem;">⚠️</div>
+        <h2 style="margin-bottom:6px; color:var(--danger); font-size:1.35rem;">Item Unavailable</h2>
         <p style="color:var(--text-light); font-weight:600; font-size:0.85rem; margin-bottom:14px; line-height:1.5;" id="iq-reason-text"></p>
-        <div id="iq-items-list" style="background:#FFF3F3; border:1px solid #FFCDD2; border-radius:10px; padding:12px 14px; text-align:left; font-size:0.85rem; margin-bottom:14px; font-weight:700; color:#C62828; line-height:1.9;"></div>
-        <p style="color:var(--text-light); font-size:0.82rem; font-weight:600; margin-bottom:12px; line-height:1.5;">
-            Would you like to <b style="color:#2E7D32;">proceed without these items</b> (total adjusted) or <b style="color:var(--danger);">cancel your entire order</b>?
+
+        <!-- Unavailable items list -->
+        <div id="iq-items-list" style="background:#FFF3F3; border:1.5px solid #FFCDD2; border-radius:12px; padding:12px 14px; text-align:left; font-size:0.85rem; margin-bottom:14px; font-weight:700; color:#C62828; line-height:2;"></div>
+
+        <p style="color:var(--text-light); font-size:0.82rem; font-weight:600; margin-bottom:6px; line-height:1.6;">
+            What would you like to do?
         </p>
-        <div id="iq-new-total" style="font-family:'Playfair Display',serif; font-weight:900; font-size:1.2rem; color:var(--gold); margin-bottom:18px;"></div>
-        <div style="display:flex; gap:10px; flex-direction:column;">
+        <div id="iq-new-total" style="font-family:'Playfair Display',serif; font-weight:900; font-size:1.05rem; color:var(--gold); margin-bottom:16px; min-height:22px;"></div>
+
+        <div style="display:flex; gap:9px; flex-direction:column;">
+            <!-- Option 1: proceed without unavailable items -->
             <button id="iq-proceed-btn" onclick="decideItemQuery('proceed')"
-                style="width:100%; padding:14px; border-radius:12px; border:none; background:#2E7D32; color:#fff; font-weight:800; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:'DM Sans',sans-serif;">
-                <i class="fas fa-check-circle"></i> Proceed Without These Items
+                style="width:100%; padding:13px; border-radius:12px; border:none; background:#2E7D32; color:#fff; font-weight:800; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:'DM Sans',sans-serif;">
+                <i class="fas fa-check-circle"></i> Proceed — Remove Unavailable Items
             </button>
+
+            <!-- Option 2: choose a replacement (open menu, enter replacement mode) -->
+            <button id="iq-replace-btn" onclick="enterReplacementMode()"
+                style="width:100%; padding:13px; border-radius:12px; border:1.5px solid var(--gold); background:var(--gold-light); color:var(--text-dark); font-weight:800; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:'DM Sans',sans-serif;">
+                <i class="fas fa-exchange-alt" style="color:var(--gold);"></i> Choose a Replacement Item
+            </button>
+
+            <!-- Option 3: cancel entire order -->
             <button onclick="decideItemQuery('cancel')"
-                style="width:100%; padding:13px; border-radius:12px; border:1.5px solid #FFCDD2; background:#FFEBEE; color:#C62828; font-weight:800; font-size:0.9rem; cursor:pointer; font-family:'DM Sans',sans-serif;">
+                style="width:100%; padding:12px; border-radius:12px; border:1.5px solid #FFCDD2; background:#FFEBEE; color:#C62828; font-weight:800; font-size:0.88rem; cursor:pointer; font-family:'DM Sans',sans-serif;">
                 <i class="fas fa-times-circle"></i> Cancel My Entire Order
             </button>
         </div>
         <div id="iq-decision-status" style="font-size:0.82rem; font-weight:700; margin-top:10px; min-height:18px;"></div>
+    </div>
+</div>
+
+<!-- ── OOS-Cancel Recovery Modal (admin directly cancelled with OOS reason) ── -->
+<div id="oos-cancel-modal" class="modal" style="display:none; z-index:9600;">
+    <div class="modal-content" style="text-align:center; max-width:460px; padding:30px 26px;">
+        <div style="width:60px;height:60px;border-radius:50%;background:#FFF3E0;border:2px solid #FFB74D;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:1.7rem;">😔</div>
+        <h2 style="margin-bottom:6px; color:var(--danger); font-size:1.3rem;">We're Sorry — Item Out of Stock</h2>
+        <p style="color:var(--text-light); font-weight:600; font-size:0.85rem; margin-bottom:10px; line-height:1.5;">
+            Order <b id="oos-cancel-code" style="color:var(--text-dark);"></b> was cancelled because an item is currently unavailable.
+        </p>
+        <div style="background:#FFF3F3; border:1.5px solid #FFCDD2; border-radius:12px; padding:11px 14px; margin-bottom:18px; font-size:0.84rem; font-weight:700; color:#B71C1C;" id="oos-cancel-reason"></div>
+
+        <p style="font-size:0.82rem; color:var(--text-light); font-weight:600; margin-bottom:18px; line-height:1.6;">
+            You can browse our menu and place a <b style="color:var(--text-dark);">new order</b> with a different item, or dismiss this notification.
+        </p>
+
+        <div style="display:flex; gap:9px; flex-direction:column;">
+            <button onclick="oosReorderNow()"
+                style="width:100%; padding:14px; border-radius:12px; border:none; background:var(--gold); color:var(--text-dark); font-weight:900; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; font-family:'DM Sans',sans-serif; box-shadow:0 4px 16px rgba(205,154,91,0.35);">
+                <i class="fas fa-redo"></i> Browse Menu &amp; Reorder
+            </button>
+            <button onclick="closeOOSCancelModal()"
+                style="width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border-color); background:transparent; color:var(--text-light); font-weight:700; font-size:0.88rem; cursor:pointer; font-family:'DM Sans',sans-serif;">
+                Got it — I'll order another time
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Replacement Mode Banner (shown while customer picks a replacement) ── -->
+<div id="replacement-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9400; background:linear-gradient(135deg,#1a6b5a,#2E7D32); color:#fff; padding:12px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+    <div style="max-width:600px; margin:0 auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:180px;">
+            <div style="font-weight:900; font-size:0.95rem; display:flex; align-items:center; gap:7px;"><i class="fas fa-exchange-alt"></i> Replacement Mode</div>
+            <div style="font-size:0.78rem; font-weight:600; opacity:0.88; margin-top:2px;">Add your replacement item(s) from the menu below, then tap <b>Confirm Replacements</b>.</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+            <button onclick="confirmReplacements()" id="confirm-replace-btn"
+                style="background:#fff; color:#1a6b5a; border:none; border-radius:10px; padding:9px 16px; font-weight:900; font-size:0.84rem; cursor:pointer; display:flex; align-items:center; gap:6px; font-family:'DM Sans',sans-serif;">
+                <i class="fas fa-check-circle"></i> Confirm Replacements
+            </button>
+            <button onclick="cancelReplacementMode()"
+                style="background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:10px; padding:9px 12px; font-weight:800; font-size:0.82rem; cursor:pointer; font-family:'DM Sans',sans-serif;">
+                Cancel
+            </button>
+        </div>
     </div>
 </div>
 
@@ -4458,6 +4551,7 @@ function playGrantedSound() {
 
     async function checkItemAvailabilityQuery() {
         const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+        // Check any order that is not completed/cancelled (includes 'Awaiting Customer')
         const active = orders.find(o => !['Completed','Cancelled'].includes(o.status));
         if(!active) return;
         try {
@@ -4465,6 +4559,11 @@ function playGrantedSound() {
             const data = await res.json();
             if(data.pending && (!_activeItemQuery || _activeItemQuery.query_id !== data.query_id)) {
                 _activeItemQuery = data;
+                // Hide replacement banner if somehow open for an old query
+                if(_replacementQueryId && _replacementQueryId !== data.query_id) {
+                    document.getElementById('replacement-banner').style.display = 'none';
+                    _replacementQueryId = null;
+                }
                 showItemQueryModal(data, active.code);
             }
         } catch(e) {}
@@ -4473,13 +4572,15 @@ function playGrantedSound() {
     async function showItemQueryModal(queryData, orderCode) {
         const unavailable = queryData.unavailable_items;
         document.getElementById('iq-reason-text').innerHTML =
-            '<b>' + escapeHTML(queryData.reason) + '</b> — the following item(s) from Order <b>#'
-            + escapeHTML(orderCode) + '</b> are currently unavailable:';
+            'The staff flagged the following item(s) in Order <b>#'
+            + escapeHTML(orderCode) + '</b> as unavailable:';
         document.getElementById('iq-items-list').innerHTML =
             unavailable.map(n => '❌ ' + escapeHTML(n)).join('<br>');
         document.getElementById('iq-new-total').innerText = '';
         document.getElementById('iq-decision-status').innerText = '';
         document.getElementById('iq-proceed-btn').disabled = false;
+        const replaceBtn = document.getElementById('iq-replace-btn');
+        if(replaceBtn) replaceBtn.disabled = false;
         try {
             const res = await fetch('/api/customer/order_detail?code=' + encodeURIComponent(orderCode));
             const order = await res.json();
@@ -4489,14 +4590,14 @@ function playGrantedSound() {
                     .reduce((s, i) => s + i.item_total, 0);
                 const newTotal = Math.max(0, order.total - removedTotal);
                 document.getElementById('iq-new-total').innerHTML =
-                    'New total if you proceed: <span style="color:var(--gold);">₱' + newTotal.toFixed(2) + '</span>'
-                    + ' <span style="font-size:0.75rem;color:var(--text-light);font-family:\'DM Sans\',sans-serif;">(-₱'
+                    'New total if you proceed: <span style="color:var(--gold); font-size:1.15rem;">₱' + newTotal.toFixed(2) + '</span>'
+                    + ' <span style="font-size:0.75rem;color:var(--text-light);font-family:\'DM Sans\',sans-serif;"> (−₱'
                     + removedTotal.toFixed(2) + ')</span>';
             }
         } catch(e) {}
-        // Show modal and alert
+        // Show modal - ensure it's above sticky bar and backdrop
         document.getElementById('item-query-modal').style.display = 'flex';
-        showToast('⚠️ Action required: an item in your order is unavailable!', 'error');
+        showToast('⚠️ Action required — please respond to the staff about your order.', 'error');
         addNotifMessage('⚠️ Staff flagged an item as unavailable — please respond!');
     }
 
@@ -4506,6 +4607,8 @@ function playGrantedSound() {
         statusEl.style.color = 'var(--text-light)';
         statusEl.innerText = 'Sending your response…';
         document.getElementById('iq-proceed-btn').disabled = true;
+        const replaceBtn = document.getElementById('iq-replace-btn');
+        if(replaceBtn) replaceBtn.disabled = true;
         try {
             const res = await fetch('/api/item_query/' + _activeItemQuery.query_id + '/decide', {
                 method: 'POST',
@@ -4531,11 +4634,104 @@ function playGrantedSound() {
                 statusEl.style.color = 'var(--danger)';
                 statusEl.innerText = 'Error. Please try again.';
                 document.getElementById('iq-proceed-btn').disabled = false;
+                if(replaceBtn) replaceBtn.disabled = false;
             }
         } catch(e) {
             statusEl.style.color = 'var(--danger)';
             statusEl.innerText = 'Connection error. Please try again.';
             document.getElementById('iq-proceed-btn').disabled = false;
+            if(replaceBtn) replaceBtn.disabled = false;
+        }
+    }
+
+    // ── Replacement mode ─────────────────────────────────────────────────────
+    let _replacementQueryId = null;
+
+    function enterReplacementMode() {
+        if(!_activeItemQuery) return;
+        _replacementQueryId = _activeItemQuery.query_id;
+        // Close the decision modal
+        document.getElementById('item-query-modal').style.display = 'none';
+        // Show replacement banner
+        document.getElementById('replacement-banner').style.display = 'block';
+        // Scroll to menu
+        const menuArea = document.querySelector('.menu-area');
+        if(menuArea) setTimeout(() => menuArea.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+        showToast('🛒 Add your replacement item(s), then tap Confirm Replacements.', 'success');
+    }
+
+    function cancelReplacementMode() {
+        document.getElementById('replacement-banner').style.display = 'none';
+        _replacementQueryId = null;
+        // Re-open the decision modal if query still active
+        if(_activeItemQuery) {
+            document.getElementById('item-query-modal').style.display = 'flex';
+        }
+    }
+
+    async function confirmReplacements() {
+        if(cart.length === 0) {
+            showToast('Please add at least one replacement item from the menu.', 'error');
+            return;
+        }
+        const btn = document.getElementById('confirm-replace-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+
+        // Get the current order code from localStorage
+        const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+        const active = orders.find(o => !['Completed','Cancelled'].includes(o.status));
+        if(!active) {
+            showToast('Could not find your active order.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Replacements';
+            return;
+        }
+
+        // Step 1: add new replacement items to the existing order
+        const payload = {
+            code: active.code,
+            items: cart.map(i => ({
+                foundation: i.name, size: i.size, sweetener: i.sugar,
+                ice: i.ice, waterTemp: i.waterTemp || '', addons: i.addons.join(', '), price: i.price
+            }))
+        };
+        try {
+            const addRes = await fetch('/api/customer/update_order', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(!addRes.ok) {
+                const err = await addRes.json();
+                showToast('Could not add items: ' + (err.error || 'Unknown error'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Replacements';
+                return;
+            }
+
+            // Step 2: decide 'proceed' on the original item query (removes unavailable items)
+            if(_replacementQueryId) {
+                await fetch('/api/item_query/' + _replacementQueryId + '/decide', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ decision: 'proceed' })
+                });
+            }
+
+            // Step 3: clear cart, hide banner, notify customer
+            cart = [];
+            try { sessionStorage.removeItem('sf_cart'); } catch(e) {}
+            updateCartUI();
+            document.getElementById('replacement-banner').style.display = 'none';
+            _activeItemQuery = null;
+            _replacementQueryId = null;
+            orders.forEach(o => { if(o.status === 'Awaiting Customer') o.status = 'Waiting Confirmation'; });
+            localStorage.setItem('myOrders', JSON.stringify(orders));
+            showToast('✅ Replacement item(s) added — your updated order is back in queue!', 'success');
+            addNotifMessage('✅ Replacement items added. Your order continues with the changes.');
+        } catch(e) {
+            showToast('Connection error. Please try again.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Replacements';
         }
     }
 
