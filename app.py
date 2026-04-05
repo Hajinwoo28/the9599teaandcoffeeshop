@@ -2604,6 +2604,8 @@ function playGrantedSound() {
     }
 
     // ── Gate geolocation ─────────────────────────────────────────────────────
+    let _gateGeoAddr = '';   // stores reverse-geocoded address from sign-in location button
+
     function gateUseMyLocation() {
         const btn    = document.getElementById('gate-geo-btn');
         const status = document.getElementById('gate-geo-status');
@@ -2630,12 +2632,16 @@ function playGrantedSound() {
                 status.innerText   = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
                 btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Confirmed ✓';
-                // Try reverse geocode for a friendly address label
+                // Reverse geocode and store address for order history
                 try {
                     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers:{'Accept-Language':'en'} });
                     const d = await r.json();
-                    if (d.display_name) status.innerText = '📍 ' + d.display_name;
-                } catch(_) {}
+                    const addr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    _gateGeoAddr = addr;
+                    status.innerText = '📍 ' + addr;
+                } catch(_) {
+                    _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                }
             },
             (err) => {
                 btn.disabled = false;
@@ -2673,7 +2679,7 @@ function playGrantedSound() {
             const res = await fetch('/api/auth/manual', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, email, phone, lat, lng })
+                body: JSON.stringify({ name, email, phone, lat, lng, address: _gateGeoAddr })
             });
             if (res.ok) { location.reload(); }
             else {
@@ -2860,6 +2866,7 @@ function playGrantedSound() {
     <input type="hidden" id="customer-phone" value="{{ session.get('customer_phone', '') }}">
     <input type="hidden" id="customer-lat" value="{{ session.get('customer_lat', '') }}">
     <input type="hidden" id="customer-lng" value="{{ session.get('customer_lng', '') }}">
+    <input type="hidden" id="customer-address" value="{{ session.get('customer_address', '') }}">
     <input type="hidden" id="pickup-time" value="">
 
     <div class="cart-top-section">
@@ -3221,7 +3228,7 @@ function playGrantedSound() {
     let orderType = 'Dine-In';
     let updateModeCode = null;        // set when customer has permission to update an order
     let _pendingUpdateOrderCode = null; // the real order code when an update request is in flight
-    let _capturedGeoAddress = '';       // filled when 'Use my current location' completes
+    let _capturedGeoAddress = document.getElementById('customer-address') ? document.getElementById('customer-address').value : '';  // pre-filled from sign-in location
 
     // ── Persist cart across viewport changes ──────────────────────────────
     function saveCartToSession() {
@@ -4300,7 +4307,7 @@ function playGrantedSound() {
             total: cart.reduce((s,i)=>s+i.price, 0),
             customer_lat: document.getElementById('customer-lat').value || null,
             customer_lng: document.getElementById('customer-lng').value || null,
-            address: _capturedGeoAddress || '',
+            address: _capturedGeoAddress || document.getElementById('customer-address').value || '',
             items: cart.map(i => ({ foundation: i.name, size: i.size, sweetener: i.sugar, ice: i.ice, waterTemp: i.waterTemp||'', addons: i.addons.join(', '), pearls: orderType, price: i.price }))
         };
         try {
@@ -6611,6 +6618,7 @@ def manual_auth():
     phone = (data.get('phone') or '').strip()
     lat   = (data.get('lat') or '').strip()
     lng   = (data.get('lng') or '').strip()
+    address = (data.get('address') or '').strip()
     if not name:
         return jsonify({"error": "Full name is required."}), 400
     if not email or '@' not in email:
@@ -6623,6 +6631,7 @@ def manual_auth():
     session['customer_phone']    = phone
     session['customer_lat']      = lat
     session['customer_lng']      = lng
+    session['customer_address']  = address
     return jsonify({"status": "success"})
 
 @app.route('/login', methods=['GET', 'POST'])
