@@ -4668,7 +4668,7 @@ function playGrantedSound() {
                 const newTotal = Math.max(0, order.total - removedTotal);
                 document.getElementById('iq-new-total').innerHTML =
                     'New total if you proceed: <span style="color:var(--gold); font-size:1.15rem;">₱' + newTotal.toFixed(2) + '</span>'
-                    + ' <span style="font-size:0.75rem;color:var(--text-light);font-family:\'DM Sans\',sans-serif;"> (−₱'
+                    + ' <span style="font-size:0.75rem;color:var(--text-light);font-family:&quot;DM Sans&quot;,sans-serif;"> (−₱'
                     + removedTotal.toFixed(2) + ')</span>';
             }
         } catch(e) {}
