@@ -332,6 +332,17 @@ class StoreScheduleEntry(db.Model):
     close_hour = db.Column(db.Integer, nullable=False, default=19)
     close_minute = db.Column(db.Integer, nullable=False, default=0)
 
+class ItemAvailabilityQuery(db.Model):
+    """Tracks when an employee flags item(s) as unavailable and waits for the customer to decide."""
+    __tablename__ = 'item_availability_queries'
+    id = db.Column(db.Integer, primary_key=True)
+    reservation_id = db.Column(db.Integer, db.ForeignKey('reservations.id'), nullable=False)
+    order_code = db.Column(db.String(20), nullable=False)
+    unavailable_items = db.Column(db.Text, nullable=False, default='[]')  # JSON list of item names
+    reason = db.Column(db.String(100), nullable=False, default='Out of Stock')
+    customer_decision = db.Column(db.String(20), nullable=True)  # 'proceed' | 'cancel' | None (pending)
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
 # ==========================================
 # 4. FRONTEND HTML TEMPLATES
 # ==========================================
@@ -1123,11 +1134,13 @@ function playEmpPermBeep(){
 
 <!-- CANCEL REASON MODAL -->
 <div class="success-overlay" id="cancel-reason-modal" style="display:none;">
-  <div class="success-card" style="max-width:380px;padding:28px 24px;">
+  <div class="success-card" style="max-width:420px;padding:26px 22px;">
     <div style="font-size:2rem;margin-bottom:6px;">❌</div>
-    <div style="font-size:0.85rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Cancel Order</div>
-    <div style="font-size:0.8rem;color:var(--muted);font-weight:600;margin-bottom:18px;line-height:1.5;">Select a reason so the customer is informed why their order was cancelled.</div>
-    <div style="width:100%;text-align:left;margin-bottom:10px;">
+    <div style="font-size:0.85rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Cancel / Notify Customer</div>
+    <div style="font-size:0.8rem;color:var(--muted);font-weight:600;margin-bottom:16px;line-height:1.5;">Select a reason. For stock/availability issues, pick the specific items — the customer will be asked whether they want to proceed.</div>
+
+    <!-- Step 1: Reason -->
+    <div style="width:100%;text-align:left;margin-bottom:12px;">
       <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Cancellation Reason</label>
       <select id="cancel-reason-select" onchange="onCancelReasonChange(this.value)"
         style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.86rem;font-weight:700;color:var(--text);background:var(--bg);outline:none;">
@@ -1138,14 +1151,41 @@ function playEmpPermBeep(){
         <option value="Other">✏️ Other (specify below)</option>
       </select>
     </div>
-    <div id="cancel-reason-custom-wrap" style="width:100%;text-align:left;margin-bottom:14px;display:none;">
+
+    <!-- Custom reason (for "Other") -->
+    <div id="cancel-reason-custom-wrap" style="width:100%;text-align:left;margin-bottom:12px;display:none;">
       <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Custom Reason</label>
       <input id="cancel-reason-custom" type="text" placeholder="e.g. Machine breakdown, ingredient issue…"
         style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;color:var(--text);background:#fff;outline:none;">
     </div>
-    <div style="display:flex;gap:10px;width:100%;">
+
+    <!-- Step 2: Item picker (shown only for Out of Stock / Item Unavailable) -->
+    <div id="cancel-item-picker-wrap" style="display:none;width:100%;text-align:left;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;">Select Unavailable Items</label>
+        <span style="font-size:0.65rem;font-weight:700;color:var(--teal-dark);cursor:pointer;" onclick="autoSelectLowStock()">⚡ Auto-detect from Inventory</span>
+      </div>
+      <div id="cancel-item-picker-list" style="display:flex;flex-direction:column;gap:7px;max-height:200px;overflow-y:auto;padding-right:2px;">
+        <div style="font-size:0.8rem;color:var(--muted);font-weight:600;">Loading items…</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.72rem;color:var(--muted);font-weight:600;line-height:1.4;">
+        🔔 The customer will be notified and asked if they want to <b>proceed without these items</b> or <b>cancel</b>.
+      </div>
+    </div>
+
+    <!-- Awaiting customer state -->
+    <div id="cancel-awaiting-wrap" style="display:none;text-align:center;padding:14px 0 6px;">
+      <div style="font-size:1.4rem;margin-bottom:6px;">🕐</div>
+      <div style="font-size:0.88rem;font-weight:800;color:var(--teal-dark);margin-bottom:4px;">Waiting for Customer</div>
+      <div style="font-size:0.78rem;color:var(--muted);font-weight:600;line-height:1.5;">The customer has been notified. This modal will close once they decide.</div>
+      <div id="cancel-awaiting-poll-status" style="margin-top:10px;font-size:0.75rem;color:var(--muted);font-weight:600;"></div>
+    </div>
+
+    <!-- Action buttons -->
+    <div id="cancel-action-btns" style="display:flex;gap:10px;width:100%;">
       <button onclick="closeCancelReasonModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;">Keep Order</button>
-      <button onclick="confirmCancelOrder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--red);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;"><i class="fas fa-times-circle"></i> Confirm Cancel</button>
+      <button id="cancel-confirm-btn" onclick="confirmCancelOrder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--red);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-times-circle"></i> Confirm Cancel</button>
+      <button id="cancel-notify-btn" onclick="notifyCustomerAboutItems()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;display:none;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-bell"></i> Notify Customer</button>
     </div>
   </div>
 </div>
@@ -1379,7 +1419,7 @@ function renderOrders(){
     tbody.innerHTML='<tr class="empty-row"><td colspan="8">No active orders</td></tr>';
     return;
   }
-  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled'};
+  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled','Awaiting Customer':'sel-waiting'};
   tbody.innerHTML=orders.map(o=>{
     const isOnline=o.source==='Online';
     const sourceBadge=isOnline
@@ -1387,12 +1427,14 @@ function renderOrders(){
       :'<span class="badge badge-walkin" style="font-size:0.67rem;">🚶 Walk-In</span>';
     const itemsSummary=o.items.map(i=>escapeHTML(i.foundation+(i.size&&i.size!=='16 oz'?' ('+i.size+')':''))).join(', ');
     const cls=statusClass[o.status]||'sel-waiting';
-    const sel=`<select class="status-select ${cls}" onchange="updateStatus(${o.id},this.value,this)">
+    const isAwaiting = o.status === 'Awaiting Customer';
+    const sel=`<select class="status-select ${cls}" onchange="updateStatus(${o.id},this.value,this)" ${isAwaiting?'disabled title="Waiting for customer response"':''}>
       <option value="Waiting Confirmation" ${o.status==='Waiting Confirmation'?'selected':''}>⏳ Waiting</option>
       <option value="Preparing" ${o.status==='Preparing'?'selected':''}>🔥 Preparing</option>
       <option value="Ready for Pickup" ${o.status==='Ready for Pickup'?'selected':''}>✅ Ready</option>
       <option value="Completed" ${o.status==='Completed'?'selected':''}>🏁 Completed</option>
       <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
+      ${isAwaiting?'<option value="Awaiting Customer" selected>🕐 Awaiting Customer</option>':''}
     </select>`;
     return `<tr>
       <td><span class="order-num">#${escapeHTML(o.code)}</span></td>
@@ -1408,20 +1450,25 @@ function renderOrders(){
 }
 
 async function updateStatus(orderId,status,selectEl){
-  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled'};
+  const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled','Awaiting Customer':'sel-waiting'};
   if(status === 'Cancelled'){
-    // Show cancellation reason modal before updating
     window._pendingCancelOrderId = orderId;
     window._pendingCancelSelectEl = selectEl;
+    // Find the order's items from allOrders
+    window._pendingCancelOrder = allOrders.find(o=>o.id===orderId) || null;
     document.getElementById('cancel-reason-select').value = 'Out of Stock';
     document.getElementById('cancel-reason-custom').value = '';
     document.getElementById('cancel-reason-custom-wrap').style.display = 'none';
+    document.getElementById('cancel-item-picker-wrap').style.display = 'block';
+    document.getElementById('cancel-awaiting-wrap').style.display = 'none';
+    document.getElementById('cancel-action-btns').style.display = 'flex';
+    document.getElementById('cancel-confirm-btn').style.display = 'none';
+    document.getElementById('cancel-notify-btn').style.display = 'flex';
     document.getElementById('cancel-reason-modal').style.display = 'flex';
+    loadCancelItemPicker();
     return;
   }
-  if(selectEl){
-    selectEl.className='status-select '+(statusClass[status]||'sel-waiting');
-  }
+  if(selectEl){ selectEl.className='status-select '+(statusClass[status]||'sel-waiting'); }
   try{
     const r=await fetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
     if(r.ok){showToast(`Status: ${status}`,'success');fetchOrders();}
@@ -1429,8 +1476,127 @@ async function updateStatus(orderId,status,selectEl){
   }catch(e){showToast('Network error','error');}
 }
 
+// Load order items into the item picker, auto-check low-stock ones
+async function loadCancelItemPicker(){
+  const listEl = document.getElementById('cancel-item-picker-list');
+  listEl.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Checking inventory…</div>';
+  const orderId = window._pendingCancelOrderId;
+  try {
+    const r = await fetch(`/api/orders/${orderId}/check_stock`);
+    const data = await r.json();
+    window._cancelItemsData = data.items || [];
+    renderCancelItemPicker(data.items);
+  } catch(e) {
+    // Fallback: use items already in allOrders
+    const order = window._pendingCancelOrder;
+    const items = order ? order.items.map(i=>({name:i.foundation,size:i.size,addons:i.addons,item_total:i.item_total,is_low_stock:false})) : [];
+    window._cancelItemsData = items;
+    renderCancelItemPicker(items);
+  }
+}
+
+function renderCancelItemPicker(items){
+  const listEl = document.getElementById('cancel-item-picker-list');
+  if(!items || !items.length){
+    listEl.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);">No items found.</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((item, idx) => {
+    const lowBadge = item.is_low_stock
+      ? '<span style="background:rgba(211,47,47,0.1);color:var(--red);font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:10px;margin-left:6px;">⚠️ LOW STOCK</span>'
+      : '';
+    const sizeStr = item.size && item.size !== '16 oz' ? ` (${item.size})` : '';
+    return `<label style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:${item.is_low_stock?'rgba(211,47,47,0.04)':'var(--bg)'};transition:background 0.15s;">
+      <input type="checkbox" class="cancel-item-cb" data-name="${escapeHTML(item.name)}" data-total="${item.item_total}" ${item.is_low_stock?'checked':''} style="width:16px;height:16px;accent-color:var(--red);flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:0.82rem;color:var(--text);">${escapeHTML(item.name)}${escapeHTML(sizeStr)}${lowBadge}</div>
+        ${item.addons?`<div style="font-size:0.68rem;color:var(--muted);">+${escapeHTML(item.addons)}</div>`:''}
+      </div>
+      <div style="font-size:0.8rem;font-weight:800;color:var(--teal-dark);white-space:nowrap;">₱${Number(item.item_total).toFixed(2)}</div>
+    </label>`;
+  }).join('');
+}
+
+function autoSelectLowStock(){
+  document.querySelectorAll('.cancel-item-cb').forEach(cb => {
+    const idx = Array.from(document.querySelectorAll('.cancel-item-cb')).indexOf(cb);
+    const item = (window._cancelItemsData||[])[idx];
+    cb.checked = item ? item.is_low_stock : false;
+  });
+}
+
 function onCancelReasonChange(val){
+  const isStockReason = (val === 'Out of Stock' || val === 'Item Unavailable');
   document.getElementById('cancel-reason-custom-wrap').style.display = val === 'Other' ? 'block' : 'none';
+  document.getElementById('cancel-item-picker-wrap').style.display = isStockReason ? 'block' : 'none';
+  document.getElementById('cancel-confirm-btn').style.display = isStockReason ? 'none' : '';
+  document.getElementById('cancel-notify-btn').style.display = isStockReason ? 'flex' : 'none';
+}
+
+async function notifyCustomerAboutItems(){
+  const orderId = window._pendingCancelOrderId;
+  const reason = document.getElementById('cancel-reason-select').value;
+  const checked = Array.from(document.querySelectorAll('.cancel-item-cb:checked')).map(cb=>cb.dataset.name);
+  if(!checked.length){
+    showToast('Please select at least one unavailable item.','error');
+    return;
+  }
+  const btn = document.getElementById('cancel-notify-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+  try {
+    const r = await fetch(`/api/orders/${orderId}/item_query`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({unavailable_items:checked, reason})
+    });
+    if(r.ok){
+      // Show "awaiting customer" state
+      document.getElementById('cancel-action-btns').style.display = 'none';
+      document.getElementById('cancel-item-picker-wrap').style.display = 'none';
+      document.getElementById('cancel-awaiting-wrap').style.display = 'block';
+      fetchOrders();
+      startWaitingForCustomerDecision(orderId);
+    } else {
+      showToast('Failed to notify customer.','error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-bell"></i> Notify Customer';
+    }
+  } catch(e){
+    showToast('Network error.','error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-bell"></i> Notify Customer';
+  }
+}
+
+let _waitDecisionPoll = null;
+let _seenDecisionCodes = new Set();
+
+function startWaitingForCustomerDecision(orderId){
+  const statusEl = document.getElementById('cancel-awaiting-poll-status');
+  _waitDecisionPoll = setInterval(async ()=>{
+    try {
+      const r = await fetch('/api/item_queries/decisions');
+      const decisions = await r.json();
+      const code = (window._pendingCancelOrder||{}).code;
+      const match = decisions.find(d=>d.order_code===code && !_seenDecisionCodes.has(d.query_id));
+      if(match){
+        clearInterval(_waitDecisionPoll); _waitDecisionPoll = null;
+        _seenDecisionCodes.add(match.query_id);
+        document.getElementById('cancel-reason-modal').style.display='none';
+        if(match.decision==='proceed'){
+          showToast(`✅ Customer chose to proceed — ${match.unavailable_items.join(', ')} removed.`,'success');
+        } else {
+          showToast(`❌ Customer chose to cancel Order #${code}.`,'error');
+        }
+        fetchOrders();
+      } else {
+        const elapsed = Math.floor((Date.now()-_waitStart)/1000);
+        if(statusEl) statusEl.innerText = `Waiting… ${elapsed}s elapsed`;
+      }
+    } catch(e){}
+  }, 3000);
+  window._waitStart = Date.now();
 }
 
 async function confirmCancelOrder(){
@@ -1451,7 +1617,7 @@ async function confirmCancelOrder(){
 
 function closeCancelReasonModal(){
   document.getElementById('cancel-reason-modal').style.display='none';
-  // Revert the select back to the previous status
+  if(_waitDecisionPoll){clearInterval(_waitDecisionPoll);_waitDecisionPoll=null;}
   fetchOrders();
 }
 
@@ -1882,34 +2048,38 @@ STOREFRONT_HTML = """
         body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-base); color: var(--text-dark); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         h1, h2, h3, .serif-font { font-family: 'Playfair Display', serif; }
 
-        .promo-ticker { background: #1A110D; color: var(--gold); padding: 10px 0; overflow: hidden; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+        .promo-ticker { background: #1A110D; color: var(--gold); padding: 5px 0; overflow: hidden; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
         .ticker-inner { display: inline-block; animation: ticker 25s linear infinite; }
         @keyframes ticker { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 
-        header { background: var(--bg-base); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-        .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-ring { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--gold); display: flex; justify-content: center; align-items: center; }
-        .logo-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        header { background: var(--bg-base); padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-ring { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold); display: flex; justify-content: center; align-items: center; }
+        .logo-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
         .logo-text-wrapper { display: flex; flex-direction: column; }
-        .logo-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.3rem; color: var(--text-dark); line-height: 1; }
-        .logo-sub { font-family: 'Playfair Display', serif; font-size: 0.7rem; font-weight: 900; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-top: 4px; }
+        .logo-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.05rem; color: var(--text-dark); line-height: 1; }
+        .logo-sub { font-family: 'Playfair Display', serif; font-size: 0.6rem; font-weight: 900; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-top: 3px; }
 
         .main-container { display: flex; flex: 1; overflow: hidden; }
-        .menu-area { flex: 1; padding: 25px 30px; overflow-y: auto; background: var(--bg-base); }
-        .categories { display: flex; gap: 12px; overflow-x: auto; margin-bottom: 25px; padding-bottom: 10px; scrollbar-width: none; }
+        .menu-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-base); }
+        /* Sticky search + category bar — never scrolls */
+        .menu-controls { padding: 12px 20px 8px; flex-shrink: 0; background: var(--bg-base); border-bottom: 1px solid var(--border-color); }
+        /* Scrollable menu grid area */
+        .menu-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 20px; }
+        .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 0; padding-bottom: 0; scrollbar-width: none; }
         .categories::-webkit-scrollbar { display: none; }
-        .cat-btn { padding: 10px 24px; border-radius: 50px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-dark); font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .cat-btn { padding: 6px 16px; border-radius: 50px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-dark); font-weight: 700; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .cat-btn.active { background: var(--text-dark); color: var(--gold); border-color: var(--text-dark); }
 
-        .search-bar-wrapper { position: relative; margin-bottom: 20px; }
-        .search-bar-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 0.95rem; pointer-events: none; }
-        .menu-search-input { width: 100%; padding: 12px 15px 12px 42px; border: 1.5px solid var(--border-color); border-radius: 50px; font-size: 0.9rem; font-weight: 600; color: var(--text-dark); background: var(--card-bg); outline: none; transition: border-color 0.2s; }
+        .search-bar-wrapper { position: relative; margin-bottom: 10px; }
+        .search-bar-wrapper i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 0.85rem; pointer-events: none; }
+        .menu-search-input { width: 100%; padding: 9px 13px 9px 36px; border: 1.5px solid var(--border-color); border-radius: 50px; font-size: 0.85rem; font-weight: 600; color: var(--text-dark); background: var(--card-bg); outline: none; transition: border-color 0.2s; }
         .menu-search-input:focus { border-color: var(--gold); }
 
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
         .card { background: var(--card-bg); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(44, 26, 18, 0.05); cursor: pointer; transition: transform 0.2s ease; border: 1px solid var(--border-color); position: relative; display: flex; flex-direction: column; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(44, 26, 18, 0.1); }
-        .card-img-container { height: 140px; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden;}
+        .card-img-container { height: 130px; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden;}
         
         .grad-trending   { background: linear-gradient(135deg, #8B5A2B, #C88A3C); }
         .grad-signature  { background: linear-gradient(135deg, #4A3A6B, #6A5A8B); }
@@ -1932,40 +2102,122 @@ STOREFRONT_HTML = """
         .card.sold-out { opacity: 0.5; pointer-events: none; }
         .sold-out-badge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.6); display: flex; justify-content: center; align-items: center; font-weight: 900; color: var(--danger); font-size: 1.2rem; z-index: 10; letter-spacing: 2px; }
 
-        .sidebar { width: 380px; background: var(--bg-base); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 50; overflow: hidden; }
-        .cart-top-section { padding: 25px 25px 15px; flex-shrink: 0; overflow: visible; }
-        .cart-header { display: flex; align-items: center; margin-bottom: 20px; gap: 10px; }
-        .cart-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--text-dark); }
-        .cart-count { background: var(--gold); color: var(--text-dark); font-size: 0.8rem; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        /* ── Order Sheet (desktop: right panel, hidden by default) ── */
+        .sidebar {
+            width: 320px; background: var(--bg-base); border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column; z-index: 300; overflow: hidden;
+            position: fixed; right: 0; top: 0; bottom: 0;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: -8px 0 32px rgba(44,26,18,0.14);
+        }
+        .sidebar.sheet-open { transform: translateX(0); }
 
-        .order-type { display: flex; background: var(--gold-light); border-radius: 12px; padding: 5px; gap: 5px; margin-bottom: 15px; border: 1px solid var(--border-color); }
-        .type-btn { flex: 1; padding: 10px; text-align: center; font-weight: 700; font-size: 0.85rem; border-radius: 8px; cursor: pointer; color: var(--text-light); transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        /* Sheet overlay backdrop */
+        #sheet-backdrop {
+            display: none; position: fixed; inset: 0; z-index: 290;
+            background: rgba(44,26,18,0.35); backdrop-filter: blur(2px);
+        }
+        #sheet-backdrop.show { display: block; }
+
+        /* Sheet handle at top */
+        .sheet-handle-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 18px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border-color);
+            cursor: pointer; user-select: none; background: var(--bg-base);
+        }
+        .sheet-handle-left { display: flex; align-items: center; gap: 8px; }
+        .sheet-handle-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1rem; color: var(--text-dark); }
+        .sheet-handle-badge { background: var(--gold); color: var(--text-dark); font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 20px; min-width: 22px; text-align: center; }
+        .sheet-handle-chevron { font-size: 0.85rem; color: var(--text-light); }
+
+        /* ── Sticky Bottom Bar ── */
+        #sticky-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 250;
+            background: var(--text-dark); color: #fff;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px max(14px, env(safe-area-inset-bottom, 0px));
+            transform: translateY(100%);
+            transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 -4px 20px rgba(44,26,18,0.22);
+        }
+        #sticky-bar.bar-visible { transform: translateY(0); }
+        .sticky-bar-info { display: flex; flex-direction: column; gap: 2px; }
+        .sticky-bar-count { font-size: 0.72rem; font-weight: 700; opacity: 0.7; letter-spacing: 0.3px; }
+        .sticky-bar-total { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 900; color: var(--gold); }
+        .sticky-bar-btn {
+            background: var(--gold); color: var(--text-dark);
+            border: none; border-radius: 10px; padding: 10px 18px;
+            font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 800;
+            cursor: pointer; display: flex; align-items: center; gap: 7px;
+            transition: opacity 0.15s; white-space: nowrap;
+        }
+        .sticky-bar-btn:active { opacity: 0.85; }
+
+        /* ── Pickup Time Modal ── */
+        #pickup-modal {
+            display: none; position: fixed; inset: 0; z-index: 9100;
+            background: rgba(44,26,18,0.6); backdrop-filter: blur(4px);
+            align-items: flex-end; justify-content: center;
+        }
+        #pickup-modal.show { display: flex; }
+        .pickup-sheet {
+            background: var(--bg-base); width: 100%; max-width: 480px;
+            border-radius: 24px 24px 0 0; padding: 20px 24px max(28px, env(safe-area-inset-bottom,0px));
+            animation: slideUpSheet 0.28s ease;
+        }
+        @keyframes slideUpSheet { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .pickup-sheet-handle { width: 40px; height: 4px; background: var(--border-color); border-radius: 4px; margin: 0 auto 18px; }
+        .pickup-sheet-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 900; color: var(--text-dark); margin-bottom: 4px; }
+        .pickup-sheet-sub { font-size: 0.82rem; color: var(--text-light); font-weight: 600; margin-bottom: 18px; }
+        .pickup-confirm-btn {
+            width: 100%; padding: 14px; border-radius: 13px; border: none;
+            background: var(--gold); color: var(--text-dark);
+            font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 800;
+            cursor: pointer; margin-top: 16px; display: flex; align-items: center;
+            justify-content: center; gap: 8px; transition: opacity 0.15s;
+        }
+        .pickup-confirm-btn:active { opacity: 0.85; }
+        .pickup-cancel-btn {
+            width: 100%; padding: 12px; border-radius: 13px;
+            border: 1.5px solid var(--border-color); background: transparent;
+            color: var(--text-light); font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem; font-weight: 700; cursor: pointer; margin-top: 8px;
+        }
+
+        .cart-top-section { padding: 8px 18px 10px; flex-shrink: 0; overflow: visible; }
+        .cart-header { display: flex; align-items: center; margin-bottom: 12px; gap: 8px; }
+        .cart-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 900; color: var(--text-dark); }
+        .cart-count { background: var(--gold); color: var(--text-dark); font-size: 0.72rem; font-weight: 800; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+        .order-type { display: flex; background: var(--gold-light); border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 10px; border: 1px solid var(--border-color); }
+        .type-btn { flex: 1; padding: 7px; text-align: center; font-weight: 700; font-size: 0.78rem; border-radius: 7px; cursor: pointer; color: var(--text-light); transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px; }
         .type-btn.active { background: var(--text-dark); color: var(--gold); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
-        .name-input { width: 100%; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.95rem; font-weight: 700; outline: none; margin-bottom: 15px; color: var(--text-dark); background: var(--card-bg); font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .name-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.85rem; font-weight: 700; outline: none; margin-bottom: 10px; color: var(--text-dark); background: var(--card-bg); font-family: 'DM Sans', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .name-input:focus { border-color: var(--gold); }
-        .pickup-label { font-size: 0.75rem; font-weight: 800; color: var(--text-light); margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        .pickup-label { font-size: 0.68rem; font-weight: 800; color: var(--text-light); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 1px; }
         .time-wrapper { position: relative; }
-        .time-wrapper i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-dark); font-size: 1.1rem; pointer-events: none; }
+        .time-wrapper i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dark); font-size: 1rem; pointer-events: none; }
 
-        .cart-content { padding: 0 25px 15px; flex: 1; overflow-y: auto; min-height: 0; }
-        .empty-cart { margin: auto 0; text-align: center; padding: 40px 0; }
-        .empty-cart-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.2; }
-        .empty-cart p { font-weight: 700; font-size: 1rem; color: var(--text-light); }
+        .cart-content { padding: 0 18px 10px; flex: 1; overflow-y: auto; min-height: 0; }
+        .empty-cart { margin: auto 0; text-align: center; padding: 28px 0; }
+        .empty-cart-icon { font-size: 2.4rem; margin-bottom: 10px; opacity: 0.2; }
+        .empty-cart p { font-weight: 700; font-size: 0.88rem; color: var(--text-light); }
 
-        .cart-item { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; padding: 16px; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(44, 26, 18, 0.03); }
-        .cart-item-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 900; color: var(--text-dark); margin-bottom: 4px; }
-        .cart-item-sub { font-size: 0.75rem; color: var(--text-light); font-weight: 500; line-height: 1.4; }
+        .cart-item { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 9px; padding: 11px 12px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(44, 26, 18, 0.03); }
+        .cart-item-name { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 900; color: var(--text-dark); margin-bottom: 3px; }
+        .cart-item-sub { font-size: 0.68rem; color: var(--text-light); font-weight: 500; line-height: 1.4; }
         .cart-item-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%; }
-        .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 1.1rem; }
-        .cart-item-del { margin-top: 10px; font-size: 0.8rem; color: var(--danger); cursor: pointer; font-weight: 700; }
+        .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 0.95rem; }
+        .cart-item-del { margin-top: 7px; font-size: 0.75rem; color: var(--danger); cursor: pointer; font-weight: 700; }
 
-        .checkout-area { padding: 20px 25px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
-        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .total-label { font-size: 0.9rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
-        .total-amount { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--text-dark); }
+        .checkout-area { padding: 12px 18px 16px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
+        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .total-label { font-size: 0.8rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+        .total-amount { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 900; color: var(--text-dark); }
 
-        .checkout-btn { width: 100%; padding: 18px; border: 2px solid #B8A898; border-radius: 12px; font-size: 1rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
+        .checkout-btn { width: 100%; padding: 13px; border: 2px solid #B8A898; border-radius: 12px; font-size: 0.88rem; font-weight: 800; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #8C7B6E; background: #E8DDD4; cursor: not-allowed; transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
         .checkout-btn.active { background: var(--gold); color: var(--text-dark); border-color: var(--gold); cursor: pointer; box-shadow: 0 6px 20px rgba(200, 155, 60, 0.4); }
         .checkout-btn.active:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(200, 155, 60, 0.5); }
 
@@ -1998,14 +2250,14 @@ STOREFRONT_HTML = """
         .btn-cancel { flex: 1; background: var(--border-color); color: var(--text-dark); border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .btn-add { flex: 2; background: var(--gold); color: var(--text-dark); border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 1rem; }
 
-        .slide-clock-wrapper { background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 15px; }
-        .slide-clock-display { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--gold); text-align: center; margin-bottom: 12px; letter-spacing: 2px; }
-        .slide-clock-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .slide-clock-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .sc-btn { background: var(--gold-light); border: 1px solid var(--border-color); border-radius: 6px; width: 36px; height: 28px; font-size: 0.8rem; cursor: pointer; font-weight: 800; color: var(--text-dark); transition: background 0.15s; }
+        .slide-clock-wrapper { background: var(--card-bg); border: 1.5px solid var(--border-color); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+        .slide-clock-display { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); text-align: center; margin-bottom: 8px; letter-spacing: 2px; }
+        .slide-clock-row { display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .slide-clock-col { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .sc-btn { background: var(--gold-light); border: 1px solid var(--border-color); border-radius: 5px; width: 30px; height: 24px; font-size: 0.72rem; cursor: pointer; font-weight: 800; color: var(--text-dark); transition: background 0.15s; }
         .sc-btn:hover { background: var(--gold); }
-        .sc-val { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); min-width: 40px; text-align: center; font-family: 'Playfair Display', serif; }
-        .sc-sep { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); align-self: center; padding-bottom: 4px; }
+        .sc-val { font-size: 1.25rem; font-weight: 900; color: var(--text-dark); min-width: 34px; text-align: center; font-family: 'Playfair Display', serif; }
+        .sc-sep { font-size: 1.25rem; font-weight: 900; color: var(--text-dark); align-self: center; padding-bottom: 4px; }
 
         .admin-slide-clock-wrapper { background: #FDFBF7; border: 1.5px solid #D7CCC8; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px; }
         .admin-slide-clock-label { font-size: 0.75rem; font-weight: 800; color: #8D6E63; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
@@ -2019,45 +2271,23 @@ STOREFRONT_HTML = """
         @media (max-width: 768px) {
             body { height: auto; min-height: 100vh; overflow-y: auto; }
             .main-container { flex-direction: column; height: auto; overflow: visible; }
-            .menu-area { flex: none; height: auto; overflow: visible; padding-bottom: 110px; }
+            .menu-area { flex: none; height: auto; overflow: visible; }
+            .menu-controls { position: sticky; top: 0; z-index: 30; }
+            .menu-scroll { overflow: visible; padding-bottom: 80px; }
             .menu-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 
-            /* ── Collapsible order panel ── */
+            /* ── Mobile: order sheet is a bottom sheet ── */
             .sidebar {
                 width: 100%; flex: none; border-left: none;
-                position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-                display: flex; flex-direction: column;
-                background: var(--bg-base);
-                border-top: 2px solid var(--border-color);
-                box-shadow: 0 -4px 24px rgba(44,26,18,0.18);
-                max-height: 90px;          /* collapsed: just the toggle bar + total */
-                transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
-                overflow: hidden;
+                position: fixed; bottom: 0; left: 0; right: 0; top: auto;
+                height: min(82vh, 680px);
+                border-radius: 22px 22px 0 0;
+                transform: translateY(100%);
+                box-shadow: 0 -8px 32px rgba(44,26,18,0.22);
             }
-            .sidebar.mobile-expanded {
-                max-height: min(82vh, 680px);
-                max-height: min(82dvh, 680px);
-            }
+            .sidebar.sheet-open { transform: translateY(0); }
 
-            /* Toggle handle – shown only on mobile */
-            .mobile-cart-toggle {
-                display: flex; align-items: center; justify-content: space-between;
-                padding: 10px 20px 6px;
-                cursor: pointer;
-                flex-shrink: 0;
-                user-select: none;
-            }
-            .mobile-cart-toggle-left { display: flex; align-items: center; gap: 10px; }
-            .mobile-cart-toggle-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1rem; color: var(--text-dark); }
-            .mobile-cart-toggle-badge {
-                background: var(--gold); color: #fff; border-radius: 20px;
-                font-size: 0.7rem; font-weight: 900; padding: 2px 8px;
-                min-width: 22px; text-align: center;
-            }
-            .mobile-cart-chevron { font-size: 0.9rem; color: var(--text-light); transition: transform 0.3s; }
-            .sidebar.mobile-expanded .mobile-cart-chevron { transform: rotate(180deg); }
-
-            /* Scrollable inner area when expanded */
+            /* Cart content scrollable on mobile */
             .cart-top-section { flex-shrink: 1; min-height: 0; overflow-y: auto; max-height: min(38vh, 330px); padding: 0 20px 10px; }
             .cart-content { flex: 1 1 auto; overflow-y: auto; min-height: 0; max-height: none; }
             .checkout-area {
@@ -2068,9 +2298,6 @@ STOREFRONT_HTML = """
         }
 
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .mobile-cart-toggle { display: none; } /* hidden on desktop */
-
-        /* ── Geolocation button ── */
         .geo-btn {
             width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
             padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--gold);
@@ -2111,13 +2338,13 @@ STOREFRONT_HTML = """
         .gate-wrapper { display: flex; height: 100vh; width: 100vw; justify-content: center; align-items: center; background: var(--bg-base); padding: 20px; flex-direction: column; }
 
         /* ── Location Banner ── */
-        .location-banner { background: linear-gradient(90deg, #6F4E37, #A67B5B); color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: opacity 0.2s; }
+        .location-banner { background: linear-gradient(90deg, #6F4E37, #A67B5B); color: #fff; padding: 6px 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: opacity 0.2s; }
         .location-banner:hover { opacity: 0.92; }
-        .location-banner i { font-size: 1rem; color: var(--gold); }
+        .location-banner i { font-size: 0.88rem; color: var(--gold); }
         .location-banner span { letter-spacing: 0.3px; }
-        .location-banner .loc-pill { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px 12px; font-size: 0.78rem; border: 1px solid rgba(255,255,255,0.3); }
-        .hours-strip { background: #FDF8F0; border-bottom: 1px solid #EDE0CC; padding: 7px 20px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 0.8rem; font-weight: 700; flex-wrap: wrap; flex-shrink: 0; }
-        .hours-strip i { color: #C8922A; font-size: 0.88rem; }
+        .location-banner .loc-pill { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; border: 1px solid rgba(255,255,255,0.3); }
+        .hours-strip { background: #FDF8F0; border-bottom: 1px solid #EDE0CC; padding: 4px 16px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.73rem; font-weight: 700; flex-wrap: wrap; flex-shrink: 0; }
+        .hours-strip i { color: #C8922A; font-size: 0.78rem; }
         .hours-label { color: #8D6E63; font-weight: 700; }
         .hours-range { color: #4E342E; font-weight: 900; font-family: 'Playfair Display', serif; font-size: 0.85rem; letter-spacing: 0.3px; }
         .hours-note { color: #A1887F; font-size: 0.74rem; font-weight: 600; }
@@ -2463,7 +2690,7 @@ function playGrantedSound() {
         <div title="Find Us" onclick="openLocModal()" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--gold-light); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
             <i class="fas fa-map-marker-alt" style="color:var(--gold); font-size:16px;"></i>
         </div>
-        <button class="notif-bell" id="basket-btn" onclick="toggleMobileCart()" title="View Your Order" style="position:relative;">
+        <button class="notif-bell" id="basket-btn" onclick="cart.length > 0 ? openOrderSheet() : toggleMobileCart()" title="View Your Order" style="position:relative;">
             <i class="fas fa-shopping-basket" style="font-size:15px;"></i>
             <span class="notif-badge" id="basket-badge" style="display:none;">0</span>
         </button>
@@ -2532,103 +2759,135 @@ function playGrantedSound() {
     
     <!-- Menu Area -->
     <div class="menu-area">
-        <div class="search-bar-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" class="menu-search-input" id="menu-search" placeholder="Search drinks &amp; snacks…" oninput="searchMenu(this.value)">
+        <div class="menu-controls">
+            <div class="search-bar-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" class="menu-search-input" id="menu-search" placeholder="Search drinks &amp; snacks…" oninput="searchMenu(this.value)">
+            </div>
+            <div class="categories" id="categories-container">
+                <button class="cat-btn active" onclick="filterMenu('All', this)">☕ All</button>
+                <button class="cat-btn" onclick="filterMenu('Best Sellers', this)">⭐ Best Sellers</button>
+                <button class="cat-btn" onclick="filterMenu('Milktea', this)">🧋 Milktea</button>
+                <button class="cat-btn" onclick="filterMenu('Coffee', this)">☕ Coffee</button>
+                <button class="cat-btn" onclick="filterMenu('Matcha Series', this)">🍵 Matcha</button>
+                <button class="cat-btn" onclick="filterMenu('Milk Series', this)">🥛 Milk Series</button>
+                <button class="cat-btn" onclick="filterMenu('Fruit Soda', this)">🍹 Fruit Soda</button>
+                <button class="cat-btn" onclick="filterMenu('Frappe', this)">🥤 Frappe</button>
+                <button class="cat-btn" onclick="filterMenu('Snacks', this)">🍟 Snacks</button>
+            </div>
         </div>
-        <div class="categories" id="categories-container">
-            <button class="cat-btn active" onclick="filterMenu('All', this)">☕ All</button>
-            <button class="cat-btn" onclick="filterMenu('Best Sellers', this)">⭐ Best Sellers</button>
-            <button class="cat-btn" onclick="filterMenu('Milktea', this)">🧋 Milktea</button>
-            <button class="cat-btn" onclick="filterMenu('Coffee', this)">☕ Coffee</button>
-            <button class="cat-btn" onclick="filterMenu('Matcha Series', this)">🍵 Matcha</button>
-            <button class="cat-btn" onclick="filterMenu('Milk Series', this)">🥛 Milk Series</button>
-            <button class="cat-btn" onclick="filterMenu('Fruit Soda', this)">🍹 Fruit Soda</button>
-            <button class="cat-btn" onclick="filterMenu('Frappe', this)">🥤 Frappe</button>
-            <button class="cat-btn" onclick="filterMenu('Snacks', this)">🍟 Snacks</button>
+        <div class="menu-scroll">
+            <div class="menu-grid" id="menu-grid">
+                <div class="empty-category">Loading our luxurious menu…</div>
+            </div>
         </div>
-        <div class="menu-grid" id="menu-grid">
-            <div class="empty-category">Loading our luxurious menu…</div>
+    </div>
+</div><!-- /main-container -->
+
+<!-- Sheet backdrop -->
+<div id="sheet-backdrop" onclick="closeOrderSheet()"></div>
+
+<!-- Sidebar Cart / Order Sheet -->
+<div class="sidebar" id="sidebar">
+    <!-- ▲ Your Order handle — toggles expand/collapse -->
+    <div class="sheet-handle-bar" id="sheet-handle" onclick="toggleOrderSheet()">
+        <div class="sheet-handle-left">
+            <i class="fas fa-chevron-down sheet-handle-chevron" id="sheet-chevron"></i>
+            <span class="sheet-handle-title">Your Order</span>
+            <span class="sheet-handle-badge" id="cart-count" style="display:none;">0</span>
+        </div>
+        <button onclick="event.stopPropagation(); closeOrderSheet();" style="background:none; border:none; color:var(--text-light); font-size:0.85rem; cursor:pointer; padding:4px 8px; border-radius:6px;"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- Hidden customer info (from session / gatekeeper) -->
+    <input type="hidden" id="customer-name" value="{{ session.get('customer_name', '') }}">
+    <input type="hidden" id="customer-gmail" value="{{ session.get('customer_email', '') }}">
+    <input type="hidden" id="customer-phone" value="{{ session.get('customer_phone', '') }}">
+    <input type="hidden" id="customer-lat" value="{{ session.get('customer_lat', '') }}">
+    <input type="hidden" id="customer-lng" value="{{ session.get('customer_lng', '') }}">
+    <input type="hidden" id="pickup-time" value="">
+
+    <div class="cart-top-section">
+        <div class="order-type">
+            <div class="type-btn active" id="btn-dine-in" onclick="setOrderType('Dine-In')"><i class="fas fa-chair"></i> Dine-In</div>
+            <div class="type-btn" id="btn-take-out" onclick="setOrderType('Take-Out')"><i class="fas fa-shopping-bag"></i> Take-Out</div>
         </div>
     </div>
 
-    <!-- Sidebar Cart -->
-    <div class="sidebar" id="sidebar">
-        <!-- Mobile-only toggle handle -->
-        <div class="mobile-cart-toggle" id="mobile-cart-toggle" onclick="toggleMobileCart()">
-            <div class="mobile-cart-toggle-left">
-                <span class="mobile-cart-toggle-title">Your Order</span>
-                <span class="mobile-cart-toggle-badge" id="mobile-cart-count">0</span>
-            </div>
-            <i class="fas fa-chevron-up mobile-cart-chevron" id="mobile-cart-chevron"></i>
+    <!-- Scrollable cart list -->
+    <div class="cart-content">
+        <div class="empty-cart" id="empty-cart">
+            <p>Your cart is empty.</p>
         </div>
-        <div class="cart-top-section">
-            <div class="cart-header" style="display:none;">
-                <div class="cart-title">Your Order</div>
-                <div class="cart-count" id="cart-count">0</div>
+        <div id="cart-items"></div>
+    </div>
+
+    <div class="checkout-area">
+        <!-- Edit Mode Banner -->
+        <div id="edit-mode-banner" style="display:none; background:#E8F5E9; border:1.5px solid #A5D6A7; border-radius:10px; padding:10px 12px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:7px; margin-bottom:3px;">
+                <i class="fas fa-edit" style="color:#2E7D32; font-size:0.95rem;"></i>
+                <span style="font-weight:800; font-size:0.84rem; color:#1B5E20;">Update Mode Active</span>
+                <button onclick="deactivateEditMode()" title="Cancel update" style="margin-left:auto; background:none; border:none; color:#888; cursor:pointer; font-size:0.82rem; font-weight:700; padding:2px 6px; border-radius:6px; line-height:1;">✕ Cancel</button>
             </div>
-
-            <div class="order-type">
-                <div class="type-btn active" id="btn-dine-in" onclick="setOrderType('Dine-In')"><i class="fas fa-chair"></i> Dine-In</div>
-                <div class="type-btn" id="btn-take-out" onclick="setOrderType('Take-Out')"><i class="fas fa-shopping-bag"></i> Take-Out</div>
+            <div style="font-size:0.74rem; color:#388E3C; font-weight:600; line-height:1.4;">
+                Pick items from the menu and tap <b>Update Order</b> to add them to your existing order.
             </div>
+        </div>
+        <div class="total-row">
+            <span class="total-label">Total</span>
+            <span class="total-amount" id="cart-total">₱0.00</span>
+        </div>
+        <button class="checkout-btn" id="checkout-btn" onclick="openPickupModal()">
+            <i class="fas fa-plane"></i> Place My Order
+        </button>
+    </div>
+</div>
 
-            <input type="text" class="name-input" id="customer-name" placeholder="Your Name *" value="{{ session.get('customer_name', '') }}" oninput="checkCheckoutStatus()">
-            <input type="email" class="name-input" id="customer-gmail" placeholder="Email Address *" value="{{ session.get('customer_email', '') }}" oninput="checkCheckoutStatus()">
-            <input type="tel" class="name-input" id="customer-phone" placeholder="Phone Number *" value="{{ session.get('customer_phone', '') }}" oninput="checkCheckoutStatus()">
+<!-- Sticky Bottom Bar -->
+<div id="sticky-bar">
+    <div class="sticky-bar-info">
+        <span class="sticky-bar-count" id="sticky-count">0 items</span>
+        <span class="sticky-bar-total" id="sticky-total">₱0.00</span>
+    </div>
+    <button class="sticky-bar-btn" onclick="openOrderSheet()">
+        View Order <i class="fas fa-arrow-right"></i>
+    </button>
+</div>
 
-            <!-- Geolocation -->
-            <button class="geo-btn" id="geo-btn" onclick="useMyLocation()">
-                <i class="fas fa-map-marker-alt"></i> Use my current location
-            </button>
-            <div class="geo-status" id="geo-status"></div>
-            <div class="geo-map-wrap" id="geo-map-wrap">
-                <div id="geo-map"></div>
-                <div class="geo-addr" id="geo-addr"></div>
-            </div>
-            <input type="hidden" id="customer-lat" value="">
-            <input type="hidden" id="customer-lng" value="">
+<!-- Pickup Time Modal (appears when "Place My Order" is tapped) -->
+<div id="pickup-modal" onclick="if(event.target===this)closePickupModal()">
+    <div class="pickup-sheet">
+        <div class="pickup-sheet-handle"></div>
+        <div class="pickup-sheet-title">⏰ When will you pick up?</div>
+        <div class="pickup-sheet-sub">Set your preferred pickup time and we'll have your order ready.</div>
 
-            <label class="pickup-label">Pick-up Time *</label>
-            <div class="slide-clock-wrapper" id="pickup-clock-wrapper">
-                <div class="slide-clock-row">
-                    <div class="slide-clock-col">
-                        <button class="sc-btn" onclick="adjustPickupTime('hour', 1)">▲</button>
-                        <div class="sc-val" id="sc-hour">12</div>
-                        <button class="sc-btn" onclick="adjustPickupTime('hour', -1)">▼</button>
-                    </div>
-                    <div class="sc-sep">:</div>
-                    <div class="slide-clock-col">
-                        <button class="sc-btn" onclick="adjustPickupTime('min', 1)">▲</button>
-                        <div class="sc-val" id="sc-min">00</div>
-                        <button class="sc-btn" onclick="adjustPickupTime('min', -1)">▼</button>
-                    </div>
-                    <div class="slide-clock-col" style="margin-left:8px;">
-                        <button class="sc-btn" onclick="adjustPickupTime('ampm', 1)">▲</button>
-                        <div class="sc-val" id="sc-ampm">PM</div>
-                        <button class="sc-btn" onclick="adjustPickupTime('ampm', -1)">▼</button>
-                    </div>
+        <div class="slide-clock-wrapper" style="margin-bottom:6px;">
+            <div class="slide-clock-row">
+                <div class="slide-clock-col">
+                    <button class="sc-btn" onclick="adjustPickupTime('hour', 1)">▲</button>
+                    <div class="sc-val" id="sc-hour">12</div>
+                    <button class="sc-btn" onclick="adjustPickupTime('hour', -1)">▼</button>
+                </div>
+                <div class="sc-sep">:</div>
+                <div class="slide-clock-col">
+                    <button class="sc-btn" onclick="adjustPickupTime('min', 1)">▲</button>
+                    <div class="sc-val" id="sc-min">00</div>
+                    <button class="sc-btn" onclick="adjustPickupTime('min', -1)">▼</button>
+                </div>
+                <div class="slide-clock-col" style="margin-left:8px;">
+                    <button class="sc-btn" onclick="adjustPickupTime('ampm', 1)">▲</button>
+                    <div class="sc-val" id="sc-ampm">PM</div>
+                    <button class="sc-btn" onclick="adjustPickupTime('ampm', -1)">▼</button>
                 </div>
             </div>
-            <input type="hidden" id="pickup-time" value="">
         </div>
+        <div style="text-align:center; font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:900; color:var(--gold); margin-bottom:4px;" id="pickup-time-preview">12:00 PM</div>
 
-        <div class="cart-content">
-            <div class="empty-cart" id="empty-cart">
-                <p>Your cart is empty.</p>
-            </div>
-            <div id="cart-items"></div>
-        </div>
-
-        <div class="checkout-area">
-            <div class="total-row">
-                <span class="total-label">Total</span>
-                <span class="total-amount" id="cart-total">₱0.00</span>
-            </div>
-            <button class="checkout-btn" id="checkout-btn" onclick="submitOrder()">
-                <i class="fas fa-plane"></i> Place My Order
-            </button>
-        </div>
+        <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()">
+            <i class="fas fa-plane"></i> Confirm & Place Order
+        </button>
+        <button class="pickup-cancel-btn" onclick="closePickupModal()">Cancel</button>
     </div>
 </div>
 
@@ -2915,6 +3174,8 @@ function playGrantedSound() {
     let pendingPrice = 49;
     let pendingCat = '';
     let orderType = 'Dine-In';
+    let updateModeCode = null;        // set when customer has permission to update an order
+    let _pendingUpdateOrderCode = null; // the real order code when an update request is in flight
 
     // ── Persist cart across viewport changes ──────────────────────────────
     function saveCartToSession() {
@@ -3280,12 +3541,20 @@ function playGrantedSound() {
         const list = document.getElementById('cart-items');
         const empty = document.getElementById('empty-cart');
         const count = document.getElementById('cart-count');
+        const stickyBar = document.getElementById('sticky-bar');
+        const stickyCount = document.getElementById('sticky-count');
+        const stickyTotal = document.getElementById('sticky-total');
         let total = 0; list.innerHTML = '';
         
         if(cart.length === 0) {
-            empty.style.display = 'block'; count.style.display = 'none';
+            empty.style.display = 'block';
+            count.style.display = 'none';
+            // Hide sticky bar and close order sheet if empty
+            if(stickyBar) stickyBar.classList.remove('bar-visible');
+            closeOrderSheet();
         } else {
-            empty.style.display = 'none'; count.style.display = 'flex'; count.innerText = cart.length;
+            empty.style.display = 'none';
+            count.style.display = 'flex'; count.innerText = cart.length;
             cart.forEach((c, i) => {
                 total += c.price;
                 const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
@@ -3310,11 +3579,15 @@ function playGrantedSound() {
                     </div>
                 </div>`;
             });
+            // Show sticky bar
+            if(stickyBar) stickyBar.classList.add('bar-visible');
         }
+
+        // Update sticky bar content
+        if(stickyCount) stickyCount.innerText = cart.length === 1 ? '1 item' : `${cart.length} items`;
+        if(stickyTotal) stickyTotal.innerText = `₱${total.toFixed(2)}`;
+
         document.getElementById('cart-total').innerText = `₱${total.toFixed(2)}`;
-        // Sync mobile badge
-        const mobileBadge = document.getElementById('mobile-cart-count');
-        if (mobileBadge) mobileBadge.innerText = cart.length;
         // Sync basket badge in header
         const basketBadge = document.getElementById('basket-badge');
         if (basketBadge) {
@@ -3325,8 +3598,33 @@ function playGrantedSound() {
         checkCheckoutStatus();
     }
 
+    // ── Order Sheet controls ──────────────────────────────────────────────
+    function openOrderSheet() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sheet-backdrop');
+        const chevron = document.getElementById('sheet-chevron');
+        sidebar.classList.add('sheet-open');
+        if(backdrop) backdrop.classList.add('show');
+        if(chevron) { chevron.classList.remove('fa-chevron-down'); chevron.classList.add('fa-chevron-up'); }
+    }
+
+    function closeOrderSheet() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sheet-backdrop');
+        const chevron = document.getElementById('sheet-chevron');
+        sidebar.classList.remove('sheet-open');
+        if(backdrop) backdrop.classList.remove('show');
+        if(chevron) { chevron.classList.remove('fa-chevron-up'); chevron.classList.add('fa-chevron-down'); }
+    }
+
+    function toggleOrderSheet() {
+        const sidebar = document.getElementById('sidebar');
+        if(sidebar.classList.contains('sheet-open')) closeOrderSheet();
+        else openOrderSheet();
+    }
+
     function toggleMobileCart() {
-        // If the customer has a placed order, show the My Order modal instead
+        // If placed order exists, open My Order modal
         try {
             const orders = JSON.parse(localStorage.getItem('myOrders')) || [];
             if (orders.length > 0) {
@@ -3334,13 +3632,8 @@ function playGrantedSound() {
                 return;
             }
         } catch(e) {}
-        // No placed order — fall back to opening the sidebar cart
-        const sidebar = document.getElementById('sidebar');
-        if (window.innerWidth <= 768) {
-            sidebar.classList.toggle('mobile-expanded');
-        } else {
-            sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        // Otherwise toggle order sheet
+        toggleOrderSheet();
     }
 
     async function openMyOrderModal(code) {
@@ -3439,12 +3732,14 @@ function playGrantedSound() {
     }
 
     function checkCheckoutStatus() {
-        const n = document.getElementById('customer-name').value.trim();
-        const g = document.getElementById('customer-gmail').value.trim();
-        const ph = document.getElementById('customer-phone').value.trim();
-        const p = document.getElementById('pickup-time').value.trim();
+        // In update/edit mode the button is managed by activateEditMode — don't override it
+        if(updateModeCode) {
+            const btn = document.getElementById('checkout-btn');
+            if(btn) { btn.className = 'checkout-btn active'; btn.disabled = cart.length === 0; }
+            return;
+        }
         const btn = document.getElementById('checkout-btn');
-        if(cart.length > 0 && n && g && ph && p) { btn.className = 'checkout-btn active'; btn.disabled = false; }
+        if(cart.length > 0) { btn.className = 'checkout-btn active'; btn.disabled = false; }
         else { btn.className = 'checkout-btn'; btn.disabled = true; }
     }
 
@@ -3459,7 +3754,17 @@ function playGrantedSound() {
         document.getElementById('sc-min').innerText = mStr;
         document.getElementById('sc-ampm').innerText = scAmpm;
         document.getElementById('pickup-time').value = timeStr;
-        checkCheckoutStatus();
+        const preview = document.getElementById('pickup-time-preview');
+        if(preview) preview.innerText = timeStr;
+    }
+
+    function openPickupModal() {
+        if(cart.length === 0) return;
+        document.getElementById('pickup-modal').classList.add('show');
+    }
+
+    function closePickupModal() {
+        document.getElementById('pickup-modal').classList.remove('show');
     }
 
     function adjustPickupTime(part, dir) {
@@ -3510,7 +3815,7 @@ function playGrantedSound() {
 
     function openUpdateOrderModal() {
         const code = document.getElementById('display-code').innerText.trim();
-        const name = document.getElementById('customer-name').value.trim() || 'Customer';
+        const name = document.getElementById('customer-name').value.trim() || '{{ session.get("customer_name","Customer") }}';
         document.getElementById('update-code-display').innerText = code;
         document.getElementById('update-name-display').value = name;
         document.getElementById('update-message-input').value = '';
@@ -3535,7 +3840,8 @@ function playGrantedSound() {
             return;
         }
         const code = document.getElementById('update-code-display').innerText.trim();
-        const name = document.getElementById('update-name-display').value.trim() || 'Customer';
+        const name = document.getElementById('update-name-display').value.trim() || document.getElementById('customer-name').value || '{{ session.get("customer_name","Customer") }}';
+        _pendingUpdateOrderCode = code;   // save the real order code for activateEditMode
         const requestCode = 'UPD-' + code + '-' + Math.floor(Math.random()*9000+1000);
         const payload = {
             name,
@@ -3573,15 +3879,106 @@ function playGrantedSound() {
                 const stat = document.getElementById('update-send-status');
                 const replyMsg = data.reply_message && data.reply_message.trim();
                 stat.style.color = '#2E7D32';
-                stat.innerHTML = '✅ <b>Update approved!</b>'
+                stat.innerHTML = '✅ <b>Permission granted! Opening menu…</b>'
                     + (replyMsg ? '<br><div style="background:#F1F8F1;border:1px solid #A5D6A7;border-radius:10px;padding:10px 13px;margin-top:8px;font-size:0.85rem;color:#2E7D32;line-height:1.5;">'
                         + '<span style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;color:#1B5E20;">📣 From the staff:</span>'
                         + escapeHTML(replyMsg) + '</div>' : '');
                 document.getElementById('update-send-btn').style.display = 'none';
                 addNotifMessage('✅ Your order update request was approved!');
                 playGrantedSound();
+                // Close modal and activate edit mode after a short pause so customer reads the message
+                setTimeout(() => {
+                    document.getElementById('update-order-modal').style.display = 'none';
+                    activateEditMode(_pendingUpdateOrderCode || '');
+                }, 1600);
             }
         } catch(e){}
+    }
+
+    // ── Edit Mode (order update after permission granted) ─────────────────
+    function activateEditMode(orderCode) {
+        updateModeCode = orderCode;
+        // Clear cart so customer picks the items they want to ADD
+        cart = [];
+        saveCartToSession();
+        updateCartUI();
+        // Show green banner
+        const banner = document.getElementById('edit-mode-banner');
+        if(banner) banner.style.display = 'block';
+        // Swap checkout button
+        const btn = document.getElementById('checkout-btn');
+        if(btn) {
+            btn.className = 'checkout-btn active';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Update Order #' + escapeHTML(orderCode);
+            btn.onclick = submitOrderUpdate;
+        }
+        // Open the order sheet so the customer sees the update mode banner immediately
+        openOrderSheet();
+        showToast('✅ Permission granted! Pick items to add to your order.', 'success');
+    }
+
+    function deactivateEditMode() {
+        updateModeCode = null;
+        _pendingUpdateOrderCode = null;
+        // Hide banner
+        const banner = document.getElementById('edit-mode-banner');
+        if(banner) banner.style.display = 'none';
+        // Restore button
+        const btn = document.getElementById('checkout-btn');
+        if(btn) {
+            btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order';
+            btn.onclick = openPickupModal;
+        }
+        // Clear cart
+        cart = [];
+        saveCartToSession();
+        updateCartUI();
+    }
+
+    async function submitOrderUpdate() {
+        if(!updateModeCode) return;
+        if(cart.length === 0) {
+            showToast('Please pick at least one item to add.', 'error');
+            return;
+        }
+        const btn = document.getElementById('checkout-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating order…';
+        const payload = {
+            code: updateModeCode,
+            items: cart.map(i => ({
+                foundation: i.name,
+                size: i.size || '16 oz',
+                sweetener: i.sugar || 'N/A',
+                ice: i.ice || 'Normal Ice',
+                addons: Array.isArray(i.addons) ? i.addons.join(', ') : (i.addons || ''),
+                price: i.price
+            }))
+        };
+        try {
+            const res = await fetch('/api/customer/update_order', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if(res.ok) {
+                const savedCode = updateModeCode;
+                const addedTotal = data.added_total || 0;
+                showToast('✅ Order #' + savedCode + ' updated! +₱' + addedTotal.toFixed(2) + ' added.', 'success');
+                addNotifMessage('✅ Order #' + savedCode + ' updated — ₱' + addedTotal.toFixed(2) + ' added.');
+                deactivateEditMode();
+            } else {
+                showToast('Error: ' + (data.error || 'Could not update order.'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Update Order #' + escapeHTML(updateModeCode);
+            }
+        } catch(e) {
+            showToast('Connection error. Please try again.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Update Order #' + escapeHTML(updateModeCode);
+        }
     }
 
     async function sendPermissionRequest() {
@@ -3653,6 +4050,7 @@ function playGrantedSound() {
 
     function useMyLocation() {
         const btn = document.getElementById('geo-btn');
+        if (!btn) return; // geo-btn removed from sidebar; location captured at sign-in
         const status = document.getElementById('geo-status');
         if (!navigator.geolocation) {
             status.style.color = 'var(--danger)';
@@ -3733,11 +4131,15 @@ function playGrantedSound() {
     }
 
     async function submitOrder() {
+        if(updateModeCode) { submitOrderUpdate(); return; }  // safety guard
         if(cart.length === 0) return;
+
+        // Close pickup modal while processing
+        closePickupModal();
 
         // ── VPN / proxy check ────────────────────────────────────────────────
         const btn = document.getElementById('checkout-btn');
-        btn.innerHTML = '<i class="fas fa-shield-alt"></i> Checking connection…'; btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-shield-alt"></i> Checking…'; btn.disabled = true;
         const isVPN = await checkForVPN();
         if (isVPN) {
             btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
@@ -3768,7 +4170,7 @@ function playGrantedSound() {
             btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             playAlertSound();
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
-            document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || 'Customer';
+            document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || '{{ session.get("customer_name","Customer") }}';
             document.getElementById('perm-address-input').value = '';
             document.getElementById('perm-message-input').value = '';
             document.getElementById('perm-send-status').innerText = '';
@@ -3833,7 +4235,8 @@ function playGrantedSound() {
     async function submitOrderWithOverride() {
         document.getElementById('perm-modal').style.display = 'none';
         if(permPoll) clearInterval(permPoll);
-        await submitOrder();
+        permissionGranted = true;
+        openPickupModal();
     }
 
     function closeSuccessAndReset() {
@@ -3842,12 +4245,11 @@ function playGrantedSound() {
         // Clear cart state
         cart = [];
         try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
-        // Reset form fields
-        ['customer-name','customer-gmail','customer-phone','pickup-time'].forEach(id => {
-            const el = document.getElementById(id); if(el) el.value = '';
-        });
-        // Re-render the cart UI
+        // Reset pickup-time only (name/email/phone come from session hidden inputs)
+        const pt = document.getElementById('pickup-time'); if(pt) pt.value = '';
+        // Re-render the cart UI (also hides sticky bar)
         updateCartUI();
+        closeOrderSheet();
     }
 
     function openReceiptWindow(r) {
@@ -4024,6 +4426,121 @@ function playGrantedSound() {
 
     // Close modal on back button (mobile)
     window.addEventListener('popstate', () => closeLocModal());
+</script>
+
+<!-- ── Item Availability Decision Modal (customer) ─────────────────── -->
+<div id="item-query-modal" class="modal" style="display:none;">
+    <div class="modal-content" style="text-align:center; max-width:440px;">
+        <div style="font-size:2.5rem; margin-bottom:8px;">⚠️</div>
+        <h2 style="margin-bottom:6px; color:var(--danger); font-size:1.5rem;">Item Unavailable</h2>
+        <p style="color:var(--text-light); font-weight:600; font-size:0.85rem; margin-bottom:14px; line-height:1.5;" id="iq-reason-text"></p>
+        <div id="iq-items-list" style="background:#FFF3F3; border:1px solid #FFCDD2; border-radius:10px; padding:12px 14px; text-align:left; font-size:0.85rem; margin-bottom:14px; font-weight:700; color:#C62828; line-height:1.9;"></div>
+        <p style="color:var(--text-light); font-size:0.82rem; font-weight:600; margin-bottom:12px; line-height:1.5;">
+            Would you like to <b style="color:#2E7D32;">proceed without these items</b> (total adjusted) or <b style="color:var(--danger);">cancel your entire order</b>?
+        </p>
+        <div id="iq-new-total" style="font-family:'Playfair Display',serif; font-weight:900; font-size:1.2rem; color:var(--gold); margin-bottom:18px;"></div>
+        <div style="display:flex; gap:10px; flex-direction:column;">
+            <button id="iq-proceed-btn" onclick="decideItemQuery('proceed')"
+                style="width:100%; padding:14px; border-radius:12px; border:none; background:#2E7D32; color:#fff; font-weight:800; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:'DM Sans',sans-serif;">
+                <i class="fas fa-check-circle"></i> Proceed Without These Items
+            </button>
+            <button onclick="decideItemQuery('cancel')"
+                style="width:100%; padding:13px; border-radius:12px; border:1.5px solid #FFCDD2; background:#FFEBEE; color:#C62828; font-weight:800; font-size:0.9rem; cursor:pointer; font-family:'DM Sans',sans-serif;">
+                <i class="fas fa-times-circle"></i> Cancel My Entire Order
+            </button>
+        </div>
+        <div id="iq-decision-status" style="font-size:0.82rem; font-weight:700; margin-top:10px; min-height:18px;"></div>
+    </div>
+</div>
+
+<script>
+    let _activeItemQuery = null;
+
+    async function checkItemAvailabilityQuery() {
+        const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+        const active = orders.find(o => !['Completed','Cancelled'].includes(o.status));
+        if(!active) return;
+        try {
+            const res = await fetch('/api/item_query/' + encodeURIComponent(active.code));
+            const data = await res.json();
+            if(data.pending && (!_activeItemQuery || _activeItemQuery.query_id !== data.query_id)) {
+                _activeItemQuery = data;
+                showItemQueryModal(data, active.code);
+            }
+        } catch(e) {}
+    }
+
+    async function showItemQueryModal(queryData, orderCode) {
+        const unavailable = queryData.unavailable_items;
+        document.getElementById('iq-reason-text').innerHTML =
+            '<b>' + escapeHTML(queryData.reason) + '</b> — the following item(s) from Order <b>#'
+            + escapeHTML(orderCode) + '</b> are currently unavailable:';
+        document.getElementById('iq-items-list').innerHTML =
+            unavailable.map(n => '❌ ' + escapeHTML(n)).join('<br>');
+        document.getElementById('iq-new-total').innerText = '';
+        document.getElementById('iq-decision-status').innerText = '';
+        document.getElementById('iq-proceed-btn').disabled = false;
+        try {
+            const res = await fetch('/api/customer/order_detail?code=' + encodeURIComponent(orderCode));
+            const order = await res.json();
+            if(order && order.items) {
+                const removedTotal = order.items
+                    .filter(i => unavailable.includes(i.foundation))
+                    .reduce((s, i) => s + i.item_total, 0);
+                const newTotal = Math.max(0, order.total - removedTotal);
+                document.getElementById('iq-new-total').innerHTML =
+                    'New total if you proceed: <span style="color:var(--gold);">₱' + newTotal.toFixed(2) + '</span>'
+                    + ' <span style="font-size:0.75rem;color:var(--text-light);font-family:\'DM Sans\',sans-serif;">(-₱'
+                    + removedTotal.toFixed(2) + ')</span>';
+            }
+        } catch(e) {}
+        // Show modal and alert
+        document.getElementById('item-query-modal').style.display = 'flex';
+        showToast('⚠️ Action required: an item in your order is unavailable!', 'error');
+        addNotifMessage('⚠️ Staff flagged an item as unavailable — please respond!');
+    }
+
+    async function decideItemQuery(decision) {
+        if(!_activeItemQuery) return;
+        const statusEl = document.getElementById('iq-decision-status');
+        statusEl.style.color = 'var(--text-light)';
+        statusEl.innerText = 'Sending your response…';
+        document.getElementById('iq-proceed-btn').disabled = true;
+        try {
+            const res = await fetch('/api/item_query/' + _activeItemQuery.query_id + '/decide', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ decision })
+            });
+            if(res.ok) {
+                const savedQuery = _activeItemQuery;
+                _activeItemQuery = null;
+                document.getElementById('item-query-modal').style.display = 'none';
+                const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+                if(decision === 'proceed') {
+                    showToast('✅ Order updated — unavailable items removed.', 'success');
+                    addNotifMessage('✅ Your order continues with the unavailable items removed.');
+                    orders.forEach(o => { if(o.status === 'Awaiting Customer') o.status = 'Waiting Confirmation'; });
+                } else {
+                    showToast('Your order has been cancelled.', 'error');
+                    addNotifMessage('❌ Your order was cancelled.');
+                    orders.forEach(o => { if(o.status === 'Awaiting Customer') o.status = 'Cancelled'; });
+                }
+                localStorage.setItem('myOrders', JSON.stringify(orders));
+            } else {
+                statusEl.style.color = 'var(--danger)';
+                statusEl.innerText = 'Error. Please try again.';
+                document.getElementById('iq-proceed-btn').disabled = false;
+            }
+        } catch(e) {
+            statusEl.style.color = 'var(--danger)';
+            statusEl.innerText = 'Connection error. Please try again.';
+            document.getElementById('iq-proceed-btn').disabled = false;
+        }
+    }
+
+    // Poll for item queries every 5 seconds
+    setInterval(checkItemAvailabilityQuery, 5000);
 </script>
 {% endif %}
 </body>
@@ -6107,6 +6624,173 @@ def customer_order_status():
     codes = request.args.get('codes', '').split(',')
     orders = Reservation.query.filter(Reservation.reservation_code.in_(codes)).all()
     return jsonify([{'code': o.reservation_code, 'status': o.status, 'cancel_reason': o.cancel_reason or ''} for o in orders])
+
+@app.route('/api/customer/update_order', methods=['POST'])
+@limiter.limit("15 per minute")
+def customer_update_order():
+    """Append new items to an existing order (customer-facing, permission-gated)."""
+    data = request.json or {}
+    code  = data.get('code', '').strip().upper()
+    items = data.get('items', [])
+    if not code:
+        return jsonify({'error': 'No order code provided'}), 400
+    if not items:
+        return jsonify({'error': 'No items to add'}), 400
+    order = Reservation.query.filter_by(reservation_code=code).first()
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    if order.status in ('Completed', 'Cancelled'):
+        return jsonify({'error': 'This order can no longer be modified'}), 400
+    try:
+        added_total = 0.0
+        for i in items:
+            inf = Infusion(
+                reservation_id=order.id,
+                foundation=i.get('foundation', 'Unknown'),
+                cup_size=i.get('size', '16 oz'),
+                sweetener=i.get('sweetener', 'N/A'),
+                ice_level=i.get('ice', 'Normal Ice'),
+                pearls='Online',
+                addons=i.get('addons', ''),
+                item_total=float(i.get('price', 0))
+            )
+            db.session.add(inf)
+            added_total += float(i.get('price', 0))
+        order.total_investment += added_total
+        db.session.commit()
+        push_event('order_updated', {'code': code, 'name': order.patron_name, 'added': added_total})
+        log_audit("Order Updated by Customer", f"Code: {code}, +₱{added_total:.2f} ({len(items)} item(s))")
+        return jsonify({'status': 'success', 'new_total': order.total_investment, 'added_total': added_total})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/orders/<int:order_id>/check_stock')
+def check_order_stock(order_id):
+    """Return each item in an order with a flag indicating whether it's low/out of stock."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    order = Reservation.query.get_or_404(order_id)
+    result = []
+    for inf in order.infusions:
+        mi = MenuItem.query.filter_by(name=inf.foundation).first()
+        is_low = bool(mi and mi.is_out_of_stock)
+        if mi and not is_low:
+            recipes = RecipeItem.query.filter_by(menu_item_id=mi.id).all()
+            for rec in recipes:
+                ing = Ingredient.query.get(rec.ingredient_id)
+                if ing and ing.stock < rec.quantity_required:
+                    is_low = True
+                    break
+        result.append({
+            'infusion_id': inf.id,
+            'name': inf.foundation,
+            'size': inf.cup_size,
+            'addons': inf.addons,
+            'item_total': inf.item_total,
+            'is_low_stock': is_low,
+        })
+    return jsonify({'items': result})
+
+@app.route('/api/orders/<int:order_id>/item_query', methods=['POST'])
+def create_item_query(order_id):
+    """Employee marks specific items unavailable; order moves to 'Awaiting Customer'."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    order = Reservation.query.get_or_404(order_id)
+    data = request.json or {}
+    unavailable = data.get('unavailable_items', [])
+    reason = data.get('reason', 'Out of Stock')
+    if not unavailable:
+        return jsonify({"error": "No items selected"}), 400
+    order.status = 'Awaiting Customer'
+    q = ItemAvailabilityQuery(
+        reservation_id=order_id,
+        order_code=order.reservation_code,
+        unavailable_items=json.dumps(unavailable),
+        reason=reason
+    )
+    db.session.add(q)
+    db.session.commit()
+    push_event('order_status', {'id': order_id, 'status': 'Awaiting Customer'})
+    push_event('item_query_new', {'code': order.reservation_code, 'items': unavailable, 'reason': reason})
+    log_audit("Item Query Sent", f"Order {order.reservation_code}: {', '.join(unavailable)} — {reason}")
+    return jsonify({'status': 'success', 'query_id': q.id})
+
+@app.route('/api/item_query/<order_code>')
+def get_item_query(order_code):
+    """Customer polls: is there a pending item-availability decision for my order?"""
+    q = ItemAvailabilityQuery.query.filter_by(
+        order_code=order_code.upper(),
+        customer_decision=None
+    ).order_by(ItemAvailabilityQuery.created_at.desc()).first()
+    if not q:
+        return jsonify({'pending': False})
+    return jsonify({
+        'pending': True,
+        'query_id': q.id,
+        'unavailable_items': json.loads(q.unavailable_items),
+        'reason': q.reason,
+    })
+
+@app.route('/api/item_query/<int:query_id>/decide', methods=['POST'])
+def decide_item_query(query_id):
+    """Customer decides: 'proceed' (remove unavailable items) or 'cancel' (cancel the order)."""
+    q = ItemAvailabilityQuery.query.get_or_404(query_id)
+    if q.customer_decision is not None:
+        return jsonify({"error": "Already decided"}), 400
+    data = request.json or {}
+    decision = data.get('decision')
+    if decision not in ('proceed', 'cancel'):
+        return jsonify({"error": "Invalid decision"}), 400
+    q.customer_decision = decision
+    order = Reservation.query.get(q.reservation_id)
+    unavailable = json.loads(q.unavailable_items)
+    if order:
+        if decision == 'proceed':
+            removed_total = 0.0
+            for inf in list(order.infusions):
+                if inf.foundation in unavailable:
+                    removed_total += inf.item_total
+                    db.session.delete(inf)
+            order.total_investment = max(0.0, order.total_investment - removed_total)
+            order.status = 'Waiting Confirmation'
+            db.session.commit()
+            push_event('order_status', {'id': order.id, 'status': 'Waiting Confirmation'})
+            push_event('customer_decision', {
+                'code': order.reservation_code, 'decision': 'proceed',
+                'removed': unavailable, 'new_total': order.total_investment
+            })
+            log_audit("Customer Chose Proceed", f"Order {order.reservation_code}: removed {', '.join(unavailable)}")
+        else:
+            order.status = 'Cancelled'
+            order.cancel_reason = f"{q.reason}: {', '.join(unavailable)} (customer cancelled)"
+            db.session.commit()
+            push_event('order_status', {'id': order.id, 'status': 'Cancelled'})
+            push_event('customer_decision', {
+                'code': order.reservation_code, 'decision': 'cancel', 'removed': unavailable
+            })
+            log_audit("Customer Chose Cancel", f"Order {order.reservation_code}: cancelled — {', '.join(unavailable)}")
+    else:
+        db.session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/api/item_queries/decisions')
+def get_item_query_decisions():
+    """Employee polls for recent customer decisions (last 15 min)."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify([]), 403
+    cutoff = get_ph_time() - timedelta(minutes=15)
+    queries = ItemAvailabilityQuery.query.filter(
+        ItemAvailabilityQuery.customer_decision.isnot(None),
+        ItemAvailabilityQuery.created_at >= cutoff
+    ).all()
+    return jsonify([{
+        'query_id': q.id,
+        'order_code': q.order_code,
+        'decision': q.customer_decision,
+        'unavailable_items': json.loads(q.unavailable_items),
+    } for q in queries])
 
 @app.route('/api/customer/order_detail')
 def customer_order_detail():
