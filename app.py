@@ -5150,7 +5150,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-nav-item i{color:var(--brown);font-size:0.88rem;width:16px;text-align:center;}
 .fin-nav-item.active{background:var(--cream);color:var(--brown-dark);}
 .fin-nav-item:hover:not(.active){background:var(--cream);}
-#s-finance{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+#s-finance{position:relative;}
+#s-finance.active{display:flex;flex-direction:column;overflow:hidden;}
 .fin-sticky-top{flex-shrink:0;}
 .fin-content-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:16px;}
 
