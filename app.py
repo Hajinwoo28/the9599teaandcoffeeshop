@@ -259,6 +259,7 @@ class Reservation(db.Model):
     order_source = db.Column(db.String(30), default='Online') 
     created_at = db.Column(db.DateTime, default=get_ph_time)
     cancel_reason = db.Column(db.String(300), nullable=True, default='')
+    patron_address = db.Column(db.String(300), nullable=True, default='')
     infusions = db.relationship('Infusion', backref='reservation', lazy=True, cascade="all, delete-orphan")
 
 class Infusion(db.Model):
@@ -1123,6 +1124,12 @@ function playEmpPermBeep(){
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-item-name">Customize</div>
+    <span class="modal-label" id="lbl-flavor" style="display:none;">Flavor</span>
+    <div class="option-row" id="opt-flavor" style="display:none;">
+      <button class="opt-btn selected" onclick="selOpt('flavor','Sour Cream',this)">🧀 Sour Cream</button>
+      <button class="opt-btn" onclick="selOpt('flavor','Cheese',this)">🫕 Cheese</button>
+      <button class="opt-btn" onclick="selOpt('flavor','Barbeque',this)">🔥 Barbeque</button>
+    </div>
     <span class="modal-label" id="lbl-size">Size</span>
     <div class="option-row" id="opt-size">
       <button class="opt-btn selected" onclick="selOpt('size','16 oz',this)">16 oz</button>
@@ -1836,10 +1843,12 @@ function renderMenuGrid(cat){
   }).join('');
 }
 const WATER_TEMP_ITEMS=['Iced Americano','Cappuccino'];
+const FRIES_FLAVOR_ITEMS=['French Fries'];
+const PLAIN_SNACK_ITEMS=['Hash Brown','Onion Rings','Potato Mojos'];
 function openCustomize(menuId){
   currentItem=menuItems.find(m=>m.id===menuId);
   if(!currentItem) return;
-  currentOpts={size:'16 oz',sugar:'100%',ice:'Normal Ice',addons:[],waterTemp:'Cold'};
+  currentOpts={size:'16 oz',sugar:'100%',ice:'Normal Ice',addons:[],waterTemp:'Cold',flavor:'Sour Cream'};
   document.getElementById('modal-item-name').textContent=currentItem.name;
   ['opt-size','opt-sugar','opt-ice'].forEach(id=>document.querySelectorAll(`#${id} .opt-btn`).forEach(b=>b.classList.remove('selected')));
   document.querySelectorAll('#opt-addons .opt-btn').forEach(b=>b.classList.remove('selected'));
@@ -1851,10 +1860,17 @@ function openCustomize(menuId){
   document.getElementById('opt-water-temp').style.display=showWT?'':'none';
   if(showWT){document.querySelectorAll('#opt-water-temp .opt-btn').forEach((b,i)=>{b.classList.toggle('selected',i===0);});currentOpts.waterTemp='Cold';}
   const isSnack=currentItem.category==='Snacks';
+  const isFries=FRIES_FLAVOR_ITEMS.includes(currentItem.name);
+  const isPlainSnack=PLAIN_SNACK_ITEMS.includes(currentItem.name);
   const isFruitSoda=currentItem.category==='Fruit Soda';
+  // Reset flavor buttons
+  document.querySelectorAll('#opt-flavor .opt-btn').forEach((b,i)=>{b.classList.toggle('selected',i===0);});
+  // Show flavor only for French Fries; hide all drink options for snacks
+  ['lbl-flavor','opt-flavor'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isFries?'':'none';});
   ['lbl-size','opt-size','lbl-sugar','opt-sugar','lbl-ice','opt-ice','lbl-addons','opt-addons'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     if(isSnack){el.style.display='none';return;}
+    if(showWT&&(id==='lbl-ice'||id==='opt-ice')){el.style.display='';return;}
     if(isFruitSoda&&(id==='lbl-sugar'||id==='opt-sugar')){el.style.display='none';return;}
     el.style.display='';
   });
@@ -1868,6 +1884,19 @@ function selOpt(key,val,btn){
   const row=btn.closest('.option-row');
   row.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
+  if(key==='waterTemp'){
+    const isHot=val==='Hot';
+    const lblIce=document.getElementById('lbl-ice');
+    const optIce=document.getElementById('opt-ice');
+    if(lblIce) lblIce.style.display=isHot?'none':'';
+    if(optIce) optIce.style.display=isHot?'none':'';
+    if(isHot){currentOpts.ice='N/A';}
+    else{
+      // Restore default ice selection when switching back to Cold
+      currentOpts.ice='Normal Ice';
+      if(optIce) optIce.querySelectorAll('.opt-btn').forEach(b=>{b.classList.toggle('selected',b.textContent.includes('Normal'));});
+    }
+  }
 }
 
 function toggleAddon(name,btn){
@@ -1883,10 +1912,12 @@ function addToCart(){
   const sizeSur=SIZE_SURCHARGE[currentOpts.size]||0;
   const addonSur=currentOpts.addons.length*ADD_ON_PRICE;
   const price=currentItem.price+sizeSur+addonSur;
-  cart.push({id:Date.now(),menuId:currentItem.id,foundation:currentItem.name,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price});
+  const isFries=FRIES_FLAVOR_ITEMS.includes(currentItem.name);
+  const foundationName=isFries?`${currentItem.name} (${currentOpts.flavor})`:currentItem.name;
+  cart.push({id:Date.now(),menuId:currentItem.id,foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price});
   closeCustomizeModal();
   renderCart();
-  showToast(`${currentItem.name} added!`,'success');
+  showToast(`${foundationName} added!`,'success');
 }
 
 function renderCart(){
@@ -2774,9 +2805,6 @@ function playGrantedSound() {
             <i class="fas fa-directions"></i>
             Navigate with Google Maps
         </button>
-        <button class="loc-nav-btn" onclick="openWaze()" style="background:#33CCFF;">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Waze_icon.svg/32px-Waze_icon.svg.png" style="width:20px;height:20px;"> Navigate with Waze
-        </button>
         <button class="loc-close-btn" onclick="closeLocModal()">Close</button>
     </div>
 </div>
@@ -3163,7 +3191,7 @@ function playGrantedSound() {
                 <input type="text" id="perm-name-display" class="name-input" readonly style="background:var(--gold-light); cursor:default; margin-bottom:12px;">
             </div>
             <div style="text-align:left; margin-bottom:6px;">
-                <label class="pickup-label">Your Address / Location <span style="color:var(--danger);">*</span></label>
+                <label class="pickup-label">Your Address / Location <span id="perm-address-label" style="color:var(--danger);">*</span></label>
                 <input type="text" id="perm-address-input" class="name-input" placeholder="e.g. Brgy. Poblacion, San Antonio, Quezon" style="margin-bottom:12px;">
             </div>
             <div style="text-align:left; margin-bottom:12px;">
@@ -3193,6 +3221,7 @@ function playGrantedSound() {
     let orderType = 'Dine-In';
     let updateModeCode = null;        // set when customer has permission to update an order
     let _pendingUpdateOrderCode = null; // the real order code when an update request is in flight
+    let _capturedGeoAddress = '';       // filled when 'Use my current location' completes
 
     // ── Persist cart across viewport changes ──────────────────────────────
     function saveCartToSession() {
@@ -4040,9 +4069,16 @@ function playGrantedSound() {
     async function sendPermissionRequest() {
         const address = document.getElementById('perm-address-input').value.trim();
         const message = document.getElementById('perm-message-input').value.trim();
-        if(!address || !message) {
+        if(!address) {
             document.getElementById('perm-send-status').style.color = 'var(--danger)';
-            document.getElementById('perm-send-status').innerText = 'Please fill in your address and message.';
+            document.getElementById('perm-send-status').innerText = _capturedGeoAddress
+                ? 'Please fill in your message to the admin.'
+                : 'Please fill in your address and message.';
+            return;
+        }
+        if(!message) {
+            document.getElementById('perm-send-status').style.color = 'var(--danger)';
+            document.getElementById('perm-send-status').innerText = 'Please fill in your message to the admin.';
             return;
         }
         const payload = {
@@ -4167,9 +4203,12 @@ function playGrantedSound() {
             });
             const data = await res.json();
             const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            _capturedGeoAddress = addr;
             document.getElementById('geo-addr').innerText = '📍 ' + addr;
         } catch(e) {
-            document.getElementById('geo-addr').innerText = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const coords = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            _capturedGeoAddress = coords;
+            document.getElementById('geo-addr').innerText = '📍 ' + coords;
         }
     }
 
@@ -4228,9 +4267,21 @@ function playGrantedSound() {
             document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
             document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || '{{ session.get("customer_name","Customer") }}';
             // Auto-fill address from geolocation if already captured
-            const _geoEl = document.getElementById('geo-addr');
-            const _geoText = _geoEl ? _geoEl.innerText.replace(/^📍\s*/, '').trim() : '';
-            document.getElementById('perm-address-input').value = _geoText;
+            const _addrInput = document.getElementById('perm-address-input');
+            const _addrLabel = document.getElementById('perm-address-label');
+            if (_capturedGeoAddress) {
+                _addrInput.value = _capturedGeoAddress;
+                _addrInput.readOnly = true;
+                _addrInput.style.background = 'var(--gold-light)';
+                _addrInput.style.cursor = 'default';
+                if (_addrLabel) _addrLabel.style.display = 'none';
+            } else {
+                _addrInput.value = '';
+                _addrInput.readOnly = false;
+                _addrInput.style.background = '';
+                _addrInput.style.cursor = '';
+                if (_addrLabel) _addrLabel.style.display = '';
+            }
             document.getElementById('perm-message-input').value = '';
             document.getElementById('perm-send-status').innerText = '';
             document.getElementById('perm-send-btn').disabled = false;
@@ -4249,6 +4300,7 @@ function playGrantedSound() {
             total: cart.reduce((s,i)=>s+i.price, 0),
             customer_lat: document.getElementById('customer-lat').value || null,
             customer_lng: document.getElementById('customer-lng').value || null,
+            address: _capturedGeoAddress || '',
             items: cart.map(i => ({ foundation: i.name, size: i.size, sweetener: i.sugar, ice: i.ice, waterTemp: i.waterTemp||'', addons: i.addons.join(', '), pearls: orderType, price: i.price }))
         };
         try {
@@ -5428,8 +5480,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </div>
         <div class="tbl-wrap">
           <table class="kds-table" style="min-width:420px;">
-            <thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
-            <tbody id="oh-tbody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr></tbody>
+            <thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Location</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="oh-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr></tbody>
           </table>
         </div>
         <!-- Pagination -->
@@ -6018,20 +6070,27 @@ async function loadOrderHistory(page){
   const info=document.getElementById('oh-page-info');
   const prevBtn=document.getElementById('oh-prev');
   const nextBtn=document.getElementById('oh-next');
-  tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
   try{
     const r=await apiFetch(`/api/orders/history?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page}`);
     if(!r||!r.ok)return;
     const data=await r.json();
     const statusColors={'Waiting Confirmation':'var(--orange)','Preparing Order':'var(--blue)','Ready for Pick-up':'var(--green)','Completed':'#388E3C','Cancelled':'var(--red)'};
     const statusLabels={'Waiting Confirmation':'Waiting','Preparing Order':'Preparing','Ready for Pick-up':'Ready','Completed':'Completed','Cancelled':'Cancelled'};
-    tbody.innerHTML=data.orders.length?data.orders.map(o=>`<tr>
+    tbody.innerHTML=data.orders.length?data.orders.map(o=>{
+      const isWalkIn=o.source==='Manual/Walk-In';
+      const locCell=isWalkIn
+        ?`<span style="background:rgba(21,101,192,0.12);color:#1565C0;padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;">🚶 Walk-In</span>`
+        :(o.address?`<span style="font-size:0.72rem;color:var(--muted);font-weight:600;" title="${escapeHTML(o.address)}">📍 ${escapeHTML(o.address.length>28?o.address.slice(0,28)+'…':o.address)}</span>`
+        :`<span style="font-size:0.7rem;color:var(--muted);">Online</span>`);
+      return`<tr>
       <td style="font-size:0.74rem;color:var(--muted);">${escapeHTML(o.date)}</td>
       <td><b style="color:var(--brown-dark);font-size:0.78rem;">${escapeHTML(o.code)}</b></td>
-      <td><b style="font-size:0.8rem;">${escapeHTML(o.name)}</b><br><span style="font-size:0.68rem;color:var(--muted);">${escapeHTML(o.items.slice(0,2).join(', '))}${o.items.length>2?' +'+( o.items.length-2)+'…':''}</span></td>
+      <td><b style="font-size:0.8rem;">${escapeHTML(o.name)}</b><br><span style="font-size:0.68rem;color:var(--muted);">${escapeHTML(o.items.slice(0,2).join(', '))}${o.items.length>2?' +'+(o.items.length-2)+'…':''}</span></td>
+      <td>${locCell}</td>
       <td style="color:var(--brown);font-weight:800;font-size:0.82rem;">₱${o.total.toFixed(2)}</td>
       <td><span style="background:${statusColors[o.status]||'var(--muted)'};color:#fff;padding:3px 8px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">${statusLabels[o.status]||o.status}</span></td>
-    </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
+    </tr>`}).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
     const total=data.total,perPage=data.per_page,totalPages=Math.ceil(total/perPage);
     const start=(page-1)*perPage+1;
     const end=Math.min(page*perPage,total);
@@ -6883,7 +6942,7 @@ def handle_inventory():
 def reserve_blend():
     data = request.json
     try:
-        new_res = Reservation(patron_name=data['name'], patron_email=data.get('email',''), patron_phone=data.get('phone',''), total_investment=data['total'], pickup_time=data['pickup_time'], order_source="Online", status="Waiting Confirmation")
+        new_res = Reservation(patron_name=data['name'], patron_email=data.get('email',''), patron_phone=data.get('phone',''), total_investment=data['total'], pickup_time=data['pickup_time'], order_source="Online", status="Waiting Confirmation", patron_address=data.get('address',''))
         db.session.add(new_res)
         db.session.flush()
         for i in data['items']:
@@ -7321,7 +7380,7 @@ def admin_manual_order():
     data = request.json
     customer_name = data.get('customer_name', 'Walk-In')
     try:
-        res = Reservation(patron_name=customer_name, patron_email="walkin@local", total_investment=data['total'], pickup_time="Walk-In", status="Waiting Confirmation", order_source="Manual/Walk-In")
+        res = Reservation(patron_name=customer_name, patron_email="walkin@local", total_investment=data['total'], pickup_time="Walk-In", status="Waiting Confirmation", order_source="Manual/Walk-In", patron_address="Walk-In")
         db.session.add(res)
         db.session.flush()
         for i in data['items']:
@@ -7429,6 +7488,7 @@ def order_history():
             "id": o.id, "code": o.reservation_code, "name": o.patron_name,
             "total": o.total_investment, "status": o.status, "source": o.order_source,
             "pickup": o.pickup_time,
+            "address": o.patron_address or '',
             "date": o.created_at.strftime('%b %d, %Y'),
             "time": o.created_at.strftime('%I:%M %p'),
             "items": [i.foundation for i in o.infusions]
@@ -7577,6 +7637,30 @@ with app.app_context():
             else:
                 print("Migration: reservations.cancel_reason already exists, skipped")
         except Exception as migration_cancel_err:
+            db.session.rollback()
+
+        # Migrate: add patron_address column to reservations
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='reservations' AND column_name='patron_address'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
+                col_exists = any(row[1] == 'patron_address' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    "ALTER TABLE reservations ADD COLUMN patron_address VARCHAR(300) DEFAULT ''"
+                ))
+                db.session.commit()
+                print("Migration: added patron_address column to reservations")
+            else:
+                print("Migration: reservations.patron_address already exists, skipped")
+        except Exception as migration_addr_err:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_cancel_err}")
 
