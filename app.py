@@ -85,11 +85,34 @@ limiter = Limiter(
 
 @app.after_request
 def add_header(response):
-    """Prevent the browser from caching API data."""
+    """Prevent the browser from caching API data and add security headers."""
     if 'api' in request.path:
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '-1'
+
+    # Apply a Content Security Policy on the employee dashboard to suppress
+    # chrome-extension://invalid/ injection errors and block unexpected origins.
+    if request.path in ('/employee', '/employee/login'):
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' "
+                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+                "https://fonts.googleapis.com; "
+            "font-src 'self' "
+                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+                "https://fonts.gstatic.com data:; "
+            "img-src 'self' data: blob: https:; "
+            "connect-src 'self'; "
+            "frame-src 'none'; "
+            "object-src 'none';"
+        )
+        response.headers['Content-Security-Policy'] = csp
+        # Prevent MIME-type sniffing (stops some extension injection vectors)
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+
     return response
 
 # ==========================================
@@ -356,8 +379,13 @@ LOGIN_HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
+<!-- DNS / connection hints: establish early to avoid cold-start latency -->
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+<!-- Font Awesome via jsDelivr (avoids Edge Tracking Prevention on cdnjs.cloudflare.com) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" crossorigin="anonymous">
 <style>
 :root{
   --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
@@ -1179,6 +1207,20 @@ function playEmpPermBeep(){
       <div style="font-size:1.4rem;margin-bottom:6px;">🕐</div>
       <div style="font-size:0.88rem;font-weight:800;color:var(--teal-dark);margin-bottom:4px;">Waiting for Customer</div>
       <div style="font-size:0.78rem;color:var(--muted);font-weight:600;line-height:1.5;">The customer has been notified. This modal will close once they decide.</div>
+      <!-- Customer tracking link — shown after notify so staff can share it -->
+      <div id="cancel-awaiting-link-wrap" style="margin-top:12px;display:none;">
+        <div style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">📱 Share this link with the customer</div>
+        <div style="display:flex;gap:6px;align-items:center;background:#f0f7f5;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;">
+          <span id="cancel-awaiting-link-text" style="font-size:0.72rem;font-weight:700;color:var(--teal-dark);flex:1;word-break:break-all;text-align:left;"></span>
+          <button onclick="copyCustomerLink()" title="Copy link"
+            style="flex-shrink:0;background:var(--teal-dark);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:0.72rem;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+        <div style="margin-top:5px;font-size:0.7rem;color:var(--muted);font-weight:600;">
+          Customer can open this on their phone to see the decision prompt.
+        </div>
+      </div>
       <div id="cancel-awaiting-poll-status" style="margin-top:10px;font-size:0.75rem;color:var(--muted);font-weight:600;"></div>
     </div>
 
@@ -1534,6 +1576,14 @@ function onCancelReasonChange(val){
   document.getElementById('cancel-notify-btn').style.display = isStockReason ? 'flex' : 'none';
 }
 
+function copyCustomerLink(){
+  const txt = document.getElementById('cancel-awaiting-link-text').innerText;
+  navigator.clipboard.writeText(txt).then(()=>showToast('Link copied!','success')).catch(()=>{
+    // Fallback for older browsers
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Link copied!','success');
+  });
+}
+
 async function notifyCustomerAboutItems(){
   const orderId = window._pendingCancelOrderId;
   const reason = document.getElementById('cancel-reason-select').value;
@@ -1556,6 +1606,13 @@ async function notifyCustomerAboutItems(){
       document.getElementById('cancel-action-btns').style.display = 'none';
       document.getElementById('cancel-item-picker-wrap').style.display = 'none';
       document.getElementById('cancel-awaiting-wrap').style.display = 'block';
+      // Build and display the customer-facing tracking URL
+      const orderCode = (window._pendingCancelOrder || {}).code || '';
+      if(orderCode){
+        const trackUrl = window.location.origin + '/?code=' + encodeURIComponent(orderCode);
+        document.getElementById('cancel-awaiting-link-text').innerText = trackUrl;
+        document.getElementById('cancel-awaiting-link-wrap').style.display = 'block';
+      }
       fetchOrders();
       startWaitingForCustomerDecision(orderId);
     } else {
@@ -1618,6 +1675,7 @@ async function confirmCancelOrder(){
 
 function closeCancelReasonModal(){
   document.getElementById('cancel-reason-modal').style.display='none';
+  document.getElementById('cancel-awaiting-link-wrap').style.display='none';
   if(_waitDecisionPoll){clearInterval(_waitDecisionPoll);_waitDecisionPoll=null;}
   fetchOrders();
 }
@@ -3295,8 +3353,34 @@ function playGrantedSound() {
         loadCartFromSession();
         fetchMenu(); 
         updateCartUI();
+
+        // ── ?code=XXXX URL param: inject order into localStorage so walk-in
+        //    customers can track via a shared link / QR code even if they never
+        //    placed the order from this device. ─────────────────────────────
+        (function injectCodeFromURL() {
+            try {
+                const urlCode = new URLSearchParams(window.location.search).get('code');
+                if (!urlCode) return;
+                const clean = urlCode.trim().toUpperCase();
+                if (!clean) return;
+                let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+                if (!orders.find(o => o.code === clean)) {
+                    orders.push({ code: clean, status: 'Waiting Confirmation' });
+                    localStorage.setItem('myOrders', JSON.stringify(orders));
+                }
+                // Remove ?code= from the URL bar so a page refresh doesn't re-inject
+                const url = new URL(window.location.href);
+                url.searchParams.delete('code');
+                history.replaceState({}, '', url.toString());
+            } catch(e) {}
+        })();
+
         setInterval(pollCustomerOrderStatus, 3000);
         setInterval(fetchMenu, 30000); // Re-sync menu every 30s so stock changes appear automatically
+
+        // Run immediately on load so a refreshed page still shows a pending
+        // item-query modal without waiting for the first 5-second tick.
+        checkItemAvailabilityQuery();
     });
 
     function showToast(msg, type='info') {
@@ -4760,7 +4844,116 @@ function playGrantedSound() {
 
     // Poll for item queries every 5 seconds
     setInterval(checkItemAvailabilityQuery, 5000);
+
+    // ── "Track My Order" manual lookup ──────────────────────────────────────
+    function openTrackModal() {
+        document.getElementById('track-order-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('track-code-input').focus(), 100);
+    }
+    function closeTrackModal() {
+        document.getElementById('track-order-modal').style.display = 'none';
+        document.getElementById('track-code-input').value = '';
+        document.getElementById('track-code-error').style.display = 'none';
+    }
+
+    async function submitTrackCode() {
+        const raw = document.getElementById('track-code-input').value.trim().toUpperCase();
+        const errEl = document.getElementById('track-code-error');
+        errEl.style.display = 'none';
+        if (!raw) { errEl.innerText = 'Please enter your order code.'; errEl.style.display = 'block'; return; }
+
+        // Verify the code exists on the server
+        const btn = document.getElementById('track-submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…';
+        try {
+            const res = await fetch('/api/customer/order_detail?code=' + encodeURIComponent(raw));
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                errEl.innerText = 'Order not found. Please check the code and try again.';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search"></i> Track Order';
+                return;
+            }
+            // Inject into localStorage
+            let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+            if (!orders.find(o => o.code === raw)) {
+                orders.push({ code: raw, status: data.status || 'Waiting Confirmation' });
+            } else {
+                orders.forEach(o => { if (o.code === raw) o.status = data.status || o.status; });
+            }
+            localStorage.setItem('myOrders', JSON.stringify(orders));
+            closeTrackModal();
+            showToast('✅ Order #' + raw + ' is now being tracked!', 'success');
+            // Immediately check for pending item queries
+            _activeItemQuery = null;
+            await checkItemAvailabilityQuery();
+            // Also open the My Order modal so they see their order details
+            setTimeout(() => openMyOrderModal(raw), 400);
+        } catch(e) {
+            errEl.innerText = 'Connection error. Please try again.';
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search"></i> Track Order';
+        }
+    }
 </script>
+
+<!-- ── Track My Order Floating Button ────────────────────────────────── -->
+<button onclick="openTrackModal()"
+    style="position:fixed; bottom:90px; right:18px; z-index:9500;
+           background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff;
+           border:none; border-radius:50px; padding:11px 18px;
+           font-family:'DM Sans',sans-serif; font-weight:800; font-size:0.82rem;
+           box-shadow:0 4px 18px rgba(92,51,23,0.45); cursor:pointer;
+           display:flex; align-items:center; gap:8px; transition:opacity 0.2s;"
+    title="Track your order by code">
+    <i class="fas fa-receipt"></i> Track Order
+</button>
+
+<!-- ── Track My Order Modal ──────────────────────────────────────────── -->
+<div id="track-order-modal" style="display:none; position:fixed; inset:0;
+     background:rgba(0,0,0,0.55); z-index:9800; align-items:center;
+     justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:20px; padding:28px 24px;
+              max-width:380px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+              text-align:center; position:relative;">
+    <button onclick="closeTrackModal()"
+        style="position:absolute; top:14px; right:16px; background:none; border:none;
+               font-size:1.2rem; cursor:pointer; color:#aaa;">✕</button>
+    <div style="width:52px;height:52px;border-radius:50%;background:#FFF8E1;
+                border:2px solid #C8A84B; display:flex; align-items:center;
+                justify-content:center; margin:0 auto 14px; font-size:1.5rem;">🧾</div>
+    <h2 style="font-family:'Playfair Display',serif; font-size:1.25rem;
+               font-weight:900; color:#3E2723; margin-bottom:4px;">Track My Order</h2>
+    <p style="font-size:0.82rem; font-weight:600; color:#795548; margin-bottom:18px; line-height:1.5;">
+        Enter the order code from your receipt to track your order status and receive staff notifications.
+    </p>
+    <input id="track-code-input" type="text" placeholder="e.g. A1B2C3D4"
+        maxlength="10"
+        style="width:100%; padding:13px; border:2px solid #D7CCC8; border-radius:12px;
+               font-size:1.4rem; text-align:center; letter-spacing:6px; font-weight:900;
+               color:#3E2723; font-family:'Nunito',sans-serif; outline:none;
+               text-transform:uppercase; margin-bottom:10px; background:#FAFAFA;"
+        onfocus="this.style.borderColor='#C8A84B'" onblur="this.style.borderColor='#D7CCC8'"
+        onkeydown="if(event.key==='Enter') submitTrackCode()">
+    <div id="track-code-error"
+        style="display:none; background:#FFF0F0; color:#C62828; border:1.5px solid #FFCDD2;
+               border-radius:10px; padding:9px 12px; font-size:0.8rem; font-weight:700;
+               margin-bottom:10px; text-align:left;">
+    </div>
+    <button id="track-submit-btn" onclick="submitTrackCode()"
+        style="width:100%; padding:13px; border-radius:12px; border:none;
+               background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff;
+               font-family:'Nunito',sans-serif; font-weight:800; font-size:0.95rem;
+               cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px;
+               box-shadow:0 4px 14px rgba(92,51,23,0.3);">
+        <i class="fas fa-search"></i> Track Order
+    </button>
+  </div>
+</div>
+
 {% endif %}
 </body>
 </html>
