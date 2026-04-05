@@ -2719,7 +2719,7 @@ function playGrantedSound() {
             const res = await fetch('/api/auth/manual', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, email, phone, lat, lng, address: _gateGeoAddr })
+                body: JSON.stringify({ name, email, phone, lat, lng, address: _gateGeoAddr || (lat && lng ? `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}` : '') })
             });
             if (res.ok) { location.reload(); }
             else {
@@ -5150,7 +5150,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-nav-item i{color:var(--brown);font-size:0.88rem;width:16px;text-align:center;}
 .fin-nav-item.active{background:var(--cream);color:var(--brown-dark);}
 .fin-nav-item:hover:not(.active){background:var(--cream);}
-#s-finance{position:relative;}
+#s-finance{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.fin-sticky-top{flex-shrink:0;}
+.fin-content-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:16px;}
 
 /* ── SETTINGS DROPDOWN ROWS ── */
 .settings-drop-item{border-bottom:1px solid var(--cream-dark);}
@@ -5455,38 +5457,41 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
   <!-- FINANCE -->
   <div id="s-finance" class="screen">
-    <div class="page-header">
-      <h2><i class="fas fa-chart-line"></i> Finance</h2>
-      <p>Revenue, reports &amp; order history</p>
-    </div>
-    <div class="fin-stats">
-      <div class="fin-stat" style="grid-column:1/-1;border-top:3px solid var(--brown);">
-        <div class="fl">System Total Today</div>
-        <div class="fv" id="sys-total" style="color:var(--brown);">₱0.00</div>
+    <div class="fin-sticky-top">
+      <div class="page-header">
+        <h2><i class="fas fa-chart-line"></i> Finance</h2>
+        <p>Revenue, reports &amp; order history</p>
       </div>
-      <div class="fin-stat" style="border-top:3px solid var(--green);">
-        <div class="fl">Net Profit</div>
-        <div class="fv" id="net-profit" style="color:var(--green);">₱0.00</div>
+      <div class="fin-stats">
+        <div class="fin-stat" style="grid-column:1/-1;border-top:3px solid var(--brown);">
+          <div class="fl">System Total Today</div>
+          <div class="fv" id="sys-total" style="color:var(--brown);">₱0.00</div>
+        </div>
+        <div class="fin-stat" style="border-top:3px solid var(--green);">
+          <div class="fl">Net Profit</div>
+          <div class="fv" id="net-profit" style="color:var(--green);">₱0.00</div>
+        </div>
+        <div class="fin-stat" style="border-top:3px solid var(--red);">
+          <div class="fl">Expenses</div>
+          <div class="fv" id="exp-total" style="color:var(--red);">₱0.00</div>
+        </div>
       </div>
-      <div class="fin-stat" style="border-top:3px solid var(--red);">
-        <div class="fl">Expenses</div>
-        <div class="fv" id="exp-total" style="color:var(--red);">₱0.00</div>
-      </div>
-    </div>
 
-    <!-- Finance Section Nav (Hamburger Dropdown) -->
-    <div class="fin-menu-wrap" style="position:relative;">
-      <div class="fin-menu-label" id="fin-active-label"><i class="fas fa-sun"></i> Today</div>
-      <button class="fin-hamburger-btn" id="fin-hamburger" onclick="toggleFinMenu()" title="Finance sections">
-        <i class="fas fa-bars"></i>
-      </button>
-      <div class="fin-nav-dropdown" id="fin-nav-dropdown">
-        <button class="fin-nav-item active" id="ftab-today" onclick="finTab('today',this)"><i class="fas fa-sun"></i> Today</button>
-        <button class="fin-nav-item" id="ftab-reports" onclick="finTab('reports',this)"><i class="fas fa-chart-bar"></i> Reports</button>
-        <button class="fin-nav-item" id="ftab-history" onclick="finTab('history',this)"><i class="fas fa-history"></i> Orders</button>
+      <!-- Finance Section Nav (Hamburger Dropdown) -->
+      <div class="fin-menu-wrap" style="position:relative;">
+        <div class="fin-menu-label" id="fin-active-label"><i class="fas fa-sun"></i> Today</div>
+        <button class="fin-hamburger-btn" id="fin-hamburger" onclick="toggleFinMenu()" title="Finance sections">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="fin-nav-dropdown" id="fin-nav-dropdown">
+          <button class="fin-nav-item active" id="ftab-today" onclick="finTab('today',this)"><i class="fas fa-sun"></i> Today</button>
+          <button class="fin-nav-item" id="ftab-reports" onclick="finTab('reports',this)"><i class="fas fa-chart-bar"></i> Reports</button>
+          <button class="fin-nav-item" id="ftab-history" onclick="finTab('history',this)"><i class="fas fa-history"></i> Orders</button>
+        </div>
       </div>
-    </div>
+    </div><!-- end fin-sticky-top -->
 
+    <div class="fin-content-scroll">
     <!-- ── TODAY TAB ── -->
     <div id="fin-today" class="fin-tabpane active">
       <div class="section card">
@@ -5586,8 +5591,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           </button>
         </div>
       </div>
-    </div>
-  </div>
+    </div><!-- end fin-content-scroll -->
+  </div><!-- end s-finance -->
 
   <!-- SETTINGS -->
   <div id="s-settings" class="screen">
@@ -6240,7 +6245,7 @@ async function loadOrderHistory(page){
       const locCell=isWalkIn
         ?`<span style="background:rgba(21,101,192,0.12);color:#1565C0;padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;">🚶 Walk-In</span>`
         :(o.address?`<span style="font-size:0.72rem;color:var(--muted);font-weight:600;" title="${escapeHTML(o.address)}">📍 ${escapeHTML(o.address.length>28?o.address.slice(0,28)+'…':o.address)}</span>`
-        :`<span style="font-size:0.7rem;color:var(--muted);">Online</span>`);
+        :`<span style="background:rgba(13,122,106,0.1);color:var(--teal-dark,#094F44);padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;">🌐 Online</span>`);
       return`<tr>
       <td style="font-size:0.74rem;color:var(--muted);">${escapeHTML(o.date)}</td>
       <td><b style="color:var(--brown-dark);font-size:0.78rem;">${escapeHTML(o.code)}</b></td>
