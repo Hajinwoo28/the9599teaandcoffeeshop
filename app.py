@@ -634,16 +634,26 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .logout-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:800;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
 .logout-btn:hover{background:rgba(255,255,255,0.15);}
 
-.bottom-nav{height:var(--nav-h);background:var(--teal-dark);border-top:2px solid var(--teal-mid);display:flex;align-items:stretch;flex-shrink:0;z-index:100;}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.62rem;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;padding:8px 4px;transition:color 0.15s,background 0.15s;}
-.nav-btn i{font-size:1.2rem;}
-.nav-btn.active{color:var(--gold);background:rgba(200,168,75,0.1);}
-.nav-btn:hover:not(.active){color:rgba(255,255,255,0.8);}
+/* ── HAMBURGER MENU (replaces bottom nav) ── */
+.hamburger-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.9);width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.05rem;flex-shrink:0;transition:background 0.15s;position:relative;}
+.hamburger-btn:hover{background:rgba(255,255,255,0.18);}
+.hamburger-badge{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.55rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
+.hamburger-badge.show{display:flex;}
+.emp-nav-dropdown{display:none;position:fixed;top:var(--topbar-h);right:0;width:220px;background:var(--teal-dark);border-left:2px solid var(--teal-mid);border-bottom:2px solid var(--teal-mid);border-radius:0 0 0 16px;box-shadow:-4px 6px 24px rgba(9,79,68,0.35);z-index:9000;overflow:hidden;animation:dropDown 0.18s ease;}
+.emp-nav-dropdown.open{display:block;}
+@keyframes dropDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.emp-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:15px 18px;border:none;background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.85rem;font-weight:800;letter-spacing:0.3px;text-transform:uppercase;transition:background 0.15s,color 0.15s;border-bottom:1px solid rgba(255,255,255,0.08);}
+.emp-nav-item:last-child{border-bottom:none;}
+.emp-nav-item i{font-size:1rem;width:18px;text-align:center;}
+.emp-nav-item.active{color:var(--gold);background:rgba(200,168,75,0.12);}
+.emp-nav-item:hover:not(.active){background:rgba(255,255,255,0.08);color:#fff;}
+.emp-nav-item .nav-item-badge{background:var(--red);color:#fff;border-radius:20px;min-width:18px;height:18px;padding:0 4px;font-size:0.6rem;font-weight:900;display:none;align-items:center;justify-content:center;margin-left:auto;}
+.emp-nav-item .nav-item-badge.show{display:flex;}
 .nav-badge{position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
 .nav-icon-wrap{position:relative;display:inline-block;}
 
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 calc(var(--nav-h)+12px);}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;}
 .screen.active{display:block;}
 
 .page-header{padding:20px 16px 14px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:50;}
@@ -941,8 +951,32 @@ function playEmpPermBeep(){
       <span class="bell-count" id="bell-count"></span>
     </button>
     <a href="/employee/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    <button class="hamburger-btn" id="emp-hamburger" onclick="toggleEmpMenu()" title="Navigation">
+      <i class="fas fa-bars"></i>
+      <span class="hamburger-badge" id="hamburger-badge"></span>
+    </button>
   </div>
 </header>
+
+<!-- EMPLOYEE NAV DROPDOWN -->
+<div class="emp-nav-dropdown" id="emp-nav-dropdown">
+  <button class="emp-nav-item active" id="nav-online" onclick="goScreen('online');closeEmpMenu()">
+    <div class="nav-icon-wrap"><i class="fas fa-wifi"></i></div>
+    Online POS
+    <span class="nav-item-badge" id="nav-item-badge"></span>
+  </button>
+  <button class="emp-nav-item" id="nav-pos" onclick="goScreen('pos');closeEmpMenu()">
+    <i class="fas fa-cash-register"></i>
+    Walk-In POS
+  </button>
+  <button class="emp-nav-item" id="nav-stock" onclick="goScreen('stock');closeEmpMenu()">
+    <div class="nav-icon-wrap" style="position:relative;display:inline-flex;">
+      <i class="fas fa-boxes"></i>
+      <span class="nav-badge-stock" id="stock-nav-badge-2"></span>
+    </div>
+    Stock Alert
+  </button>
+</div>
 
 <!-- NOTIFICATION PANEL -->
 <div class="notif-panel" id="notif-panel">
@@ -1101,24 +1135,6 @@ function playEmpPermBeep(){
 
 </div>
 
-<nav class="bottom-nav">
-  <button class="nav-btn active" id="nav-online" onclick="goScreen('online')">
-    <div class="nav-icon-wrap"><i class="fas fa-wifi"></i><span class="nav-badge" id="nav-badge" style="display:none;"></span></div>
-    Online POS
-  </button>
-  <button class="nav-btn" id="nav-pos" onclick="goScreen('pos')">
-    <i class="fas fa-cash-register"></i>
-    Walk-In POS
-  </button>
-  <button class="nav-btn" id="nav-stock" onclick="goScreen('stock')">
-    <div class="nav-icon-wrap" style="position:relative;display:inline-block;">
-      <i class="fas fa-boxes"></i>
-      <span class="nav-badge-stock" id="stock-nav-badge"></span>
-    </div>
-    Stock Alert
-  </button>
-</nav>
-
 <!-- CUSTOMISE MODAL -->
 <div class="modal-overlay" id="customize-modal">
   <div class="modal-sheet">
@@ -1248,13 +1264,28 @@ function showToast(msg,type='info'){const c=document.getElementById('toast-conta
 
 function goScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.emp-nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('s-'+id).classList.add('active');
-  document.getElementById('nav-'+id).classList.add('active');
+  const navBtn=document.getElementById('nav-'+id);
+  if(navBtn)navBtn.classList.add('active');
   if(id==='online') fetchOrders();
   if(id==='pos') loadMenu();
   if(id==='stock') fetchStockAlerts();
 }
+
+function toggleEmpMenu(){
+  const dd=document.getElementById('emp-nav-dropdown');
+  dd.classList.toggle('open');
+}
+function closeEmpMenu(){
+  document.getElementById('emp-nav-dropdown').classList.remove('open');
+}
+// Close dropdown when clicking outside
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('emp-nav-dropdown');
+  const btn=document.getElementById('emp-hamburger');
+  if(dd&&btn&&!dd.contains(e.target)&&!btn.contains(e.target)){dd.classList.remove('open');}
+});
 
 /* ── NOTIFICATION BELL ── */
 let _notifDismissed=new Set(); // ids of dismissed notifications
@@ -1359,7 +1390,8 @@ document.addEventListener('click',function(e){
 /* ── STOCK ALERTS ── */
 async function fetchStockAlerts(){
   const el=document.getElementById('sa-list');
-  const badge=document.getElementById('stock-nav-badge');
+  const badge=document.getElementById('stock-nav-badge-2');
+  const hamBadge=document.getElementById('hamburger-badge');
   try{
     const r=await fetch('/api/finance/low_stock');
     if(!r.ok){if(el)el.innerHTML='<div style="color:var(--red);font-size:0.84rem;font-weight:700;">Failed to load stock data.</div>';return;}
@@ -1383,6 +1415,10 @@ async function fetchStockAlerts(){
     if(badge){
       if(urgent>0){badge.textContent=urgent>99?'99+':urgent;badge.style.display='flex';}
       else{badge.style.display='none';}
+    }
+    if(hamBadge){
+      if(urgent>0){hamBadge.textContent=urgent>99?'99+':urgent;hamBadge.classList.add('show');}
+      else{hamBadge.classList.remove('show');}
     }
 
     if(!el) return;
@@ -1441,8 +1477,12 @@ function updateStats(){
   document.getElementById('stat-preparing').textContent=allOrders.filter(o=>o.status==='Preparing').length;
   document.getElementById('stat-ready').textContent=allOrders.filter(o=>o.status==='Ready for Pickup').length;
   const pending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
-  const badge=document.getElementById('nav-badge');
-  if(pending>0){badge.textContent=pending;badge.style.display='flex';}else{badge.style.display='none';}
+  const badge=document.getElementById('nav-item-badge');
+  const hamBadge=document.getElementById('hamburger-badge');
+  if(badge){if(pending>0){badge.textContent=pending;badge.classList.add('show');}else{badge.classList.remove('show');}}
+  if(hamBadge&&!hamBadge.classList.contains('show')){
+    if(pending>0){hamBadge.textContent=pending;hamBadge.classList.add('show');}
+  }
 }
 
 function renderOrders(){
@@ -5071,7 +5111,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── SCREENS ── */
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 calc(var(--nav-h)+12px);}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 16px;}
 .screen.active{display:block;}
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
@@ -5082,14 +5122,35 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.76rem;color:var(--tan);margin-top:3px;}
 
-/* ── BOTTOM NAV ── */
-.bottom-nav{height:var(--nav-h);background:var(--brown-dark);border-top:2px solid var(--brown);display:flex;flex-shrink:0;position:relative;z-index:100;}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--tan);font-size:9px;font-weight:800;letter-spacing:0.3px;border:none;background:transparent;transition:color 0.15s;padding:0;opacity:0.65;}
-.nav-btn i{font-size:18px;}
-.nav-btn.active{color:var(--cream);opacity:1;}
-.nav-btn.active i{transform:scale(1.1);}
-.nav-center-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
-.nav-center-btn{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--brown) 0%,var(--tan) 100%);display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:20px;border:3px solid var(--brown-dark);box-shadow:0 4px 14px rgba(61,36,16,0.5);cursor:pointer;position:absolute;top:-18px;left:50%;transform:translateX(-50%);}
+/* ── BOTTOM NAV (hidden — replaced by hamburger) ── */
+.bottom-nav{display:none;}
+
+/* ── ADMIN HAMBURGER MENU ── */
+.admin-hamburger-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.35);color:var(--tan);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.95rem;flex-shrink:0;transition:background 0.15s;position:relative;}
+.admin-hamburger-btn:hover{background:rgba(196,168,130,0.2);}
+.admin-nav-dropdown{display:none;position:fixed;top:var(--topbar-h);right:0;width:230px;background:var(--brown-dark);border-left:2px solid var(--brown);border-bottom:2px solid var(--brown);border-radius:0 0 0 16px;box-shadow:-4px 8px 30px rgba(61,36,16,0.45);z-index:9000;overflow:hidden;animation:adminDropDown 0.18s ease;}
+.admin-nav-dropdown.open{display:block;}
+@keyframes adminDropDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.admin-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:15px 18px;border:none;background:transparent;color:var(--tan);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;transition:background 0.15s,color 0.15s;border-bottom:1px solid rgba(196,168,130,0.12);}
+.admin-nav-item:last-child{border-bottom:none;}
+.admin-nav-item i{font-size:1rem;width:18px;text-align:center;}
+.admin-nav-item.active{color:var(--cream);background:rgba(196,168,130,0.14);}
+.admin-nav-item:hover:not(.active){background:rgba(196,168,130,0.1);color:var(--cream);}
+
+/* ── FINANCE HAMBURGER ── */
+.fin-menu-wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 4px;gap:10px;}
+.fin-menu-label{font-size:0.78rem;font-weight:900;color:var(--brown-dark);display:flex;align-items:center;gap:7px;}
+.fin-hamburger-btn{background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown);width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;flex-shrink:0;transition:background 0.15s;position:relative;}
+.fin-hamburger-btn:hover{background:var(--cream);}
+.fin-nav-dropdown{display:none;position:absolute;right:14px;top:calc(100% + 2px);width:200px;background:var(--white);border:1.5px solid var(--cream-dark);border-radius:var(--radius);box-shadow:0 8px 28px rgba(61,36,16,0.18);z-index:500;overflow:hidden;animation:finDrop 0.18s ease;}
+.fin-nav-dropdown.open{display:block;}
+@keyframes finDrop{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.fin-nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:13px 15px;border:none;background:transparent;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.81rem;font-weight:800;transition:background 0.15s;border-bottom:1px solid var(--cream-dark);}
+.fin-nav-item:last-child{border-bottom:none;}
+.fin-nav-item i{color:var(--brown);font-size:0.88rem;width:16px;text-align:center;}
+.fin-nav-item.active{background:var(--cream);color:var(--brown-dark);}
+.fin-nav-item:hover:not(.active){background:var(--cream);}
+#s-finance{position:relative;}
 
 /* ── SETTINGS DROPDOWN ROWS ── */
 .settings-drop-item{border-bottom:1px solid var(--cream-dark);}
@@ -5327,8 +5388,19 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <div style="text-align:center;color:var(--muted);padding:18px;font-size:0.81rem;font-weight:600;">No notifications</div>
       </div>
     </div>
+    <button class="admin-hamburger-btn" id="admin-hamburger" onclick="toggleAdminMenu()" title="Navigation">
+      <i class="fas fa-bars"></i>
+    </button>
   </div>
 </header>
+
+<!-- ══ ADMIN NAV DROPDOWN ══ -->
+<div class="admin-nav-dropdown" id="admin-nav-dropdown">
+  <button class="admin-nav-item active" id="nb-inventory" onclick="goScreen('inventory',this);closeAdminMenu()"><i class="fas fa-boxes"></i> Stock</button>
+  <button class="admin-nav-item" id="nb-audit" onclick="goScreen('audit',this);closeAdminMenu()"><i class="fas fa-shield-alt"></i> Audit Log</button>
+  <button class="admin-nav-item" id="nb-finance" onclick="goScreen('finance',this);closeAdminMenu()"><i class="fas fa-chart-line"></i> Finance</button>
+  <button class="admin-nav-item" id="nb-settings" onclick="goScreen('settings',this);closeAdminMenu()"><i class="fas fa-sliders-h"></i> Settings</button>
+</div>
 
 <!-- ══ SCREENS ══ -->
 <div class="screens">
@@ -5402,11 +5474,17 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </div>
 
-    <!-- Tab Bar -->
-    <div class="fin-tab-bar" style="margin-top:14px;">
-      <button class="fin-tab active" id="ftab-today" onclick="finTab('today',this)"><i class="fas fa-sun" style="margin-right:5px;font-size:0.7rem;"></i>Today</button>
-      <button class="fin-tab" id="ftab-reports" onclick="finTab('reports',this)"><i class="fas fa-chart-bar" style="margin-right:5px;font-size:0.7rem;"></i>Reports</button>
-      <button class="fin-tab" id="ftab-history" onclick="finTab('history',this)"><i class="fas fa-history" style="margin-right:5px;font-size:0.7rem;"></i>Orders</button>
+    <!-- Finance Section Nav (Hamburger Dropdown) -->
+    <div class="fin-menu-wrap" style="position:relative;">
+      <div class="fin-menu-label" id="fin-active-label"><i class="fas fa-sun"></i> Today</div>
+      <button class="fin-hamburger-btn" id="fin-hamburger" onclick="toggleFinMenu()" title="Finance sections">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="fin-nav-dropdown" id="fin-nav-dropdown">
+        <button class="fin-nav-item active" id="ftab-today" onclick="finTab('today',this)"><i class="fas fa-sun"></i> Today</button>
+        <button class="fin-nav-item" id="ftab-reports" onclick="finTab('reports',this)"><i class="fas fa-chart-bar"></i> Reports</button>
+        <button class="fin-nav-item" id="ftab-history" onclick="finTab('history',this)"><i class="fas fa-history"></i> Orders</button>
+      </div>
     </div>
 
     <!-- ── TODAY TAB ── -->
@@ -5680,14 +5758,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 </div><!-- /screens -->
 
-<!-- ══ BOTTOM NAV ══ -->
-<nav class="bottom-nav">
-  <button class="nav-btn active" id="nb-inventory" onclick="goScreen('inventory',this)"><i class="fas fa-boxes"></i>Stock</button>
-  <button class="nav-btn" id="nb-audit" onclick="goScreen('audit',this)"><i class="fas fa-shield-alt"></i>Audit</button>
-  <button class="nav-btn" id="nb-finance" onclick="goScreen('finance',this)"><i class="fas fa-chart-line"></i>Finance</button>
-  <button class="nav-btn" id="nb-settings" onclick="goScreen('settings',this)"><i class="fas fa-sliders-h"></i>Settings</button>
-</nav>
-
 <!-- ══ MODALS ══ -->
 <div id="qo-modal" class="modal">
   <div class="modal-sheet">
@@ -5757,7 +5827,7 @@ function toggleSettingsDrop(key){
 /* ══ SCREEN NAV ══ */
 function goScreen(name,btn){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-item').forEach(b=>b.classList.remove('active'));
   const scr=document.getElementById('s-'+name);
   scr.classList.add('active');
   scr.style.display='block';
@@ -5767,6 +5837,22 @@ function goScreen(name,btn){
   if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();}
   if(name==='audit'){auditPage=1;fetchAuditLogs();}
 }
+
+function toggleAdminMenu(){
+  const dd=document.getElementById('admin-nav-dropdown');
+  dd.classList.toggle('open');
+}
+function closeAdminMenu(){
+  document.getElementById('admin-nav-dropdown').classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('admin-nav-dropdown');
+  const btn=document.getElementById('admin-hamburger');
+  if(dd&&btn&&!dd.contains(e.target)&&!btn.contains(e.target)){dd.classList.remove('open');}
+  const fdd=document.getElementById('fin-nav-dropdown');
+  const fbtn=document.getElementById('fin-hamburger');
+  if(fdd&&fbtn&&!fdd.contains(e.target)&&!fbtn.contains(e.target)){fdd.classList.remove('open');}
+});
 
 /* ══ HELPERS ══ */
 function escapeHTML(s){const d=document.createElement('div');d.innerText=s;return d.innerHTML;}
@@ -5986,11 +6072,23 @@ async function saveInventory(){
 /* ══ FINANCE TABS ══ */
 function finTab(name,btn){
   document.querySelectorAll('.fin-tabpane').forEach(p=>{p.classList.remove('active');});
-  document.querySelectorAll('.fin-tab').forEach(b=>{b.classList.remove('active');});
+  document.querySelectorAll('.fin-nav-item').forEach(b=>{b.classList.remove('active');});
   document.getElementById('fin-'+name).classList.add('active');
   if(btn)btn.classList.add('active');
+  // Update label in fin-menu-wrap
+  const labels={'today':'<i class="fas fa-sun"></i> Today','reports':'<i class="fas fa-chart-bar"></i> Reports','history':'<i class="fas fa-history"></i> Orders'};
+  const labelEl=document.getElementById('fin-active-label');
+  if(labelEl)labelEl.innerHTML=labels[name]||name;
+  // Close dropdown
+  const fdd=document.getElementById('fin-nav-dropdown');
+  if(fdd)fdd.classList.remove('open');
   if(name==='reports'){loadSalesChart(7,document.getElementById('pp-7'));loadBestSellers('today',document.getElementById('bsp-today'));loadLowStock();}
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
+}
+
+function toggleFinMenu(){
+  const dd=document.getElementById('fin-nav-dropdown');
+  if(dd)dd.classList.toggle('open');
 }
 
 /* ══ FINANCE ══ */
