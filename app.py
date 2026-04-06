@@ -635,47 +635,218 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .logout-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:800;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
 .logout-btn:hover{background:rgba(255,255,255,0.15);}
 
-/* ── SIDE NAV BUTTON ── */
-.hamburger-btn{background:rgba(255,255,255,0.08);border:1.5px solid rgba(200,168,75,0.45);color:var(--gold);width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.05rem;flex-shrink:0;transition:all 0.2s;position:relative;}
-.hamburger-btn:hover{background:rgba(200,168,75,0.15);box-shadow:0 0 14px rgba(200,168,75,0.25);}
-.hamburger-btn.open{background:rgba(200,168,75,0.2);border-color:var(--gold);}
-.hamburger-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:17px;height:17px;padding:0 3px;font-size:0.55rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
-.hamburger-badge.show{display:flex;}
+/* ── SIDEBAR TOGGLE (mobile only) ── */
+.sidebar-toggle{background:rgba(255,255,255,0.08);border:1.5px solid rgba(200,168,75,0.4);color:var(--gold);width:40px;height:40px;border-radius:12px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;transition:all 0.22s;position:relative;}
+.sidebar-toggle:hover{background:rgba(200,168,75,0.18);border-color:rgba(200,168,75,0.7);box-shadow:0 0 18px rgba(200,168,75,0.22);}
+.sidebar-toggle.is-open{background:rgba(200,168,75,0.2);border-color:var(--gold);}
+.sidebar-toggle-badge{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;padding:0 3px;font-size:0.54rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2.5px solid var(--teal-dark);box-shadow:0 2px 8px rgba(211,47,47,0.4);}
+.sidebar-toggle-badge.show{display:flex;animation:badgePop 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes badgePop{from{transform:scale(0);}to{transform:scale(1);}}
 /* ── SIDE NAV BACKDROP ── */
-.nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:8998;}
-.nav-backdrop.open{display:block;animation:backdropIn 0.25s ease;}
+.nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:8998;}
+.nav-backdrop.open{display:block;animation:backdropIn 0.28s ease;}
 @keyframes backdropIn{from{opacity:0;}to{opacity:1;}}
-/* ── EMPLOYEE SIDE DRAWER ── */
-.emp-nav-drawer{position:fixed;top:0;left:0;height:100%;width:280px;background:linear-gradient(170deg,#082E28 0%,#0A3D35 35%,#0D4F43 70%,#0A3830 100%);z-index:8999;transform:translateX(-100%);transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:8px 0 50px rgba(0,0,0,0.45);}
+
+/* ══════════════════════════════════════════
+   PREMIUM EMPLOYEE SIDEBAR
+══════════════════════════════════════════ */
+.emp-nav-drawer{
+  position:fixed;top:0;left:0;height:100%;width:272px;
+  background:linear-gradient(175deg,#061F1B 0%,#082E28 30%,#0A3830 65%,#072620 100%);
+  z-index:8999;
+  transform:translateX(-100%);
+  transition:transform 0.34s cubic-bezier(0.4,0,0.2,1);
+  display:flex;flex-direction:column;
+  box-shadow:12px 0 60px rgba(0,0,0,0.55);
+  overflow:hidden;
+}
+/* Decorative background mesh */
+.emp-nav-drawer::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 160px 120px at 20% 15%,rgba(200,168,75,0.06) 0%,transparent 70%),
+    radial-gradient(ellipse 200px 150px at 85% 80%,rgba(13,122,106,0.12) 0%,transparent 70%),
+    radial-gradient(ellipse 100px 80px at 10% 85%,rgba(200,168,75,0.04) 0%,transparent 70%);
+}
+/* Thin gold left-edge stripe */
+.emp-nav-drawer::after{
+  content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(180deg,transparent 0%,rgba(200,168,75,0.5) 20%,rgba(200,168,75,0.7) 50%,rgba(200,168,75,0.5) 80%,transparent 100%);
+}
 .emp-nav-drawer.open{transform:translateX(0);}
-.drawer-header{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.drawer-logo{display:flex;align-items:center;gap:11px;}
-.drawer-logo-circle{width:44px;height:44px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;background:#fff;flex-shrink:0;}
+
+/* ── Drawer Header ── */
+.drawer-header{
+  padding:0;flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  position:relative;
+}
+.drawer-header-inner{
+  padding:20px 18px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.drawer-logo{display:flex;align-items:center;gap:12px;}
+.drawer-logo-ring{
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(200,168,75,0.4) 0%,rgba(200,168,75,0.1) 100%);
+  padding:2.5px;flex-shrink:0;
+  box-shadow:0 0 18px rgba(200,168,75,0.2),inset 0 0 8px rgba(200,168,75,0.1);
+}
+.drawer-logo-circle{width:100%;height:100%;border-radius:50%;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;}
 .drawer-logo-circle img{width:100%;height:100%;object-fit:cover;}
-.drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;color:#fff;line-height:1.2;}
-.drawer-brand-sub{font-size:0.59rem;color:var(--gold);font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-top:1px;}
-.drawer-close{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;transition:all 0.15s;flex-shrink:0;}
-.drawer-close:hover{background:rgba(255,255,255,0.15);color:#fff;}
-.drawer-section-label{font-size:0.6rem;font-weight:900;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;padding:14px 18px 6px;}
-.drawer-nav{padding:8px 10px 0;flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
-.drawer-nav-item,.emp-nav-item{width:100%;display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;border:1.5px solid transparent;background:transparent;color:rgba(255,255,255,0.55);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.2s;text-decoration:none;}
-.drawer-nav-item:hover:not(.active),.emp-nav-item:hover:not(.active){background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.1);}
-.drawer-nav-item.active,.emp-nav-item.active{background:rgba(200,168,75,0.14);border-color:rgba(200,168,75,0.45);color:#fff;}
-.drawer-nav-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;background:rgba(255,255,255,0.07);transition:all 0.2s;}
-.drawer-nav-item.active .drawer-nav-icon,.emp-nav-item.active .drawer-nav-icon{background:var(--gold);color:#1a0800;}
-.drawer-nav-item:hover:not(.active) .drawer-nav-icon,.emp-nav-item:hover:not(.active) .drawer-nav-icon{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.9);}
+.drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.97rem;font-weight:900;color:#fff;line-height:1.2;letter-spacing:0.2px;}
+.drawer-brand-sub{font-size:0.58rem;color:var(--gold);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:2px;opacity:0.85;}
+.drawer-close{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.5);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:0.8rem;
+  transition:all 0.18s;flex-shrink:0;
+  display:none; /* hidden on desktop; shown on mobile */
+}
+.drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
+
+/* Staff pill in header */
+.drawer-staff-pill{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(200,168,75,0.08);
+  border:1px solid rgba(200,168,75,0.2);
+  border-radius:10px;padding:8px 14px;
+  margin:0 14px 14px;
+}
+.drawer-staff-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 8px rgba(76,175,80,0.7);flex-shrink:0;animation:dotPulse 2.5s infinite;}
+@keyframes dotPulse{0%,100%{opacity:1;box-shadow:0 0 6px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 12px rgba(76,175,80,0.9);}}
+.drawer-staff-info{flex:1;min-width:0;}
+.drawer-staff-role{font-size:0.66rem;font-weight:900;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;}
+.drawer-staff-status{font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.55);margin-top:1px;}
+
+/* ── Nav Section Label ── */
+.drawer-section-label{
+  font-size:0.56rem;font-weight:900;
+  color:rgba(255,255,255,0.25);
+  letter-spacing:2.5px;text-transform:uppercase;
+  padding:12px 20px 6px;
+  display:flex;align-items:center;gap:8px;
+}
+.drawer-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.07);}
+
+/* ── Nav List ── */
+.drawer-nav{padding:6px 12px 0;flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;scrollbar-width:none;}
+.drawer-nav::-webkit-scrollbar{display:none;}
+
+/* ── Nav Items ── */
+.drawer-nav-item,.emp-nav-item{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:11px 12px;border-radius:14px;
+  border:1px solid transparent;
+  background:transparent;
+  color:rgba(255,255,255,0.5);
+  cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;
+  transition:all 0.22s cubic-bezier(0.4,0,0.2,1);
+  text-decoration:none;position:relative;overflow:hidden;
+}
+.drawer-nav-item::before,.emp-nav-item::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:0;border-radius:0 3px 3px 0;
+  background:var(--gold);transition:height 0.22s ease;
+}
+.drawer-nav-item:hover:not(.active),.emp-nav-item:hover:not(.active){
+  background:rgba(255,255,255,0.05);
+  color:rgba(255,255,255,0.88);
+  border-color:rgba(255,255,255,0.07);
+}
+.drawer-nav-item.active,.emp-nav-item.active{
+  background:linear-gradient(135deg,rgba(200,168,75,0.14) 0%,rgba(200,168,75,0.06) 100%);
+  border-color:rgba(200,168,75,0.28);
+  color:#fff;
+  box-shadow:0 4px 20px rgba(200,168,75,0.08),inset 0 1px 0 rgba(200,168,75,0.1);
+}
+.drawer-nav-item.active::before,.emp-nav-item.active::before{height:60%;}
+.drawer-nav-item:hover:not(.active)::before,.emp-nav-item:hover:not(.active)::before{height:30%;opacity:0.5;}
+
+/* Icon box */
+.drawer-nav-icon{
+  width:42px;height:42px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.05rem;flex-shrink:0;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.07);
+  transition:all 0.22s;color:rgba(255,255,255,0.5);
+}
+.drawer-nav-item.active .drawer-nav-icon,.emp-nav-item.active .drawer-nav-icon{
+  background:linear-gradient(135deg,var(--gold) 0%,#e8c060 100%);
+  color:#1a0a00;border-color:transparent;
+  box-shadow:0 6px 18px rgba(200,168,75,0.35);
+}
+.drawer-nav-item:hover:not(.active) .drawer-nav-icon,.emp-nav-item:hover:not(.active) .drawer-nav-icon{
+  background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);
+  border-color:rgba(255,255,255,0.12);
+}
+
+/* Text block */
 .drawer-nav-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
-.drawer-nav-label{font-size:0.88rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
-.drawer-nav-desc{font-size:0.67rem;font-weight:600;color:rgba(255,255,255,0.35);margin-top:3px;}
-.drawer-nav-item.active .drawer-nav-desc,.emp-nav-item.active .drawer-nav-desc{color:rgba(255,255,255,0.55);}
-.drawer-nav-badge,.nav-item-badge{background:var(--red);color:#fff;border-radius:20px;min-width:20px;height:20px;padding:0 5px;font-size:0.62rem;font-weight:900;display:none;align-items:center;justify-content:center;flex-shrink:0;}
+.drawer-nav-label{font-size:0.87rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
+.drawer-nav-desc{font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.3);margin-top:3px;line-height:1.3;}
+.drawer-nav-item.active .drawer-nav-desc,.emp-nav-item.active .drawer-nav-desc{color:rgba(255,255,255,0.5);}
+.drawer-nav-item:hover:not(.active) .drawer-nav-desc,.emp-nav-item:hover:not(.active) .drawer-nav-desc{color:rgba(255,255,255,0.4);}
+/* Nav badges */
+.drawer-nav-badge,.nav-item-badge{background:var(--red);color:#fff;border-radius:20px;min-width:20px;height:20px;padding:0 5px;font-size:0.6rem;font-weight:900;display:none;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(211,47,47,0.4);}
 .drawer-nav-badge.show,.nav-item-badge.show{display:flex;}
-.drawer-divider{height:1px;background:rgba(255,255,255,0.07);margin:6px 14px;}
-.drawer-footer{padding:12px 10px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
-.drawer-logout{width:100%;display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.22);color:rgba(255,160,160,0.85);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.83rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
-.drawer-logout:hover{background:rgba(211,47,47,0.22);color:#fff;border-color:rgba(211,47,47,0.45);}
+
+/* Divider */
+.drawer-divider{height:1px;background:rgba(255,255,255,0.06);margin:8px 16px;}
+
+/* ── Drawer Footer ── */
+.drawer-footer{padding:14px 12px 16px;border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+.drawer-time-chip{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:10px;padding:8px 12px;margin-bottom:10px;
+}
+.drawer-time-chip i{color:var(--gold);font-size:0.75rem;opacity:0.7;}
+.drawer-time-val{font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:0.3px;}
+.drawer-logout{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:11px 15px;border-radius:12px;
+  background:rgba(211,47,47,0.08);
+  border:1px solid rgba(211,47,47,0.2);
+  color:rgba(255,150,150,0.8);
+  cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.83rem;font-weight:800;
+  text-decoration:none;transition:all 0.2s;
+}
+.drawer-logout:hover{background:rgba(211,47,47,0.2);color:#fff;border-color:rgba(211,47,47,0.5);box-shadow:0 4px 16px rgba(211,47,47,0.15);}
+
 .nav-badge{position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
 .nav-icon-wrap{position:relative;display:inline-block;}
+
+/* ── LAYOUT: Desktop permanent sidebar ── */
+@media(min-width:768px){
+  body{flex-direction:row;}
+  .topbar{
+    position:fixed;top:0;left:272px;right:0;z-index:200;
+    border-bottom:none;
+    border-left:none;
+  }
+  .emp-nav-drawer{
+    transform:translateX(0) !important;
+    position:fixed;top:0;left:0;height:100vh;
+    box-shadow:none;
+    border-right:1px solid rgba(255,255,255,0.06);
+  }
+  .emp-nav-drawer::after{display:none;}
+  .sidebar-toggle{display:none !important;}
+  .drawer-close{display:none !important;}
+  .nav-backdrop{display:none !important;}
+  .screens{margin-left:272px;margin-top:var(--topbar-h);}
+}
+@media(max-width:767px){
+  .sidebar-toggle{display:flex;}
+  .drawer-close{display:flex !important;}
+  .topbar{position:relative;}
+  .screens{margin-top:0;}
+}
 
 .screens{flex:1;overflow:hidden;position:relative;}
 .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;}
@@ -977,9 +1148,9 @@ function playEmpPermBeep(){
       <i class="fas fa-bell"></i>
       <span class="bell-count" id="bell-count"></span>
     </button>
-    <button class="hamburger-btn" id="emp-hamburger" onclick="toggleEmpMenu()" title="Open navigation" aria-label="Open menu">
-      <i class="fas fa-bars"></i>
-      <span class="hamburger-badge" id="hamburger-badge"></span>
+    <button class="sidebar-toggle" id="emp-hamburger" onclick="toggleEmpMenu()" title="Open navigation" aria-label="Open menu">
+      <i class="fas fa-grip-lines"></i>
+      <span class="sidebar-toggle-badge" id="hamburger-badge"></span>
     </button>
   </div>
 </header>
@@ -987,21 +1158,39 @@ function playEmpPermBeep(){
 <!-- SIDE NAV BACKDROP -->
 <div class="nav-backdrop" id="nav-backdrop" onclick="closeEmpMenu()"></div>
 
-<!-- EMPLOYEE SIDE DRAWER -->
-<nav class="emp-nav-drawer" id="emp-nav-dropdown" aria-label="Navigation">
+<!-- PREMIUM EMPLOYEE SIDEBAR -->
+<nav class="emp-nav-drawer" id="emp-nav-dropdown" aria-label="Employee Navigation">
+
+  <!-- Header: Branding -->
   <div class="drawer-header">
-    <div class="drawer-logo">
-      <div class="drawer-logo-circle">
-        <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+    <div class="drawer-header-inner">
+      <div class="drawer-logo">
+        <div class="drawer-logo-ring">
+          <div class="drawer-logo-circle">
+            <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+          </div>
+        </div>
+        <div>
+          <div class="drawer-brand-name">9599 Tea &amp; Coffee</div>
+          <div class="drawer-brand-sub">Employee Station</div>
+        </div>
       </div>
-      <div>
-        <div class="drawer-brand-name">9599 Tea &amp; Coffee</div>
-        <div class="drawer-brand-sub">Employee Station</div>
+      <button class="drawer-close" onclick="closeEmpMenu()" aria-label="Close menu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Staff Status Pill -->
+    <div class="drawer-staff-pill">
+      <div class="drawer-staff-dot"></div>
+      <div class="drawer-staff-info">
+        <div class="drawer-staff-role">Staff</div>
+        <div class="drawer-staff-status">Active &amp; on duty</div>
       </div>
     </div>
-    <button class="drawer-close" onclick="closeEmpMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
   </div>
 
+  <!-- Navigation -->
   <div class="drawer-section-label">Navigation</div>
 
   <div class="drawer-nav">
@@ -1034,9 +1223,17 @@ function playEmpPermBeep(){
     </button>
   </div>
 
+  <!-- Footer -->
   <div class="drawer-footer">
-    <a href="/employee/logout" class="drawer-logout"><i class="fas fa-sign-out-alt"></i> Logout of Station</a>
+    <div class="drawer-time-chip">
+      <i class="fas fa-clock"></i>
+      <span class="drawer-time-val" id="sidebar-clock">--:-- --</span>
+    </div>
+    <a href="/employee/logout" class="drawer-logout">
+      <i class="fas fa-sign-out-alt"></i> Logout of Station
+    </a>
   </div>
+
 </nav>
 
 <!-- NOTIFICATION PANEL -->
@@ -1321,7 +1518,7 @@ function escapeHTML(s){const d=document.createElement('div');d.appendChild(docum
 function onImgErr(el){el.style.display='none';if(el.nextElementSibling)el.nextElementSibling.style.display='flex';}
 function showToast(msg,type='info'){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=msg;c.appendChild(t);setTimeout(()=>t.remove(),3200);}
 
-(function tickClock(){const el=document.getElementById('clock');if(el){const now=new Date();const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();const h12=h%12||12;const ap=h<12?'AM':'PM';el.textContent=`${h12}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ap}`;}setTimeout(tickClock,1000);})();
+(function tickClock(){const el=document.getElementById('clock');const sl=document.getElementById('sidebar-clock');if(el){const now=new Date();const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();const h12=h%12||12;const ap=h<12?'AM':'PM';const t=`${h12}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ap}`;el.textContent=t;if(sl)sl.textContent=t;}setTimeout(tickClock,1000);})();
 
 function goScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -1339,14 +1536,14 @@ function toggleEmpMenu(){
   const backdrop=document.getElementById('nav-backdrop');
   const btn=document.getElementById('emp-hamburger');
   const isOpen=dd.classList.contains('open');
-  if(isOpen){dd.classList.remove('open');backdrop.classList.remove('open');btn.classList.remove('open');}
-  else{dd.classList.add('open');backdrop.classList.add('open');btn.classList.add('open');}
+  if(isOpen){dd.classList.remove('open');backdrop.classList.remove('open');if(btn)btn.classList.remove('is-open');}
+  else{dd.classList.add('open');backdrop.classList.add('open');if(btn)btn.classList.add('is-open');}
 }
 function closeEmpMenu(){
   document.getElementById('emp-nav-dropdown').classList.remove('open');
   document.getElementById('nav-backdrop').classList.remove('open');
   const btn=document.getElementById('emp-hamburger');
-  if(btn)btn.classList.remove('open');
+  if(btn)btn.classList.remove('is-open');
 }
 // Backdrop handles outside-click via its own onclick
 
@@ -1766,10 +1963,12 @@ async function fetchPermReqs(){
   const tbody=document.getElementById('perm-tbody');
   try{
     const r=await fetch('/api/permission_requests');
-    if(!r.ok){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Could not load requests</td></tr>';return;}
-    const data=await r.json();
+    if(r.status===403){location.href='/employee';return;}
+    if(!r.ok){tbody.innerHTML=`<tr class="empty-row"><td colspan="5">Could not load requests (${r.status})</td></tr>`;return;}
+    let data;
+    try{data=await r.json();}
+    catch(jsonErr){console.error('Permission API non-JSON:',jsonErr);tbody.innerHTML='<tr class="empty-row"><td colspan="5">Server error — try refreshing</td></tr>';return;}
     if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';_bellPermItems=[];updateBell();return;}
-    // Sound alert for new codes
     data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpPermBeep();knownPermCodes.add(p.code);}});
     _bellPermItems=data;
     const badge=document.getElementById('nav-badge');
@@ -1785,7 +1984,7 @@ async function fetchPermReqs(){
       <td><button class="tbl-btn grant" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')"><i class="fas fa-check-circle"></i> Grant</button></td>
     </tr>`).join('');
     updateBell();
-  }catch(e){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Network error</td></tr>';}
+  }catch(e){console.error('fetchPermReqs error:',e);tbody.innerHTML='<tr class="empty-row"><td colspan="5">Connection failed — check your network</td></tr>';}
 }
 
 async function grantPerm(id,name,code){
