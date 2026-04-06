@@ -5832,18 +5832,27 @@ function toggleSettingsDrop(key){
   body.classList.toggle('open',!isOpen);
   chev.classList.toggle('open',!isOpen);
 }
+function openAllSettingsDrops(){
+  ['slg','sched','menu','backup'].forEach(function(key){
+    const body=document.getElementById('body-'+key);
+    const chev=document.getElementById('chev-'+key);
+    if(body)body.classList.add('open');
+    if(chev)chev.classList.add('open');
+  });
+}
 
 /* ══ SCREEN NAV ══ */
 function goScreen(name,btn){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
   document.querySelectorAll('.admin-nav-item').forEach(b=>b.classList.remove('active'));
   const scr=document.getElementById('s-'+name);
+  if(!scr){console.warn('goScreen: element not found → s-'+name);return;}
   scr.classList.add('active');
   scr.style.display='block';
   if(btn)btn.classList.add('active');
   if(name==='inventory')fetchInventory();
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
-  if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();}
+  if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();openAllSettingsDrops();}
   if(name==='audit'){auditPage=1;fetchAuditLogs();}
 }
 
@@ -6566,9 +6575,6 @@ setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById(
 // Initial data load on page open
 fetchPermReqs();
 fetchInventory();
-
-// Activate the default screen (inventory) on load
-goScreen('inventory', document.getElementById('nb-inventory'));
 </script>
 </body>
 </html>
