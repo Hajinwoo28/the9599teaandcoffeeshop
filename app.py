@@ -5389,58 +5389,92 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ── BOTTOM NAV (hidden — replaced by drawer) ── */
 .bottom-nav{display:none;}
 
-/* ── ADMIN NAV BUTTON ── */
-.admin-hamburger-btn{background:rgba(255,255,255,0.09);border:1.5px solid rgba(196,168,130,0.45);color:var(--tan);width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.95rem;flex-shrink:0;transition:all 0.2s;position:relative;}
+/* ── ADMIN NAV BUTTON (mobile only) ── */
+.admin-hamburger-btn{background:rgba(255,255,255,0.09);border:1.5px solid rgba(196,168,130,0.45);color:var(--tan);width:38px;height:38px;border-radius:11px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:0.95rem;flex-shrink:0;transition:all 0.2s;position:relative;}
 .admin-hamburger-btn:hover{background:rgba(196,168,130,0.2);box-shadow:0 0 14px rgba(196,168,130,0.2);}
 .admin-hamburger-btn.open{background:rgba(196,168,130,0.22);border-color:var(--tan);}
 
-/* ── ADMIN NAV BACKDROP ── */
+/* ── ADMIN NAV BACKDROP (mobile only) ── */
 .admin-nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.48);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:8998;}
 .admin-nav-backdrop.open{display:block;animation:backdropIn 0.25s ease;}
+@keyframes backdropIn{from{opacity:0;}to{opacity:1;}}
 
 /* ── ADMIN SIDE DRAWER ── */
-.admin-nav-drawer{position:fixed;top:0;left:0;height:100%;width:288px;background:linear-gradient(170deg,#261408 0%,#3D2410 30%,#4A2C14 65%,#321A0A 100%);z-index:8999;transform:translateX(-100%);transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:8px 0 50px rgba(0,0,0,0.5);}
+.admin-nav-drawer{position:fixed;top:0;left:0;height:100%;width:272px;background:linear-gradient(170deg,#261408 0%,#3D2410 30%,#4A2C14 65%,#321A0A 100%);z-index:8999;transform:translateX(-100%);transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:8px 0 50px rgba(0,0,0,0.5);overflow:hidden;}
+/* Decorative radial glows */
+.admin-nav-drawer::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 160px 120px at 20% 15%,rgba(196,168,130,0.07) 0%,transparent 70%),radial-gradient(ellipse 200px 150px at 85% 80%,rgba(122,79,46,0.1) 0%,transparent 70%);}
+/* Thin tan left-edge stripe */
+.admin-nav-drawer::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent 0%,rgba(196,168,130,0.25) 20%,rgba(196,168,130,0.4) 50%,rgba(196,168,130,0.25) 80%,transparent 100%);}
 .admin-nav-drawer.open{transform:translateX(0);}
-.admin-drawer-header{padding:18px 16px 14px;border-bottom:1px solid rgba(196,168,130,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.admin-drawer-logo{display:flex;align-items:center;gap:12px;}
-.admin-drawer-logo-circle{width:44px;height:44px;border-radius:50%;border:2px solid var(--tan);overflow:hidden;background:var(--cream);flex-shrink:0;}
-.admin-drawer-logo-circle img{width:100%;height:100%;object-fit:cover;}
-.admin-drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;color:var(--cream);line-height:1.2;}
-.admin-drawer-brand-sub{font-size:0.59rem;color:var(--tan);font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-top:1px;}
-.admin-drawer-close{width:34px;height:34px;border-radius:50%;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.18);color:rgba(196,168,130,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;transition:all 0.15s;flex-shrink:0;}
-.admin-drawer-close:hover{background:rgba(196,168,130,0.2);color:var(--cream);}
-.admin-drawer-section-label{font-size:0.6rem;font-weight:900;color:rgba(196,168,130,0.35);letter-spacing:2px;text-transform:uppercase;padding:14px 18px 6px;}
-.admin-drawer-nav{padding:8px 10px 0;flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
-.admin-nav-item{width:100%;display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;border:1.5px solid transparent;background:transparent;color:rgba(196,168,130,0.6);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.2s;}
-.admin-nav-item:hover:not(.active){background:rgba(196,168,130,0.08);color:var(--cream);border-color:rgba(196,168,130,0.15);}
-.admin-nav-item.active{background:rgba(196,168,130,0.13);border-color:rgba(196,168,130,0.4);color:var(--cream);}
-.admin-nav-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;background:rgba(196,168,130,0.07);transition:all 0.2s;}
-.admin-nav-item.active .admin-nav-icon{background:var(--tan);color:var(--brown-dark);}
-.admin-nav-item:hover:not(.active) .admin-nav-icon{background:rgba(196,168,130,0.14);color:var(--cream);}
-.admin-nav-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
-.admin-nav-label{font-size:0.88rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
-.admin-nav-desc{font-size:0.67rem;font-weight:600;color:rgba(196,168,130,0.38);margin-top:3px;}
-.admin-nav-item.active .admin-nav-desc{color:rgba(196,168,130,0.6);}
-.admin-drawer-divider{height:1px;background:rgba(196,168,130,0.1);margin:6px 14px;}
-.admin-drawer-footer{padding:12px 10px;border-top:1px solid rgba(196,168,130,0.1);flex-shrink:0;display:flex;flex-direction:column;gap:6px;}
-.admin-drawer-action{width:100%;display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.75);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
-.admin-drawer-action:hover{background:rgba(196,168,130,0.15);color:var(--cream);}
-.admin-drawer-action.danger{background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.22);color:rgba(255,150,150,0.85);}
-.admin-drawer-action.danger:hover{background:rgba(192,57,43,0.22);color:#fff;border-color:rgba(192,57,43,0.45);}
 
-/* ── FINANCE SECTION NAV (unchanged) ── */
-.fin-menu-wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 4px;gap:10px;}
-.fin-menu-label{font-size:0.78rem;font-weight:900;color:var(--brown-dark);display:flex;align-items:center;gap:7px;}
-.fin-hamburger-btn{background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown);width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;flex-shrink:0;transition:background 0.15s;position:relative;}
-.fin-hamburger-btn:hover{background:var(--cream);}
-.fin-nav-dropdown{display:none;position:absolute;right:14px;top:calc(100% + 2px);width:200px;background:var(--white);border:1.5px solid var(--cream-dark);border-radius:var(--radius);box-shadow:0 8px 28px rgba(61,36,16,0.18);z-index:500;overflow:hidden;animation:finDrop 0.18s ease;}
-.fin-nav-dropdown.open{display:block;}
-@keyframes finDrop{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
-.fin-nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:13px 15px;border:none;background:transparent;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.81rem;font-weight:800;transition:background 0.15s;border-bottom:1px solid var(--cream-dark);}
-.fin-nav-item:last-child{border-bottom:none;}
-.fin-nav-item i{color:var(--brown);font-size:0.88rem;width:16px;text-align:center;}
-.fin-nav-item.active{background:var(--cream);color:var(--brown-dark);}
-.fin-nav-item:hover:not(.active){background:var(--cream);}
+/* ── DESKTOP PERMANENT SIDEBAR LAYOUT ── */
+@media(min-width:768px){
+  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:1px solid rgba(196,168,130,0.1);}
+  .admin-nav-drawer::after{display:none;}
+  .topbar{position:fixed;top:0;left:272px;right:0;z-index:200;}
+  .screens{position:fixed;top:var(--topbar-h);left:272px;right:0;bottom:0;overflow:hidden;}
+  .admin-hamburger-btn{display:none !important;}
+  .admin-drawer-close{display:none !important;}
+  .admin-nav-backdrop{display:none !important;}
+}
+@media(max-width:767px){
+  .admin-hamburger-btn{display:flex;}
+  .admin-drawer-close{display:flex !important;}
+  .topbar{position:relative;}
+}
+.admin-drawer-header{padding:20px 16px 14px;border-bottom:1px solid rgba(196,168,130,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;}
+.admin-drawer-logo{display:flex;align-items:center;gap:12px;}
+.admin-drawer-logo-ring{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,rgba(196,168,130,0.4) 0%,rgba(196,168,130,0.1) 100%);padding:2.5px;flex-shrink:0;box-shadow:0 0 18px rgba(196,168,130,0.2),inset 0 0 8px rgba(196,168,130,0.1);}
+.admin-drawer-logo-circle{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--cream);display:flex;align-items:center;justify-content:center;}
+.admin-drawer-logo-circle img{width:100%;height:100%;object-fit:cover;}
+.admin-drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.97rem;font-weight:900;color:var(--cream);line-height:1.2;letter-spacing:0.2px;}
+.admin-drawer-brand-sub{font-size:0.58rem;color:var(--tan);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:2px;opacity:0.85;}
+.admin-drawer-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.8rem;transition:all 0.18s;flex-shrink:0;}
+.admin-drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
+
+/* Admin pill in header */
+.admin-drawer-role-pill{display:flex;align-items:center;gap:8px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:10px;padding:8px 14px;margin:0 14px 14px;}
+.admin-drawer-role-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 8px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
+@keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 6px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 12px rgba(76,175,80,0.9);}}
+.admin-drawer-role-info{flex:1;min-width:0;}
+.admin-drawer-role-title{font-size:0.66rem;font-weight:900;color:var(--tan);letter-spacing:1.5px;text-transform:uppercase;}
+.admin-drawer-role-sub{font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:1px;}
+
+.admin-drawer-section-label{font-size:0.56rem;font-weight:900;color:rgba(196,168,130,0.3);letter-spacing:2.5px;text-transform:uppercase;padding:12px 20px 6px;display:flex;align-items:center;gap:8px;}
+.admin-drawer-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06);}
+.admin-drawer-nav{padding:6px 12px 0;flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;scrollbar-width:none;}
+.admin-drawer-nav::-webkit-scrollbar{display:none;}
+.admin-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;border:1px solid transparent;background:transparent;color:rgba(196,168,130,0.55);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.22s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;}
+.admin-nav-item::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;border-radius:0 3px 3px 0;background:var(--tan);transition:height 0.22s ease;}
+.admin-nav-item:hover:not(.active){background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.88);border-color:rgba(255,255,255,0.07);}
+.admin-nav-item.active{background:linear-gradient(135deg,rgba(196,168,130,0.14) 0%,rgba(196,168,130,0.06) 100%);border-color:rgba(196,168,130,0.3);color:#fff;box-shadow:0 4px 20px rgba(196,168,130,0.08),inset 0 1px 0 rgba(196,168,130,0.1);}
+.admin-nav-item.active::before{height:60%;}
+.admin-nav-item:hover:not(.active)::before{height:30%;opacity:0.5;}
+.admin-nav-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.07);transition:all 0.22s;color:rgba(196,168,130,0.55);}
+.admin-nav-item.active .admin-nav-icon{background:linear-gradient(135deg,var(--tan) 0%,#d4b060 100%);color:var(--brown-dark);border-color:transparent;box-shadow:0 6px 18px rgba(196,168,130,0.35);}
+.admin-nav-item:hover:not(.active) .admin-nav-icon{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);border-color:rgba(255,255,255,0.12);}
+.admin-nav-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
+.admin-nav-label{font-size:0.87rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
+.admin-nav-desc{font-size:0.65rem;font-weight:600;color:rgba(196,168,130,0.32);margin-top:3px;line-height:1.3;}
+.admin-nav-item.active .admin-nav-desc{color:rgba(196,168,130,0.55);}
+.admin-nav-item:hover:not(.active) .admin-nav-desc{color:rgba(255,255,255,0.35);}
+.admin-drawer-divider{height:1px;background:rgba(196,168,130,0.08);margin:8px 16px;}
+.admin-drawer-footer{padding:12px 12px 16px;border-top:1px solid rgba(196,168,130,0.08);flex-shrink:0;display:flex;flex-direction:column;gap:6px;}
+/* Time chip in footer */
+.admin-drawer-time-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:8px 12px;margin-bottom:4px;}
+.admin-drawer-time-chip i{color:var(--tan);font-size:0.75rem;opacity:0.7;}
+.admin-drawer-time-val{font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:0.3px;}
+.admin-drawer-action{width:100%;display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
+.admin-drawer-action:hover{background:rgba(196,168,130,0.15);color:var(--cream);}
+.admin-drawer-action.danger{background:rgba(192,57,43,0.08);border-color:rgba(192,57,43,0.2);color:rgba(255,150,150,0.8);}
+.admin-drawer-action.danger:hover{background:rgba(192,57,43,0.2);color:#fff;border-color:rgba(192,57,43,0.45);}
+
+/* ── FINANCE SECTION NAV (Tab Pills) ── */
+.fin-tab-nav{display:flex;gap:6px;padding:14px 14px 2px;background:var(--white);border-bottom:1px solid var(--cream-dark);}
+.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+.fin-tab-pill i{font-size:0.85rem;}
+.fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
+.fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 3px 12px rgba(61,36,16,0.25);}
 #s-finance{position:relative;}
 #s-finance.active{display:flex;flex-direction:column;overflow:hidden;}
 .fin-sticky-top{flex-shrink:0;}
@@ -5455,6 +5489,55 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .settings-drop-chevron.open{transform:rotate(180deg);}
 .settings-drop-body{display:none;padding:0 18px 18px;border-top:1px solid var(--cream-dark);background:var(--cream);}
 .settings-drop-body.open{display:block;}
+
+/* ── IMPROVED INVENTORY ── */
+.inv-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:20px 14px 0;}
+@media(max-width:600px){.inv-stats-row{grid-template-columns:repeat(2,1fr);}}
+.inv-stat-chip{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px 12px;text-align:center;box-shadow:0 2px 8px rgba(61,36,16,0.08);}
+.inv-stat-chip .isc-num{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;line-height:1;}
+.inv-stat-chip .isc-lbl{font-size:0.62rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-top:3px;}
+.inv-stat-chip.total .isc-num{color:var(--brown);}
+.inv-stat-chip.ok .isc-num{color:var(--green);}
+.inv-stat-chip.low .isc-num{color:var(--orange);}
+.inv-stat-chip.critical .isc-num{color:var(--red);}
+.inv-search-row{display:flex;gap:8px;padding:14px 14px 0;align-items:center;flex-wrap:wrap;}
+.inv-search-inp{flex:1;min-width:140px;padding:9px 13px 9px 36px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;outline:none;color:var(--text);background:var(--white);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238D6E55' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;transition:border-color 0.2s;}
+.inv-search-inp:focus{border-color:var(--brown);}
+.inv-stock-bar-wrap{width:100%;background:var(--cream-dark);border-radius:4px;height:6px;margin-top:5px;overflow:hidden;}
+.inv-stock-bar{height:100%;border-radius:4px;transition:width 0.5s ease;}
+.inv-stock-bar.ok{background:linear-gradient(90deg,var(--green),#52c77a);}
+.inv-stock-bar.low{background:linear-gradient(90deg,var(--orange),#ffa040);}
+.inv-stock-bar.critical{background:linear-gradient(90deg,var(--red),#e05555);}
+.inv-inline-edit{width:90px;padding:5px 8px;border:1.5px solid var(--cream-dark);border-radius:8px;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;color:var(--text);background:var(--white);outline:none;text-align:right;}
+.inv-inline-edit:focus{border-color:var(--brown);background:#fff;}
+
+/* ── IMPROVED AUDIT LOG ── */
+.audit-toolbar{display:flex;gap:8px;padding:14px 14px 0;flex-wrap:wrap;align-items:center;}
+.audit-search-inp{flex:1;min-width:160px;padding:9px 13px 9px 36px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;outline:none;color:var(--text);background:var(--white);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238D6E55' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;transition:border-color 0.2s;}
+.audit-search-inp:focus{border-color:var(--brown);}
+.audit-filter-sel{padding:9px 12px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:700;color:var(--text);background:var(--white);outline:none;cursor:pointer;}
+.audit-entry{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-bottom:1px solid var(--cream-dark);transition:background 0.12s;position:relative;}
+.audit-entry:last-child{border-bottom:none;}
+.audit-entry:hover{background:rgba(61,36,16,0.03);}
+.audit-icon-wrap{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.88rem;flex-shrink:0;margin-top:1px;}
+.audit-icon-wrap.order{background:rgba(25,118,210,0.1);color:#1976D2;border:1px solid rgba(25,118,210,0.15);}
+.audit-icon-wrap.stock{background:rgba(245,124,0,0.1);color:var(--orange);border:1px solid rgba(245,124,0,0.15);}
+.audit-icon-wrap.menu{background:rgba(39,174,96,0.1);color:var(--green);border:1px solid rgba(39,174,96,0.15);}
+.audit-icon-wrap.settings{background:rgba(123,79,46,0.1);color:var(--brown);border:1px solid rgba(123,79,46,0.15);}
+.audit-icon-wrap.auth{background:rgba(192,57,43,0.1);color:var(--red);border:1px solid rgba(192,57,43,0.15);}
+.audit-icon-wrap.finance{background:rgba(39,174,96,0.1);color:var(--green);border:1px solid rgba(39,174,96,0.15);}
+.audit-icon-wrap.other{background:rgba(61,36,16,0.08);color:var(--brown-light);border:1px solid rgba(61,36,16,0.12);}
+.audit-body{flex:1;min-width:0;}
+.audit-action{font-size:0.83rem;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:2px;}
+.audit-details{font-size:0.73rem;color:var(--muted);font-weight:600;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.audit-time{font-size:0.68rem;font-weight:700;color:rgba(141,110,85,0.6);white-space:nowrap;flex-shrink:0;margin-top:2px;}
+
+/* ── IMPROVED SETTINGS ── */
+.settings-section-group{background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 12px rgba(61,36,16,0.06);}
+.settings-group-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--cream-dark);background:var(--cream);}
+.settings-group-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;}
+.settings-group-title{font-size:0.82rem;font-weight:900;color:var(--text);text-transform:uppercase;letter-spacing:0.8px;}
+.settings-group-sub{font-size:0.68rem;font-weight:600;color:var(--muted);margin-top:1px;}
 
 /* ── STAT CARDS ── */
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:28px 14px 14px;}
@@ -5694,8 +5777,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 <nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
   <div class="admin-drawer-header">
     <div class="admin-drawer-logo">
-      <div class="admin-drawer-logo-circle">
-        <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+      <div class="admin-drawer-logo-ring">
+        <div class="admin-drawer-logo-circle">
+          <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+        </div>
       </div>
       <div>
         <div class="admin-drawer-brand-name">9599 Tea &amp; Coffee</div>
@@ -5703,6 +5788,14 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </div>
     <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="admin-drawer-role-pill">
+    <div class="admin-drawer-role-dot"></div>
+    <div class="admin-drawer-role-info">
+      <div class="admin-drawer-role-title">Administrator</div>
+      <div class="admin-drawer-role-sub">Full access granted</div>
+    </div>
   </div>
 
   <div class="admin-drawer-section-label">Manage</div>
@@ -5744,6 +5837,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   </div>
 
   <div class="admin-drawer-footer">
+    <div class="admin-drawer-time-chip">
+      <i class="fas fa-clock"></i>
+      <span class="admin-drawer-time-val" id="sidebar-clock">--:-- --</span>
+    </div>
     <button class="admin-drawer-action" onclick="closeAdminMenu();location.reload()">
       <i class="fas fa-sync-alt"></i> Reload Panel
     </button>
@@ -5764,8 +5861,35 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     </div>
     <div class="screen-inner">
 
+      <!-- Inventory Stats -->
+      <div class="inv-stats-row">
+        <div class="inv-stat-chip total">
+          <div class="isc-num" id="inv-stat-total">—</div>
+          <div class="isc-lbl">Total Items</div>
+        </div>
+        <div class="inv-stat-chip ok">
+          <div class="isc-num" id="inv-stat-ok">—</div>
+          <div class="isc-lbl">In Stock</div>
+        </div>
+        <div class="inv-stat-chip low">
+          <div class="isc-num" id="inv-stat-low">—</div>
+          <div class="isc-lbl">Low Stock</div>
+        </div>
+        <div class="inv-stat-chip critical">
+          <div class="isc-num" id="inv-stat-critical">—</div>
+          <div class="isc-lbl">Out of Stock</div>
+        </div>
+      </div>
+
+      <!-- Search + Category Tabs -->
+      <div class="inv-search-row">
+        <input type="text" class="inv-search-inp" id="inv-search" placeholder="Search ingredients…" oninput="renderInventoryTable()">
+        <button class="btn-secondary" onclick="fetchInventory()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn-primary" style="margin-bottom:0;width:auto;padding:9px 14px;" onclick="saveInventory()"><i class="fas fa-save"></i> Save</button>
+      </div>
+
       <!-- Category Tabs -->
-      <div style="padding:0 14px;margin-bottom:14px;">
+      <div style="padding:12px 14px 0;">
         <div class="inv-tab-bar" id="inv-tab-bar">
           <button class="inv-tab active" onclick="invTab('All',this)">All</button>
           <button class="inv-tab" onclick="invTab('Teas &amp; Bases',this)">🍵 Teas</button>
@@ -5778,26 +5902,22 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
 
       <!-- Stock Table -->
-      <div class="section card">
+      <div class="section card" style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <span class="card-title" style="margin:0;" id="inv-tab-label">All Items</span>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <span id="inv-count" style="font-size:0.72rem;font-weight:700;color:var(--muted);"></span>
-            <button class="btn-secondary" onclick="fetchInventory()"><i class="fas fa-sync-alt"></i> Refresh</button>
-          </div>
+          <span id="inv-count" style="font-size:0.72rem;font-weight:700;color:var(--muted);background:var(--cream);padding:3px 10px;border-radius:20px;border:1px solid var(--cream-dark);"></span>
         </div>
         <div class="tbl-wrap">
           <table class="kds-table" style="min-width:300px;">
-            <thead><tr><th>Ingredient</th><th>Unit</th><th>Stock</th><th>Status</th></tr></thead>
+            <thead><tr><th>Ingredient</th><th>Category</th><th>Stock</th><th>Status</th></tr></thead>
             <tbody id="inv-tbody"></tbody>
           </table>
         </div>
-        <button class="btn-primary" style="margin-top:14px;" onclick="saveInventory()"><i class="fas fa-save"></i> Save Changes</button>
       </div>
 
       <!-- Low Stock Summary -->
       <div class="section card" id="inv-low-stock-card" style="display:none;">
-        <div class="card-title">⚠️ Low / Out of Stock in this Category</div>
+        <div class="card-title" style="color:var(--orange);">⚠️ Low / Out of Stock</div>
         <div id="inv-low-list"></div>
       </div>
 
@@ -5826,17 +5946,17 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </div>
       </div>
 
-      <!-- Finance Section Nav (Hamburger Dropdown) -->
-      <div class="fin-menu-wrap" style="position:relative;">
-        <div class="fin-menu-label" id="fin-active-label"><i class="fas fa-sun"></i> Today</div>
-        <button class="fin-hamburger-btn" id="fin-hamburger" onclick="toggleFinMenu()" title="Finance sections">
-          <i class="fas fa-bars"></i>
+      <!-- Finance Tab Pills (replaces hamburger dropdown) -->
+      <div class="fin-tab-nav">
+        <button class="fin-tab-pill active" id="ftab-today" onclick="finTab('today',this)">
+          <i class="fas fa-sun"></i> Today
         </button>
-        <div class="fin-nav-dropdown" id="fin-nav-dropdown">
-          <button class="fin-nav-item active" id="ftab-today" onclick="finTab('today',this)"><i class="fas fa-sun"></i> Today</button>
-          <button class="fin-nav-item" id="ftab-reports" onclick="finTab('reports',this)"><i class="fas fa-chart-bar"></i> Reports</button>
-          <button class="fin-nav-item" id="ftab-history" onclick="finTab('history',this)"><i class="fas fa-history"></i> Orders</button>
-        </div>
+        <button class="fin-tab-pill" id="ftab-reports" onclick="finTab('reports',this)">
+          <i class="fas fa-chart-bar"></i> Reports
+        </button>
+        <button class="fin-tab-pill" id="ftab-history" onclick="finTab('history',this)">
+          <i class="fas fa-history"></i> Orders
+        </button>
       </div>
     </div><!-- end fin-sticky-top -->
 
@@ -5952,129 +6072,146 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     </div>
     <div class="screen-inner">
 
-      <!-- Settings Dropdown List -->
-      <div class="section" style="margin-bottom:0;">
-        <div style="background:var(--white);border:1px solid var(--cream-dark);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);">
+      <!-- Settings Sections -->
+      <div class="section" style="margin-bottom:0;display:flex;flex-direction:column;gap:12px;">
 
-          <!-- ① Store Link Generator -->
-          <div class="settings-drop-item" id="sdrop-slg">
-            <button class="settings-drop-header" onclick="toggleSettingsDrop('slg')">
-              <span style="display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-link" style="width:16px;color:var(--brown);"></i>
-                <span class="settings-drop-title">Store Link Generator</span>
-              </span>
-              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-slg"></i>
+        <!-- ① Store Link Generator -->
+        <div class="settings-section-group">
+          <div class="settings-group-header">
+            <div class="settings-group-icon" style="background:rgba(123,79,46,0.1);color:var(--brown);border:1px solid rgba(123,79,46,0.15);">
+              <i class="fas fa-link"></i>
+            </div>
+            <div>
+              <div class="settings-group-title">Store Link Generator</div>
+              <div class="settings-group-sub">Create your permanent ordering URL</div>
+            </div>
+            <button class="btn-outline" style="margin-left:auto;padding:7px 13px;font-size:0.75rem;" onclick="toggleSettingsDrop('slg')">
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-slg" style="margin-right:4px;transition:transform 0.25s;"></i>Toggle
             </button>
-            <div class="settings-drop-body" id="body-slg">
-              <div style="background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px;margin-bottom:13px;">
-                <p style="font-size:0.79rem;color:var(--muted);line-height:1.65;margin-bottom:11px;">Generate a <b style="color:var(--brown-dark);">permanent</b> ordering link for customers. The system uses the schedule below to open/close automatically.</p>
-                <input type="password" class="inp" id="store-pin" placeholder="Enter Master PIN" style="background:var(--white);">
-                <button class="btn-primary" onclick="generateLink()" style="margin-bottom:9px;"><i class="fas fa-link"></i> Generate Permanent Link</button>
-                <div style="position:relative;">
-                  <input type="text" class="inp" id="posLink" style="background:var(--white);padding-right:74px;font-size:0.74rem;color:var(--brown-dark);margin-bottom:0;" readonly placeholder="Link will appear here…">
-                  <div style="position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;gap:4px;">
-                    <button onclick="copyLink()" style="background:var(--brown);border:none;border-radius:6px;color:var(--cream);width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-copy" style="font-size:11px;"></i></button>
-                    <button onclick="openLink()" style="background:#1a73e8;border:none;border-radius:6px;color:#fff;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-external-link-alt" style="font-size:11px;"></i></button>
-                  </div>
-                </div>
-              </div>
-              <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
-                <div style="background:var(--brown-dark);color:var(--cream);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-                  <button onclick="calPrev()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-left"></i></button>
-                  <span id="cal-title" style="font-family:'Playfair Display',serif;font-weight:900;font-size:0.95rem;letter-spacing:0.5px;">APRIL 2025</span>
-                  <button onclick="calNext()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-right"></i></button>
-                </div>
-                <div style="padding:8px 6px;">
-                  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px;">
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SUN</div>
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">MON</div>
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">TUE</div>
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">WED</div>
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">THU</div>
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">FRI</div>
-                    <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SAT</div>
-                  </div>
-                  <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;"></div>
+          </div>
+          <div class="settings-drop-body" id="body-slg" style="padding:16px 18px 18px;">
+            <div style="background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:12px;padding:13px;margin-bottom:13px;">
+              <p style="font-size:0.79rem;color:var(--muted);line-height:1.65;margin-bottom:11px;">Generate a <b style="color:var(--brown-dark);">permanent</b> ordering link for customers. The system uses the schedule below to open/close automatically.</p>
+              <input type="password" class="inp" id="store-pin" placeholder="Enter Master PIN" style="background:var(--white);">
+              <button class="btn-primary" onclick="generateLink()" style="margin-bottom:9px;"><i class="fas fa-link"></i> Generate Permanent Link</button>
+              <div style="position:relative;">
+                <input type="text" class="inp" id="posLink" style="background:var(--white);padding-right:74px;font-size:0.74rem;color:var(--brown-dark);margin-bottom:0;" readonly placeholder="Link will appear here…">
+                <div style="position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;gap:4px;">
+                  <button onclick="copyLink()" style="background:var(--brown);border:none;border-radius:6px;color:var(--cream);width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-copy" style="font-size:11px;"></i></button>
+                  <button onclick="openLink()" style="background:#1a73e8;border:none;border-radius:6px;color:#fff;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fas fa-external-link-alt" style="font-size:11px;"></i></button>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- ② Store Schedule -->
-          <div class="settings-drop-item" id="sdrop-sched">
-            <button class="settings-drop-header" onclick="toggleSettingsDrop('sched')">
-              <span style="display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-clock" style="width:16px;color:var(--brown);"></i>
-                <span class="settings-drop-title">Store Schedule</span>
-              </span>
-              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-sched"></i>
-            </button>
-            <div class="settings-drop-body" id="body-sched">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
-                <button class="btn-primary" style="width:auto;margin-bottom:0;padding:8px 16px;" onclick="saveSchedule()"><i class="fas fa-save"></i> Save</button>
+            <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
+              <div style="background:var(--brown-dark);color:var(--cream);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+                <button onclick="calPrev()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-left"></i></button>
+                <span id="cal-title" style="font-family:'Playfair Display',serif;font-weight:900;font-size:0.95rem;letter-spacing:0.5px;">APRIL 2025</span>
+                <button onclick="calNext()" style="background:none;border:none;color:var(--tan);cursor:pointer;font-size:1rem;padding:2px 6px;"><i class="fas fa-chevron-right"></i></button>
               </div>
-              <div class="schedule-grid" id="schedule-grid">
-                <div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;">Loading schedule…</div>
-              </div>
-              <div id="sched-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
-            </div>
-          </div>
-
-          <!-- ③ Menu Management -->
-          <div class="settings-drop-item" id="sdrop-menu">
-            <button class="settings-drop-header" onclick="toggleSettingsDrop('menu')">
-              <span style="display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-utensils" style="width:16px;color:var(--brown);"></i>
-                <span class="settings-drop-title">Menu Management</span>
-              </span>
-              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-menu"></i>
-            </button>
-            <div class="settings-drop-body" id="body-menu">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-                <button class="btn-secondary" onclick="openMenuModal()"><i class="fas fa-plus"></i> Add Item</button>
-              </div>
-              <div class="tbl-wrap">
-                <table class="kds-table">
-                  <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
-                  <tbody id="menu-tbody"></tbody>
-                </table>
+              <div style="padding:8px 6px;">
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px;">
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SUN</div>
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">MON</div>
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">TUE</div>
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">WED</div>
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">THU</div>
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">FRI</div>
+                  <div style="text-align:center;font-size:0.62rem;font-weight:900;color:var(--muted);padding:4px 0;">SAT</div>
+                </div>
+                <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;"></div>
               </div>
             </div>
           </div>
-
-          <!-- ④ Backup & Recovery -->
-          <div class="settings-drop-item" id="sdrop-backup" style="border-bottom:none;">
-            <button class="settings-drop-header" onclick="toggleSettingsDrop('backup')">
-              <span style="display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-database" style="width:16px;color:var(--brown);"></i>
-                <span class="settings-drop-title">Backup &amp; Recovery</span>
-              </span>
-              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-backup"></i>
-            </button>
-            <div class="settings-drop-body" id="body-backup">
-              <p style="font-size:0.79rem;color:var(--muted);margin-bottom:13px;line-height:1.65;">Download or restore a full backup of all orders, menu, inventory and customer data.</p>
-              <div style="display:flex;flex-direction:column;gap:9px;">
-                <button onclick="downloadBackup()" class="btn-primary" style="margin-bottom:0;"><i class="fas fa-download"></i> Download Backup</button>
-                <label style="width:100%;padding:12px;background:var(--brown-mid);color:var(--cream);border-radius:12px;font-weight:800;font-size:0.87rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:'Nunito',sans-serif;">
-                  <i class="fas fa-upload"></i> Restore from Backup
-                  <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
-                </label>
-              </div>
-              <div id="backup-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
-            </div>
-          </div>
-
         </div>
+
+        <!-- ② Store Schedule -->
+        <div class="settings-section-group">
+          <div class="settings-group-header">
+            <div class="settings-group-icon" style="background:rgba(25,118,210,0.1);color:var(--blue);border:1px solid rgba(25,118,210,0.15);">
+              <i class="fas fa-clock"></i>
+            </div>
+            <div>
+              <div class="settings-group-title">Store Schedule</div>
+              <div class="settings-group-sub">Opening &amp; closing hours per day</div>
+            </div>
+            <button class="btn-outline" style="margin-left:auto;padding:7px 13px;font-size:0.75rem;" onclick="toggleSettingsDrop('sched')">
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-sched" style="margin-right:4px;transition:transform 0.25s;"></i>Toggle
+            </button>
+          </div>
+          <div class="settings-drop-body" id="body-sched" style="padding:16px 18px 18px;">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+              <button class="btn-primary" style="width:auto;margin-bottom:0;padding:8px 16px;" onclick="saveSchedule()"><i class="fas fa-save"></i> Save Schedule</button>
+            </div>
+            <div class="schedule-grid" id="schedule-grid">
+              <div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;">Loading schedule…</div>
+            </div>
+            <div id="sched-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
+          </div>
+        </div>
+
+        <!-- ③ Menu Management -->
+        <div class="settings-section-group">
+          <div class="settings-group-header">
+            <div class="settings-group-icon" style="background:rgba(39,174,96,0.1);color:var(--green);border:1px solid rgba(39,174,96,0.15);">
+              <i class="fas fa-utensils"></i>
+            </div>
+            <div>
+              <div class="settings-group-title">Menu Management</div>
+              <div class="settings-group-sub">Add, edit or toggle menu items</div>
+            </div>
+            <button class="btn-outline" style="margin-left:auto;padding:7px 13px;font-size:0.75rem;" onclick="toggleSettingsDrop('menu')">
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-menu" style="margin-right:4px;transition:transform 0.25s;"></i>Toggle
+            </button>
+          </div>
+          <div class="settings-drop-body" id="body-menu" style="padding:16px 18px 18px;">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+              <button class="btn-secondary" onclick="openMenuModal()"><i class="fas fa-plus"></i> Add Item</button>
+            </div>
+            <div class="tbl-wrap">
+              <table class="kds-table">
+                <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+                <tbody id="menu-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ Backup & Recovery -->
+        <div class="settings-section-group">
+          <div class="settings-group-header">
+            <div class="settings-group-icon" style="background:rgba(192,57,43,0.08);color:var(--red);border:1px solid rgba(192,57,43,0.15);">
+              <i class="fas fa-database"></i>
+            </div>
+            <div>
+              <div class="settings-group-title">Backup &amp; Recovery</div>
+              <div class="settings-group-sub">Download or restore system data</div>
+            </div>
+            <button class="btn-outline" style="margin-left:auto;padding:7px 13px;font-size:0.75rem;" onclick="toggleSettingsDrop('backup')">
+              <i class="fas fa-chevron-down settings-drop-chevron" id="chev-backup" style="margin-right:4px;transition:transform 0.25s;"></i>Toggle
+            </button>
+          </div>
+          <div class="settings-drop-body" id="body-backup" style="padding:16px 18px 18px;">
+            <p style="font-size:0.79rem;color:var(--muted);margin-bottom:13px;line-height:1.65;">Download or restore a full backup of all orders, menu, inventory and customer data.</p>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <button onclick="downloadBackup()" class="btn-primary" style="margin-bottom:0;"><i class="fas fa-download"></i> Download Backup</button>
+              <label style="width:100%;padding:12px;background:var(--brown-mid);color:var(--cream);border-radius:12px;font-weight:800;font-size:0.87rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:'Nunito',sans-serif;">
+                <i class="fas fa-upload"></i> Restore from Backup
+                <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
+              </label>
+            </div>
+            <div id="backup-status" style="margin-top:10px;font-size:0.81rem;font-weight:700;min-height:16px;"></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- Lock / Reload -->
-      <div class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;margin-bottom:20px;">
         <button class="btn-outline" onclick="location.reload()"><i class="fas fa-sync-alt"></i> Reload</button>
         <button class="btn-outline" style="color:var(--red);border-color:rgba(192,57,43,0.3);" onclick="location.href='/logout'"><i class="fas fa-lock"></i> Lock Panel</button>
       </div>
 
     </div>
-  </div>
 
   <!-- AUDIT TRAIL SCREEN -->
   <div id="s-audit" class="screen">
@@ -6083,21 +6220,40 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <p>Complete log of all admin actions</p>
     </div>
     <div class="screen-inner" style="padding-top:28px;">
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-          <span class="card-title" style="margin:0;">Activity Log</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span id="audit-page-info" style="font-size:0.75rem;font-weight:700;color:var(--muted);"></span>
-            <button class="btn-secondary" style="padding:6px 10px;font-size:0.75rem;" onclick="fetchAuditLogs()"><i class="fas fa-sync-alt"></i> Refresh</button>
-          </div>
-        </div>
 
-        <!-- Log entries -->
+      <!-- Audit Toolbar -->
+      <div class="audit-toolbar">
+        <input type="text" class="audit-search-inp" id="audit-search" placeholder="Search actions or details…" oninput="renderAuditList()">
+        <select class="audit-filter-sel" id="audit-filter" onchange="renderAuditList()">
+          <option value="">All Actions</option>
+          <option value="order">Orders</option>
+          <option value="stock">Stock</option>
+          <option value="menu">Menu</option>
+          <option value="finance">Finance</option>
+          <option value="auth">Auth / Login</option>
+          <option value="settings">Settings</option>
+        </select>
+        <button class="btn-secondary" style="padding:9px 14px;font-size:0.78rem;" onclick="fetchAuditLogs()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+
+      <!-- Stats row -->
+      <div style="display:flex;gap:8px;padding:12px 14px 0;flex-wrap:wrap;">
+        <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <i class="fas fa-list-alt" style="color:var(--brown);font-size:0.85rem;"></i>
+          <span id="audit-total-count" style="font-size:0.8rem;font-weight:800;color:var(--text);">— entries</span>
+        </div>
+        <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <i class="fas fa-calendar-day" style="color:var(--brown);font-size:0.85rem;"></i>
+          <span id="audit-today-count" style="font-size:0.8rem;font-weight:800;color:var(--text);">— today</span>
+        </div>
+        <div style="flex:1;"></div>
+        <span id="audit-page-info" style="font-size:0.75rem;font-weight:700;color:var(--muted);align-self:center;"></span>
+      </div>
+
+      <div class="section card" style="margin-top:14px;">
         <div id="audit-log-list" style="display:flex;flex-direction:column;gap:0;border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
-          <div style="padding:24px;text-align:center;color:var(--muted);font-size:0.82rem;font-weight:600;">Loading logs…</div>
+          <div style="padding:28px;text-align:center;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading logs…</div>
         </div>
-
-        <!-- Pagination controls -->
         <div id="audit-pagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:8px;">
           <button id="audit-prev-btn" onclick="auditChangePage(-1)" style="display:flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown-dark);padding:9px 16px;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='var(--white)'">
             <i class="fas fa-chevron-left" style="font-size:0.75rem;"></i> Prev
@@ -6156,7 +6312,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 <script>
 /* ══ CLOCK & PING ══ */
-function updateClock(){const n=new Date();let h=n.getHours()%12||12,m=n.getMinutes().toString().padStart(2,'0'),ap=n.getHours()>=12?'PM':'AM';document.getElementById('clock').innerText=h+':'+m+' '+ap;}
+function updateClock(){const n=new Date();let h=n.getHours()%12||12,m=n.getMinutes().toString().padStart(2,'0'),ap=n.getHours()>=12?'PM':'AM';const t=h+':'+m+' '+ap;document.getElementById('clock').innerText=t;const sc=document.getElementById('sidebar-clock');if(sc)sc.innerText=t;}
 setInterval(updateClock,1000);updateClock();
 setInterval(()=>fetch('/api/admin/ping'),30000);
 
@@ -6216,11 +6372,6 @@ function closeAdminMenu(){
   const btn=document.getElementById('admin-hamburger');
   if(btn)btn.classList.remove('open');
 }
-document.addEventListener('click',function(e){
-  const fdd=document.getElementById('fin-nav-dropdown');
-  const fbtn=document.getElementById('fin-hamburger');
-  if(fdd&&fbtn&&!fdd.contains(e.target)&&!fbtn.contains(e.target)){fdd.classList.remove('open');}
-});
 
 /* ══ HELPERS ══ */
 function escapeHTML(s){const d=document.createElement('div');d.innerText=s;return d.innerHTML;}
@@ -6356,13 +6507,28 @@ let invAllData=[], invActiveTab='All';
 
 async function fetchInventory(){
   const tbody=document.getElementById('inv-tbody');
-  tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
   try{
     const r=await apiFetch('/api/inventory');
     if(!r||!r.ok){tbody.innerHTML='<tr><td colspan="4" class="error-state">DB Error</td></tr>';return;}
     invAllData=await r.json();
-    renderInvTable();
+    renderInventoryTable();
+    updateInvStats();
   }catch(e){tbody.innerHTML='<tr><td colspan="4" class="error-state">Network Error</td></tr>';}
+}
+
+function updateInvStats(){
+  let total=0,ok=0,low=0,critical=0;
+  invAllData.forEach(i=>{
+    const t=i.unit==='pcs'?50:(i.unit==='ml'?500:200);
+    total++;
+    if(i.stock<=0)critical++;
+    else if(i.stock<=t)low++;
+    else ok++;
+  });
+  const st=document.getElementById('inv-stat-total');const so=document.getElementById('inv-stat-ok');
+  const sl=document.getElementById('inv-stat-low');const sc=document.getElementById('inv-stat-critical');
+  if(st)st.innerText=total;if(so)so.innerText=ok;if(sl)sl.innerText=low;if(sc)sc.innerText=critical;
 }
 
 function invTab(name,btn){
@@ -6371,19 +6537,22 @@ function invTab(name,btn){
   if(btn)btn.classList.add('active');
   const label=document.getElementById('inv-tab-label');
   if(label)label.innerText=name==='All'?'All Items':name;
-  renderInvTable();
+  renderInventoryTable();
 }
 
-function renderInvTable(){
+function renderInventoryTable(){
   const tbody=document.getElementById('inv-tbody');
   const countEl=document.getElementById('inv-count');
   const lowCard=document.getElementById('inv-low-stock-card');
   const lowList=document.getElementById('inv-low-list');
+  const q=(document.getElementById('inv-search')||{}).value||'';
+  const ql=q.trim().toLowerCase();
 
-  const filtered=invActiveTab==='All'?invAllData:invAllData.filter(i=>i.category===invActiveTab);
+  let filtered=invActiveTab==='All'?invAllData:invAllData.filter(i=>i.category===invActiveTab);
+  if(ql)filtered=filtered.filter(i=>i.name.toLowerCase().includes(ql)||i.category.toLowerCase().includes(ql));
 
   if(!filtered.length){
-    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No items in this category.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted);font-weight:600;">No items found.</td></tr>';
     if(countEl)countEl.innerText='';
     if(lowCard)lowCard.style.display='none';
     return;
@@ -6391,43 +6560,49 @@ function renderInvTable(){
 
   tbody.innerHTML=filtered.map(i=>{
     const threshold=i.unit==='pcs'?50:(i.unit==='ml'?500:200);
-    const pct=i.stock/Math.max(threshold*4,1);
-    const color=i.stock<=0?'var(--red)':(i.stock<=threshold?'var(--orange)':'var(--green)');
-    const statusDot=i.stock<=0
-      ?`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:2px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;">Out</span>`
-      :(i.stock<=threshold
-        ?`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:2px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;">Low</span>`
-        :`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:2px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;">OK</span>`);
+    const maxVal=Math.max(threshold*4,i.stock,1);
+    const pct=Math.min(100,Math.round((i.stock/maxVal)*100));
+    const level=i.stock<=0?'critical':(i.stock<=threshold?'low':'ok');
+    const color=level==='critical'?'var(--red)':(level==='low'?'var(--orange)':'var(--green)');
+    const statusBadge=level==='critical'
+      ?`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-times-circle" style="font-size:0.62rem;"></i> Out</span>`
+      :(level==='low'
+        ?`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-exclamation-triangle" style="font-size:0.62rem;"></i> Low</span>`
+        :`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.62rem;"></i> OK</span>`);
     return`<tr>
-      <td><b style="font-size:0.83rem;">${escapeHTML(i.name)}</b><br><span style="font-size:0.67rem;color:var(--muted);">${escapeHTML(i.category)}</span></td>
-      <td style="color:var(--muted);font-size:0.8rem;">${escapeHTML(i.unit)}</td>
-      <td><input type="number" class="inp stock-inp" data-id="${i.id}" value="${i.stock}" min="0" style="width:110px;padding:6px 9px;margin:0;border-color:${color};color:${color};font-weight:800;font-size:0.84rem;"></td>
-      <td>${statusDot}</td>
+      <td>
+        <b style="font-size:0.83rem;color:var(--text);">${escapeHTML(i.name)}</b>
+        <div class="inv-stock-bar-wrap"><div class="inv-stock-bar ${level}" style="width:${pct}%;"></div></div>
+      </td>
+      <td style="color:var(--muted);font-size:0.8rem;white-space:nowrap;">${escapeHTML(i.category)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" class="inv-inline-edit stock-inp" data-id="${i.id}" value="${i.stock}" min="0" style="border-color:${color};color:${color};">
+          <span style="font-size:0.72rem;color:var(--muted);font-weight:700;">${escapeHTML(i.unit)}</span>
+        </div>
+      </td>
+      <td>${statusBadge}</td>
     </tr>`;
   }).join('');
 
   if(countEl)countEl.innerText=`${filtered.length} item${filtered.length!==1?'s':''}`;
 
-  // Low stock summary panel
-  const lowItems=filtered.filter(i=>{
-    const threshold=i.unit==='pcs'?50:(i.unit==='ml'?500:200);
-    return i.stock<=threshold;
-  });
+  const lowItems=filtered.filter(i=>{const t=i.unit==='pcs'?50:(i.unit==='ml'?500:200);return i.stock<=t;});
   if(lowItems.length&&lowCard&&lowList){
     lowCard.style.display='block';
     lowList.innerHTML=lowItems.map(i=>{
-      const isOut=i.stock<=0;
-      const color=isOut?'var(--red)':'var(--orange)';
+      const isOut=i.stock<=0;const color=isOut?'var(--red)':'var(--orange)';
       return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);">
-        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+        <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>
         <span style="flex:1;font-size:0.81rem;font-weight:800;color:var(--text);">${escapeHTML(i.name)}</span>
-        <span style="font-size:0.75rem;font-weight:700;color:${color};">${i.stock} ${escapeHTML(i.unit)}</span>
+        <span style="font-size:0.75rem;font-weight:800;color:${color};">${i.stock} ${escapeHTML(i.unit)}</span>
       </div>`;
     }).join('');
-  } else if(lowCard){
-    lowCard.style.display='none';
-  }
+  }else if(lowCard)lowCard.style.display='none';
 }
+
+// Alias for backward compat
+function renderInvTable(){renderInventoryTable();}
 
 async function saveInventory(){
   const payload=Array.from(document.querySelectorAll('.stock-inp')).map(inp=>({id:parseInt(inp.dataset.id),stock:parseFloat(inp.value)||0}));
@@ -6441,23 +6616,11 @@ async function saveInventory(){
 /* ══ FINANCE TABS ══ */
 function finTab(name,btn){
   document.querySelectorAll('.fin-tabpane').forEach(p=>{p.classList.remove('active');});
-  document.querySelectorAll('.fin-nav-item').forEach(b=>{b.classList.remove('active');});
-  document.getElementById('fin-'+name).classList.add('active');
+  document.querySelectorAll('.fin-tab-pill').forEach(b=>{b.classList.remove('active');});
+  const el=document.getElementById('fin-'+name);if(el)el.classList.add('active');
   if(btn)btn.classList.add('active');
-  // Update label in fin-menu-wrap
-  const labels={'today':'<i class="fas fa-sun"></i> Today','reports':'<i class="fas fa-chart-bar"></i> Reports','history':'<i class="fas fa-history"></i> Orders'};
-  const labelEl=document.getElementById('fin-active-label');
-  if(labelEl)labelEl.innerHTML=labels[name]||name;
-  // Close dropdown
-  const fdd=document.getElementById('fin-nav-dropdown');
-  if(fdd)fdd.classList.remove('open');
   if(name==='reports'){loadSalesChart(7,document.getElementById('pp-7'));loadBestSellers('today',document.getElementById('bsp-today'));loadLowStock();}
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
-}
-
-function toggleFinMenu(){
-  const dd=document.getElementById('fin-nav-dropdown');
-  if(dd)dd.classList.toggle('open');
 }
 
 /* ══ FINANCE ══ */
@@ -6716,57 +6879,81 @@ async function toggleOOS(id,state){
 let auditAllLogs=[], auditPage=1;
 const AUDIT_PER_PAGE=15;
 
+function getAuditIcon(action){
+  const a=(action||'').toLowerCase();
+  if(a.includes('order')||a.includes('status')||a.includes('cancel'))return{cls:'order',icon:'fa-shopping-bag'};
+  if(a.includes('stock')||a.includes('inventory')||a.includes('ingredient'))return{cls:'stock',icon:'fa-boxes'};
+  if(a.includes('menu')||a.includes('item')||a.includes('price'))return{cls:'menu',icon:'fa-utensils'};
+  if(a.includes('expense')||a.includes('finance')||a.includes('revenue'))return{cls:'finance',icon:'fa-chart-line'};
+  if(a.includes('login')||a.includes('logout')||a.includes('auth')||a.includes('pin')||a.includes('access'))return{cls:'auth',icon:'fa-lock'};
+  if(a.includes('schedule')||a.includes('setting')||a.includes('link')||a.includes('closed'))return{cls:'settings',icon:'fa-sliders-h'};
+  return{cls:'other',icon:'fa-shield-alt'};
+}
+
 async function fetchAuditLogs(){
   const list=document.getElementById('audit-log-list');
   if(!list)return;
-  list.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading…</div>';
+  list.innerHTML='<div style="padding:28px;text-align:center;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading…</div>';
   try{
     const r=await apiFetch('/api/audit_logs');
     if(!r||!r.ok){list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:0.82rem;font-weight:600;">Error loading logs</div>';return;}
     auditAllLogs=await r.json();
-    renderAuditPage();
+    renderAuditList();
   }catch(e){list.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:0.82rem;font-weight:600;">Network error</div>';}
 }
 
-function renderAuditPage(){
+function renderAuditList(){
+  // Apply search + filter
+  const q=((document.getElementById('audit-search')||{}).value||'').toLowerCase();
+  const f=((document.getElementById('audit-filter')||{}).value||'');
+  let filtered=auditAllLogs;
+  if(q)filtered=filtered.filter(l=>(l.action||'').toLowerCase().includes(q)||(l.details||'').toLowerCase().includes(q));
+  if(f)filtered=filtered.filter(l=>{const ic=getAuditIcon(l.action);return ic.cls===f;});
+
+  // Stats
+  const today=new Date().toDateString();
+  const todayCount=auditAllLogs.filter(l=>{try{return new Date(l.time).toDateString()===today;}catch(e){return false;}}).length;
+  const tc=document.getElementById('audit-total-count');const tdc=document.getElementById('audit-today-count');
+  if(tc)tc.innerText=`${auditAllLogs.length} entries`;
+  if(tdc)tdc.innerText=`${todayCount} today`;
+
+  renderAuditPage(filtered);
+}
+
+function renderAuditPage(logs){
   const list=document.getElementById('audit-log-list');
   const info=document.getElementById('audit-page-info');
   const dots=document.getElementById('audit-page-dots');
   const prevBtn=document.getElementById('audit-prev-btn');
   const nextBtn=document.getElementById('audit-next-btn');
   if(!list)return;
-  const total=auditAllLogs.length;
+  const data=logs||auditAllLogs;
+  const total=data.length;
   const totalPages=Math.max(1,Math.ceil(total/AUDIT_PER_PAGE));
   if(auditPage>totalPages)auditPage=totalPages;
   if(auditPage<1)auditPage=1;
   const start=(auditPage-1)*AUDIT_PER_PAGE;
-  const slice=auditAllLogs.slice(start,start+AUDIT_PER_PAGE);
+  const slice=data.slice(start,start+AUDIT_PER_PAGE);
   if(!total){
-    list.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;"><i class="fas fa-shield-alt" style="font-size:1.8rem;display:block;margin-bottom:10px;opacity:0.3;"></i>No audit logs yet.</div>';
+    list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(123,79,46,0.08);border:1.5px solid rgba(123,79,46,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fas fa-shield-alt" style="opacity:0.35;color:var(--brown);"></i></div>No audit logs found.</div>';
   } else {
-    list.innerHTML=slice.map((l,i)=>{
-      const isEven=i%2===0;
-      return`<div style="padding:13px 16px;background:${isEven?'var(--white)':'var(--cream)'};border-bottom:1px solid var(--cream-dark);display:flex;align-items:flex-start;gap:12px;">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--brown-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-          <i class="fas fa-shield-alt" style="font-size:0.7rem;color:var(--tan);"></i>
+    list.innerHTML=slice.map(l=>{
+      const ic=getAuditIcon(l.action);
+      return`<div class="audit-entry">
+        <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
+        <div class="audit-body">
+          <div class="audit-action">${escapeHTML(l.action)}</div>
+          ${l.details?`<div class="audit-details">${escapeHTML(l.details)}</div>`:''}
         </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.8rem;font-weight:800;color:var(--text);line-height:1.35;">${escapeHTML(l.action)}</div>
-          ${l.details?`<div style="font-size:0.72rem;color:var(--muted);margin-top:2px;line-height:1.35;">${escapeHTML(l.details)}</div>`:''}
-          <div style="font-size:0.65rem;color:var(--tan);margin-top:4px;font-weight:700;">${escapeHTML(l.time)}</div>
-        </div>
+        <div class="audit-time">${escapeHTML(l.time)}</div>
       </div>`;
     }).join('');
   }
-  // Info text
-  if(info) info.innerText=total?`${start+1}–${Math.min(start+AUDIT_PER_PAGE,total)} of ${total}`:'';
-  // Prev/Next state
+  if(info)info.innerText=total?`${start+1}–${Math.min(start+AUDIT_PER_PAGE,total)} of ${total}`:'';
   if(prevBtn){prevBtn.disabled=auditPage<=1;prevBtn.style.opacity=auditPage<=1?'0.4':'1';}
   if(nextBtn){nextBtn.disabled=auditPage>=totalPages;nextBtn.style.opacity=auditPage>=totalPages?'0.4':'1';}
-  // Dots
   if(dots){
-    const maxDots=7;
-    let pages=[];
+    const maxDots=7;let pages=[];
     if(totalPages<=maxDots){for(let i=1;i<=totalPages;i++)pages.push(i);}
     else{
       pages=[1];
@@ -6784,8 +6971,8 @@ function renderAuditPage(){
   }
 }
 
-function auditChangePage(dir){auditPage+=dir;renderAuditPage();}
-function auditGoPage(p){auditPage=p;renderAuditPage();}
+function auditChangePage(dir){auditPage+=dir;renderAuditList();}
+function auditGoPage(p){auditPage=p;renderAuditList();}
 
 /* ══ BACKUP ══ */
 async function downloadBackup(){
