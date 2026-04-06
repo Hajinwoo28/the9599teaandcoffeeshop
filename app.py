@@ -356,6 +356,7 @@ class StoreScheduleEntry(db.Model):
     open_minute = db.Column(db.Integer, nullable=False, default=0)
     close_hour = db.Column(db.Integer, nullable=False, default=19)
     close_minute = db.Column(db.Integer, nullable=False, default=0)
+    is_open = db.Column(db.Boolean, nullable=False, default=True)
 
 class ItemAvailabilityQuery(db.Model):
     """Tracks when an employee flags item(s) as unavailable and waits for the customer to decide."""
@@ -6565,6 +6566,10 @@ setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById(
 // Initial data load on page open
 fetchPermReqs();
 fetchInventory();
+fetchOrders();
+
+// Show the Orders screen by default
+goScreen('orders', document.getElementById('nb-orders'));
 </script>
 </body>
 </html>
@@ -6982,10 +6987,12 @@ def handle_schedule():
         result = []
         for dow in range(7):
             oh, om, ch, cm = get_schedule_for_day(dow)
+            entry = StoreScheduleEntry.query.filter_by(day_of_week=dow).first()
+            is_open = entry.is_open if entry else True
             result.append({
                 "day": dow,
                 "name": day_names[dow],
-                "is_open": True,
+                "is_open": is_open,
                 "open_hour": oh,
                 "open_minute": om,
                 "close_hour": ch,
@@ -7003,6 +7010,7 @@ def handle_schedule():
             new_om = d.get('open_minute', om)
             new_ch = d.get('close_hour', ch)
             new_cm = d.get('close_minute', cm)
+            new_is_open = d.get('is_open', True)
             # Update in-memory fallback
             STORE_SCHEDULE[dow] = (new_oh, new_om, new_ch, new_cm)
             # Persist to DB
@@ -7012,11 +7020,13 @@ def handle_schedule():
                 entry.open_minute = new_om
                 entry.close_hour = new_ch
                 entry.close_minute = new_cm
+                entry.is_open = new_is_open
             else:
                 db.session.add(StoreScheduleEntry(
                     day_of_week=dow,
                     open_hour=new_oh, open_minute=new_om,
-                    close_hour=new_ch, close_minute=new_cm
+                    close_hour=new_ch, close_minute=new_cm,
+                    is_open=new_is_open
                 ))
         db.session.commit()
         log_audit("Schedule Updated", "Store schedule updated by admin")
@@ -7761,6 +7771,31 @@ with app.app_context():
         except Exception as migration_err2:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err2}")
+
+        # Migrate: add is_open column to store_schedule
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='store_schedule' AND column_name='is_open'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(store_schedule)")).fetchall()
+                col_exists = any(row[1] == 'is_open' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    'ALTER TABLE store_schedule ADD COLUMN is_open BOOLEAN NOT NULL DEFAULT TRUE'
+                ))
+                db.session.commit()
+                print("Migration: added is_open column to store_schedule")
+            else:
+                print("Migration: store_schedule.is_open already exists, skipped")
+        except Exception as migration_err_sched:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_err_sched}")
 
         # Migrate: add category column to ingredients
         try:
