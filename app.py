@@ -5595,6 +5595,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           </button>
         </div>
       </div>
+    </div><!-- end fin-history -->
     </div><!-- end fin-content-scroll -->
   </div><!-- end s-finance -->
 
