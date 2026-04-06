@@ -6566,10 +6566,9 @@ setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById(
 // Initial data load on page open
 fetchPermReqs();
 fetchInventory();
-fetchOrders();
 
-// Show the Orders screen by default
-goScreen('orders', document.getElementById('nb-orders'));
+// Activate the default screen (inventory) on load
+goScreen('inventory', document.getElementById('nb-inventory'));
 </script>
 </body>
 </html>
