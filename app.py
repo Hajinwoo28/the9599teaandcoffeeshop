@@ -100,17 +100,18 @@ def add_header(response):
                 "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' "
                 "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://fonts.googleapis.com; "
+                "https://fonts.googleapis.com "
+                "https://use.fontawesome.com https://ka-f.fontawesome.com; "
             "font-src 'self' "
                 "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://fonts.gstatic.com data:; "
+                "https://fonts.gstatic.com "
+                "https://use.fontawesome.com https://ka-f.fontawesome.com data:; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self'; "
+            "connect-src 'self' https://ka-f.fontawesome.com; "
             "frame-src 'none'; "
             "object-src 'none';"
         )
         response.headers['Content-Security-Policy'] = csp
-        # Prevent MIME-type sniffing (stops some extension injection vectors)
         response.headers['X-Content-Type-Options'] = 'nosniff'
 
     return response
@@ -634,21 +635,45 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .logout-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:800;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
 .logout-btn:hover{background:rgba(255,255,255,0.15);}
 
-/* ── HAMBURGER MENU (replaces bottom nav) ── */
-.hamburger-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.9);width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.05rem;flex-shrink:0;transition:background 0.15s;position:relative;}
-.hamburger-btn:hover{background:rgba(255,255,255,0.18);}
-.hamburger-badge{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.55rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
+/* ── SIDE NAV BUTTON ── */
+.hamburger-btn{background:rgba(255,255,255,0.08);border:1.5px solid rgba(200,168,75,0.45);color:var(--gold);width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.05rem;flex-shrink:0;transition:all 0.2s;position:relative;}
+.hamburger-btn:hover{background:rgba(200,168,75,0.15);box-shadow:0 0 14px rgba(200,168,75,0.25);}
+.hamburger-btn.open{background:rgba(200,168,75,0.2);border-color:var(--gold);}
+.hamburger-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:17px;height:17px;padding:0 3px;font-size:0.55rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
 .hamburger-badge.show{display:flex;}
-.emp-nav-dropdown{display:none;position:fixed;top:var(--topbar-h);right:0;width:220px;background:var(--teal-dark);border-left:2px solid var(--teal-mid);border-bottom:2px solid var(--teal-mid);border-radius:0 0 0 16px;box-shadow:-4px 6px 24px rgba(9,79,68,0.35);z-index:9000;overflow:hidden;animation:dropDown 0.18s ease;}
-.emp-nav-dropdown.open{display:block;}
-@keyframes dropDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-.emp-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:15px 18px;border:none;background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.85rem;font-weight:800;letter-spacing:0.3px;text-transform:uppercase;transition:background 0.15s,color 0.15s;border-bottom:1px solid rgba(255,255,255,0.08);}
-.emp-nav-item:last-child{border-bottom:none;}
-.emp-nav-item i{font-size:1rem;width:18px;text-align:center;}
-.emp-nav-item.active{color:var(--gold);background:rgba(200,168,75,0.12);}
-.emp-nav-item:hover:not(.active){background:rgba(255,255,255,0.08);color:#fff;}
-.emp-nav-item .nav-item-badge{background:var(--red);color:#fff;border-radius:20px;min-width:18px;height:18px;padding:0 4px;font-size:0.6rem;font-weight:900;display:none;align-items:center;justify-content:center;margin-left:auto;}
-.emp-nav-item .nav-item-badge.show{display:flex;}
+/* ── SIDE NAV BACKDROP ── */
+.nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:8998;}
+.nav-backdrop.open{display:block;animation:backdropIn 0.25s ease;}
+@keyframes backdropIn{from{opacity:0;}to{opacity:1;}}
+/* ── EMPLOYEE SIDE DRAWER ── */
+.emp-nav-drawer{position:fixed;top:0;left:0;height:100%;width:280px;background:linear-gradient(170deg,#082E28 0%,#0A3D35 35%,#0D4F43 70%,#0A3830 100%);z-index:8999;transform:translateX(-100%);transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:8px 0 50px rgba(0,0,0,0.45);}
+.emp-nav-drawer.open{transform:translateX(0);}
+.drawer-header{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drawer-logo{display:flex;align-items:center;gap:11px;}
+.drawer-logo-circle{width:44px;height:44px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;background:#fff;flex-shrink:0;}
+.drawer-logo-circle img{width:100%;height:100%;object-fit:cover;}
+.drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;color:#fff;line-height:1.2;}
+.drawer-brand-sub{font-size:0.59rem;color:var(--gold);font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-top:1px;}
+.drawer-close{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;transition:all 0.15s;flex-shrink:0;}
+.drawer-close:hover{background:rgba(255,255,255,0.15);color:#fff;}
+.drawer-section-label{font-size:0.6rem;font-weight:900;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;padding:14px 18px 6px;}
+.drawer-nav{padding:8px 10px 0;flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
+.drawer-nav-item,.emp-nav-item{width:100%;display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;border:1.5px solid transparent;background:transparent;color:rgba(255,255,255,0.55);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.2s;text-decoration:none;}
+.drawer-nav-item:hover:not(.active),.emp-nav-item:hover:not(.active){background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.1);}
+.drawer-nav-item.active,.emp-nav-item.active{background:rgba(200,168,75,0.14);border-color:rgba(200,168,75,0.45);color:#fff;}
+.drawer-nav-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;background:rgba(255,255,255,0.07);transition:all 0.2s;}
+.drawer-nav-item.active .drawer-nav-icon,.emp-nav-item.active .drawer-nav-icon{background:var(--gold);color:#1a0800;}
+.drawer-nav-item:hover:not(.active) .drawer-nav-icon,.emp-nav-item:hover:not(.active) .drawer-nav-icon{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.9);}
+.drawer-nav-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
+.drawer-nav-label{font-size:0.88rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
+.drawer-nav-desc{font-size:0.67rem;font-weight:600;color:rgba(255,255,255,0.35);margin-top:3px;}
+.drawer-nav-item.active .drawer-nav-desc,.emp-nav-item.active .drawer-nav-desc{color:rgba(255,255,255,0.55);}
+.drawer-nav-badge,.nav-item-badge{background:var(--red);color:#fff;border-radius:20px;min-width:20px;height:20px;padding:0 5px;font-size:0.62rem;font-weight:900;display:none;align-items:center;justify-content:center;flex-shrink:0;}
+.drawer-nav-badge.show,.nav-item-badge.show{display:flex;}
+.drawer-divider{height:1px;background:rgba(255,255,255,0.07);margin:6px 14px;}
+.drawer-footer{padding:12px 10px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+.drawer-logout{width:100%;display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.22);color:rgba(255,160,160,0.85);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.83rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
+.drawer-logout:hover{background:rgba(211,47,47,0.22);color:#fff;border-color:rgba(211,47,47,0.45);}
 .nav-badge{position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--teal-dark);}
 .nav-icon-wrap{position:relative;display:inline-block;}
 
@@ -952,33 +977,67 @@ function playEmpPermBeep(){
       <i class="fas fa-bell"></i>
       <span class="bell-count" id="bell-count"></span>
     </button>
-    <a href="/employee/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    <button class="hamburger-btn" id="emp-hamburger" onclick="toggleEmpMenu()" title="Navigation">
+    <button class="hamburger-btn" id="emp-hamburger" onclick="toggleEmpMenu()" title="Open navigation" aria-label="Open menu">
       <i class="fas fa-bars"></i>
       <span class="hamburger-badge" id="hamburger-badge"></span>
     </button>
   </div>
 </header>
 
-<!-- EMPLOYEE NAV DROPDOWN -->
-<div class="emp-nav-dropdown" id="emp-nav-dropdown">
-  <button class="emp-nav-item active" id="nav-online" onclick="goScreen('online');closeEmpMenu()">
-    <div class="nav-icon-wrap"><i class="fas fa-wifi"></i></div>
-    Online POS
-    <span class="nav-item-badge" id="nav-item-badge"></span>
-  </button>
-  <button class="emp-nav-item" id="nav-pos" onclick="goScreen('pos');closeEmpMenu()">
-    <i class="fas fa-cash-register"></i>
-    Walk-In POS
-  </button>
-  <button class="emp-nav-item" id="nav-stock" onclick="goScreen('stock');closeEmpMenu()">
-    <div class="nav-icon-wrap" style="position:relative;display:inline-flex;">
-      <i class="fas fa-boxes"></i>
-      <span class="nav-badge-stock" id="stock-nav-badge-2"></span>
+<!-- SIDE NAV BACKDROP -->
+<div class="nav-backdrop" id="nav-backdrop" onclick="closeEmpMenu()"></div>
+
+<!-- EMPLOYEE SIDE DRAWER -->
+<nav class="emp-nav-drawer" id="emp-nav-dropdown" aria-label="Navigation">
+  <div class="drawer-header">
+    <div class="drawer-logo">
+      <div class="drawer-logo-circle">
+        <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+      </div>
+      <div>
+        <div class="drawer-brand-name">9599 Tea &amp; Coffee</div>
+        <div class="drawer-brand-sub">Employee Station</div>
+      </div>
     </div>
-    Stock Alert
-  </button>
-</div>
+    <button class="drawer-close" onclick="closeEmpMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="drawer-section-label">Navigation</div>
+
+  <div class="drawer-nav">
+    <button class="drawer-nav-item emp-nav-item active" id="nav-online" onclick="goScreen('online');closeEmpMenu()">
+      <div class="drawer-nav-icon"><i class="fas fa-wifi"></i></div>
+      <div class="drawer-nav-text">
+        <span class="drawer-nav-label">Online POS</span>
+        <span class="drawer-nav-desc">Live orders &amp; permissions</span>
+      </div>
+      <span class="drawer-nav-badge" id="nav-item-badge"></span>
+    </button>
+
+    <button class="drawer-nav-item emp-nav-item" id="nav-pos" onclick="goScreen('pos');closeEmpMenu()">
+      <div class="drawer-nav-icon"><i class="fas fa-cash-register"></i></div>
+      <div class="drawer-nav-text">
+        <span class="drawer-nav-label">Walk-In POS</span>
+        <span class="drawer-nav-desc">Counter register</span>
+      </div>
+    </button>
+
+    <button class="drawer-nav-item emp-nav-item" id="nav-stock" onclick="goScreen('stock');closeEmpMenu()">
+      <div class="drawer-nav-icon" style="position:relative;">
+        <i class="fas fa-boxes"></i>
+        <span class="nav-badge-stock" id="stock-nav-badge-2" style="position:absolute;top:-5px;right:-5px;"></span>
+      </div>
+      <div class="drawer-nav-text">
+        <span class="drawer-nav-label">Stock Alerts</span>
+        <span class="drawer-nav-desc">Inventory levels</span>
+      </div>
+    </button>
+  </div>
+
+  <div class="drawer-footer">
+    <a href="/employee/logout" class="drawer-logout"><i class="fas fa-sign-out-alt"></i> Logout of Station</a>
+  </div>
+</nav>
 
 <!-- NOTIFICATION PANEL -->
 <div class="notif-panel" id="notif-panel">
@@ -1277,17 +1336,19 @@ function goScreen(id){
 
 function toggleEmpMenu(){
   const dd=document.getElementById('emp-nav-dropdown');
-  dd.classList.toggle('open');
+  const backdrop=document.getElementById('nav-backdrop');
+  const btn=document.getElementById('emp-hamburger');
+  const isOpen=dd.classList.contains('open');
+  if(isOpen){dd.classList.remove('open');backdrop.classList.remove('open');btn.classList.remove('open');}
+  else{dd.classList.add('open');backdrop.classList.add('open');btn.classList.add('open');}
 }
 function closeEmpMenu(){
   document.getElementById('emp-nav-dropdown').classList.remove('open');
-}
-// Close dropdown when clicking outside
-document.addEventListener('click',function(e){
-  const dd=document.getElementById('emp-nav-dropdown');
+  document.getElementById('nav-backdrop').classList.remove('open');
   const btn=document.getElementById('emp-hamburger');
-  if(dd&&btn&&!dd.contains(e.target)&&!btn.contains(e.target)){dd.classList.remove('open');}
-});
+  if(btn)btn.classList.remove('open');
+}
+// Backdrop handles outside-click via its own onclick
 
 /* ── NOTIFICATION BELL ── */
 let _notifDismissed=new Set(); // ids of dismissed notifications
@@ -5126,22 +5187,49 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.76rem;color:var(--tan);margin-top:3px;}
 
-/* ── BOTTOM NAV (hidden — replaced by hamburger) ── */
+/* ── BOTTOM NAV (hidden — replaced by drawer) ── */
 .bottom-nav{display:none;}
 
-/* ── ADMIN HAMBURGER MENU ── */
-.admin-hamburger-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.35);color:var(--tan);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.95rem;flex-shrink:0;transition:background 0.15s;position:relative;}
-.admin-hamburger-btn:hover{background:rgba(196,168,130,0.2);}
-.admin-nav-dropdown{display:none;position:fixed;top:var(--topbar-h);right:0;width:230px;background:var(--brown-dark);border-left:2px solid var(--brown);border-bottom:2px solid var(--brown);border-radius:0 0 0 16px;box-shadow:-4px 8px 30px rgba(61,36,16,0.45);z-index:9000;overflow:hidden;animation:adminDropDown 0.18s ease;}
-.admin-nav-dropdown.open{display:block;}
-@keyframes adminDropDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-.admin-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:15px 18px;border:none;background:transparent;color:var(--tan);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;transition:background 0.15s,color 0.15s;border-bottom:1px solid rgba(196,168,130,0.12);}
-.admin-nav-item:last-child{border-bottom:none;}
-.admin-nav-item i{font-size:1rem;width:18px;text-align:center;}
-.admin-nav-item.active{color:var(--cream);background:rgba(196,168,130,0.14);}
-.admin-nav-item:hover:not(.active){background:rgba(196,168,130,0.1);color:var(--cream);}
+/* ── ADMIN NAV BUTTON ── */
+.admin-hamburger-btn{background:rgba(255,255,255,0.09);border:1.5px solid rgba(196,168,130,0.45);color:var(--tan);width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.95rem;flex-shrink:0;transition:all 0.2s;position:relative;}
+.admin-hamburger-btn:hover{background:rgba(196,168,130,0.2);box-shadow:0 0 14px rgba(196,168,130,0.2);}
+.admin-hamburger-btn.open{background:rgba(196,168,130,0.22);border-color:var(--tan);}
 
-/* ── FINANCE HAMBURGER ── */
+/* ── ADMIN NAV BACKDROP ── */
+.admin-nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.48);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:8998;}
+.admin-nav-backdrop.open{display:block;animation:backdropIn 0.25s ease;}
+
+/* ── ADMIN SIDE DRAWER ── */
+.admin-nav-drawer{position:fixed;top:0;left:0;height:100%;width:288px;background:linear-gradient(170deg,#261408 0%,#3D2410 30%,#4A2C14 65%,#321A0A 100%);z-index:8999;transform:translateX(-100%);transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:8px 0 50px rgba(0,0,0,0.5);}
+.admin-nav-drawer.open{transform:translateX(0);}
+.admin-drawer-header{padding:18px 16px 14px;border-bottom:1px solid rgba(196,168,130,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.admin-drawer-logo{display:flex;align-items:center;gap:12px;}
+.admin-drawer-logo-circle{width:44px;height:44px;border-radius:50%;border:2px solid var(--tan);overflow:hidden;background:var(--cream);flex-shrink:0;}
+.admin-drawer-logo-circle img{width:100%;height:100%;object-fit:cover;}
+.admin-drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;color:var(--cream);line-height:1.2;}
+.admin-drawer-brand-sub{font-size:0.59rem;color:var(--tan);font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-top:1px;}
+.admin-drawer-close{width:34px;height:34px;border-radius:50%;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.18);color:rgba(196,168,130,0.6);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;transition:all 0.15s;flex-shrink:0;}
+.admin-drawer-close:hover{background:rgba(196,168,130,0.2);color:var(--cream);}
+.admin-drawer-section-label{font-size:0.6rem;font-weight:900;color:rgba(196,168,130,0.35);letter-spacing:2px;text-transform:uppercase;padding:14px 18px 6px;}
+.admin-drawer-nav{padding:8px 10px 0;flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
+.admin-nav-item{width:100%;display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;border:1.5px solid transparent;background:transparent;color:rgba(196,168,130,0.6);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.2s;}
+.admin-nav-item:hover:not(.active){background:rgba(196,168,130,0.08);color:var(--cream);border-color:rgba(196,168,130,0.15);}
+.admin-nav-item.active{background:rgba(196,168,130,0.13);border-color:rgba(196,168,130,0.4);color:var(--cream);}
+.admin-nav-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;background:rgba(196,168,130,0.07);transition:all 0.2s;}
+.admin-nav-item.active .admin-nav-icon{background:var(--tan);color:var(--brown-dark);}
+.admin-nav-item:hover:not(.active) .admin-nav-icon{background:rgba(196,168,130,0.14);color:var(--cream);}
+.admin-nav-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
+.admin-nav-label{font-size:0.88rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
+.admin-nav-desc{font-size:0.67rem;font-weight:600;color:rgba(196,168,130,0.38);margin-top:3px;}
+.admin-nav-item.active .admin-nav-desc{color:rgba(196,168,130,0.6);}
+.admin-drawer-divider{height:1px;background:rgba(196,168,130,0.1);margin:6px 14px;}
+.admin-drawer-footer{padding:12px 10px;border-top:1px solid rgba(196,168,130,0.1);flex-shrink:0;display:flex;flex-direction:column;gap:6px;}
+.admin-drawer-action{width:100%;display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.75);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
+.admin-drawer-action:hover{background:rgba(196,168,130,0.15);color:var(--cream);}
+.admin-drawer-action.danger{background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.22);color:rgba(255,150,150,0.85);}
+.admin-drawer-action.danger:hover{background:rgba(192,57,43,0.22);color:#fff;border-color:rgba(192,57,43,0.45);}
+
+/* ── FINANCE SECTION NAV (unchanged) ── */
 .fin-menu-wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 4px;gap:10px;}
 .fin-menu-label{font-size:0.78rem;font-weight:900;color:var(--brown-dark);display:flex;align-items:center;gap:7px;}
 .fin-hamburger-btn{background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown);width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;flex-shrink:0;transition:background 0.15s;position:relative;}
@@ -5394,19 +5482,77 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <div style="text-align:center;color:var(--muted);padding:18px;font-size:0.81rem;font-weight:600;">No notifications</div>
       </div>
     </div>
-    <button class="admin-hamburger-btn" id="admin-hamburger" onclick="toggleAdminMenu()" title="Navigation">
+    <button class="admin-hamburger-btn" id="admin-hamburger" onclick="toggleAdminMenu()" title="Open navigation" aria-label="Open menu">
       <i class="fas fa-bars"></i>
     </button>
   </div>
 </header>
 
-<!-- ══ ADMIN NAV DROPDOWN ══ -->
-<div class="admin-nav-dropdown" id="admin-nav-dropdown">
-  <button class="admin-nav-item active" id="nb-inventory" onclick="goScreen('inventory',this);closeAdminMenu()"><i class="fas fa-boxes"></i> Stock</button>
-  <button class="admin-nav-item" id="nb-audit" onclick="goScreen('audit',this);closeAdminMenu()"><i class="fas fa-shield-alt"></i> Audit Log</button>
-  <button class="admin-nav-item" id="nb-finance" onclick="goScreen('finance',this);closeAdminMenu()"><i class="fas fa-chart-line"></i> Finance</button>
-  <button class="admin-nav-item" id="nb-settings" onclick="goScreen('settings',this);closeAdminMenu()"><i class="fas fa-sliders-h"></i> Settings</button>
-</div>
+<!-- ══ ADMIN NAV BACKDROP ══ -->
+<div class="admin-nav-backdrop" id="admin-nav-backdrop" onclick="closeAdminMenu()"></div>
+
+<!-- ══ ADMIN SIDE DRAWER ══ -->
+<nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
+  <div class="admin-drawer-header">
+    <div class="admin-drawer-logo">
+      <div class="admin-drawer-logo-circle">
+        <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+      </div>
+      <div>
+        <div class="admin-drawer-brand-name">9599 Tea &amp; Coffee</div>
+        <div class="admin-drawer-brand-sub">Admin Panel</div>
+      </div>
+    </div>
+    <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="admin-drawer-section-label">Manage</div>
+
+  <div class="admin-drawer-nav">
+    <button class="admin-nav-item active" id="nb-inventory" onclick="goScreen('inventory',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-boxes"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Inventory</span>
+        <span class="admin-nav-desc">Stock levels &amp; ingredients</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-finance" onclick="goScreen('finance',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Finance</span>
+        <span class="admin-nav-desc">Sales, reports &amp; expenses</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-settings" onclick="goScreen('settings',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-sliders-h"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Settings</span>
+        <span class="admin-nav-desc">Menu, schedule &amp; store</span>
+      </div>
+    </button>
+
+    <div class="admin-drawer-divider"></div>
+
+    <button class="admin-nav-item" id="nb-audit" onclick="goScreen('audit',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-shield-alt"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Audit Log</span>
+        <span class="admin-nav-desc">All admin activity</span>
+      </div>
+    </button>
+  </div>
+
+  <div class="admin-drawer-footer">
+    <button class="admin-drawer-action" onclick="closeAdminMenu();location.reload()">
+      <i class="fas fa-sync-alt"></i> Reload Panel
+    </button>
+    <a href="/logout" class="admin-drawer-action danger">
+      <i class="fas fa-lock"></i> Lock &amp; Logout
+    </a>
+  </div>
+</nav>
 
 <!-- ══ SCREENS ══ -->
 <div class="screens">
@@ -5859,15 +6005,19 @@ function goScreen(name,btn){
 
 function toggleAdminMenu(){
   const dd=document.getElementById('admin-nav-dropdown');
-  dd.classList.toggle('open');
+  const backdrop=document.getElementById('admin-nav-backdrop');
+  const btn=document.getElementById('admin-hamburger');
+  const isOpen=dd.classList.contains('open');
+  if(isOpen){dd.classList.remove('open');backdrop.classList.remove('open');btn.classList.remove('open');}
+  else{dd.classList.add('open');backdrop.classList.add('open');btn.classList.add('open');}
 }
 function closeAdminMenu(){
   document.getElementById('admin-nav-dropdown').classList.remove('open');
+  document.getElementById('admin-nav-backdrop').classList.remove('open');
+  const btn=document.getElementById('admin-hamburger');
+  if(btn)btn.classList.remove('open');
 }
 document.addEventListener('click',function(e){
-  const dd=document.getElementById('admin-nav-dropdown');
-  const btn=document.getElementById('admin-hamburger');
-  if(dd&&btn&&!dd.contains(e.target)&&!btn.contains(e.target)){dd.classList.remove('open');}
   const fdd=document.getElementById('fin-nav-dropdown');
   const fbtn=document.getElementById('fin-hamburger');
   if(fdd&&fbtn&&!fdd.contains(e.target)&&!fbtn.contains(e.target)){fdd.classList.remove('open');}
@@ -7172,8 +7322,19 @@ def permission_status():
 @app.route('/api/permission_requests', methods=['GET'])
 def get_permission_requests():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify([]), 403
-    pending = PermissionRequest.query.filter_by(granted=False).order_by(PermissionRequest.created_at.desc()).all()
-    return jsonify([{"id": p.id, "code": p.request_code, "name": p.customer_name, "address": p.address, "message": p.message, "time": p.created_at.strftime('%I:%M %p')} for p in pending])
+    try:
+        pending = PermissionRequest.query.filter_by(granted=False).order_by(PermissionRequest.created_at.desc()).all()
+        return jsonify([{
+            "id": p.id,
+            "code": p.request_code,
+            "name": p.customer_name,
+            "address": getattr(p, 'address', '') or '',
+            "message": getattr(p, 'message', '') or '',
+            "time": p.created_at.strftime('%I:%M %p')
+        } for p in pending])
+    except Exception:
+        db.session.rollback()
+        return jsonify([]), 500
 
 @app.route('/api/permission_requests/<int:req_id>/grant', methods=['POST'])
 def grant_permission(req_id):
