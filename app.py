@@ -80,7 +80,9 @@ token_serializer = URLSafeTimedSerializer(app.secret_key)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["1000 per day", "100 per hour"]
+    default_limits=["1000 per day", "100 per hour"],
+    storage_uri="memory://",
+    swallow_errors=True   # Prevents crash on serverless (Vercel) where in-memory state is lost
 )
 
 @app.after_request
@@ -126,7 +128,12 @@ def add_header(response):
 # ==========================================
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, 'milktea_system.db')
+
+# On Vercel the project root is read-only; /tmp is the only writable directory.
+# Locally the DB sits next to app.py as before.
+_IS_VERCEL = bool(os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'))
+_default_db_dir = '/tmp' if _IS_VERCEL else BASE_DIR
+DEFAULT_DB_PATH = os.path.join(_default_db_dir, 'milktea_system.db')
 
 database_url = os.environ.get('DATABASE_URL', f'sqlite:///{DEFAULT_DB_PATH}')
 if database_url.startswith("postgres://"):
@@ -9321,6 +9328,25 @@ def get_audit_logs():
 # ==========================================
 # 10. SYSTEM INITIALIZATION & SEED DATA
 # ==========================================
+
+def _initialize_db():
+    """Run DB creation + seeding inside an app context.
+    Called once at module load (local/Render) and also lazily on first request
+    on Vercel so a startup crash does not produce a blank 500."""
+    try:
+        db.create_all()
+    except Exception as _e:
+        print(f"db.create_all() skipped: {_e}")
+
+# Lazy init: guarantees tables exist even if the module-level call below fails
+_db_initialized = False
+
+@app.before_request
+def _lazy_db_init():
+    global _db_initialized
+    if not _db_initialized:
+        _initialize_db()
+        _db_initialized = True
 
 with app.app_context():
     try:
