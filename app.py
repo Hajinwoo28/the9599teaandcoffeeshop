@@ -97,7 +97,11 @@ def add_header(response):
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+                "https://vercel.live https://*.vercel.live https://*.vercel.app; "
+            "script-src-elem 'self' 'unsafe-inline' "
+                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+                "https://vercel.live https://*.vercel.live https://*.vercel.app; "
             "style-src 'self' 'unsafe-inline' "
                 "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
                 "https://fonts.googleapis.com "
@@ -107,8 +111,9 @@ def add_header(response):
                 "https://fonts.gstatic.com "
                 "https://use.fontawesome.com https://ka-f.fontawesome.com data:; "
             "img-src 'self' data: blob: https:; "
-            "connect-src 'self' https://ka-f.fontawesome.com; "
-            "frame-src 'none'; "
+            "connect-src 'self' https://ka-f.fontawesome.com "
+                "https://vercel.live https://*.vercel.live wss://*.vercel.live; "
+            "frame-src 'self' https://vercel.live; "
             "object-src 'none';"
         )
         response.headers['Content-Security-Policy'] = csp
@@ -849,7 +854,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 }
 
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;scrollbar-width:none;}
+.screen::-webkit-scrollbar{display:none;}
 .screen.active{display:block;}
 
 .page-header{padding:20px 16px 14px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:50;}
@@ -912,7 +918,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .filter-tab.active{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);}
 
 .pos-layout{display:flex;height:calc(100vh - var(--topbar-h) - var(--nav-h));overflow:hidden;}
-.pos-menu-area{flex:1;overflow-y:auto;padding:10px;background:var(--bg);}
+.pos-menu-area{flex:1;overflow-y:auto;padding:10px;background:var(--bg);scrollbar-width:none;}
+.pos-menu-area::-webkit-scrollbar{display:none;}
 .pos-sidebar{width:260px;flex-shrink:0;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 @media(max-width:680px){
   .pos-layout{flex-direction:column;height:calc(100vh - var(--topbar-h) - var(--nav-h));overflow:hidden;}
@@ -941,7 +948,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .cart-title{font-size:0.85rem;font-weight:900;color:var(--teal-dark);display:flex;align-items:center;gap:6px;}
 .cart-clear{background:none;border:none;color:var(--red);font-size:0.72rem;font-weight:800;cursor:pointer;padding:3px 7px;border-radius:6px;}
 .cart-clear:hover{background:rgba(211,47,47,0.08);}
-.cart-items{flex:1;overflow-y:auto;padding:10px 12px;}
+.cart-items{flex:1;overflow-y:auto;padding:10px 12px;scrollbar-width:none;}
+.cart-items::-webkit-scrollbar{display:none;}
 .cart-item{display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);}
 .cart-item:last-child{border-bottom:none;}
 .cart-item-info{flex:1;min-width:0;}
@@ -1094,11 +1102,31 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 <div id="toast-container"></div>
 <script>
 var _empAudioCtx=null;
-function _getEmpAudioCtx(){if(!_empAudioCtx){try{_empAudioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return _empAudioCtx;}
+var _empUserInteracted=false;
+
+// Unlock AudioContext on the very first user gesture (click or touch)
+function _unlockEmpAudio(){
+  _empUserInteracted=true;
+  if(_empAudioCtx&&_empAudioCtx.state==='suspended'){_empAudioCtx.resume().catch(function(){});}
+  document.removeEventListener('click',_unlockEmpAudio);
+  document.removeEventListener('touchend',_unlockEmpAudio);
+  document.removeEventListener('keydown',_unlockEmpAudio);
+}
+document.addEventListener('click',_unlockEmpAudio,{once:true,passive:true});
+document.addEventListener('touchend',_unlockEmpAudio,{once:true,passive:true});
+document.addEventListener('keydown',_unlockEmpAudio,{once:true,passive:true});
+
+function _getEmpAudioCtx(){
+  if(!_empUserInteracted)return null;  // refuse before first gesture
+  if(!_empAudioCtx){
+    try{_empAudioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}
+  }
+  if(_empAudioCtx.state==='suspended'){_empAudioCtx.resume().catch(function(){});}
+  return _empAudioCtx;
+}
 function playEmpBeep(){
   var ctx=_getEmpAudioCtx();if(!ctx)return Promise.resolve();
   try{
-    if(ctx.state==='suspended')ctx.resume();
     [[0,880,0.3],[0.35,660,0.25],[0.65,780,0.35]].forEach(function(t){
       var osc=ctx.createOscillator(),gain=ctx.createGain();
       osc.connect(gain);gain.connect(ctx.destination);
@@ -1116,7 +1144,6 @@ function playEmpBeep(){
 function playEmpPermBeep(){
   var ctx=_getEmpAudioCtx();if(!ctx)return;
   try{
-    if(ctx.state==='suspended')ctx.resume();
     [[0,330,0.18,'sine',0.35],[0.22,440,0.28,'sine',0.3],[0.6,330,0.18,'sine',0.35],[0.82,440,0.28,'sine',0.3]].forEach(function(t){
       var osc=ctx.createOscillator(),gain=ctx.createGain();
       osc.connect(gain);gain.connect(ctx.destination);
@@ -1964,19 +1991,24 @@ async function fetchPermReqs(){
   try{
     const r=await fetch('/api/permission_requests');
     if(r.status===403){location.href='/employee';return;}
-    if(!r.ok){tbody.innerHTML=`<tr class="empty-row"><td colspan="5">Could not load requests (${r.status})</td></tr>`;return;}
+    if(!r.ok){if(tbody)tbody.innerHTML=`<tr class="empty-row"><td colspan="5">Could not load requests (${r.status})</td></tr>`;return;}
     let data;
     try{data=await r.json();}
-    catch(jsonErr){console.error('Permission API non-JSON:',jsonErr);tbody.innerHTML='<tr class="empty-row"><td colspan="5">Server error — try refreshing</td></tr>';return;}
-    if(!data.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';_bellPermItems=[];updateBell();return;}
+    catch(jsonErr){console.error('Permission API non-JSON:',jsonErr);if(tbody)tbody.innerHTML='<tr class="empty-row"><td colspan="5">Server error — try refreshing</td></tr>';return;}
+    if(!data.length){if(tbody)tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';_bellPermItems=[];updateBell();return;}
     data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpPermBeep();knownPermCodes.add(p.code);}});
     _bellPermItems=data;
-    const badge=document.getElementById('nav-badge');
+    // Update nav badges safely — elements may not exist on every screen
     const permCount=data.length;
     const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
     const total=permCount+orderPending;
-    if(total>0){badge.textContent=total;badge.style.display='flex';}
-    tbody.innerHTML=data.map(p=>`<tr class="perm-row-card">
+    const badge=document.getElementById('nav-badge');
+    if(badge){if(total>0){badge.textContent=total;badge.style.display='flex';}else{badge.style.display='none';}}
+    const hamBadge=document.getElementById('hamburger-badge');
+    if(hamBadge){if(total>0){hamBadge.textContent=total;hamBadge.classList.add('show');}else{hamBadge.classList.remove('show');}}
+    const navItemBadge=document.getElementById('nav-item-badge');
+    if(navItemBadge){if(permCount>0){navItemBadge.textContent=permCount;navItemBadge.classList.add('show');}else{navItemBadge.classList.remove('show');}}
+    if(tbody)tbody.innerHTML=data.map(p=>`<tr class="perm-row-card">
       <td style="white-space:nowrap;font-size:0.74rem;color:var(--muted);">${escapeHTML(p.time)}</td>
       <td><span style="font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);font-size:0.82rem;">${escapeHTML(p.code)}</span></td>
       <td style="font-weight:700;">${escapeHTML(p.name)}</td>
@@ -1984,7 +2016,7 @@ async function fetchPermReqs(){
       <td><button class="tbl-btn grant" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')"><i class="fas fa-check-circle"></i> Grant</button></td>
     </tr>`).join('');
     updateBell();
-  }catch(e){console.error('fetchPermReqs error:',e);tbody.innerHTML='<tr class="empty-row"><td colspan="5">Connection failed — check your network</td></tr>';}
+  }catch(e){console.error('fetchPermReqs error:',e);if(tbody)tbody.innerHTML='<tr class="empty-row"><td colspan="5">Connection failed — check your network</td></tr>';}
 }
 
 async function grantPerm(id,name,code){
@@ -5470,11 +5502,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-action.danger:hover{background:rgba(192,57,43,0.2);color:#fff;border-color:rgba(192,57,43,0.45);}
 
 /* ── FINANCE SECTION NAV (Tab Pills) ── */
-.fin-tab-nav{display:flex;gap:6px;padding:14px 14px 2px;background:var(--white);border-bottom:1px solid var(--cream-dark);}
-.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
-.fin-tab-pill i{font-size:0.85rem;}
+.fin-tab-nav{display:flex;gap:5px;padding:8px 14px 8px;background:var(--white);border-bottom:1px solid var(--cream-dark);}
+.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 8px;border-radius:10px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+.fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
-.fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 3px 12px rgba(61,36,16,0.25);}
+.fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
 #s-finance{position:relative;}
 #s-finance.active{display:flex;flex-direction:column;overflow:hidden;}
 .fin-sticky-top{flex-shrink:0;}
@@ -5635,10 +5667,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .perm-title{font-weight:800;color:var(--red);font-size:0.84rem;display:flex;align-items:center;gap:6px;}
 
 /* ── FINANCE ── */
-.fin-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:28px 14px 14px;}
-.fin-stat{background:var(--white);border-radius:12px;padding:13px;border:1px solid var(--cream-dark);box-shadow:var(--shadow);}
-.fin-stat .fl{font-size:0.66rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
-.fin-stat .fv{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:900;}
+.fin-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:10px 14px 8px;}
+.fin-stat{background:var(--white);border-radius:10px;padding:8px 12px;border:1px solid var(--cream-dark);box-shadow:0 1px 6px rgba(61,36,16,0.07);display:flex;align-items:center;gap:8px;}
+.fin-stat .fl{font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;flex:1;}
+.fin-stat .fv{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;white-space:nowrap;}
 
 /* ── SCHEDULE ── */
 .schedule-grid{display:flex;flex-direction:column;gap:10px;}
@@ -5927,22 +5959,28 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <!-- FINANCE -->
   <div id="s-finance" class="screen">
     <div class="fin-sticky-top">
-      <div class="page-header">
-        <h2><i class="fas fa-chart-line"></i> Finance</h2>
-        <p>Revenue, reports &amp; order history</p>
+      <div class="page-header" style="padding:10px 16px 16px;">
+        <h2 style="font-size:1rem;"><i class="fas fa-chart-line"></i> Finance</h2>
+        <p style="font-size:0.7rem;margin-top:1px;">Revenue, reports &amp; order history</p>
       </div>
       <div class="fin-stats">
-        <div class="fin-stat" style="grid-column:1/-1;border-top:3px solid var(--brown);">
-          <div class="fl">System Total Today</div>
-          <div class="fv" id="sys-total" style="color:var(--brown);">₱0.00</div>
+        <div class="fin-stat" style="border-top:3px solid var(--brown);">
+          <div>
+            <div class="fl">Today's Revenue</div>
+            <div class="fv" id="sys-total" style="color:var(--brown);">₱0.00</div>
+          </div>
         </div>
         <div class="fin-stat" style="border-top:3px solid var(--green);">
-          <div class="fl">Net Profit</div>
-          <div class="fv" id="net-profit" style="color:var(--green);">₱0.00</div>
+          <div>
+            <div class="fl">Net Profit</div>
+            <div class="fv" id="net-profit" style="color:var(--green);">₱0.00</div>
+          </div>
         </div>
         <div class="fin-stat" style="border-top:3px solid var(--red);">
-          <div class="fl">Expenses</div>
-          <div class="fv" id="exp-total" style="color:var(--red);">₱0.00</div>
+          <div>
+            <div class="fl">Expenses</div>
+            <div class="fv" id="exp-total" style="color:var(--red);">₱0.00</div>
+          </div>
         </div>
       </div>
 
@@ -6212,6 +6250,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
 
     </div>
+  </div><!-- /s-settings -->
 
   <!-- AUDIT TRAIL SCREEN -->
   <div id="s-audit" class="screen">
