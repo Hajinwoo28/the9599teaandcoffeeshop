@@ -52,7 +52,13 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID.app
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-if os.environ.get('RENDER') or os.environ.get('DYNO'):
+_ON_CLOUD = bool(
+    os.environ.get('RENDER') or
+    os.environ.get('DYNO') or
+    os.environ.get('VERCEL') or
+    os.environ.get('VERCEL_ENV')
+)
+if _ON_CLOUD:
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 else:
@@ -9348,7 +9354,8 @@ def _lazy_db_init():
         _initialize_db()
         _db_initialized = True
 
-with app.app_context():
+try:
+  with app.app_context():
     try:
         db.create_all()
 
@@ -9826,7 +9833,13 @@ with app.app_context():
 
     except Exception as e:
         print(f"DB Init Error: {e}")
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass  # Rollback can fail if the engine never connected; swallow safely
+except Exception as _module_init_err:
+    print(f"[Startup] DB init block failed at module level: {_module_init_err}")
+    # App will still serve requests; lazy init will retry on first request.
 
 # ==========================================
 # 11. APPLICATION RUNNER
