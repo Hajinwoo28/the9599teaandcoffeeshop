@@ -5441,7 +5441,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── DESKTOP PERMANENT SIDEBAR LAYOUT ── */
 @media(min-width:768px){
-  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:1px solid rgba(196,168,130,0.1);top:var(--topbar-h);height:calc(100% - var(--topbar-h));}
+  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:none;top:var(--topbar-h);height:calc(100% - var(--topbar-h));}
   .admin-nav-drawer::after{display:none;}
   .topbar{position:fixed;top:0;left:0;right:0;z-index:200;}
   .screens{position:fixed;top:var(--topbar-h);left:272px;right:0;bottom:0;overflow:hidden;}
@@ -5502,8 +5502,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-action.danger:hover{background:rgba(192,57,43,0.2);color:#fff;border-color:rgba(192,57,43,0.45);}
 
 /* ── FINANCE SECTION NAV (Tab Pills) ── */
-.fin-tab-nav{display:flex;gap:5px;padding:8px 14px 8px;background:var(--white);border-bottom:1px solid var(--cream-dark);}
-.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 8px;border-radius:10px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+.fin-tab-nav{display:flex;gap:5px;padding:5px 12px 5px;background:var(--white);border-bottom:1px solid var(--cream-dark);}
+.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:5px 8px;border-radius:9px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
 .fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
@@ -5667,10 +5667,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .perm-title{font-weight:800;color:var(--red);font-size:0.84rem;display:flex;align-items:center;gap:6px;}
 
 /* ── FINANCE ── */
-.fin-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:10px 14px 8px;}
-.fin-stat{background:var(--white);border-radius:10px;padding:8px 12px;border:1px solid var(--cream-dark);box-shadow:0 1px 6px rgba(61,36,16,0.07);display:flex;align-items:center;gap:8px;}
-.fin-stat .fl{font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;flex:1;}
-.fin-stat .fv{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;white-space:nowrap;}
+.fin-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:6px 12px 4px;}
+.fin-stat{background:var(--white);border-radius:8px;padding:5px 10px;border:1px solid var(--cream-dark);box-shadow:0 1px 4px rgba(61,36,16,0.07);display:flex;align-items:center;gap:6px;}
+.fin-stat .fl{font-size:0.56rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;flex:1;}
+.fin-stat .fv{font-family:'Playfair Display',serif;font-size:0.85rem;font-weight:900;white-space:nowrap;}
 
 /* ── SCHEDULE ── */
 .schedule-grid{display:flex;flex-direction:column;gap:10px;}
@@ -5712,7 +5712,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .opt-section-label{font-size:0.66rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 7px;}
 
 /* ── SECTION SPACING ── */
-.section{margin:0 14px 12px;}
+.section{margin:0 12px 8px;}
 .screen-inner{padding:28px 0 0;}
 
 /* ── FINANCE TABS ── */
@@ -6002,16 +6002,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <!-- ── TODAY TAB ── -->
     <div id="fin-today" class="fin-tabpane active">
       <div class="section card">
-        <div class="card-title">Log Expense</div>
-        <input type="text" class="inp" id="exp-desc" placeholder="Description (e.g. Ice, Packaging)">
-        <input type="number" class="inp" id="exp-amount" placeholder="Amount (₱)">
-        <button class="btn-primary" onclick="addExpense()"><i class="fas fa-plus"></i> Record Expense</button>
-      </div>
-      <div class="section card">
-        <div class="card-title">Expense Log</div>
-        <div id="exp-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No expenses today.</div></div>
-      </div>
-      <div class="section card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <span class="card-title" style="margin:0;">Customer Records</span>
           <button class="btn-secondary" onclick="fetchCustomerLogs()"><i class="fas fa-sync-alt"></i></button>
@@ -6023,29 +6013,23 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           </table>
         </div>
       </div>
+      <div class="section card">
+        <div class="card-title">Log Expense</div>
+        <input type="text" class="inp" id="exp-desc" placeholder="Description (e.g. Ice, Packaging)">
+        <input type="number" class="inp" id="exp-amount" placeholder="Amount (₱)">
+        <button class="btn-primary" onclick="addExpense()"><i class="fas fa-plus"></i> Record Expense</button>
+      </div>
+      <div class="section card">
+        <div class="card-title">Expense Log</div>
+        <div id="exp-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No expenses today.</div></div>
+      </div>
     </div>
 
     <!-- ── REPORTS TAB ── -->
     <div id="fin-reports" class="fin-tabpane">
-      <!-- Sales Chart -->
+      <!-- Best-sellers (moved to top) -->
       <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-          <span class="card-title" style="margin:0;">Sales Overview</span>
-          <div class="period-pills">
-            <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
-            <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
-          </div>
-        </div>
-        <div id="chart-loading" style="text-align:center;padding:30px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;"><i class="fas fa-spinner fa-spin"></i> Loading chart…</div>
-        <div style="position:relative;height:200px;">
-          <canvas id="sales-chart"></canvas>
-        </div>
-        <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;"></div>
-      </div>
-
-      <!-- Best-sellers -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
           <span class="card-title" style="margin:0;">Best-Sellers</span>
           <div class="period-pills">
             <button class="period-pill active" id="bsp-today" onclick="loadBestSellers('today',this)">Today</button>
@@ -6054,6 +6038,22 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           </div>
         </div>
         <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;">Loading…</div></div>
+      </div>
+
+      <!-- Sales Chart -->
+      <div class="section card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+          <span class="card-title" style="margin:0;">Sales Overview</span>
+          <div class="period-pills">
+            <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
+            <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
+          </div>
+        </div>
+        <div id="chart-loading" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;"><i class="fas fa-spinner fa-spin"></i> Loading chart…</div>
+        <div style="position:relative;height:150px;">
+          <canvas id="sales-chart"></canvas>
+        </div>
+        <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;"></div>
       </div>
 
       <!-- Low Stock Alerts -->
