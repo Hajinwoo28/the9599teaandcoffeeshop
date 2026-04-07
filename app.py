@@ -86,8 +86,9 @@ token_serializer = URLSafeTimedSerializer(app.secret_key)
 limiter = Limiter(
     get_remote_address,
     app=app,
+    default_limits=["1000 per day", "100 per hour"],
     storage_uri="memory://",
-    default_limits=[]  # Per-route limits applied individually; global limits removed for Vercel compat
+    swallow_errors=True   # Prevents crash on serverless (Vercel) where in-memory state is lost
 )
 
 @app.after_request
@@ -840,11 +841,15 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
 /* ── LAYOUT: Desktop permanent sidebar ── */
 @media(min-width:768px){
-  body{flex-direction:row;}
+  body{flex-direction:column;}
   .topbar{
     position:fixed;top:0;left:272px;right:0;z-index:200;
     border-bottom:none;
     border-left:none;
+  }
+  #emp-shift-stats{
+    position:fixed;top:var(--topbar-h);left:272px;right:0;
+    z-index:150;
   }
   .emp-nav-drawer{
     transform:translateX(0) !important;
@@ -856,8 +861,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
   .sidebar-toggle{display:none !important;}
   .drawer-close{display:none !important;}
   .nav-backdrop{display:none !important;}
-  .screens{margin-left:272px;margin-top:var(--topbar-h);padding-left:0;}
-  .screen{padding-top:0;}
+  .screens{margin-left:272px;margin-top:calc(var(--topbar-h) + 28px);}
 }
 @media(max-width:767px){
   .sidebar-toggle{display:flex;}
@@ -866,7 +870,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
   .screens{margin-top:0;}
 }
 
-.screens{flex:1;overflow:hidden;position:relative;padding-left:0;padding-right:0;}
+.screens{flex:1;overflow:hidden;position:relative;}
 .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;scrollbar-width:none;}
 .screen::-webkit-scrollbar{display:none;}
 .screen.active{display:block;}
@@ -875,7 +879,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:900;color:var(--teal-dark);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.76rem;color:var(--muted);margin-top:3px;font-weight:600;}
 
-.section{padding:14px 14px 0;margin-left:0;}
+.section{padding:14px 14px 0;}
 .card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
 .card-title{font-size:0.8rem;font-weight:900;color:var(--teal-dark);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
 
@@ -8215,37 +8219,40 @@ def _get_state():
 
 @app.before_request
 def check_admin_session():
-    # ── /admin: lock to the device that owns the active admin session ────────
+    # ── /admin: when NOT yet logged in, enforce the active-session lock ──────
+    # (Already-logged-in takeover is handled inside admin_dashboard() itself)
     if request.path == '/admin':
         if request.method == 'POST' and request.form.get('force') == '1':
             return  # let the route handle force takeover
-        try:
+        if not session.get('is_admin'):
+            # Only show lock screen for unauthenticated visitors
             state = _get_state()
             if state:
-                active = state.active_session_id
-                ping   = state.last_ping
-                if active and _session_active(ping):
-                    if active != session.get('admin_id'):
+                try:
+                    active = state.active_session_id
+                    ping   = state.last_ping
+                    if active and _session_active(ping):
                         return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
-        except Exception:
-            pass  # DB not ready yet — let the route handle it
-        return  # no active lock — /admin route shows its own login form
+                except Exception:
+                    pass
+        return  # let admin_dashboard() take over from here
 
-    # ── /employee: lock to the device that owns the active employee session ──
+    # ── /employee: when NOT yet logged in, enforce the active-session lock ───
+    # (Already-logged-in takeover is handled inside employee_dashboard() itself)
     if request.path == '/employee':
         if request.method == 'POST' and request.form.get('force') == '1':
             return  # let the route handle force takeover
-        try:
+        if not session.get('is_employee'):
             state = _get_state()
             if state:
-                active = getattr(state, 'active_employee_session_id', None)
-                ping   = getattr(state, 'employee_last_ping', None)
-                if active and _session_active(ping):
-                    if active != session.get('employee_id'):
+                try:
+                    active = getattr(state, 'active_employee_session_id', None)
+                    ping   = getattr(state, 'employee_last_ping', None)
+                    if active and _session_active(ping):
                         return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
-        except Exception:
-            pass  # DB not ready yet — let the route handle it
-        return  # no active lock — /employee route shows its own login form
+                except Exception:
+                    pass
+        return  # let employee_dashboard() take over from here
 
     # ── Guard admin API routes and sub-paths ─────────────────────────────────
     if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
@@ -8387,6 +8394,7 @@ def google_auth():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/auth/manual', methods=['POST'])
+@limiter.limit("30 per minute")
 def manual_auth():
     """Manual sign-in: name + email + optional phone + required location. No Google OAuth required."""
     data = request.json or {}
@@ -8412,6 +8420,7 @@ def manual_auth():
     return jsonify({"status": "success"})
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def admin_login():
     error = None
     if request.method == 'POST':
@@ -8453,40 +8462,66 @@ def admin_logout():
     return redirect(url_for('admin_login'))
 
 @app.route('/admin', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def admin_dashboard():
+    # Ensure tables exist on first hit (Vercel cold-start safety)
+    try:
+        _initialize_db()
+    except Exception:
+        pass
+
     if not session.get('is_admin'):
         error = None
         if request.method == 'POST':
             pin = request.form.get('pin')
             force = request.form.get('force') == '1'
             if master_pin_matches(pin):
-                state = SystemState.query.first()
-                if not state:
-                    state = SystemState(active_session_id='', last_ping=datetime.min,
-                                        active_employee_session_id='', employee_last_ping=datetime.min)
-                    db.session.add(state)
-                # Block if another device holds an active session — unless force takeover
-                if not force and state.active_session_id and _session_active(state.last_ping):
-                    if state.active_session_id != session.get('admin_id'):
-                        return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
-                session.permanent = True
-                session['is_admin'] = True
-                session['admin_id'] = str(uuid.uuid4())
-                state.active_session_id = session['admin_id']
-                state.last_ping = datetime.utcnow()
-                db.session.commit()
-                log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login to dashboard")
-                return redirect(url_for('admin_dashboard'))
-            error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+                try:
+                    state = SystemState.query.first()
+                    if not state:
+                        state = SystemState(active_session_id='', last_ping=datetime.min,
+                                            active_employee_session_id='', employee_last_ping=datetime.min)
+                        db.session.add(state)
+                    # Block if another device holds an active session — unless force takeover
+                    if not force and state.active_session_id and _session_active(state.last_ping):
+                        if state.active_session_id != session.get('admin_id'):
+                            return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
+                    session.permanent = True
+                    session['is_admin'] = True
+                    session['admin_id'] = str(uuid.uuid4())
+                    state.active_session_id = session['admin_id']
+                    state.last_ping = datetime.utcnow()
+                    db.session.commit()
+                    log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login to dashboard")
+                    return redirect(url_for('admin_dashboard'))
+                except Exception as _e:
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                    error = "A server error occurred. Please try again."
+            if not error:
+                error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
             if request.form.get('force') == '1':
                 return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=error), 200
         return render_template_string(LOGIN_HTML, error=error)
+
+    # Already authenticated — verify this device still holds the active session (takeover check)
     try:
-        return render_template_string(ADMIN_HTML)
-    except Exception as _e:
-        return f"<h2>Template error: {_e}</h2><p>Check Vercel function logs.</p>", 500
+        state = _get_state()
+        if state and state.active_session_id and _session_active(state.last_ping):
+            if state.active_session_id != session.get('admin_id'):
+                # Another device has taken over — kick this one out
+                session.pop('is_admin', None)
+                session.pop('admin_id', None)
+                return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
+    except Exception:
+        pass
+
+    return render_template_string(ADMIN_HTML)
 
 @app.route('/employee/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def employee_login():
     if session.get('is_employee'): return redirect(url_for('employee_dashboard'))
     error = None
@@ -8528,38 +8563,63 @@ def employee_logout():
     return redirect(url_for('employee_login'))
 
 @app.route('/employee', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def employee_dashboard():
+    # Ensure tables exist on first hit (Vercel cold-start safety)
+    try:
+        _initialize_db()
+    except Exception:
+        pass
+
     if not session.get('is_employee'):
         error = None
         if request.method == 'POST':
             pin = request.form.get('pin')
             force = request.form.get('force') == '1'
             if master_pin_matches(pin):
-                state = SystemState.query.first()
-                if not state:
-                    state = SystemState(active_session_id='', last_ping=datetime.min,
-                                        active_employee_session_id='', employee_last_ping=datetime.min)
-                    db.session.add(state)
-                # Block if another device holds an active session — unless force takeover
-                if not force and state.active_employee_session_id and _session_active(state.employee_last_ping):
-                    if state.active_employee_session_id != session.get('employee_id'):
-                        return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
-                session.permanent = True
-                session['is_employee'] = True
-                session['employee_id'] = str(uuid.uuid4())
-                state.active_employee_session_id = session['employee_id']
-                state.employee_last_ping = datetime.utcnow()
-                db.session.commit()
-                log_audit("Employee Login", f"{'Force takeover — ' if force else ''}Staff logged in to employee station")
-                return redirect(url_for('employee_dashboard'))
-            error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+                try:
+                    state = SystemState.query.first()
+                    if not state:
+                        state = SystemState(active_session_id='', last_ping=datetime.min,
+                                            active_employee_session_id='', employee_last_ping=datetime.min)
+                        db.session.add(state)
+                    # Block if another device holds an active session — unless force takeover
+                    if not force and state.active_employee_session_id and _session_active(state.employee_last_ping):
+                        if state.active_employee_session_id != session.get('employee_id'):
+                            return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
+                    session.permanent = True
+                    session['is_employee'] = True
+                    session['employee_id'] = str(uuid.uuid4())
+                    state.active_employee_session_id = session['employee_id']
+                    state.employee_last_ping = datetime.utcnow()
+                    db.session.commit()
+                    log_audit("Employee Login", f"{'Force takeover — ' if force else ''}Staff logged in to employee station")
+                    return redirect(url_for('employee_dashboard'))
+                except Exception as _e:
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                    error = "A server error occurred. Please try again."
+            if not error:
+                error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
             if request.form.get('force') == '1':
                 return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=error), 200
         return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
+
+    # Already authenticated — verify this device still holds the active employee session (takeover check)
     try:
-        return render_template_string(EMPLOYEE_HTML)
-    except Exception as _e:
-        return f"<h2>Template error: {_e}</h2><p>Check Vercel function logs.</p>", 500
+        state = _get_state()
+        if state and state.active_employee_session_id and _session_active(state.employee_last_ping):
+            if state.active_employee_session_id != session.get('employee_id'):
+                # Another device has taken over — kick this one out
+                session.pop('is_employee', None)
+                session.pop('employee_id', None)
+                return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
+    except Exception:
+        pass
+
+    return render_template_string(EMPLOYEE_HTML)
 
 @app.route('/api/admin/ping')
 def admin_ping():
@@ -8731,6 +8791,7 @@ def handle_inventory():
         return jsonify({"status": "success"})
 
 @app.route('/reserve', methods=['POST'])
+@limiter.limit("5 per minute")
 def reserve_blend():
     data = request.json
     try:
@@ -8887,6 +8948,7 @@ def customer_order_status():
     return jsonify([{'code': o.reservation_code, 'status': o.status, 'cancel_reason': o.cancel_reason or ''} for o in orders])
 
 @app.route('/api/customer/update_order', methods=['POST'])
+@limiter.limit("15 per minute")
 def customer_update_order():
     """Append new items to an existing order (customer-facing, permission-gated)."""
     data = request.json or {}
