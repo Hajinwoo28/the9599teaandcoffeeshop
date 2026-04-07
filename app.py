@@ -1096,6 +1096,97 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .notif-section-label.order-lbl::before{background:#1565C0;}
 .notif-section-label.perm-lbl::before{background:var(--orange);}
 .notif-section-label.stock-lbl::before{background:var(--red);}
+
+/* ══ ENHANCED EMPLOYEE ANIMATIONS ══ */
+@keyframes empSlideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes empPulseGreen{0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,0.3);}50%{box-shadow:0 0 0 10px rgba(46,125,50,0);}}
+@keyframes empPulseOrange{0%,100%{box-shadow:0 0 0 0 rgba(230,81,0,0.3);}50%{box-shadow:0 0 0 8px rgba(230,81,0,0);}}
+@keyframes empRipple{to{transform:scale(4);opacity:0;}}
+@keyframes empModalIn{from{opacity:0;transform:scale(0.9) translateY(18px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes empOverlayIn{from{opacity:0;}to{opacity:1;}}
+@keyframes newOrderFlash{0%{background:rgba(46,125,50,0.15);}50%{background:rgba(46,125,50,0.06);}100%{background:transparent;}}
+@keyframes empShimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+@keyframes bellShake{0%,100%{transform:rotate(0);}20%{transform:rotate(-15deg);}40%{transform:rotate(15deg);}60%{transform:rotate(-10deg);}80%{transform:rotate(10deg);}}
+
+/* ══ NEW ORDER HIGHLIGHT ══ */
+.kds-row-new{animation:newOrderFlash 2s ease-out;}
+
+/* ══ RIPPLE ON EMP BUTTONS ══ */
+.btn-action,.drawer-nav-item,.emp-status-btn{position:relative;overflow:hidden;}
+.emp-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:empRipple 0.5s linear;pointer-events:none;}
+
+/* ══ ENHANCED TOPBAR ══ */
+.topbar{background:linear-gradient(135deg,#052A24 0%,var(--teal-dark) 50%,#0A3830 100%);}
+
+/* ══ BELL ANIMATION ══ */
+.bell-btn.ringing{animation:bellShake 0.5s ease;}
+
+/* ══ ENHANCED ORDER CARDS (KDS) ══ */
+.kds-card{background:var(--card);border-radius:16px;border:1.5px solid var(--border);box-shadow:0 4px 18px rgba(13,122,106,0.08);padding:0;overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;animation:empSlideUp 0.28s cubic-bezier(0.22,1,0.36,1) both;}
+.kds-card:hover{box-shadow:0 10px 36px rgba(13,122,106,0.15);transform:translateY(-2px);}
+.kds-card-header{padding:12px 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.kds-card-status-bar{height:4px;width:100%;}
+.kds-card-status-bar.waiting{background:linear-gradient(90deg,var(--orange),#FFCC80);}
+.kds-card-status-bar.preparing{background:linear-gradient(90deg,var(--blue),#64B5F6);}
+.kds-card-status-bar.ready{background:linear-gradient(90deg,var(--green),#81C784);}
+.kds-card-body{padding:12px 14px;}
+.kds-card-footer{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;}
+
+/* ══ EMP STATUS BUTTONS ══ */
+.emp-status-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:none;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;transition:all 0.18s;flex:1;justify-content:center;}
+.emp-status-btn.accept{background:rgba(46,125,50,0.1);color:var(--green);border:1.5px solid rgba(46,125,50,0.2);}
+.emp-status-btn.accept:hover{background:var(--green);color:#fff;}
+.emp-status-btn.prepare{background:rgba(21,101,192,0.1);color:var(--blue);border:1.5px solid rgba(21,101,192,0.2);}
+.emp-status-btn.prepare:hover{background:var(--blue);color:#fff;}
+.emp-status-btn.ready{background:rgba(13,122,106,0.1);color:var(--teal);border:1.5px solid rgba(13,122,106,0.2);}
+.emp-status-btn.ready:hover{background:var(--teal);color:#fff;}
+.emp-status-btn.complete{background:rgba(46,125,50,0.08);color:#2E7D32;border:1.5px solid rgba(46,125,50,0.15);}
+.emp-status-btn.complete:hover{background:#2E7D32;color:#fff;animation:empPulseGreen 0.5s ease;}
+
+/* ══ EMP MODAL SYSTEM ══ */
+.emp-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:9500;align-items:center;justify-content:center;padding:20px;}
+.emp-modal-overlay.open{display:flex;animation:empOverlayIn 0.22s ease;}
+.emp-modal{background:#fff;border-radius:22px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 28px 80px rgba(0,0,0,0.25);position:relative;animation:empModalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.emp-modal-icon{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 14px;}
+.emp-modal h3{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:#0A2925;text-align:center;margin-bottom:6px;}
+.emp-modal p{font-size:0.82rem;color:#557570;text-align:center;line-height:1.6;margin-bottom:18px;font-weight:600;}
+.emp-modal-btns{display:flex;gap:9px;}
+.emp-modal-btn{flex:1;padding:11px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:800;cursor:pointer;transition:all 0.18s;}
+.emp-modal-btn.confirm{background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);}
+.emp-modal-btn.confirm:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,122,106,0.4);}
+.emp-modal-btn.cancel{background:#f3f4f6;color:#374151;}
+.emp-modal-btn.cancel:hover{background:#e5e7eb;}
+.emp-modal-close{position:absolute;top:14px;right:14px;background:none;border:none;color:#9ca3af;font-size:1rem;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background 0.15s;}
+.emp-modal-close:hover{background:#f3f4f6;color:#374151;}
+
+/* ══ SHIFT SUMMARY CHIP ══ */
+.shift-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(200,168,75,0.2);border-radius:12px;padding:6px 12px;font-size:0.72rem;font-weight:700;color:rgba(200,168,75,0.8);}
+.shift-chip i{font-size:0.75rem;}
+
+/* ══ STATUS DOT LIVE ══ */
+.dot-live-teal{width:8px;height:8px;border-radius:50%;background:#27AE60;animation:empPulseGreen 2s infinite;display:inline-block;}
+.dot-warn-orange{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:empPulseOrange 1.5s infinite;display:inline-block;}
+
+/* ══ ORDER TIMER BADGE ══ */
+.order-timer{font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:20px;border:1px solid;white-space:nowrap;}
+.order-timer.fresh{background:rgba(46,125,50,0.08);color:var(--green);border-color:rgba(46,125,50,0.2);}
+.order-timer.moderate{background:rgba(230,81,0,0.08);color:var(--orange);border-color:rgba(230,81,0,0.2);}
+.order-timer.late{background:rgba(211,47,47,0.08);color:var(--red);border-color:rgba(211,47,47,0.2);}
+
+/* ══ ENHANCED KDS TABLE ══ */
+#kds-tbody tr{transition:background 0.15s;animation:empSlideUp 0.22s ease both;}
+#kds-tbody tr:nth-child(2){animation-delay:0.05s;}
+#kds-tbody tr:nth-child(3){animation-delay:0.1s;}
+#kds-tbody tr:hover{background:rgba(13,122,106,0.03);}
+
+/* ══ SCROLLBAR ══ */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#D0E4E0;border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:#0D7A6A;}
+
+/* ══ SCREEN TRANSITIONS ══ */
+.screen.active{animation:empSlideUp 0.28s cubic-bezier(0.22,1,0.36,1) both;}
 </style>
 </head>
 <body>
@@ -1181,6 +1272,25 @@ function playEmpPermBeep(){
     </button>
   </div>
 </header>
+
+<!-- SHIFT STATS BAR -->
+<div id="emp-shift-stats" style="
+  background:linear-gradient(135deg,#041A17 0%,#062520 100%);
+  border-bottom:1px solid rgba(200,168,75,0.12);
+  padding:5px 16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+  min-height:28px;
+  position:sticky;
+  top:var(--topbar-h);
+  z-index:90;
+">
+  <span class="dot-live-teal"></span>
+  <span style="font-weight:800;color:rgba(200,168,75,0.9);font-size:0.7rem;">LIVE</span>
+  <span style="color:rgba(255,255,255,0.4);font-size:0.7rem;font-weight:600;">Shift data loading…</span>
+</div>
 
 <!-- SIDE NAV BACKDROP -->
 <div class="nav-backdrop" id="nav-backdrop" onclick="closeEmpMenu()"></div>
@@ -1750,10 +1860,24 @@ async function fetchOrders(){
     if(!r.ok) return;
     const data=await r.json();
     allOrders=data.orders||[];
-    const hasNewOrder=knownOrderIds.size>0&&allOrders.some(o=>!knownOrderIds.has(o.id));
-    if(hasNewOrder) playEmpBeep();
+    const newOrders=knownOrderIds.size>0?allOrders.filter(o=>!knownOrderIds.has(o.id)):[];
+    if(newOrders.length){
+      playEmpBeep();
+      // Bell shake
+      const b=document.getElementById('bell-btn');
+      if(b){b.classList.add('ringing');setTimeout(()=>b.classList.remove('ringing'),600);}
+    }
     allOrders.forEach(o=>knownOrderIds.add(o.id));
     renderOrders();
+    // Flash new order rows after render
+    if(newOrders.length){
+      setTimeout(()=>{
+        newOrders.forEach(o=>{
+          const row=document.querySelector(`[data-order-id="${o.id}"]`);
+          if(row){row.classList.add('kds-row-new');setTimeout(()=>row.classList.remove('kds-row-new'),2200);}
+        });
+      },80);
+    }
     updateStats();
     updateBell();
   }catch(e){}
@@ -1792,6 +1916,15 @@ function renderOrders(){
     const itemsSummary=o.items.map(i=>escapeHTML(i.foundation+(i.size&&i.size!=='16 oz'?' ('+i.size+')':''))).join(', ');
     const cls=statusClass[o.status]||'sel-waiting';
     const isAwaiting = o.status === 'Awaiting Customer';
+    // Timer badge
+    const timerBadge=(function(){
+      if(!o.created_at)return'';
+      const mins=Math.round((Date.now()-new Date(o.created_at).getTime())/60000);
+      if(isNaN(mins)||mins<0)return'';
+      const tc=mins<10?'fresh':mins<20?'moderate':'late';
+      const tl=mins<1?'Just now':`${mins}m ago`;
+      return`<span class="order-timer ${tc}" style="margin-left:4px;"><i class="fas fa-clock" style="font-size:0.55rem;"></i> ${tl}</span>`;
+    })();
     const sel=`<select class="status-select ${cls}" onchange="updateStatus(${o.id},this.value,this)" ${isAwaiting?'disabled title="Waiting for customer response"':''}>
       <option value="Waiting Confirmation" ${o.status==='Waiting Confirmation'?'selected':''}>⏳ Waiting</option>
       <option value="Preparing" ${o.status==='Preparing'?'selected':''}>🔥 Preparing</option>
@@ -1800,15 +1933,18 @@ function renderOrders(){
       <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
       ${isAwaiting?'<option value="Awaiting Customer" selected>🕐 Awaiting Customer</option>':''}
     </select>`;
-    return `<tr>
-      <td><span class="order-num">#${escapeHTML(o.code)}</span></td>
+    return `<tr data-order-id="${o.id}">
+      <td><span class="order-num">#${escapeHTML(o.code)}</span>${timerBadge}</td>
       <td>${sourceBadge}</td>
       <td style="font-weight:700;white-space:nowrap;">${escapeHTML(o.name)}</td>
       <td style="white-space:nowrap;font-size:0.74rem;color:var(--muted);">${escapeHTML(o.pickup_time||'Walk-In')}</td>
       <td style="white-space:nowrap;font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);">₱${Number(o.total).toFixed(2)}</td>
       <td class="items-cell">${itemsSummary}</td>
       <td>${sel}</td>
-      <td><div class="tbl-actions"><button class="tbl-btn print" onclick="printOrderReceipt(${o.id})"><i class="fas fa-print"></i></button></div></td>
+      <td><div class="tbl-actions">
+        <button class="tbl-btn print" title="View Details" onclick="event.stopPropagation();openEmpOrdDetail(allOrders.find(x=>x.id===${o.id}))"><i class="fas fa-eye"></i></button>
+        <button class="tbl-btn print" title="Print Receipt" onclick="printOrderReceipt(${o.id})"><i class="fas fa-print"></i></button>
+      </div></td>
     </tr>`;
   }).join('');
 }
@@ -5333,6 +5469,191 @@ function playGrantedSound() {
 </div>
 
 {% endif %}
+
+<!-- ══ EMPLOYEE ENHANCED INTERACTION JS ══ -->
+<script>
+/* ── Ripple Effect on all buttons ── */
+document.addEventListener('click',function(e){
+  const t=e.target.closest('.btn-action,.drawer-nav-item,.opt-btn,.btn-modal-add,.btn-modal-cancel,.emp-modal-btn,.emp-status-btn');
+  if(!t)return;
+  const r=document.createElement('span');r.className='emp-ripple';
+  const rect=t.getBoundingClientRect(),size=Math.max(rect.width,rect.height);
+  r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
+  t.appendChild(r);r.addEventListener('animationend',()=>r.remove());
+});
+
+/* ── Employee Confirmation Modal ── */
+function showEmpModal(type,title,msg,onConfirm,confirmLabel){
+  let ov=document.getElementById('emp-modal-overlay');
+  if(!ov){
+    ov=document.createElement('div');ov.id='emp-modal-overlay';ov.className='emp-modal-overlay';
+    const icons={confirm:'fas fa-check-circle',warning:'fas fa-exclamation-circle',danger:'fas fa-times-circle',info:'fas fa-info-circle'};
+    const colors={confirm:'rgba(46,125,50,0.1)',warning:'rgba(230,81,0,0.1)',danger:'rgba(211,47,47,0.1)',info:'rgba(13,122,106,0.1)'};
+    const textColors={confirm:'#2E7D32',warning:'#E65100',danger:'#D32F2F',info:'#0D7A6A'};
+    ov.innerHTML=`<div class="emp-modal"><button class="emp-modal-close" onclick="closeEmpModal()"><i class="fas fa-times"></i></button><div class="emp-modal-icon" id="emp-modal-icon-el"></div><h3 id="emp-modal-title-el"></h3><p id="emp-modal-msg-el"></p><div class="emp-modal-btns"><button class="emp-modal-btn cancel" onclick="closeEmpModal()">Cancel</button><button class="emp-modal-btn confirm" id="emp-modal-confirm-btn">Confirm</button></div></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){if(e.target===ov)closeEmpModal();});
+  }
+  const iMap={confirm:'fas fa-check-circle',warning:'fas fa-exclamation-circle',danger:'fas fa-times-circle',info:'fas fa-info-circle'};
+  const bgMap={confirm:'rgba(46,125,50,0.1)',warning:'rgba(230,81,0,0.1)',danger:'rgba(211,47,47,0.1)',info:'rgba(13,122,106,0.1)'};
+  const fgMap={confirm:'#2E7D32',warning:'#E65100',danger:'#D32F2F',info:'#0D7A6A'};
+  const iconEl=document.getElementById('emp-modal-icon-el');
+  iconEl.style.cssText=`background:${bgMap[type]||bgMap.info};color:${fgMap[type]||fgMap.info};`;
+  iconEl.innerHTML=`<i class="${iMap[type]||iMap.info}"></i>`;
+  document.getElementById('emp-modal-title-el').textContent=title;
+  document.getElementById('emp-modal-msg-el').textContent=msg;
+  const cb=document.getElementById('emp-modal-confirm-btn');
+  if(confirmLabel)cb.textContent=confirmLabel;
+  cb.onclick=function(){closeEmpModal();if(onConfirm)onConfirm();};
+  ov.classList.add('open');
+}
+function closeEmpModal(){const ov=document.getElementById('emp-modal-overlay');if(ov)ov.classList.remove('open');}
+
+/* ── Order Age Timer Badges ── */
+function getOrderTimer(createdAt){
+  if(!createdAt)return'';
+  const mins=Math.round((Date.now()-new Date(createdAt).getTime())/60000);
+  if(isNaN(mins)||mins<0)return'';
+  const cls=mins<10?'fresh':mins<20?'moderate':'late';
+  const label=mins<1?'Just now':`${mins}m ago`;
+  return`<span class="order-timer ${cls}"><i class="fas fa-clock" style="font-size:0.58rem;"></i> ${label}</span>`;
+}
+
+/* ── Bell shake on new order ── */
+function shakeBell(){
+  const b=document.getElementById('bell-btn');
+  if(!b)return;
+  b.classList.add('ringing');
+  b.addEventListener('animationend',()=>b.classList.remove('ringing'),{once:true});
+}
+
+/* ── New order row flash ── */
+function flashOrderRow(id){
+  const row=document.querySelector(`[data-order-id="${id}"]`);
+  if(row){row.classList.add('kds-row-new');setTimeout(()=>row.classList.remove('kds-row-new'),2000);}
+}
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(e.key==='Escape'){closeEmpModal();closeEmpOrdDetail();}
+  if(e.key==='1')goScreen&&goScreen('online');
+  if(e.key==='2')goScreen&&goScreen('pos');
+  if(e.key==='3')goScreen&&goScreen('stock');
+});
+
+/* ── Enhanced screen transition ── */
+function updateNavActive(name){
+  document.querySelectorAll('.drawer-nav-item').forEach(b=>b.classList.remove('active'));
+  const m={'online':'nav-online','pos':'nav-pos','stock':'nav-stock'};
+  const btn=document.getElementById(m[name]);
+  if(btn)btn.classList.add('active');
+}
+if(typeof goScreen==='function'){
+  const _origEmpGo=goScreen;
+  goScreen=function(name){_origEmpGo(name);updateNavActive(name);setTimeout(updateShiftStats,200);};
+}
+
+/* ── Scroll-to-top on screen switch ── */
+document.querySelectorAll('.screen').forEach(s=>{
+  const observer=new MutationObserver(()=>{if(s.classList.contains('active'))s.scrollTop=0;});
+  observer.observe(s,{attributes:true,attributeFilter:['class']});
+});
+
+/* ── Employee Order Detail Modal ── */
+function openEmpOrdDetail(o){
+  if(typeof o==='string')try{o=JSON.parse(o);}catch(e){return;}
+  let ov=document.getElementById('emp-ord-detail-overlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='emp-ord-detail-overlay';
+    ov.className='emp-modal-overlay';
+    ov.innerHTML=`<div class="emp-modal emp-ord-modal" id="emp-ord-detail-box">
+      <div class="emp-ord-modal-head">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span class="emp-ord-modal-code" id="eod-code">—</span>
+          <button onclick="closeEmpOrdDetail()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="emp-ord-modal-name" id="eod-name">—</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;" id="eod-badges"></div>
+      </div>
+      <div class="emp-ord-modal-body">
+        <div style="font-size:0.68rem;font-weight:900;color:#557570;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Items Ordered</div>
+        <div id="eod-items"></div>
+        <div style="font-size:0.68rem;font-weight:900;color:#557570;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px;">Order Details</div>
+        <div id="eod-meta"></div>
+        <div style="background:linear-gradient(135deg,rgba(13,122,106,0.08),rgba(13,122,106,0.04));border:1.5px solid rgba(13,122,106,0.15);border-radius:12px;padding:12px 14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;font-weight:800;color:#0A2925;">Total Amount</span>
+          <span style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--teal-dark);" id="eod-total">₱0.00</span>
+        </div>
+      </div>
+      <div class="emp-ord-modal-foot">
+        <button class="emp-modal-btn cancel" onclick="closeEmpOrdDetail()" style="flex:1;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:800;cursor:pointer;background:#f3f4f6;color:#374151;">Close</button>
+        <button class="emp-modal-btn confirm" id="eod-print-btn" style="flex:1;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fas fa-print"></i> Print</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){if(e.target===ov)closeEmpOrdDetail();});
+  }
+  document.getElementById('eod-code').textContent='#'+(o.code||'—');
+  document.getElementById('eod-name').textContent=o.name||'Unknown Customer';
+  document.getElementById('eod-total').textContent='₱'+Number(o.total||0).toFixed(2);
+  const isOnline=o.source==='Online';
+  document.getElementById('eod-badges').innerHTML=`
+    <span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;color:rgba(255,255,255,0.85);">${isOnline?'🌐 Online':'🚶 Walk-In'}</span>
+    <span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;color:rgba(255,255,255,0.85);">${escapeHTML(o.status||'—')}</span>
+    ${o.pickup_time?`<span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;color:rgba(255,255,255,0.85);">🕐 ${escapeHTML(o.pickup_time)}</span>`:''}`;
+  const itemsEl=document.getElementById('eod-items');
+  if(o.items&&o.items.length){
+    itemsEl.innerHTML=o.items.map(i=>`<div class="emp-ord-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
+        <div>
+          <div class="emp-ord-item-name">${escapeHTML(i.foundation||'?')}${i.size?` <span style="font-weight:600;color:#557570;font-size:0.74rem;">(${escapeHTML(i.size)})</span>`:''}</div>
+          <div class="emp-ord-item-opts">${[i.sweetener,i.ice,i.addons?'+ '+i.addons:''].filter(Boolean).map(v=>escapeHTML(v)).join(' · ')}</div>
+        </div>
+        <span style="font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:900;color:var(--green);white-space:nowrap;flex-shrink:0;">₱${Number(i.item_total||0).toFixed(2)}</span>
+      </div>
+    </div>`).join('');
+  }else{itemsEl.innerHTML='<div style="color:#557570;font-size:0.81rem;font-weight:600;">No items found.</div>';}
+  const metaEl=document.getElementById('eod-meta');
+  const mRows=[['Phone',o.phone],['Address',o.address],['Process Type',o.process_type],['Email',o.email]];
+  metaEl.innerHTML=mRows.filter(([,v])=>v&&String(v).trim()).map(([l,v])=>`<div class="emp-ord-detail-row"><span class="emp-ord-detail-lbl">${l}</span><span class="emp-ord-detail-val">${escapeHTML(String(v))}</span></div>`).join('')||'<div style="color:#557570;font-size:0.8rem;font-weight:600;padding:4px 0;">No extra details on file.</div>';
+  document.getElementById('eod-print-btn').onclick=()=>{closeEmpOrdDetail();if(typeof printOrderReceipt==='function')printOrderReceipt(o.id);};
+  ov.classList.add('open');
+}
+function closeEmpOrdDetail(){const ov=document.getElementById('emp-ord-detail-overlay');if(ov)ov.classList.remove('open');}
+
+/* ── Row click → order detail modal ── */
+document.addEventListener('click',function(e){
+  const row=e.target.closest('#orders-tbody tr[data-order-id]');
+  if(!row)return;
+  if(e.target.closest('select')||e.target.closest('button'))return;
+  const id=parseInt(row.dataset.orderId);
+  const o=(typeof allOrders!=='undefined')&&allOrders.find(x=>x.id===id);
+  if(o)openEmpOrdDetail(o);
+});
+
+/* ── Shift Stats Live Bar ── */
+function updateShiftStats(){
+  const el=document.getElementById('emp-shift-stats');
+  if(!el)return;
+  const orders=typeof allOrders!=='undefined'?allOrders:[];
+  const waiting=orders.filter(o=>o.status==='Waiting Confirmation').length;
+  const preparing=orders.filter(o=>o.status==='Preparing').length;
+  const done=orders.filter(o=>o.status==='Completed').length;
+  const revenue=orders.filter(o=>o.status==='Completed').reduce((s,o)=>s+Number(o.total||0),0);
+  el.innerHTML=`
+    <span class="dot-live-teal"></span>
+    <span style="font-weight:800;color:rgba(200,168,75,0.9);font-size:0.7rem;">LIVE</span>
+    <span style="width:1px;height:12px;background:rgba(255,255,255,0.12);display:inline-block;"></span>
+    <span style="color:rgba(255,255,255,0.65);font-size:0.7rem;font-weight:700;">⏳ ${waiting}</span>
+    <span style="color:rgba(255,255,255,0.65);font-size:0.7rem;font-weight:700;">🔥 ${preparing}</span>
+    <span style="color:rgba(255,255,255,0.65);font-size:0.7rem;font-weight:700;">✅ ${done} done</span>
+    <span style="width:1px;height:12px;background:rgba(255,255,255,0.12);display:inline-block;"></span>
+    <span style="color:rgba(200,168,75,0.85);font-size:0.7rem;font-weight:800;">₱${revenue.toFixed(0)}</span>`;
+}
+setInterval(updateShiftStats,8000);
+</script>
 </body>
 </html>
 """
@@ -5379,7 +5700,132 @@ ADMIN_HTML = """
 html,body{height:100%;overflow:hidden;}
 body{background:var(--cream);color:var(--text);display:flex;flex-direction:column;}
 
-/* ── TOAST ── */
+/* ══ ENHANCED ANIMATIONS ══ */
+@keyframes slideInUp{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:translateX(0);}}
+@keyframes fadeInScale{from{opacity:0;transform:scale(0.96);}to{opacity:1;transform:scale(1);}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(123,79,46,0.25);}50%{box-shadow:0 0 0 10px rgba(123,79,46,0);}}
+@keyframes pulseRed{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,0.3);}50%{box-shadow:0 0 0 8px rgba(192,57,43,0);}}
+@keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+@keyframes rippleOut{to{transform:scale(4);opacity:0;}}
+@keyframes spinOnce{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes badgeBounce{0%,100%{transform:scale(1);}30%{transform:scale(1.45);}60%{transform:scale(0.9);}}
+@keyframes toastSlide{from{opacity:0;transform:translate(-50%,-20px);}to{opacity:1;transform:translate(-50%,0);}}
+@keyframes modalIn{from{opacity:0;transform:scale(0.9) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes overlayIn{from{opacity:0;}to{opacity:1;}}
+
+/* ══ SCREEN TRANSITIONS ══ */
+.screen.active{animation:slideInUp 0.28s cubic-bezier(0.22,1,0.36,1) both;}
+
+/* ══ ENHANCED TOPBAR ══ */
+.topbar{background:linear-gradient(135deg,#2A1505 0%,var(--brown-dark) 50%,#3D2410 100%);}
+
+/* ══ RIPPLE ══ */
+.btn-primary,.btn-secondary,.admin-nav-item,.inv-tab,.fin-tab-pill,.period-pill,.dash-qa-btn{position:relative;overflow:hidden;}
+.ripple-circle{position:absolute;border-radius:50%;background:rgba(255,255,255,0.28);transform:scale(0);animation:rippleOut 0.55s linear;pointer-events:none;}
+
+/* ══ ENHANCED CARDS ══ */
+.card{transition:box-shadow 0.22s,transform 0.22s;}
+.card:hover{box-shadow:0 8px 32px rgba(61,36,16,0.16);transform:translateY(-1px);}
+
+/* ══ DASHBOARD SCREEN ══ */
+.dash-hero{background:linear-gradient(135deg,#2A1505 0%,#3D2410 40%,#5A3520 100%);padding:22px 20px 34px;position:relative;overflow:hidden;}
+.dash-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 300px 200px at 80% 30%,rgba(196,168,130,0.12) 0%,transparent 70%),radial-gradient(ellipse 200px 200px at 10% 80%,rgba(123,79,46,0.15) 0%,transparent 70%);}
+.dash-hero::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:28px;background:var(--cream);border-radius:20px 20px 0 0;}
+.dash-hero-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#fff;position:relative;z-index:1;}
+.dash-hero-sub{font-size:0.72rem;color:rgba(196,168,130,0.8);font-weight:600;margin-top:4px;position:relative;z-index:1;}
+.dash-hero-live{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:4px 10px;font-size:0.65rem;font-weight:800;color:rgba(196,168,130,0.85);margin-top:10px;position:relative;z-index:1;}
+.dash-kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px 14px 0;}
+.dash-kpi{background:var(--white);border-radius:14px;padding:14px;border:1.5px solid var(--cream-dark);box-shadow:0 3px 14px rgba(61,36,16,0.08);position:relative;overflow:hidden;cursor:default;transition:transform 0.2s,box-shadow 0.2s;}
+.dash-kpi:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(61,36,16,0.15);}
+.dash-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+.dash-kpi.revenue::before{background:linear-gradient(90deg,var(--brown),var(--tan));}
+.dash-kpi.orders::before{background:linear-gradient(90deg,var(--blue),#64B5F6);}
+.dash-kpi.profit::before{background:linear-gradient(90deg,var(--green),#81C784);}
+.dash-kpi.alerts::before{background:linear-gradient(90deg,var(--orange),#FFB74D);}
+.dash-kpi-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.95rem;margin-bottom:10px;}
+.dash-kpi.revenue .dash-kpi-icon{background:rgba(123,79,46,0.1);color:var(--brown);}
+.dash-kpi.orders .dash-kpi-icon{background:rgba(25,118,210,0.1);color:var(--blue);}
+.dash-kpi.profit .dash-kpi-icon{background:rgba(39,174,96,0.1);color:var(--green);}
+.dash-kpi.alerts .dash-kpi-icon{background:rgba(245,124,0,0.1);color:var(--orange);}
+.dash-kpi-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;line-height:1;color:var(--text);}
+.dash-kpi-lbl{font-size:0.62rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-top:4px;}
+.dash-kpi-trend{font-size:0.65rem;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:3px;}
+.dash-kpi-trend.up{color:var(--green);}
+.dash-kpi-trend.warn{color:var(--orange);}
+
+/* ══ QUICK ACTIONS ══ */
+.dash-section-title{font-size:0.72rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:14px 14px 8px;}
+.dash-qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px 0;}
+.dash-qa-btn{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:13px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:all 0.2s;font-family:'Nunito',sans-serif;text-align:center;}
+.dash-qa-btn:hover{border-color:var(--tan);background:var(--cream);transform:translateY(-3px);box-shadow:0 8px 24px rgba(61,36,16,0.13);}
+.dash-qa-btn:active{transform:translateY(0);}
+.dash-qa-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.dash-qa-label{font-size:0.67rem;font-weight:800;color:var(--text);letter-spacing:0.2px;line-height:1.3;}
+
+/* ══ DASHBOARD RECENT ORDERS ══ */
+.dash-order-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cream-dark);animation:slideInLeft 0.25s ease both;}
+.dash-order-row:last-child{border-bottom:none;}
+.dash-order-code{font-size:0.7rem;font-weight:900;color:var(--brown-dark);background:var(--cream);padding:3px 8px;border-radius:8px;border:1px solid var(--cream-dark);flex-shrink:0;font-family:monospace;}
+.dash-order-name{flex:1;font-size:0.8rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-order-total{font-size:0.8rem;font-weight:900;color:var(--green);flex-shrink:0;}
+
+/* ══ ENHANCED MODAL SYSTEM ══ */
+.adm-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:9500;align-items:center;justify-content:center;padding:20px;}
+.adm-modal-overlay.open{display:flex;animation:overlayIn 0.22s ease;}
+.adm-modal{background:var(--white);border-radius:22px;padding:30px 26px;max-width:420px;width:100%;box-shadow:0 28px 90px rgba(0,0,0,0.3);position:relative;animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.adm-modal-icon{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 16px;}
+.adm-modal-icon.success{background:rgba(39,174,96,0.12);color:var(--green);}
+.adm-modal-icon.warning{background:rgba(245,124,0,0.12);color:var(--orange);}
+.adm-modal-icon.danger{background:rgba(192,57,43,0.1);color:var(--red);}
+.adm-modal-icon.info{background:rgba(123,79,46,0.1);color:var(--brown);}
+.adm-modal h3{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--text);text-align:center;margin-bottom:8px;}
+.adm-modal p{font-size:0.83rem;color:var(--muted);text-align:center;line-height:1.65;margin-bottom:22px;font-weight:600;}
+.adm-modal-btns{display:flex;gap:10px;}
+.adm-modal-btns .btn-primary,.adm-modal-btns .btn-secondary{flex:1;margin:0;padding:12px;}
+.adm-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.1rem;color:var(--muted);cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background 0.15s;}
+.adm-modal-close:hover{background:var(--cream);color:var(--text);}
+
+/* ══ ENHANCED TOAST ══ */
+.toast{animation:toastSlide 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+
+/* ══ LOADING SKELETON ══ */
+.skeleton{background:linear-gradient(90deg,var(--cream-dark) 25%,#f8f6f0 50%,var(--cream-dark) 75%);background-size:400px 100%;animation:shimmer 1.4s infinite;border-radius:8px;height:16px;}
+
+/* ══ STATUS DOTS ══ */
+.dot-live{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulseGlow 2s infinite;display:inline-block;}
+.dot-warn{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:pulseRed 1.5s infinite;display:inline-block;}
+.dot-red{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulseRed 1s infinite;display:inline-block;}
+
+/* ══ ENHANCED PAGE HEADER ══ */
+.page-header{background:linear-gradient(135deg,#2A1505 0%,var(--brown-dark) 60%,var(--brown-mid) 100%) !important;border-bottom:none !important;position:relative;overflow:hidden;}
+.page-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 200px 150px at 90% 50%,rgba(196,168,130,0.08) 0%,transparent 70%);}
+.page-header h2{color:#fff !important;position:relative;z-index:1;}
+.page-header p{color:rgba(196,168,130,0.75) !important;position:relative;z-index:1;}
+.page-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:20px;background:var(--cream);border-radius:16px 16px 0 0;}
+
+/* ══ TABLE ROW HOVER ══ */
+#inv-tbody tr,#kds-tbody tr{transition:background 0.15s;}
+#inv-tbody tr:hover,#kds-tbody tr:hover{background:rgba(240,237,228,0.6);}
+#kds-tbody tr{animation:slideInLeft 0.22s ease both;}
+#kds-tbody tr:nth-child(2){animation-delay:0.04s;}
+#kds-tbody tr:nth-child(3){animation-delay:0.08s;}
+#kds-tbody tr:nth-child(4){animation-delay:0.12s;}
+
+/* ══ INLINE EDIT FOCUS ══ */
+.inv-inline-edit{transition:box-shadow 0.18s,transform 0.18s;}
+.inv-inline-edit:focus{box-shadow:0 0 0 3px rgba(123,79,46,0.15);transform:scale(1.04);}
+
+/* ══ NOTIFICATION BADGE ══ */
+.nbadge.new{animation:badgeBounce 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+
+/* ══ SCROLLBAR ══ */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--tan);}
+
+/* ══ TOAST ── */
 #toast-container{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;min-width:200px;}
 .toast{background:var(--brown-dark);color:var(--cream);padding:10px 20px;border-radius:20px;font-weight:700;font-size:0.84rem;box-shadow:0 4px 16px rgba(61,36,16,0.35);text-align:center;}
 .toast.error{background:var(--red);}
@@ -5763,6 +6209,84 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .oh-search-inp{flex:1;min-width:140px;padding:9px 13px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;outline:none;color:var(--text);background:var(--white);}
 .oh-search-inp:focus{border-color:var(--brown);}
 .oh-filter-sel{padding:9px 12px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:700;color:var(--text);background:var(--white);outline:none;cursor:pointer;}
+
+/* ══ LIVE ORDERS SCREEN ══ */
+.lo-filter-bar{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;}
+.lo-filter-bar::-webkit-scrollbar{display:none;}
+.lo-filter-pill{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid var(--cream-dark);background:var(--white);font-size:0.74rem;font-weight:800;color:var(--muted);cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.18s;white-space:nowrap;}
+.lo-filter-pill:hover{border-color:var(--tan);color:var(--brown);}
+.lo-filter-pill.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);}
+.lo-cards-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:12px 14px;}
+@media(min-width:600px){.lo-cards-grid{grid-template-columns:1fr 1fr;}}
+@media(min-width:1100px){.lo-cards-grid{grid-template-columns:1fr 1fr 1fr;}}
+.lo-card{background:var(--white);border-radius:16px;border:1.5px solid var(--cream-dark);box-shadow:0 3px 16px rgba(61,36,16,0.07);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;animation:slideInUp 0.25s ease both;cursor:pointer;}
+.lo-card:hover{transform:translateY(-3px);box-shadow:0 10px 32px rgba(61,36,16,0.14);}
+.lo-card-bar{height:4px;}
+.lo-card-bar.waiting{background:linear-gradient(90deg,var(--orange),#FFB74D);}
+.lo-card-bar.preparing{background:linear-gradient(90deg,var(--blue),#64B5F6);}
+.lo-card-bar.ready{background:linear-gradient(90deg,var(--green),#81C784);}
+.lo-card-bar.completed{background:linear-gradient(90deg,#388E3C,#66BB6A);}
+.lo-card-bar.cancelled{background:linear-gradient(90deg,var(--red),#E57373);}
+.lo-card-head{padding:11px 14px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cream-dark);}
+.lo-card-code{font-size:0.75rem;font-weight:900;color:var(--brown-dark);font-family:monospace;background:var(--cream);padding:3px 9px;border-radius:8px;border:1px solid var(--cream-dark);}
+.lo-card-name{font-size:0.84rem;font-weight:800;color:var(--text);}
+.lo-card-source{font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:10px;}
+.lo-card-source.online{background:rgba(25,118,210,0.1);color:var(--blue);}
+.lo-card-source.walkin{background:rgba(123,79,46,0.1);color:var(--brown);}
+.lo-card-body{padding:10px 14px 8px;display:flex;flex-direction:column;gap:5px;}
+.lo-card-items{font-size:0.78rem;color:var(--muted);font-weight:600;line-height:1.5;}
+.lo-card-total{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:var(--green);}
+.lo-card-foot{padding:9px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--cream-dark);}
+.lo-card-timer{font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:10px;border:1px solid;}
+.lo-card-timer.fresh{background:rgba(39,174,96,0.08);color:var(--green);border-color:rgba(39,174,96,0.2);}
+.lo-card-timer.moderate{background:rgba(245,124,0,0.08);color:var(--orange);border-color:rgba(245,124,0,0.2);}
+.lo-card-timer.late{background:rgba(192,57,43,0.08);color:var(--red);border-color:rgba(192,57,43,0.2);}
+.lo-status-sel{flex:1;padding:6px 10px;border:1.5px solid var(--cream-dark);border-radius:9px;font-family:'Nunito',sans-serif;font-size:0.76rem;font-weight:800;color:var(--text);background:var(--white);outline:none;cursor:pointer;transition:border-color 0.15s;}
+.lo-status-sel:focus{border-color:var(--brown);}
+.lo-empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.lo-empty-icon{font-size:2.8rem;margin-bottom:10px;}
+.lo-empty-text{font-size:0.88rem;font-weight:800;color:var(--text);margin-bottom:4px;}
+.lo-empty-sub{font-size:0.76rem;font-weight:600;}
+.lo-stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 14px 4px;}
+.lo-stat{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:11px;padding:10px 8px;text-align:center;}
+.lo-stat-num{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;line-height:1;}
+.lo-stat-lbl{font-size:0.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
+
+/* ══ ORDER DETAIL MODAL ══ */
+.ord-detail-modal{max-width:500px;}
+.ord-detail-header{background:linear-gradient(135deg,#2A1505,var(--brown-dark));border-radius:16px 16px 0 0;padding:18px 20px;margin:-30px -26px 20px;color:#fff;}
+.ord-detail-code{font-family:monospace;font-size:1.1rem;font-weight:900;letter-spacing:2px;}
+.ord-detail-name{font-size:0.82rem;color:rgba(196,168,130,0.8);margin-top:3px;font-weight:600;}
+.ord-detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cream-dark);}
+.ord-detail-row:last-child{border-bottom:none;}
+.ord-detail-lbl{font-size:0.75rem;font-weight:700;color:var(--muted);}
+.ord-detail-val{font-size:0.82rem;font-weight:800;color:var(--text);}
+.ord-detail-item{background:var(--cream);border-radius:10px;padding:10px 12px;margin-bottom:7px;}
+.ord-detail-item-name{font-size:0.84rem;font-weight:800;color:var(--text);}
+.ord-detail-item-opts{font-size:0.73rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.5;}
+.ord-detail-item-price{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:var(--green);text-align:right;}
+
+/* ══ ADD INGREDIENT MODAL ══ */
+.add-ing-modal{max-width:400px;}
+.ing-unit-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;}
+.ing-unit-btn{padding:8px;border:1.5px solid var(--cream-dark);border-radius:9px;background:var(--white);font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;color:var(--muted);cursor:pointer;text-align:center;transition:all 0.15s;}
+.ing-unit-btn:hover{border-color:var(--tan);color:var(--brown);}
+.ing-unit-btn.sel{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);}
+
+/* ══ EMPLOYEE ORDER DETAIL MODAL ══ */
+.emp-ord-modal{max-width:440px;padding:0;border-radius:22px;overflow:hidden;}
+.emp-ord-modal-head{background:linear-gradient(135deg,#052A24,var(--teal-dark));padding:22px 22px 18px;color:#fff;}
+.emp-ord-modal-code{font-family:monospace;font-size:1.05rem;font-weight:900;letter-spacing:2px;color:rgba(200,168,75,0.9);}
+.emp-ord-modal-name{font-size:1.1rem;font-weight:900;color:#fff;margin-top:4px;}
+.emp-ord-modal-body{padding:18px 22px;}
+.emp-ord-item{background:#f4faf9;border-radius:11px;padding:10px 13px;margin-bottom:8px;border:1px solid #D0E4E0;}
+.emp-ord-item-name{font-size:0.86rem;font-weight:800;color:#0A2925;}
+.emp-ord-item-opts{font-size:0.74rem;color:#557570;font-weight:600;margin-top:3px;line-height:1.5;}
+.emp-ord-detail-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e5f0ee;}
+.emp-ord-detail-row:last-child{border-bottom:none;}
+.emp-ord-detail-lbl{font-size:0.74rem;font-weight:700;color:#557570;}
+.emp-ord-detail-val{font-size:0.82rem;font-weight:800;color:#0A2925;}
+.emp-ord-modal-foot{padding:14px 22px 18px;border-top:1px solid #e5f0ee;display:flex;gap:9px;}
 </style>
 </head>
 <body>
@@ -5833,6 +6357,14 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <div class="admin-drawer-section-label">Manage</div>
 
   <div class="admin-drawer-nav">
+    <button class="admin-nav-item" id="nb-dashboard" onclick="goScreen('dashboard',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-tachometer-alt"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Dashboard</span>
+        <span class="admin-nav-desc">Live overview &amp; quick actions</span>
+      </div>
+    </button>
+
     <button class="admin-nav-item active" id="nb-inventory" onclick="goScreen('inventory',this);closeAdminMenu()">
       <div class="admin-nav-icon"><i class="fas fa-boxes"></i></div>
       <div class="admin-nav-text">
@@ -5846,6 +6378,17 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="admin-nav-text">
         <span class="admin-nav-label">Finance</span>
         <span class="admin-nav-desc">Sales, reports &amp; expenses</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-liveorders" onclick="goScreen('liveorders',this);closeAdminMenu()">
+      <div class="admin-nav-icon" style="position:relative;">
+        <i class="fas fa-stream"></i>
+        <span id="adm-live-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.52rem;font-weight:900;align-items:center;justify-content:center;border:2px solid var(--brown-dark);"></span>
+      </div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Live Orders</span>
+        <span class="admin-nav-desc">Monitor &amp; manage orders</span>
       </div>
     </button>
 
@@ -5885,6 +6428,87 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 <!-- ══ SCREENS ══ -->
 <div class="screens">
 
+  <!-- DASHBOARD -->
+  <div id="s-dashboard" class="screen">
+    <div class="dash-hero">
+      <div class="dash-hero-title">Good day, Admin 👋</div>
+      <div class="dash-hero-sub">9599 Tea &amp; Coffee — Admin Panel Overview</div>
+      <div class="dash-hero-live"><span class="dot-live"></span> Live Data</div>
+    </div>
+
+    <div class="dash-kpi-grid">
+      <div class="dash-kpi revenue">
+        <div class="dash-kpi-icon"><i class="fas fa-peso-sign"></i></div>
+        <div class="dash-kpi-val" id="dash-revenue">₱0</div>
+        <div class="dash-kpi-lbl">Today's Revenue</div>
+        <div class="dash-kpi-trend up" id="dash-revenue-trend"><i class="fas fa-arrow-up"></i> Live</div>
+      </div>
+      <div class="dash-kpi orders">
+        <div class="dash-kpi-icon"><i class="fas fa-receipt"></i></div>
+        <div class="dash-kpi-val" id="dash-orders">0</div>
+        <div class="dash-kpi-lbl">Active Orders</div>
+        <div class="dash-kpi-trend up" id="dash-orders-trend"><i class="fas fa-circle"></i> Pending</div>
+      </div>
+      <div class="dash-kpi profit">
+        <div class="dash-kpi-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="dash-kpi-val" id="dash-profit">₱0</div>
+        <div class="dash-kpi-lbl">Net Profit</div>
+        <div class="dash-kpi-trend up"><i class="fas fa-arrow-up"></i> Today</div>
+      </div>
+      <div class="dash-kpi alerts">
+        <div class="dash-kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="dash-kpi-val" id="dash-alerts">0</div>
+        <div class="dash-kpi-lbl">Stock Alerts</div>
+        <div class="dash-kpi-trend warn" id="dash-alerts-trend"><i class="fas fa-boxes"></i> Check</div>
+      </div>
+    </div>
+
+    <div class="dash-section-title">⚡ Quick Actions</div>
+    <div class="dash-qa-grid">
+      <button class="dash-qa-btn" onclick="goScreen('inventory',document.getElementById('nb-inventory'))">
+        <div class="dash-qa-icon" style="background:rgba(123,79,46,0.1);color:var(--brown);"><i class="fas fa-boxes"></i></div>
+        <div class="dash-qa-label">View Inventory</div>
+      </button>
+      <button class="dash-qa-btn" onclick="goScreen('finance',document.getElementById('nb-finance'))">
+        <div class="dash-qa-icon" style="background:rgba(39,174,96,0.1);color:var(--green);"><i class="fas fa-chart-bar"></i></div>
+        <div class="dash-qa-label">Finance Reports</div>
+      </button>
+      <button class="dash-qa-btn" onclick="goScreen('settings',document.getElementById('nb-settings'))">
+        <div class="dash-qa-icon" style="background:rgba(25,118,210,0.1);color:var(--blue);"><i class="fas fa-cog"></i></div>
+        <div class="dash-qa-label">Settings</div>
+      </button>
+      <button class="dash-qa-btn" onclick="showAdmModal('save','Save Inventory','Sync and save all current stock levels to the database?','saveInventory()')">
+        <div class="dash-qa-icon" style="background:rgba(39,174,96,0.1);color:var(--green);"><i class="fas fa-save"></i></div>
+        <div class="dash-qa-label">Save Stock</div>
+      </button>
+      <button class="dash-qa-btn" onclick="goScreen('audit',document.getElementById('nb-audit'))">
+        <div class="dash-qa-icon" style="background:rgba(192,57,43,0.08);color:var(--red);"><i class="fas fa-shield-alt"></i></div>
+        <div class="dash-qa-label">Audit Log</div>
+      </button>
+      <button class="dash-qa-btn" onclick="showAdmModal('refresh','Reload Panel','Refresh the admin panel to sync all live data?','location.reload()')">
+        <div class="dash-qa-icon" style="background:rgba(245,124,0,0.1);color:var(--orange);"><i class="fas fa-sync-alt"></i></div>
+        <div class="dash-qa-label">Reload Panel</div>
+      </button>
+    </div>
+
+    <div class="dash-section-title">📋 Recent Orders</div>
+    <div class="section card" style="margin-top:0;">
+      <div id="dash-recent-orders">
+        <div class="skeleton" style="margin-bottom:8px;height:14px;"></div>
+        <div class="skeleton" style="margin-bottom:8px;height:14px;width:80%;"></div>
+        <div class="skeleton" style="height:14px;width:60%;"></div>
+      </div>
+    </div>
+
+    <div class="dash-section-title">⚠️ Stock Alerts</div>
+    <div class="section card" style="margin-top:0;">
+      <div id="dash-stock-alerts">
+        <div class="skeleton" style="margin-bottom:8px;height:14px;"></div>
+        <div class="skeleton" style="height:14px;width:70%;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- INVENTORY -->
   <div id="s-inventory" class="screen active">
     <div class="page-header">
@@ -5917,6 +6541,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="inv-search-row">
         <input type="text" class="inv-search-inp" id="inv-search" placeholder="Search ingredients…" oninput="renderInventoryTable()">
         <button class="btn-secondary" onclick="fetchInventory()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn-secondary" style="margin-bottom:0;width:auto;padding:9px 14px;background:var(--green);color:#fff;" onclick="openAddIngModal()"><i class="fas fa-plus"></i> Add</button>
         <button class="btn-primary" style="margin-bottom:0;width:auto;padding:9px 14px;" onclick="saveInventory()"><i class="fas fa-save"></i> Save</button>
       </div>
 
@@ -6306,6 +6931,46 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     </div>
   </div>
 
+  <!-- LIVE ORDERS MONITOR -->
+  <div id="s-liveorders" class="screen">
+    <div class="page-header" style="padding:10px 16px 16px;">
+      <h2 style="font-size:1rem;"><i class="fas fa-stream"></i> Live Orders <span class="dot-live" style="margin-left:6px;"></span></h2>
+      <p style="font-size:0.7rem;margin-top:1px;">Real-time order monitor — auto-refreshes every 10s</p>
+    </div>
+
+    <div class="lo-stats-bar">
+      <div class="lo-stat">
+        <div class="lo-stat-num" id="lo-stat-waiting" style="color:var(--orange);">0</div>
+        <div class="lo-stat-lbl">Waiting</div>
+      </div>
+      <div class="lo-stat">
+        <div class="lo-stat-num" id="lo-stat-preparing" style="color:var(--blue);">0</div>
+        <div class="lo-stat-lbl">Preparing</div>
+      </div>
+      <div class="lo-stat">
+        <div class="lo-stat-num" id="lo-stat-ready" style="color:var(--green);">0</div>
+        <div class="lo-stat-lbl">Ready</div>
+      </div>
+      <div class="lo-stat">
+        <div class="lo-stat-num" id="lo-stat-total" style="color:var(--brown);">0</div>
+        <div class="lo-stat-lbl">Total</div>
+      </div>
+    </div>
+
+    <div class="lo-filter-bar">
+      <button class="lo-filter-pill active" id="lof-all" onclick="setLoFilter('all',this)">All Orders</button>
+      <button class="lo-filter-pill" id="lof-waiting" onclick="setLoFilter('Waiting Confirmation',this)">⏳ Waiting</button>
+      <button class="lo-filter-pill" id="lof-preparing" onclick="setLoFilter('Preparing Order',this)">🔥 Preparing</button>
+      <button class="lo-filter-pill" id="lof-ready" onclick="setLoFilter('Ready for Pick-up',this)">✅ Ready</button>
+      <button class="lo-filter-pill" id="lof-online" onclick="setLoFilter('online',this)">🌐 Online</button>
+      <button class="lo-filter-pill" id="lof-walkin" onclick="setLoFilter('walkin',this)">🚶 Walk-In</button>
+    </div>
+
+    <div class="lo-cards-grid" id="lo-cards-grid">
+      <div class="lo-empty"><div class="lo-empty-icon">📋</div><div class="lo-empty-text">Loading orders…</div></div>
+    </div>
+  </div>
+
 </div><!-- /screens -->
 
 <!-- ══ MODALS ══ -->
@@ -6346,6 +7011,65 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <button type="submit" class="btn-primary" style="flex:1;margin-bottom:0;">Save Item</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ══ ORDER DETAIL MODAL ══ -->
+<div class="adm-modal-overlay" id="ord-detail-overlay">
+  <div class="adm-modal ord-detail-modal" id="ord-detail-box">
+    <button class="adm-modal-close" onclick="closeOrdDetail()"><i class="fas fa-times"></i></button>
+    <div class="ord-detail-header" id="ord-detail-head">
+      <div class="ord-detail-code" id="ord-detail-code">—</div>
+      <div class="ord-detail-name" id="ord-detail-customer">—</div>
+    </div>
+    <div id="ord-detail-items" style="margin-bottom:14px;"></div>
+    <div id="ord-detail-meta"></div>
+    <div class="adm-modal-btns" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="closeOrdDetail()">Close</button>
+      <button class="btn-primary" style="margin:0;" id="ord-detail-print-btn"><i class="fas fa-print"></i> Print Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD INGREDIENT MODAL ══ -->
+<div class="adm-modal-overlay" id="add-ing-overlay">
+  <div class="adm-modal add-ing-modal">
+    <button class="adm-modal-close" onclick="closeAddIngModal()"><i class="fas fa-times"></i></button>
+    <div class="adm-modal-icon info"><i class="fas fa-box-open"></i></div>
+    <h3>Add Ingredient</h3>
+    <p>Add a new ingredient to your inventory stock.</p>
+    <input type="text" class="inp" id="new-ing-name" placeholder="Ingredient name (e.g. Matcha Powder)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Starting Stock</label>
+        <input type="number" class="inp" id="new-ing-stock" placeholder="0" style="margin-bottom:0;" min="0">
+      </div>
+      <div>
+        <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Category</label>
+        <select class="inp" id="new-ing-cat" style="margin-bottom:0;cursor:pointer;">
+          <option>Teas &amp; Bases</option>
+          <option>Syrups &amp; Flavors</option>
+          <option>Dairy</option>
+          <option>Add-ons</option>
+          <option>Snacks</option>
+          <option>Consumables &amp; Packaging</option>
+        </select>
+      </div>
+    </div>
+    <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Unit</label>
+    <div class="ing-unit-grid" id="ing-unit-grid">
+      <button class="ing-unit-btn sel" onclick="selIngUnit('g',this)">g (grams)</button>
+      <button class="ing-unit-btn" onclick="selIngUnit('ml',this)">ml</button>
+      <button class="ing-unit-btn" onclick="selIngUnit('pcs',this)">pcs</button>
+      <button class="ing-unit-btn" onclick="selIngUnit('kg',this)">kg</button>
+      <button class="ing-unit-btn" onclick="selIngUnit('L',this)">L (litres)</button>
+      <button class="ing-unit-btn" onclick="selIngUnit('oz',this)">oz</button>
+    </div>
+    <input type="hidden" id="new-ing-unit" value="g">
+    <div class="adm-modal-btns">
+      <button class="btn-secondary" onclick="closeAddIngModal()">Cancel</button>
+      <button class="btn-primary" style="margin:0;" onclick="saveNewIngredient()"><i class="fas fa-plus"></i> Add Ingredient</button>
+    </div>
   </div>
 </div>
 
@@ -6395,6 +7119,8 @@ function goScreen(name,btn){
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
   if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();openAllSettingsDrops();}
   if(name==='audit'){auditPage=1;fetchAuditLogs();}
+  if(name==='dashboard'){loadDashboard();}
+  if(name==='liveorders'){fetchLiveOrders();}
 }
 
 function toggleAdminMenu(){
@@ -7160,6 +7886,290 @@ setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById(
 // Initial data load on page open
 fetchPermReqs();
 fetchInventory();
+
+/* ══ RIPPLE EFFECT ══ */
+document.addEventListener('click',function(e){
+  const target=e.target.closest('.btn-primary,.btn-secondary,.admin-nav-item,.inv-tab,.fin-tab-pill,.period-pill,.dash-qa-btn');
+  if(!target)return;
+  const r=document.createElement('span');
+  r.className='ripple-circle';
+  const rect=target.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height);
+  r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
+  target.appendChild(r);
+  r.addEventListener('animationend',()=>r.remove());
+});
+
+/* ══ ENHANCED MODAL SYSTEM ══ */
+function showAdmModal(type,title,msg,onConfirm){
+  let overlay=document.getElementById('adm-modal-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='adm-modal-overlay';
+    overlay.className='adm-modal-overlay';
+    overlay.innerHTML=`<div class="adm-modal" id="adm-modal-box">
+      <button class="adm-modal-close" onclick="closeAdmModal()"><i class="fas fa-times"></i></button>
+      <div class="adm-modal-icon" id="adm-modal-icon"></div>
+      <h3 id="adm-modal-title"></h3>
+      <p id="adm-modal-msg"></p>
+      <div class="adm-modal-btns">
+        <button class="btn-secondary" onclick="closeAdmModal()">Cancel</button>
+        <button class="btn-primary" id="adm-modal-confirm">Confirm</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',function(e){if(e.target===overlay)closeAdmModal();});
+  }
+  const icons={save:'fas fa-save',refresh:'fas fa-sync-alt',danger:'fas fa-exclamation-triangle',info:'fas fa-info-circle'};
+  const iconTypes={save:'success',refresh:'info',danger:'danger',info:'info'};
+  document.getElementById('adm-modal-icon').className='adm-modal-icon '+(iconTypes[type]||'info');
+  document.getElementById('adm-modal-icon').innerHTML=`<i class="${icons[type]||'fas fa-question-circle'}"></i>`;
+  document.getElementById('adm-modal-title').textContent=title;
+  document.getElementById('adm-modal-msg').textContent=msg;
+  const confirmBtn=document.getElementById('adm-modal-confirm');
+  confirmBtn.onclick=function(){closeAdmModal();if(onConfirm)eval(onConfirm);};
+  overlay.classList.add('open');
+}
+function closeAdmModal(){
+  const overlay=document.getElementById('adm-modal-overlay');
+  if(overlay)overlay.classList.remove('open');
+}
+
+/* ══ DASHBOARD DATA LOADER ══ */
+async function loadDashboard(){
+  try{
+    const [finRes,ordRes,invRes]=await Promise.all([
+      apiFetch('/api/finance/daily'),
+      apiFetch('/api/orders?_t='+Date.now()),
+      apiFetch('/api/inventory')
+    ]);
+    if(finRes&&finRes.ok){
+      const fin=await finRes.json();
+      const net=fin.system_total-fin.expenses_total;
+      animateCount('dash-revenue','₱',fin.system_total,true);
+      animateCount('dash-profit','₱',net,true);
+    }
+    if(ordRes&&ordRes.ok){
+      const ord=await ordRes.json();
+      animateCount('dash-orders','',ord.orders.length,false);
+      const recentEl=document.getElementById('dash-recent-orders');
+      if(recentEl){
+        if(!ord.orders.length){recentEl.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;text-align:center;padding:12px;">No active orders right now.</div>';}
+        else{recentEl.innerHTML=ord.orders.slice(0,5).map((o,i)=>`<div class="dash-order-row" style="animation-delay:${i*0.06}s"><span class="dash-order-code">#${escapeHTML(o.code)}</span><span class="dash-order-name">${escapeHTML(o.name)}</span><span class="dash-order-total">₱${o.total.toFixed(2)}</span></div>`).join('');}
+      }
+    }
+    if(invRes&&invRes.ok){
+      const inv=await invRes.json();
+      const items=Array.isArray(inv)?inv:(inv.items||[]);
+      const alerts=items.filter(i=>{const t=i.unit==='pcs'?50:(i.unit==='ml'?500:200);return i.stock<=t;});
+      animateCount('dash-alerts','',alerts.length,false);
+      const alertsEl=document.getElementById('dash-stock-alerts');
+      if(alertsEl){
+        if(!alerts.length){alertsEl.innerHTML='<div style="background:rgba(39,174,96,0.08);border:1.5px solid rgba(39,174,96,0.2);border-radius:10px;padding:13px;display:flex;align-items:center;gap:10px;font-size:0.82rem;font-weight:700;color:var(--green);"><i class="fas fa-check-circle"></i> All ingredients are well-stocked!</div>';}
+        else{alertsEl.innerHTML=alerts.slice(0,6).map(i=>{const isOut=i.stock<=0;const color=isOut?'var(--red)':'var(--orange)';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span style="flex:1;font-size:0.81rem;font-weight:800;">${escapeHTML(i.name)}</span><span style="font-size:0.75rem;font-weight:800;color:${color};">${i.stock} ${escapeHTML(i.unit)}</span></div>`;}).join('');}
+      }
+    }
+  }catch(e){console.warn('Dashboard load error',e);}
+}
+
+function animateCount(id,prefix,target,isCurrency){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const duration=800,steps=30,step=duration/steps;
+  let current=0,i=0;
+  const interval=setInterval(()=>{
+    i++;current=Math.round(target*(i/steps));
+    el.textContent=prefix+(isCurrency?current.toLocaleString('en-PH',{minimumFractionDigits:0}):(current||0));
+    if(i>=steps){el.textContent=prefix+(isCurrency?target.toFixed(2):(target||0));clearInterval(interval);}
+  },step);
+}
+
+/* ══ KEYBOARD SHORTCUTS ══ */
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  const map={'1':'dashboard','2':'inventory','3':'finance','4':'liveorders','5':'settings','6':'audit'};
+  const screenIds={'dashboard':'nb-dashboard','inventory':'nb-inventory','finance':'nb-finance','liveorders':'nb-liveorders','settings':'nb-settings','audit':'nb-audit'};
+  if(map[e.key]){goScreen(map[e.key],document.getElementById(screenIds[map[e.key]]));}
+  if(e.key==='Escape'){closeAdmModal();closeOrdDetail();closeAddIngModal();}
+});
+
+/* ══ AUTO-REFRESH DASHBOARD ══ */
+setInterval(()=>{
+  const dash=document.getElementById('s-dashboard');
+  if(dash&&dash.classList.contains('active'))loadDashboard();
+},15000);
+
+/* ══ AUTO-REFRESH LIVE ORDERS ══ */
+let _loFilter='all', _loOrders=[], _loKnown=new Set(), _loTimer=null;
+
+function setLoFilter(f,btn){
+  _loFilter=f;
+  document.querySelectorAll('.lo-filter-pill').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderLoCards();
+}
+
+async function fetchLiveOrders(){
+  try{
+    const r=await apiFetch('/api/orders?_t='+Date.now());
+    if(!r||!r.ok)return;
+    const data=await r.json();
+    const orders=data.orders||[];
+    // New order detection
+    const newOnes=orders.filter(o=>!_loKnown.has(o.id));
+    if(newOnes.length&&_loKnown.size>0){
+      playBeep();
+      showToast(`${newOnes.length} new order${newOnes.length>1?'s':''} arrived!`,'success');
+      const badge=document.getElementById('adm-live-badge');
+      if(badge){badge.style.display='flex';badge.textContent=newOnes.length;badge.className=badge.className;badge.style.animation='none';requestAnimationFrame(()=>{badge.style.animation='badgeBounce 0.4s cubic-bezier(0.34,1.56,0.64,1)';});}
+    }
+    orders.forEach(o=>_loKnown.add(o.id));
+    _loOrders=orders;
+    renderLoCards();
+    renderLoStats();
+  }catch(e){}
+}
+
+function renderLoStats(){
+  const waiting=_loOrders.filter(o=>o.status==='Waiting Confirmation').length;
+  const preparing=_loOrders.filter(o=>o.status==='Preparing Order').length;
+  const ready=_loOrders.filter(o=>o.status==='Ready for Pick-up').length;
+  const el1=document.getElementById('lo-stat-waiting');
+  const el2=document.getElementById('lo-stat-preparing');
+  const el3=document.getElementById('lo-stat-ready');
+  const el4=document.getElementById('lo-stat-total');
+  if(el1)el1.textContent=waiting;
+  if(el2)el2.textContent=preparing;
+  if(el3)el3.textContent=ready;
+  if(el4)el4.textContent=_loOrders.length;
+}
+
+function renderLoCards(){
+  const grid=document.getElementById('lo-cards-grid');
+  if(!grid)return;
+  let orders=_loOrders;
+  if(_loFilter==='online')orders=orders.filter(o=>o.source==='Online'||o.source==='online');
+  else if(_loFilter==='walkin')orders=orders.filter(o=>o.source!=='Online'&&o.source!=='online');
+  else if(_loFilter!=='all')orders=orders.filter(o=>o.status===_loFilter);
+  if(!orders.length){
+    grid.innerHTML=`<div class="lo-empty" style="grid-column:1/-1;"><div class="lo-empty-icon">✅</div><div class="lo-empty-text">No orders here</div><div class="lo-empty-sub">Showing: ${_loFilter==='all'?'all orders':_loFilter}</div></div>`;
+    return;
+  }
+  const statusBarClass={'Waiting Confirmation':'waiting','Preparing Order':'preparing','Ready for Pick-up':'ready','Completed':'completed','Cancelled':'cancelled'};
+  const statusLabels={'Waiting Confirmation':'⏳ Waiting','Preparing Order':'🔥 Preparing','Ready for Pick-up':'✅ Ready','Completed':'🏁 Done','Cancelled':'❌ Cancelled'};
+  grid.innerHTML=orders.map((o,idx)=>{
+    const isOnline=o.source==='Online'||o.source==='online';
+    const barCls=statusBarClass[o.status]||'waiting';
+    const mins=o.created_at?Math.round((Date.now()-new Date(o.created_at).getTime())/60000):null;
+    const timerCls=mins===null?'fresh':mins<10?'fresh':mins<20?'moderate':'late';
+    const timerTxt=mins===null?'—':mins<1?'Just now':`${mins}m ago`;
+    const itemsText=o.items?o.items.map(i=>i.foundation+(i.size&&i.size!=='16 oz'?` (${i.size})`:'')+(i.addons?` +${i.addons}`:'')).join(' · '):'—';
+    return`<div class="lo-card" style="animation-delay:${idx*0.04}s" onclick="openOrdDetail(${JSON.stringify(o).replace(/"/g,'&quot;')})">
+      <div class="lo-card-bar ${barCls}"></div>
+      <div class="lo-card-head">
+        <span class="lo-card-code">#${escapeHTML(o.code||'—')}</span>
+        <span class="lo-card-source ${isOnline?'online':'walkin'}">${isOnline?'🌐 Online':'🚶 Walk-In'}</span>
+      </div>
+      <div class="lo-card-body">
+        <div class="lo-card-name">${escapeHTML(o.name||'—')}</div>
+        <div class="lo-card-items">${escapeHTML(itemsText)}</div>
+        <div class="lo-card-total">₱${Number(o.total||0).toFixed(2)}</div>
+      </div>
+      <div class="lo-card-foot" onclick="event.stopPropagation()">
+        <span class="lo-card-timer ${timerCls}"><i class="fas fa-clock" style="font-size:0.58rem;"></i> ${timerTxt}</span>
+        <select class="lo-status-sel" onchange="loUpdateStatus(${o.id},this.value,this)">
+          <option value="Waiting Confirmation" ${o.status==='Waiting Confirmation'?'selected':''}>⏳ Waiting</option>
+          <option value="Preparing Order" ${o.status==='Preparing Order'?'selected':''}>🔥 Preparing</option>
+          <option value="Ready for Pick-up" ${o.status==='Ready for Pick-up'?'selected':''}>✅ Ready</option>
+          <option value="Completed" ${o.status==='Completed'?'selected':''}>🏁 Completed</option>
+          <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loUpdateStatus(orderId,status,sel){
+  try{
+    const r=await apiFetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    if(r&&r.ok){showToast(`Order updated: ${status}`,'success');fetchLiveOrders();}
+    else showToast('Update failed','error');
+  }catch(e){showToast('Error','error');}
+}
+
+/* ══ ORDER DETAIL MODAL ══ */
+function openOrdDetail(o){
+  if(typeof o==='string')try{o=JSON.parse(o);}catch(e){return;}
+  document.getElementById('ord-detail-code').textContent='#'+(o.code||'—');
+  document.getElementById('ord-detail-customer').textContent=(o.name||'Unknown')+' · '+(o.source||'');
+  const itemsEl=document.getElementById('ord-detail-items');
+  if(o.items&&o.items.length){
+    itemsEl.innerHTML=o.items.map(i=>`<div class="ord-detail-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
+        <div>
+          <div class="ord-detail-item-name">${escapeHTML(i.foundation||'?')} ${i.size?`<span style="font-weight:600;color:var(--muted);font-size:0.78rem;">(${escapeHTML(i.size)})</span>`:''}
+          </div>
+          <div class="ord-detail-item-opts">${[i.sweetener,i.ice,i.addons?'+ '+i.addons:''].filter(Boolean).map(v=>escapeHTML(v)).join(' · ')}</div>
+        </div>
+        <div class="ord-detail-item-price">₱${Number(i.item_total||0).toFixed(2)}</div>
+      </div>
+    </div>`).join('');
+  }else{itemsEl.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No items.</div>';}
+  const metaEl=document.getElementById('ord-detail-meta');
+  const rows=[
+    ['Status',o.status||'—'],
+    ['Pick-up Time',o.pickup_time||'Walk-In'],
+    ['Phone',o.phone||'—'],
+    ['Address',o.address||'—'],
+    ['Total','₱'+Number(o.total||0).toFixed(2)],
+    ['Process Type',o.process_type||'—'],
+  ];
+  metaEl.innerHTML=rows.filter(([l,v])=>v&&v!=='—').map(([l,v])=>`<div class="ord-detail-row"><span class="ord-detail-lbl">${l}</span><span class="ord-detail-val">${escapeHTML(String(v))}</span></div>`).join('');
+  const printBtn=document.getElementById('ord-detail-print-btn');
+  if(printBtn)printBtn.onclick=()=>{closeOrdDetail();if(typeof printOrderReceipt==='function')printOrderReceipt(o.id);};
+  const overlay=document.getElementById('ord-detail-overlay');
+  overlay.classList.add('open');
+}
+function closeOrdDetail(){document.getElementById('ord-detail-overlay').classList.remove('open');}
+document.getElementById('ord-detail-overlay').addEventListener('click',function(e){if(e.target===this)closeOrdDetail();});
+
+/* ══ ADD INGREDIENT MODAL ══ */
+let _ingUnit='g';
+function openAddIngModal(){document.getElementById('add-ing-overlay').classList.add('open');}
+function closeAddIngModal(){document.getElementById('add-ing-overlay').classList.remove('open');document.getElementById('new-ing-name').value='';document.getElementById('new-ing-stock').value='';}
+function selIngUnit(u,btn){
+  _ingUnit=u;
+  document.getElementById('new-ing-unit').value=u;
+  document.querySelectorAll('.ing-unit-btn').forEach(b=>b.classList.remove('sel'));
+  if(btn)btn.classList.add('sel');
+}
+async function saveNewIngredient(){
+  const name=document.getElementById('new-ing-name').value.trim();
+  const stock=parseFloat(document.getElementById('new-ing-stock').value)||0;
+  const cat=document.getElementById('new-ing-cat').value;
+  const unit=document.getElementById('new-ing-unit').value||'g';
+  if(!name)return showToast('Enter an ingredient name','error');
+  try{
+    const r=await apiFetch('/api/inventory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,stock,unit,category:cat})});
+    if(r&&r.ok){showToast(`"${name}" added to inventory ✓`,'success');closeAddIngModal();fetchInventory();}
+    else{const d=await r.json().catch(()=>({}));showToast(d.error||'Failed to add ingredient','error');}
+  }catch(e){showToast('Error saving ingredient','error');}
+}
+document.getElementById('add-ing-overlay').addEventListener('click',function(e){if(e.target===this)closeAddIngModal();});
+
+/* ══ LIVE ORDERS AUTO-REFRESH ══ */
+setInterval(()=>{
+  const lo=document.getElementById('s-liveorders');
+  if(lo&&lo.classList.contains('active'))fetchLiveOrders();
+},10000);
+
+/* ══ GREETING TIME OF DAY ══ */
+(function(){
+  const h=new Date().getHours();
+  let greet=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+  const heroTitle=document.querySelector('.dash-hero-title');
+  if(heroTitle)heroTitle.textContent=greet+', Admin \uD83D\uDC4B';
+})();
 </script>
 </body>
 </html>
