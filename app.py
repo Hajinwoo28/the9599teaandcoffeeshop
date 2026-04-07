@@ -5441,9 +5441,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── DESKTOP PERMANENT SIDEBAR LAYOUT ── */
 @media(min-width:768px){
-  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:1px solid rgba(196,168,130,0.1);}
+  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:1px solid rgba(196,168,130,0.1);top:var(--topbar-h);height:calc(100% - var(--topbar-h));}
   .admin-nav-drawer::after{display:none;}
-  .topbar{position:fixed;top:0;left:272px;right:0;z-index:200;}
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:200;}
   .screens{position:fixed;top:var(--topbar-h);left:272px;right:0;bottom:0;overflow:hidden;}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
@@ -6018,7 +6018,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </div>
         <div class="tbl-wrap">
           <table class="kds-table">
-            <thead><tr><th>Date</th><th>Name</th><th>Gmail</th><th>Phone</th><th>Order</th><th>Pick-up</th><th>Source</th><th>Total</th></tr></thead>
+            <thead><tr><th>Date</th><th>Name</th><th>Gmail</th><th>Phone</th><th>Order</th><th>Pick-up</th><th>Process</th><th>Total</th></tr></thead>
             <tbody id="cust-tbody"></tbody>
           </table>
         </div>
@@ -6083,8 +6083,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </div>
         <div class="tbl-wrap">
           <table class="kds-table" style="min-width:420px;">
-            <thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Location</th><th>Total</th><th>Status</th></tr></thead>
-            <tbody id="oh-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr></tbody>
+            <thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Address / Location</th><th>Process</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="oh-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr></tbody>
           </table>
         </div>
         <!-- Pagination -->
@@ -6253,15 +6253,15 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   </div><!-- /s-settings -->
 
   <!-- AUDIT TRAIL SCREEN -->
-  <div id="s-audit" class="screen">
-    <div class="page-header">
+  <div id="s-audit" class="screen" style="display:flex;flex-direction:column;overflow:hidden;">
+    <div class="page-header" style="flex-shrink:0;">
       <h2><i class="fas fa-shield-alt"></i> Audit Trail</h2>
       <p>Complete log of all admin actions</p>
     </div>
-    <div class="screen-inner" style="padding-top:28px;">
 
-      <!-- Audit Toolbar -->
-      <div class="audit-toolbar">
+    <!-- Sticky toolbar -->
+    <div style="flex-shrink:0;background:var(--cream);padding:12px 14px 0;display:flex;flex-direction:column;gap:8px;">
+      <div class="audit-toolbar" style="padding:0;">
         <input type="text" class="audit-search-inp" id="audit-search" placeholder="Search actions or details…" oninput="renderAuditList()">
         <select class="audit-filter-sel" id="audit-filter" onchange="renderAuditList()">
           <option value="">All Actions</option>
@@ -6274,34 +6274,34 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </select>
         <button class="btn-secondary" style="padding:9px 14px;font-size:0.78rem;" onclick="fetchAuditLogs()"><i class="fas fa-sync-alt"></i> Refresh</button>
       </div>
-
-      <!-- Stats row -->
-      <div style="display:flex;gap:8px;padding:12px 14px 0;flex-wrap:wrap;">
-        <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <i class="fas fa-list-alt" style="color:var(--brown);font-size:0.85rem;"></i>
-          <span id="audit-total-count" style="font-size:0.8rem;font-weight:800;color:var(--text);">— entries</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:10px;">
+        <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:7px;flex-shrink:0;">
+          <i class="fas fa-list-alt" style="color:var(--brown);font-size:0.82rem;"></i>
+          <span id="audit-total-count" style="font-size:0.78rem;font-weight:800;color:var(--text);">— entries</span>
         </div>
-        <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <i class="fas fa-calendar-day" style="color:var(--brown);font-size:0.85rem;"></i>
-          <span id="audit-today-count" style="font-size:0.8rem;font-weight:800;color:var(--text);">— today</span>
+        <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:7px;flex-shrink:0;">
+          <i class="fas fa-calendar-day" style="color:var(--brown);font-size:0.82rem;"></i>
+          <span id="audit-today-count" style="font-size:0.78rem;font-weight:800;color:var(--text);">— today</span>
         </div>
-        <div style="flex:1;"></div>
-        <span id="audit-page-info" style="font-size:0.75rem;font-weight:700;color:var(--muted);align-self:center;"></span>
+        <span id="audit-page-info" style="font-size:0.73rem;font-weight:700;color:var(--muted);align-self:center;margin-left:auto;"></span>
       </div>
+    </div>
 
-      <div class="section card" style="margin-top:14px;">
-        <div id="audit-log-list" style="display:flex;flex-direction:column;gap:0;border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
+    <!-- Scrollable content -->
+    <div style="flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:0 14px 16px;">
+      <div style="background:var(--white);border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+        <div id="audit-log-list" style="display:flex;flex-direction:column;">
           <div style="padding:28px;text-align:center;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading logs…</div>
         </div>
-        <div id="audit-pagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:8px;">
-          <button id="audit-prev-btn" onclick="auditChangePage(-1)" style="display:flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown-dark);padding:9px 16px;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='var(--white)'">
-            <i class="fas fa-chevron-left" style="font-size:0.75rem;"></i> Prev
-          </button>
-          <div id="audit-page-dots" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;"></div>
-          <button id="audit-next-btn" onclick="auditChangePage(1)" style="display:flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown-dark);padding:9px 16px;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='var(--white)'">
-            Next <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
-          </button>
-        </div>
+      </div>
+      <div id="audit-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;">
+        <button id="audit-prev-btn" onclick="auditChangePage(-1)" style="display:flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown-dark);padding:9px 16px;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='var(--white)'">
+          <i class="fas fa-chevron-left" style="font-size:0.75rem;"></i> Prev
+        </button>
+        <div id="audit-page-dots" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;"></div>
+        <button id="audit-next-btn" onclick="auditChangePage(1)" style="display:flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--cream-dark);color:var(--brown-dark);padding:9px 16px;border-radius:10px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='var(--white)'">
+          Next <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -6389,7 +6389,7 @@ function goScreen(name,btn){
   const scr=document.getElementById('s-'+name);
   if(!scr){console.warn('goScreen: element not found → s-'+name);return;}
   scr.classList.add('active');
-  scr.style.display=(name==='finance')?'flex':'block';
+  scr.style.display=(name==='finance'||name==='audit')?'flex':'block';
   if(btn)btn.classList.add('active');
   if(name==='inventory')fetchInventory();
   if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
@@ -6688,6 +6688,10 @@ async function fetchCustomerLogs(){
     const phone=l.phone&&l.phone!=='Walk-In'?`<span style="font-size:0.78rem;font-weight:700;">${escapeHTML(l.phone)}</span>`:`<span style="color:var(--muted);font-size:0.75rem;">—</span>`;
     const items=l.items?`<span style="font-size:0.72rem;color:var(--text);">${escapeHTML(l.items)}</span>`:`<span style="color:var(--muted);font-size:0.72rem;">—</span>`;
     const pickup=l.pickup_time?`<span style="font-size:0.78rem;font-weight:800;color:var(--brown-dark);">${escapeHTML(l.pickup_time)}</span>`:`<span style="color:var(--muted);font-size:0.75rem;">—</span>`;
+    const isWalkIn=l.source==='Manual/Walk-In'||l.source==='Walk-In';
+    const processBadge=isWalkIn
+      ?`<span style="background:rgba(21,101,192,0.12);color:#1565C0;padding:3px 9px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-walking" style="font-size:0.6rem;"></i> Walk-In</span>`
+      :`<span style="background:rgba(13,122,106,0.1);color:#094F44;padding:3px 9px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-globe" style="font-size:0.6rem;"></i> Online</span>`;
     return`<tr>
       <td style="font-size:0.72rem;color:var(--muted);white-space:nowrap;">${dateStr}<br><span style="font-size:0.68rem;">${timeStr}</span></td>
       <td><b style="font-size:0.82rem;">${escapeHTML(l.name)}</b></td>
@@ -6695,7 +6699,7 @@ async function fetchCustomerLogs(){
       <td>${phone}</td>
       <td style="max-width:160px;">${items}</td>
       <td style="white-space:nowrap;">${pickup}</td>
-      <td><span class="kds-badge" style="background:${l.source==='Online'?'var(--brown)':'var(--brown-mid)'};color:var(--cream);">${escapeHTML(l.source)}</span></td>
+      <td>${processBadge}</td>
       <td style="color:var(--brown);font-weight:800;white-space:nowrap;">₱${l.total.toFixed(2)}</td>
     </tr>`;
   }).join(''):'<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--muted);font-weight:600;">No records.</td></tr>';}catch(e){tbody.innerHTML='<tr><td colspan="8" class="error-state">Network Error</td></tr>';}
@@ -6807,19 +6811,24 @@ async function loadOrderHistory(page){
     const statusColors={'Waiting Confirmation':'var(--orange)','Preparing Order':'var(--blue)','Ready for Pick-up':'var(--green)','Completed':'#388E3C','Cancelled':'var(--red)'};
     const statusLabels={'Waiting Confirmation':'Waiting','Preparing Order':'Preparing','Ready for Pick-up':'Ready','Completed':'Completed','Cancelled':'Cancelled'};
     tbody.innerHTML=data.orders.length?data.orders.map(o=>{
-      const isWalkIn=o.source==='Manual/Walk-In';
-      const locCell=isWalkIn
-        ?`<span style="background:rgba(21,101,192,0.12);color:#1565C0;padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;">🚶 Walk-In</span>`
-        :(o.address?`<span style="font-size:0.72rem;color:var(--muted);font-weight:600;" title="${escapeHTML(o.address)}">📍 ${escapeHTML(o.address.length>28?o.address.slice(0,28)+'…':o.address)}</span>`
-        :`<span style="background:rgba(13,122,106,0.1);color:var(--teal-dark,#094F44);padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;">🌐 Online</span>`);
+      const isWalkIn=o.source==='Manual/Walk-In'||o.source==='Walk-In';
+      // Address/Location column — show actual captured address or a dash
+      const addrCell=o.address&&o.address.trim()
+        ?`<span style="font-size:0.72rem;color:var(--text);font-weight:600;line-height:1.4;" title="${escapeHTML(o.address)}">📍 ${escapeHTML(o.address.length>36?o.address.slice(0,36)+'…':o.address)}</span>`
+        :`<span style="color:var(--muted);font-size:0.72rem;">—</span>`;
+      // Process of order column
+      const processCell=isWalkIn
+        ?`<span style="background:rgba(21,101,192,0.12);color:#1565C0;padding:3px 9px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-walking" style="font-size:0.6rem;"></i> Walk-In</span>`
+        :`<span style="background:rgba(13,122,106,0.1);color:var(--teal-dark,#094F44);padding:3px 9px;border-radius:20px;font-size:0.67rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-globe" style="font-size:0.6rem;"></i> Online</span>`;
       return`<tr>
-      <td style="font-size:0.74rem;color:var(--muted);">${escapeHTML(o.date)}</td>
+      <td style="font-size:0.74rem;color:var(--muted);white-space:nowrap;">${escapeHTML(o.date)}</td>
       <td><b style="color:var(--brown-dark);font-size:0.78rem;">${escapeHTML(o.code)}</b></td>
       <td><b style="font-size:0.8rem;">${escapeHTML(o.name)}</b><br><span style="font-size:0.68rem;color:var(--muted);">${escapeHTML(o.items.slice(0,2).join(', '))}${o.items.length>2?' +'+(o.items.length-2)+'…':''}</span></td>
-      <td>${locCell}</td>
-      <td style="color:var(--brown);font-weight:800;font-size:0.82rem;">₱${o.total.toFixed(2)}</td>
+      <td style="max-width:180px;">${addrCell}</td>
+      <td>${processCell}</td>
+      <td style="color:var(--brown);font-weight:800;font-size:0.82rem;white-space:nowrap;">₱${o.total.toFixed(2)}</td>
       <td><span style="background:${statusColors[o.status]||'var(--muted)'};color:#fff;padding:3px 8px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">${statusLabels[o.status]||o.status}</span></td>
-    </tr>`}).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
+    </tr>`}).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
     const total=data.total,perPage=data.per_page,totalPages=Math.ceil(total/perPage);
     const start=(page-1)*perPage+1;
     const end=Math.min(page*perPage,total);
