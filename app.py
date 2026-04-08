@@ -871,7 +871,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 }
 
 .screens{flex:1;overflow:hidden;position:relative;}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;scrollbar-width:none;}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:auto;background:var(--bg);display:none;padding:0 0 16px;scrollbar-width:none;}
 .screen::-webkit-scrollbar{display:none;}
 .screen.active{display:block;}
 #s-pos.active{display:flex;flex-direction:column;overflow:hidden;}
@@ -1815,14 +1815,33 @@ document.addEventListener('click',function(e){
 
 
 
+/* ── SESSION DISPLACEMENT DETECTOR ──────────────────────────────────────
+   All employee API calls go through empFetch(). If the server ever returns
+   401 or 403 it means this device's session was taken over by another device.
+   We immediately redirect to /employee so the user sees the lock screen.
+──────────────────────────────────────────────────────────────────────── */
+async function empFetch(url, opts){
+  try{
+    const r = await fetch(url, opts);
+    if(r.status === 401 || r.status === 403){
+      // Session displaced — show the lock screen
+      window.location.href = '/employee';
+      return null;
+    }
+    return r;
+  }catch(e){
+    return null;
+  }
+}
+
 /* ── STOCK ALERTS ── */
 async function fetchStockAlerts(){
   const el=document.getElementById('sa-list');
   const badge=document.getElementById('stock-nav-badge-2');
   const hamBadge=document.getElementById('hamburger-badge');
   try{
-    const r=await fetch('/api/finance/low_stock');
-    if(!r.ok){if(el)el.innerHTML='<div style="color:var(--red);font-size:0.84rem;font-weight:700;">Failed to load stock data.</div>';return;}
+    const r=await empFetch('/api/finance/low_stock');
+    if(!r||!r.ok){if(el)el.innerHTML='<div style="color:var(--red);font-size:0.84rem;font-weight:700;">Failed to load stock data.</div>';return;}
     const data=await r.json();
     _bellStockItems=data;
     updateBell();
@@ -1887,8 +1906,8 @@ function setFilter(f,btn){
 
 async function fetchOrders(){
   try{
-    const r=await fetch('/api/orders');
-    if(!r.ok) return;
+    const r=await empFetch('/api/orders');
+    if(!r||!r.ok) return;
     const data=await r.json();
     allOrders=data.orders||[];
     const newOrders=knownOrderIds.size>0?allOrders.filter(o=>!knownOrderIds.has(o.id)):[];
@@ -2001,8 +2020,8 @@ async function updateStatus(orderId,status,selectEl){
   }
   if(selectEl){ selectEl.className='status-select '+(statusClass[status]||'sel-waiting'); }
   try{
-    const r=await fetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
-    if(r.ok){showToast(`Status: ${status}`,'success');fetchOrders();}
+    const r=await empFetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    if(r&&r.ok){showToast(`Status: ${status}`,'success');fetchOrders();}
     else showToast('Update failed','error');
   }catch(e){showToast('Network error','error');}
 }
@@ -2013,7 +2032,7 @@ async function loadCancelItemPicker(){
   listEl.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Checking inventory…</div>';
   const orderId = window._pendingCancelOrderId;
   try {
-    const r = await fetch(`/api/orders/${orderId}/check_stock`);
+    const r = await empFetch(`/api/orders/${orderId}/check_stock`);
     const data = await r.json();
     window._cancelItemsData = data.items || [];
     renderCancelItemPicker(data.items);
@@ -2076,7 +2095,7 @@ async function notifyCustomerAboutItems(){
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
   try {
-    const r = await fetch(`/api/orders/${orderId}/item_query`,{
+    const r = await empFetch(`/api/orders/${orderId}/item_query`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({unavailable_items:checked, reason})
@@ -2107,7 +2126,7 @@ function startWaitingForCustomerDecision(orderId){
   const statusEl = document.getElementById('cancel-awaiting-poll-status');
   _waitDecisionPoll = setInterval(async ()=>{
     try {
-      const r = await fetch('/api/item_queries/decisions');
+      const r = await empFetch('/api/item_queries/decisions');
       const decisions = await r.json();
       const code = (window._pendingCancelOrder||{}).code;
       const match = decisions.find(d=>d.order_code===code && !_seenDecisionCodes.has(d.query_id));
@@ -2140,8 +2159,8 @@ async function confirmCancelOrder(){
   document.getElementById('cancel-reason-modal').style.display='none';
   if(selectEl){ selectEl.className='status-select sel-cancelled'; }
   try{
-    const r=await fetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Cancelled',cancel_reason})});
-    if(r.ok){showToast(`Order cancelled: ${cancel_reason}`,'success');fetchOrders();}
+    const r=await empFetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Cancelled',cancel_reason})});
+    if(r&&r.ok){showToast(`Order cancelled: ${cancel_reason}`,'success');fetchOrders();}
     else showToast('Update failed','error');
   }catch(e){showToast('Network error','error');}
 }
@@ -2156,7 +2175,8 @@ function closeCancelReasonModal(){
 async function fetchPermReqs(){
   const tbody=document.getElementById('perm-tbody');
   try{
-    const r=await fetch('/api/permission_requests');
+    const r=await empFetch('/api/permission_requests');
+    if(!r){return;}
     if(r.status===403){location.href='/employee';return;}
     if(!r.ok){if(tbody)tbody.innerHTML=`<tr class="empty-row"><td colspan="5">Could not load requests (${r.status})</td></tr>`;return;}
     let data;
@@ -2200,7 +2220,7 @@ async function submitGrantWithReply(){
   const id=window._grantPendingId,name=window._grantPendingName,code=window._grantPendingCode;
   const reply=document.getElementById('grant-reply-text').value.trim();
   try{
-    const r=await fetch(`/api/permission_requests/${id}/grant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reply_message:reply})});
+    const r=await empFetch(`/api/permission_requests/${id}/grant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reply_message:reply})});
     if(r.ok){
       showToast(`✅ Granted for ${name}`,'success');
       knownPermCodes.delete(code);
@@ -2228,7 +2248,8 @@ const SIZE_SURCHARGE={'16 oz':0,'22 oz':10};
 async function loadMenu(){
   if(menuItems.length) return;
   try{
-    const r=await fetch('/api/menu');
+    const r=await empFetch('/api/menu');
+    if(!r||!r.ok){document.getElementById('menu-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);">Could not load menu</div>';return;}
     const data=await r.json();
     menuItems=data;
     buildCatTabs();
@@ -2461,7 +2482,8 @@ async function checkout(){
   btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Processing…';
   // ── Store hours check: employees can checkout until actual closing time ──
   try{
-    const sr=await fetch('/api/store_status');
+    const sr=await empFetch('/api/store_status');
+    if(!sr){btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';return;}
     const ss=await sr.json();
     // ss.open = before 1-hr cutoff; ss.closing_soon = within last hour before close
     // Employees are allowed to place walk-in orders during BOTH windows.
@@ -2476,7 +2498,8 @@ async function checkout(){
   const total=cart.reduce((s,i)=>s+i.price,0);
   const payload={customer_name:name,total,items:cart.map(i=>({foundation:i.foundation,size:i.size,sugar:i.sugar,ice:i.ice,waterTemp:i.waterTemp||'',addons:i.addons,price:i.price}))};
   try{
-    const r=await fetch('/api/admin/manual_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const r=await empFetch('/api/admin/manual_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r){btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';return;}
     const data=await r.json();
     if(r.ok){
       window._lastWalkIn={code:data.reservation_code,name,total,items:cart.slice()};
@@ -8347,18 +8370,20 @@ def check_admin_session():
                 pass
         return  # let admin_dashboard() handle login
 
-    # ── 5. Lock screen for unauthenticated visitors hitting /employee ──────────
-    if request.path == '/employee' and not session.get('is_employee'):
+    # ── 5. Lock screen for unauthenticated visitors hitting /employee or /employee/login ──
+    if request.path in ('/employee', '/employee/login') and not session.get('is_employee'):
         state = _get_state()
         if state:
             try:
                 active = getattr(state, 'active_employee_session_id', None)
                 ping   = getattr(state, 'employee_last_ping', None)
                 if active and _session_active(ping):
-                    return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
+                    # Use the same path as action_url so the force-POST goes to the right route
+                    action_url = request.path
+                    return render_template_string(LOCKED_HTML, role='Employee', action_url=action_url, error=None), 200
             except Exception:
                 pass
-        return  # let employee_dashboard() handle login
+        return  # let the route handler handle login
 
     # ── 6. Guard admin API routes and sub-paths ───────────────────────────────
     if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
@@ -9312,7 +9337,24 @@ def sse_stream():
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
-    return jsonify({'orders': [{'id': r.id, 'code': r.reservation_code, 'source': r.order_source, 'name': r.patron_name, 'total': r.total_investment, 'status': r.status, 'pickup_time': r.pickup_time, 'over_limit': len(r.infusions) >= 2, 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions]} for r in res]})
+    def _fmt_order(r):
+        return {
+            'id': r.id,
+            'code': r.reservation_code,
+            'source': r.order_source,
+            'name': r.patron_name,
+            'email': r.patron_email or '',
+            'phone': r.patron_phone or '',
+            'address': r.patron_address or '',
+            'process_type': r.order_source or '',
+            'total': r.total_investment,
+            'status': r.status,
+            'pickup_time': r.pickup_time,
+            'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
+            'over_limit': len(r.infusions) >= 2,
+            'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions]
+        }
+    return jsonify({'orders': [_fmt_order(r) for r in res]})
 
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
