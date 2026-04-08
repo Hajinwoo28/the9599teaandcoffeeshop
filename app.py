@@ -2482,7 +2482,7 @@ async function checkout(){
   btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Processing…';
   // ── Store hours check: employees can checkout until actual closing time ──
   try{
-    const sr=await empFetch('/api/store_status');
+    const sr=await empFetch('/api/store/status');
     if(!sr){btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';return;}
     const ss=await sr.json();
     // ss.open = before 1-hr cutoff; ss.closing_soon = within last hour before close
@@ -2572,7 +2572,7 @@ function openReceiptWindow(r){
 }
 
 setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
-setInterval(()=>fetch('/api/employee/ping'),30000);
+setInterval(()=>empFetch('/api/employee/ping'),30000);
 setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
 fetchOrders();
 fetchPermReqs();
@@ -7196,7 +7196,15 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ══ CLOCK & PING ══ */
 function updateClock(){const n=new Date();let h=n.getHours()%12||12,m=n.getMinutes().toString().padStart(2,'0'),ap=n.getHours()>=12?'PM':'AM';const t=h+':'+m+' '+ap;document.getElementById('clock').innerText=t;const sc=document.getElementById('sidebar-clock');if(sc)sc.innerText=t;}
 setInterval(updateClock,1000);updateClock();
-setInterval(()=>fetch('/api/admin/ping'),30000);
+setInterval(async()=>{
+  try{
+    const r=await fetch('/api/admin/ping');
+    if(r.status===401||r.status===403){
+      // Session was taken over by another device — redirect to lock screen
+      window.location.href='/admin';
+    }
+  }catch(e){}
+},30000);
 
 /* ══ TOAST ══ */
 function showToast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.innerText=msg;document.getElementById('toast-container').appendChild(t);setTimeout(()=>t.remove(),3000);}
@@ -8359,16 +8367,17 @@ def check_admin_session():
             except Exception:
                 pass
 
-    # ── 4. Lock screen for unauthenticated visitors hitting /admin ────────────
-    if request.path == '/admin' and not session.get('is_admin'):
+    # ── 4. Lock screen for unauthenticated visitors hitting /admin or /login ──
+    if request.path in ('/admin', '/login') and not session.get('is_admin'):
         state = _get_state()
         if state:
             try:
                 if state.active_session_id and _session_active(state.last_ping):
-                    return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
+                    action_url = request.path  # POST goes back to whichever path was visited
+                    return render_template_string(LOCKED_HTML, role='Admin', action_url=action_url, error=None), 200
             except Exception:
                 pass
-        return  # let admin_dashboard() handle login
+        return  # let the route handle login
 
     # ── 5. Lock screen for unauthenticated visitors hitting /employee or /employee/login ──
     if request.path in ('/employee', '/employee/login') and not session.get('is_employee'):
