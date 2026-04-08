@@ -1204,6 +1204,21 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
 /* ══ SCREEN TRANSITIONS ══ */
 .screen.active{animation:empSlideUp 0.28s cubic-bezier(0.22,1,0.36,1) both;}
+
+/* ══ EMPLOYEE ORDER DETAIL MODAL ══ */
+.emp-ord-modal{max-width:440px;padding:0;border-radius:22px;overflow:hidden;}
+.emp-ord-modal-head{background:linear-gradient(135deg,#052A24,var(--teal-dark));padding:22px 22px 18px;color:#fff;}
+.emp-ord-modal-code{font-family:monospace;font-size:1.05rem;font-weight:900;letter-spacing:2px;color:rgba(200,168,75,0.9);}
+.emp-ord-modal-name{font-size:1.1rem;font-weight:900;color:#fff;margin-top:4px;}
+.emp-ord-modal-body{padding:18px 22px;}
+.emp-ord-item{background:#f4faf9;border-radius:11px;padding:10px 13px;margin-bottom:8px;border:1px solid #D0E4E0;}
+.emp-ord-item-name{font-size:0.86rem;font-weight:800;color:#0A2925;}
+.emp-ord-item-opts{font-size:0.74rem;color:#557570;font-weight:600;margin-top:3px;line-height:1.5;}
+.emp-ord-detail-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e5f0ee;}
+.emp-ord-detail-row:last-child{border-bottom:none;}
+.emp-ord-detail-lbl{font-size:0.74rem;font-weight:700;color:#557570;}
+.emp-ord-detail-val{font-size:0.82rem;font-weight:800;color:#0A2925;}
+.emp-ord-modal-foot{padding:14px 22px 18px;border-top:1px solid #e5f0ee;display:flex;gap:9px;}
 </style>
 </head>
 <body>
@@ -2540,6 +2555,70 @@ setInterval(()=>{if(document.getElementById('s-stock').classList.contains('activ
 fetchOrders();
 fetchPermReqs();
 fetchStockAlerts(); // pre-load badge count on startup
+
+/* ── Employee Order Detail Modal ── */
+function openEmpOrdDetail(o){
+  if(o===undefined||o===null){if(typeof showToast==='function')showToast('Order data not ready. Please wait a moment and try again.','error');return;}
+  if(typeof o==='string')try{o=JSON.parse(o);}catch(e){return;}
+  let ov=document.getElementById('emp-ord-detail-overlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='emp-ord-detail-overlay';
+    ov.className='emp-modal-overlay';
+    ov.innerHTML=`<div class="emp-modal emp-ord-modal" id="emp-ord-detail-box">
+      <div class="emp-ord-modal-head">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span class="emp-ord-modal-code" id="eod-code">—</span>
+          <button onclick="closeEmpOrdDetail()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="emp-ord-modal-name" id="eod-name">—</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;" id="eod-badges"></div>
+      </div>
+      <div class="emp-ord-modal-body">
+        <div style="font-size:0.68rem;font-weight:900;color:#557570;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Items Ordered</div>
+        <div id="eod-items"></div>
+        <div style="font-size:0.68rem;font-weight:900;color:#557570;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px;">Order Details</div>
+        <div id="eod-meta"></div>
+        <div style="background:linear-gradient(135deg,rgba(13,122,106,0.08),rgba(13,122,106,0.04));border:1.5px solid rgba(13,122,106,0.15);border-radius:12px;padding:12px 14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;font-weight:800;color:#0A2925;">Total Amount</span>
+          <span style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--teal-dark);" id="eod-total">₱0.00</span>
+        </div>
+      </div>
+      <div class="emp-ord-modal-foot">
+        <button class="emp-modal-btn cancel" onclick="closeEmpOrdDetail()" style="flex:1;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:800;cursor:pointer;background:#f3f4f6;color:#374151;">Close</button>
+        <button class="emp-modal-btn confirm" id="eod-print-btn" style="flex:1;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fas fa-print"></i> Print</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){if(e.target===ov)closeEmpOrdDetail();});
+  }
+  document.getElementById('eod-code').textContent='#'+(o.code||'—');
+  document.getElementById('eod-name').textContent=o.name||'Unknown Customer';
+  document.getElementById('eod-total').textContent='₱'+Number(o.total||0).toFixed(2);
+  const isOnline=o.source==='Online';
+  document.getElementById('eod-badges').innerHTML=`
+    <span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;color:rgba(255,255,255,0.85);">${isOnline?'🌐 Online':'🚶 Walk-In'}</span>
+    <span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;color:rgba(255,255,255,0.85);">${escapeHTML(o.status||'—')}</span>
+    ${o.pickup_time?`<span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;color:rgba(255,255,255,0.85);">🕐 ${escapeHTML(o.pickup_time)}</span>`:''}`;
+  const itemsEl=document.getElementById('eod-items');
+  if(o.items&&o.items.length){
+    itemsEl.innerHTML=o.items.map(i=>`<div class="emp-ord-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
+        <div>
+          <div class="emp-ord-item-name">${escapeHTML(i.foundation||'?')}${i.size?` <span style="font-weight:600;color:#557570;font-size:0.74rem;">(${escapeHTML(i.size)})</span>`:''}</div>
+          <div class="emp-ord-item-opts">${[i.sweetener,i.ice,i.addons?'+ '+i.addons:''].filter(Boolean).map(v=>escapeHTML(v)).join(' · ')}</div>
+        </div>
+        <span style="font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:900;color:var(--green);white-space:nowrap;flex-shrink:0;">₱${Number(i.item_total||0).toFixed(2)}</span>
+      </div>
+    </div>`).join('');
+  }else{itemsEl.innerHTML='<div style="color:#557570;font-size:0.81rem;font-weight:600;">No items found.</div>';}
+  const metaEl=document.getElementById('eod-meta');
+  const mRows=[['Phone',o.phone],['Address',o.address],['Process Type',o.process_type],['Email',o.email]];
+  metaEl.innerHTML=mRows.filter(([,v])=>v&&String(v).trim()).map(([l,v])=>`<div class="emp-ord-detail-row"><span class="emp-ord-detail-lbl">${l}</span><span class="emp-ord-detail-val">${escapeHTML(String(v))}</span></div>`).join('')||'<div style="color:#557570;font-size:0.8rem;font-weight:600;padding:4px 0;">No extra details on file.</div>';
+  document.getElementById('eod-print-btn').onclick=()=>{closeEmpOrdDetail();if(typeof printOrderReceipt==='function')printOrderReceipt(o.id);};
+  ov.classList.add('open');
+}
+function closeEmpOrdDetail(){const ov=document.getElementById('emp-ord-detail-overlay');if(ov)ov.classList.remove('open');}
 </script>
 
 <!-- GRANT REPLY MODAL -->
@@ -5579,6 +5658,7 @@ document.querySelectorAll('.screen').forEach(s=>{
 
 /* ── Employee Order Detail Modal ── */
 function openEmpOrdDetail(o){
+  if(o===undefined||o===null){if(typeof showToast==='function')showToast('Order data not ready. Please wait a moment and try again.','error');return;}
   if(typeof o==='string')try{o=JSON.parse(o);}catch(e){return;}
   let ov=document.getElementById('emp-ord-detail-overlay');
   if(!ov){
@@ -8185,7 +8265,7 @@ setInterval(()=>{
   const h=new Date().getHours();
   let greet=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
   const heroTitle=document.querySelector('.dash-hero-title');
-  if(heroTitle)heroTitle.textContent=greet+', Admin \uD83D\uDC4B';
+  if(heroTitle)heroTitle.textContent=greet+', Admin 👋';
 })();
 </script>
 </body>
@@ -8467,8 +8547,10 @@ def admin_dashboard():
     # Ensure tables exist on first hit (Vercel cold-start safety)
     try:
         _initialize_db()
-    except Exception:
-        pass
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return f"Database initialization failed: {e}", 500
 
     if not session.get('is_admin'):
         error = None
