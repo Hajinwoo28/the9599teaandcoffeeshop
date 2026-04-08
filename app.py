@@ -8302,57 +8302,74 @@ def _get_state():
 
 @app.before_request
 def check_admin_session():
-    # ── /admin: when NOT yet logged in, enforce the active-session lock ──────
-    # (Already-logged-in takeover is handled inside admin_dashboard() itself)
-    if request.path == '/admin':
-        if request.method == 'POST' and request.form.get('force') == '1':
-            return  # let the route handle force takeover
-        if not session.get('is_admin'):
-            # Only show lock screen for unauthenticated visitors
-            state = _get_state()
-            if state:
-                try:
-                    active = state.active_session_id
-                    ping   = state.last_ping
-                    if active and _session_active(ping):
-                        return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
-                except Exception:
-                    pass
-        return  # let admin_dashboard() take over from here
+    # ── 1. Force-POST bypass — let takeover forms through unconditionally ──────
+    # Covers all four entry points that render LOCKED_HTML with a PIN form.
+    _TAKEOVER_PATHS = {'/admin', '/login', '/employee', '/employee/login'}
+    if request.path in _TAKEOVER_PATHS and request.method == 'POST' and request.form.get('force') == '1':
+        return  # let the route handle the force takeover
 
-    # ── /employee: when NOT yet logged in, enforce the active-session lock ───
-    # (Already-logged-in takeover is handled inside employee_dashboard() itself)
-    if request.path == '/employee':
-        if request.method == 'POST' and request.form.get('force') == '1':
-            return  # let the route handle force takeover
-        if not session.get('is_employee'):
-            state = _get_state()
-            if state:
-                try:
-                    active = getattr(state, 'active_employee_session_id', None)
-                    ping   = getattr(state, 'employee_last_ping', None)
-                    if active and _session_active(ping):
-                        return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
-                except Exception:
-                    pass
-        return  # let employee_dashboard() take over from here
-
-    # ── Guard admin API routes and sub-paths ─────────────────────────────────
-    if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
-        if not session.get('is_admin') or not session.get('admin_id'):
-            if request.path.startswith('/api'):
-                return jsonify({"error": "Unauthorized"}), 403
-            return redirect(url_for('admin_dashboard'))
-        # Kick out if another device has since taken over the session
+    # ── 2. Global admin displacement check (fires on EVERY request) ───────────
+    # If this session claims to be admin, verify it is still the active one.
+    # If another device has taken over, immediately revoke this stale session.
+    if session.get('is_admin') and session.get('admin_id'):
         state = _get_state()
         if state:
             try:
-                if _session_active(state.last_ping) and state.active_session_id != session.get('admin_id'):
+                if state.active_session_id and state.active_session_id != session.get('admin_id'):
+                    session.pop('is_admin', None)
+                    session.pop('admin_id', None)
                     if request.path.startswith('/api'):
                         return jsonify({"error": "Unauthorized"}), 403
                     return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
             except Exception:
                 pass
+
+    # ── 3. Global employee displacement check (fires on EVERY request) ─────────
+    # Same pattern for employees — covers /api/orders/*, /api/stream, etc.
+    if session.get('is_employee') and session.get('employee_id'):
+        state = _get_state()
+        if state:
+            try:
+                active = getattr(state, 'active_employee_session_id', None)
+                if active and active != session.get('employee_id'):
+                    session.pop('is_employee', None)
+                    session.pop('employee_id', None)
+                    if request.path.startswith('/api'):
+                        return jsonify({"error": "Unauthorized"}), 403
+                    return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
+            except Exception:
+                pass
+
+    # ── 4. Lock screen for unauthenticated visitors hitting /admin ────────────
+    if request.path == '/admin' and not session.get('is_admin'):
+        state = _get_state()
+        if state:
+            try:
+                if state.active_session_id and _session_active(state.last_ping):
+                    return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
+            except Exception:
+                pass
+        return  # let admin_dashboard() handle login
+
+    # ── 5. Lock screen for unauthenticated visitors hitting /employee ──────────
+    if request.path == '/employee' and not session.get('is_employee'):
+        state = _get_state()
+        if state:
+            try:
+                active = getattr(state, 'active_employee_session_id', None)
+                ping   = getattr(state, 'employee_last_ping', None)
+                if active and _session_active(ping):
+                    return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
+            except Exception:
+                pass
+        return  # let employee_dashboard() handle login
+
+    # ── 6. Guard admin API routes and sub-paths ───────────────────────────────
+    if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
+        if not session.get('is_admin') or not session.get('admin_id'):
+            if request.path.startswith('/api'):
+                return jsonify({"error": "Unauthorized"}), 403
+            return redirect(url_for('admin_dashboard'))
 
 @app.route('/')
 def storefront():
