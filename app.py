@@ -874,8 +874,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:none;padding:0 0 16px;scrollbar-width:none;}
 .screen::-webkit-scrollbar{display:none;}
 .screen.active{display:block;}
-#s-pos{display:flex;flex-direction:column;overflow:hidden;}
-#s-pos>.page-header{flex-shrink:0;position:relative;top:auto;}
+#s-pos.active{display:flex;flex-direction:column;overflow:hidden;}
+#s-pos.active>.page-header{flex-shrink:0;position:relative;top:auto;}
 
 .page-header{padding:20px 16px 14px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:50;}
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:900;color:var(--teal-dark);display:flex;align-items:center;gap:9px;}
@@ -1042,9 +1042,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .btn-done{width:100%;padding:13px;border-radius:12px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-weight:900;font-size:0.92rem;cursor:pointer;margin-top:14px;}
 .btn-done-print{width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--teal-dark);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;}
 /* ── Stock Alerts screen ── */
-.sa-header{padding:20px 16px 14px;background:var(--card);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:50;}
-.sa-header h2{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--text);}
-.sa-header p{font-size:0.77rem;color:var(--muted);font-weight:600;margin-top:3px;}
+
 .sa-body{padding:14px 14px 20px;}
 .sa-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);}
 .sa-card.critical{border-color:rgba(211,47,47,0.35);background:rgba(211,47,47,0.04);}
@@ -1424,8 +1422,8 @@ function playEmpPermBeep(){
   <!-- ONLINE POS -->
   <div id="s-online" class="screen active">
     <div class="page-header">
-      <h2><i class="fas fa-wifi"></i> Live Orders</h2>
-      <p>Refreshes every 5 seconds — tap a status button to update</p>
+      <h2><i class="fas fa-wifi"></i> Online POS</h2>
+      <p>Live orders &amp; permissions — refreshes every 5 seconds</p>
     </div>
 
     <!-- Stats -->
@@ -1537,14 +1535,12 @@ function playEmpPermBeep(){
 
   <!-- STOCK ALERTS SCREEN -->
   <div id="s-stock" class="screen">
-    <div class="sa-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div>
-          <h2><i class="fas fa-boxes" style="color:var(--teal);margin-right:6px;"></i>Stock Alerts</h2>
-          <p>Live from admin inventory — updates every 60 seconds</p>
-        </div>
-        <button class="sa-refresh-btn" onclick="fetchStockAlerts()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div>
+        <h2><i class="fas fa-boxes"></i> Stock Alerts</h2>
+        <p>Inventory levels — updates every 60 seconds</p>
       </div>
+      <button class="sa-refresh-btn" onclick="fetchStockAlerts()"><i class="fas fa-sync-alt"></i> Refresh</button>
     </div>
     <div class="sa-body">
       <!-- Summary chips -->
