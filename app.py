@@ -6455,31 +6455,31 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-role-title{font-size:0.66rem;font-weight:900;color:var(--tan);letter-spacing:1.5px;text-transform:uppercase;}
 .admin-drawer-role-sub{font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:1px;}
 
-.admin-drawer-section-label{font-size:0.56rem;font-weight:900;color:rgba(196,168,130,0.3);letter-spacing:2.5px;text-transform:uppercase;padding:12px 20px 6px;display:flex;align-items:center;gap:8px;}
+.admin-drawer-section-label{font-size:0.62rem;font-weight:900;color:rgba(196,168,130,0.3);letter-spacing:2.5px;text-transform:uppercase;padding:12px 16px 6px;display:flex;align-items:center;gap:8px;}
 .admin-drawer-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06);}
-.admin-drawer-nav{padding:6px 10px 0;flex:1;display:flex;flex-direction:column;gap:2px;overflow-y:auto;scrollbar-width:none;}
+.admin-drawer-nav{padding:6px 10px 0;flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;scrollbar-width:none;}
 .admin-drawer-nav::-webkit-scrollbar{display:none;}
-.admin-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:rgba(196,168,130,0.55);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.22s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;}
+.admin-nav-item{width:100%;display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:8px;border:1px solid transparent;background:transparent;color:rgba(196,168,130,0.55);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.22s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;}
 .admin-nav-item::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;border-radius:0 3px 3px 0;background:var(--tan);transition:height 0.22s ease;}
 .admin-nav-item:hover:not(.active){background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.88);border-color:rgba(255,255,255,0.07);}
 .admin-nav-item.active{background:linear-gradient(135deg,rgba(196,168,130,0.14) 0%,rgba(196,168,130,0.06) 100%);border-color:rgba(196,168,130,0.3);color:#fff;box-shadow:0 4px 20px rgba(196,168,130,0.08),inset 0 1px 0 rgba(196,168,130,0.1);}
 .admin-nav-item.active::before{height:60%;}
 .admin-nav-item:hover:not(.active)::before{height:30%;opacity:0.5;}
-.admin-nav-icon{width:38px;height:38px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.07);transition:all 0.22s;color:rgba(196,168,130,0.55);}
+.admin-nav-icon{width:44px;height:44px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.07);transition:all 0.22s;color:rgba(196,168,130,0.55);}
 .admin-nav-item.active .admin-nav-icon{background:linear-gradient(135deg,var(--tan) 0%,#d4b060 100%);color:var(--brown-dark);border-color:transparent;box-shadow:0 6px 18px rgba(196,168,130,0.35);}
 .admin-nav-item:hover:not(.active) .admin-nav-icon{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);border-color:rgba(255,255,255,0.12);}
 .admin-nav-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
-.admin-nav-label{font-size:0.87rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
-.admin-nav-desc{font-size:0.65rem;font-weight:600;color:rgba(196,168,130,0.32);margin-top:3px;line-height:1.3;}
+.admin-nav-label{font-size:0.97rem;font-weight:800;letter-spacing:0.1px;line-height:1;color:inherit;}
+.admin-nav-desc{font-size:0.72rem;font-weight:600;color:rgba(196,168,130,0.32);margin-top:3px;line-height:1.3;}
 .admin-nav-item.active .admin-nav-desc{color:rgba(196,168,130,0.55);}
 .admin-nav-item:hover:not(.active) .admin-nav-desc{color:rgba(255,255,255,0.35);}
 .admin-drawer-divider{height:1px;background:rgba(196,168,130,0.08);margin:8px 16px;}
-.admin-drawer-footer{padding:12px 12px 16px;border-top:1px solid rgba(196,168,130,0.08);flex-shrink:0;display:flex;flex-direction:column;gap:6px;}
+.admin-drawer-footer{padding:8px 10px 12px;border-top:1px solid rgba(196,168,130,0.08);flex-shrink:0;display:flex;flex-direction:column;gap:4px;}
 /* Time chip in footer */
 .admin-drawer-time-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:8px 12px;margin-bottom:4px;}
 .admin-drawer-time-chip i{color:var(--tan);font-size:0.75rem;opacity:0.7;}
 .admin-drawer-time-val{font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:0.3px;}
-.admin-drawer-action{width:100%;display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
+.admin-drawer-action{width:100%;display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
 .admin-drawer-action:hover{background:rgba(196,168,130,0.15);color:var(--cream);}
 .admin-drawer-action.danger{background:rgba(192,57,43,0.08);border-color:rgba(192,57,43,0.2);color:rgba(255,150,150,0.8);}
 .admin-drawer-action.danger:hover{background:rgba(192,57,43,0.2);color:#fff;border-color:rgba(192,57,43,0.45);}
@@ -7459,11 +7459,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
       </div>
 
-      <!-- Lock / Reload -->
-      <div class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;margin-bottom:20px;">
-        <button class="btn-outline" onclick="location.reload()"><i class="fas fa-sync-alt"></i> Reload</button>
-        <button class="btn-outline" style="color:var(--red);border-color:rgba(192,57,43,0.3);" onclick="location.href='/logout'"><i class="fas fa-lock"></i> Lock Panel</button>
-      </div>
+
 
     </div>
   </div><!-- /s-settings -->
