@@ -7031,10 +7031,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   </div><!-- /admin-drawer-nav -->
 
   <div class="admin-drawer-footer">
-    <div class="admin-drawer-time-chip">
-      <i class="fas fa-clock"></i>
-      <span class="admin-drawer-time-val" id="sidebar-clock">--:-- --</span>
-    </div>
     <div class="admin-drawer-footer-btns">
     <button class="admin-drawer-action" onclick="closeAdminMenu();location.reload()">
       <i class="fas fa-sync-alt"></i> Reload
