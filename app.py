@@ -1960,8 +1960,8 @@ async function empFetch(url, opts){
   try{
     const r = await fetch(url, opts);
     if(r.status === 401 || r.status === 403){
-      // Session displaced — show the lock screen
-      window.location.href = '/employee';
+      // Session expired or invalid — redirect to login
+      window.location.href = '/employee/login';
       return null;
     }
     return r;
@@ -7757,7 +7757,7 @@ setInterval(async()=>{
 function showToast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.innerText=msg;document.getElementById('toast-container').appendChild(t);setTimeout(()=>t.remove(),3000);}
 
 /* ══ API ══ */
-async function apiFetch(url,opts={}){const r=await fetch(url,opts);if(r.status===403){location.href='/login';return null;}return r;}
+async function apiFetch(url,opts={}){const r=await fetch(url,opts);if(r.status===403||r.status===401){location.href='/login';return null;}return r;}
 
 /* ══ MODAL ══ */
 function closeModal(id){document.getElementById(id).style.display='none';}
@@ -9198,19 +9198,6 @@ async function unblockIP(id) {
 # 5. REST API ROUTES & FLASK LOGIC
 # ==========================================
 
-SESSION_TIMEOUT = 0  # seconds of inactivity before a device lock expires
-
-def _session_active(last_ping):
-    """True if a ping arrived within SESSION_TIMEOUT seconds."""
-    if last_ping is None:
-        return False
-    try:
-        if last_ping == datetime.min:
-            return False
-    except Exception:
-        return False
-    return (datetime.utcnow() - last_ping).total_seconds() < SESSION_TIMEOUT
-
 def _get_state():
     """Safely fetch SystemState row; returns None on any DB error."""
     try:
@@ -9220,77 +9207,25 @@ def _get_state():
 
 @app.before_request
 def check_admin_session():
-    # ── 1. Force-POST bypass — let takeover forms through unconditionally ──────
-    # Covers all four entry points that render LOCKED_HTML with a PIN form.
-    _TAKEOVER_PATHS = {'/admin', '/login', '/employee', '/employee/login'}
-    if request.path in _TAKEOVER_PATHS and request.method == 'POST' and request.form.get('force') == '1':
-        return  # let the route handle the force takeover
+    # ── Multi-session model ───────────────────────────────────────────────────
+    # Each browser/device must enter the PIN once per browser session.
+    # Multiple devices can be logged in simultaneously — no displacement.
+    # The session cookie handles persistence within the same browser.
 
-    # ── 2. Global admin displacement check (fires on EVERY request) ───────────
-    # If this session claims to be admin, verify it is still the active one.
-    # If another device has taken over, immediately revoke this stale session.
-    if session.get('is_admin') and session.get('admin_id'):
-        state = _get_state()
-        if state:
-            try:
-                if state.active_session_id and state.active_session_id != session.get('admin_id'):
-                    session.pop('is_admin', None)
-                    session.pop('admin_id', None)
-                    if request.path.startswith('/api'):
-                        return jsonify({"error": "Unauthorized"}), 403
-                    return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
-            except Exception:
-                pass
-
-    # ── 3. Global employee displacement check (fires on EVERY request) ─────────
-    # Same pattern for employees — covers /api/orders/*, /api/stream, etc.
-    if session.get('is_employee') and session.get('employee_id'):
-        state = _get_state()
-        if state:
-            try:
-                active = getattr(state, 'active_employee_session_id', None)
-                if active and active != session.get('employee_id'):
-                    session.pop('is_employee', None)
-                    session.pop('employee_id', None)
-                    if request.path.startswith('/api'):
-                        return jsonify({"error": "Unauthorized"}), 403
-                    return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
-            except Exception:
-                pass
-
-    # ── 4. Lock screen for unauthenticated visitors hitting /admin or /login ──
-    if request.path in ('/admin', '/login') and not session.get('is_admin'):
-        state = _get_state()
-        if state:
-            try:
-                if state.active_session_id and _session_active(state.last_ping):
-                    action_url = request.path  # POST goes back to whichever path was visited
-                    return render_template_string(LOCKED_HTML, role='Admin', action_url=action_url, error=None), 200
-            except Exception:
-                pass
-        return  # let the route handle login
-
-    # ── 5. Lock screen for unauthenticated visitors hitting /employee or /employee/login ──
-    if request.path in ('/employee', '/employee/login') and not session.get('is_employee'):
-        state = _get_state()
-        if state:
-            try:
-                active = getattr(state, 'active_employee_session_id', None)
-                ping   = getattr(state, 'employee_last_ping', None)
-                if active and _session_active(ping):
-                    # Use the same path as action_url so the force-POST goes to the right route
-                    action_url = request.path
-                    return render_template_string(LOCKED_HTML, role='Employee', action_url=action_url, error=None), 200
-            except Exception:
-                pass
-        return  # let the route handler handle login
-
-    # ── 6. Guard admin API routes and sub-paths ───────────────────────────────
-    if request.path.startswith('/admin') or request.path.startswith('/api/admin'):
+    # Guard admin API routes — must have a valid admin session
+    if request.path.startswith('/api/admin'):
         if not session.get('is_admin') or not session.get('admin_id'):
-            if request.path.startswith('/api'):
-                return jsonify({"error": "Unauthorized"}), 403
-            return redirect(url_for('admin_dashboard'))
+            return jsonify({"error": "Unauthorized"}), 403
+
+    # Guard /admin page — unauthenticated browsers are sent to login
+    if request.path == '/admin' and request.method == 'GET':
+        if not session.get('is_admin'):
+            return redirect(url_for('admin_login'))
+
+    # Guard employee API routes — must have a valid employee session
+    if request.path.startswith('/api/employee') or request.path.startswith('/api/orders') or request.path.startswith('/api/stream'):
+        if not session.get('is_employee') and not session.get('is_admin'):
+            return jsonify({"error": "Unauthorized"}), 403
 
 @app.route('/')
 def storefront():
@@ -9445,6 +9380,9 @@ def manual_auth():
 def admin_login():
     error = None
     client_ip = get_client_ip()
+    # Already logged in — go straight to dashboard
+    if session.get('is_admin'):
+        return redirect(url_for('admin_dashboard'))
     # ── IP Blacklist check ────────────────────────────────────────────────────
     if is_ip_blacklisted(client_ip):
         log_audit("Security: Blocked Access Attempt", f"Blacklisted IP {client_ip} tried to reach admin login")
@@ -9456,46 +9394,37 @@ def admin_login():
             record_failed_attempt(client_ip, 'admin')
             log_audit("Security: Honeypot Triggered", f"Bot/scraper detected at {client_ip}")
             return render_template_string(LOGIN_HTML, error="Access Denied."), 403
-        force = request.form.get('force') == '1'
         if master_pin_matches(pin):
-            state = SystemState.query.first()
-            if not state:
-                state = SystemState(active_session_id='', last_ping=datetime.min,
-                                    active_employee_session_id='', employee_last_ping=datetime.min)
-                db.session.add(state)
-            # Block if another device holds an active session — unless force takeover
-            if not force and state.active_session_id and _session_active(state.last_ping):
-                if state.active_session_id != session.get('admin_id'):
-                    return render_template_string(LOCKED_HTML, role='Admin', action_url='/login', error=None), 200
             session.permanent = True
             session['is_admin'] = True
             session['admin_id'] = str(uuid.uuid4())
-            state.active_session_id = session['admin_id']
-            state.last_ping = datetime.utcnow()
-            db.session.commit()
-            log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login from {client_ip}")
+            # Record last login for audit (no single-session gate)
+            try:
+                state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
+                                                     active_employee_session_id='', employee_last_ping=datetime.min)
+                if not state.id:
+                    db.session.add(state)
+                state.active_session_id = session['admin_id']
+                state.last_ping = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                try: db.session.rollback()
+                except Exception: pass
+            log_audit("Admin Login", f"Successful login from {client_ip}")
             return redirect(url_for('admin_dashboard'))
-        # Wrong PIN — record attempt
+        # Wrong PIN
         record_failed_attempt(client_ip, 'admin')
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
-        # If wrong PIN was entered on the force/locked page, show locked page again with error
-        if request.form.get('force') == '1':
-            return render_template_string(LOCKED_HTML, role='Admin', action_url='/login', error=error), 200
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
 def admin_logout():
     session.pop('is_admin', None)
-    admin_id = session.pop('admin_id', None)
-    state = SystemState.query.first()
-    if state and state.active_session_id == admin_id:
-        state.active_session_id = ''
-        state.last_ping = datetime.min
-        db.session.commit()
+    session.pop('admin_id', None)
+    log_audit("Admin Logout", "Admin logged out")
     return redirect(url_for('admin_login'))
 
-@app.route('/admin', methods=['GET', 'POST'])
-@limiter.limit("10 per minute")
+@app.route('/admin', methods=['GET'])
 def admin_dashboard():
     # Ensure tables exist on first hit (Vercel cold-start safety)
     try:
@@ -9506,52 +9435,7 @@ def admin_dashboard():
         return f"Database initialization failed: {e}", 500
 
     if not session.get('is_admin'):
-        error = None
-        if request.method == 'POST':
-            pin = request.form.get('pin')
-            force = request.form.get('force') == '1'
-            if master_pin_matches(pin):
-                try:
-                    state = SystemState.query.first()
-                    if not state:
-                        state = SystemState(active_session_id='', last_ping=datetime.min,
-                                            active_employee_session_id='', employee_last_ping=datetime.min)
-                        db.session.add(state)
-                    # Block if another device holds an active session — unless force takeover
-                    if not force and state.active_session_id and _session_active(state.last_ping):
-                        if state.active_session_id != session.get('admin_id'):
-                            return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
-                    session.permanent = True
-                    session['is_admin'] = True
-                    session['admin_id'] = str(uuid.uuid4())
-                    state.active_session_id = session['admin_id']
-                    state.last_ping = datetime.utcnow()
-                    db.session.commit()
-                    log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login to dashboard")
-                    return redirect(url_for('admin_dashboard'))
-                except Exception as _e:
-                    try:
-                        db.session.rollback()
-                    except Exception:
-                        pass
-                    error = "A server error occurred. Please try again."
-            if not error:
-                error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
-            if request.form.get('force') == '1':
-                return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=error), 200
-        return render_template_string(LOGIN_HTML, error=error)
-
-    # Already authenticated — verify this device still holds the active session (takeover check)
-    try:
-        state = _get_state()
-        if state and state.active_session_id and _session_active(state.last_ping):
-            if state.active_session_id != session.get('admin_id'):
-                # Another device has taken over — kick this one out
-                session.pop('is_admin', None)
-                session.pop('admin_id', None)
-                return render_template_string(LOCKED_HTML, role='Admin', action_url='/admin', error=None), 200
-    except Exception:
-        pass
+        return redirect(url_for('admin_login'))
 
     return render_template_string(ADMIN_HTML)
 
@@ -9562,42 +9446,35 @@ def employee_login():
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
-        force = request.form.get('force') == '1'
         if master_pin_matches(pin):
-            state = SystemState.query.first()
-            if not state:
-                state = SystemState(active_session_id='', last_ping=datetime.min,
-                                    active_employee_session_id='', employee_last_ping=datetime.min)
-                db.session.add(state)
-            # Block if another device holds an active session — unless force takeover
-            if not force and state.active_employee_session_id and _session_active(state.employee_last_ping):
-                if state.active_employee_session_id != session.get('employee_id'):
-                    return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee/login', error=None), 200
             session.permanent = True
             session['is_employee'] = True
             session['employee_id'] = str(uuid.uuid4())
-            state.active_employee_session_id = session['employee_id']
-            state.employee_last_ping = datetime.utcnow()
-            db.session.commit()
-            log_audit("Employee Login", f"{'Force takeover — ' if force else ''}Staff logged in to employee station")
+            # Record for audit (no single-session gate)
+            try:
+                state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
+                                                      active_employee_session_id='', employee_last_ping=datetime.min)
+                if not state.id:
+                    db.session.add(state)
+                state.active_employee_session_id = session['employee_id']
+                state.employee_last_ping = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                try: db.session.rollback()
+                except Exception: pass
+            log_audit("Employee Login", "Staff logged in to employee station")
             return redirect(url_for('employee_dashboard'))
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
-        if request.form.get('force') == '1':
-            return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee/login', error=error), 200
     return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
 
 @app.route('/employee/logout')
 def employee_logout():
     session.pop('is_employee', None)
-    employee_id = session.pop('employee_id', None)
-    state = SystemState.query.first()
-    if state and state.active_employee_session_id == employee_id:
-        state.active_employee_session_id = ''
-        state.employee_last_ping = datetime.min
-        db.session.commit()
+    session.pop('employee_id', None)
+    log_audit("Employee Logout", "Staff logged out of employee station")
     return redirect(url_for('employee_login'))
 
-@app.route('/employee', methods=['GET', 'POST'])
+@app.route('/employee', methods=['GET'])
 @limiter.limit("10 per minute")
 def employee_dashboard():
     # Ensure tables exist on first hit (Vercel cold-start safety)
@@ -9607,71 +9484,34 @@ def employee_dashboard():
         pass
 
     if not session.get('is_employee'):
-        error = None
-        if request.method == 'POST':
-            pin = request.form.get('pin')
-            force = request.form.get('force') == '1'
-            if master_pin_matches(pin):
-                try:
-                    state = SystemState.query.first()
-                    if not state:
-                        state = SystemState(active_session_id='', last_ping=datetime.min,
-                                            active_employee_session_id='', employee_last_ping=datetime.min)
-                        db.session.add(state)
-                    # Block if another device holds an active session — unless force takeover
-                    if not force and state.active_employee_session_id and _session_active(state.employee_last_ping):
-                        if state.active_employee_session_id != session.get('employee_id'):
-                            return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
-                    session.permanent = True
-                    session['is_employee'] = True
-                    session['employee_id'] = str(uuid.uuid4())
-                    state.active_employee_session_id = session['employee_id']
-                    state.employee_last_ping = datetime.utcnow()
-                    db.session.commit()
-                    log_audit("Employee Login", f"{'Force takeover — ' if force else ''}Staff logged in to employee station")
-                    return redirect(url_for('employee_dashboard'))
-                except Exception as _e:
-                    try:
-                        db.session.rollback()
-                    except Exception:
-                        pass
-                    error = "A server error occurred. Please try again."
-            if not error:
-                error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
-            if request.form.get('force') == '1':
-                return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=error), 200
-        return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
-
-    # Already authenticated — verify this device still holds the active employee session (takeover check)
-    try:
-        state = _get_state()
-        if state and state.active_employee_session_id and _session_active(state.employee_last_ping):
-            if state.active_employee_session_id != session.get('employee_id'):
-                # Another device has taken over — kick this one out
-                session.pop('is_employee', None)
-                session.pop('employee_id', None)
-                return render_template_string(LOCKED_HTML, role='Employee', action_url='/employee', error=None), 200
-    except Exception:
-        pass
+        return redirect(url_for('employee_login'))
 
     return render_template_string(EMPLOYEE_HTML)
 
 @app.route('/api/admin/ping')
 def admin_ping():
-    if session.get('is_admin'):
-        state = SystemState.query.first()
-        if state and state.active_session_id == session.get('admin_id'):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        state = _get_state()
+        if state:
             state.last_ping = datetime.utcnow()
             db.session.commit()
+    except Exception:
+        pass
     return jsonify({"status": "ok"})
 
 @app.route('/api/employee/ping')
 def employee_ping():
-    if session.get('is_employee'):
-        state = SystemState.query.first()
-        if state and state.active_employee_session_id == session.get('employee_id'):
+    if not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        state = _get_state()
+        if state:
             state.employee_last_ping = datetime.utcnow()
             db.session.commit()
+    except Exception:
+        pass
     return jsonify({"status": "ok"})
 
 
