@@ -388,6 +388,127 @@ class ItemAvailabilityQuery(db.Model):
     customer_decision = db.Column(db.String(20), nullable=True)  # 'proceed' | 'cancel' | None (pending)
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
+# ── NEW SECURITY & ADVANCED FEATURE MODELS ─────────────────────────────────
+
+class FailedLoginAttempt(db.Model):
+    """Tracks failed login attempts for brute-force protection."""
+    __tablename__ = 'failed_login_attempts'
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(60), nullable=False, index=True)
+    attempt_type = db.Column(db.String(20), default='admin')  # admin | employee | customer
+    user_agent = db.Column(db.String(300), nullable=True, default='')
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class BlacklistedIP(db.Model):
+    """Admin-managed IP blacklist to block scammers/attackers."""
+    __tablename__ = 'blacklisted_ips'
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(60), nullable=False, unique=True)
+    reason = db.Column(db.String(300), nullable=True, default='Too many failed attempts')
+    is_manual = db.Column(db.Boolean, default=False)  # True = added by admin manually
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class PromoCode(db.Model):
+    """Discount/promo codes that customers can apply to orders."""
+    __tablename__ = 'promo_codes'
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(30), nullable=False, unique=True)
+    description = db.Column(db.String(200), nullable=True, default='')
+    discount_type = db.Column(db.String(20), default='percent')  # percent | fixed
+    discount_value = db.Column(db.Float, nullable=False, default=0.0)
+    min_order = db.Column(db.Float, nullable=False, default=0.0)
+    max_uses = db.Column(db.Integer, nullable=True)       # None = unlimited
+    used_count = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class StaffAnnouncement(db.Model):
+    """Admin-to-employee announcements displayed on the employee station."""
+    __tablename__ = 'staff_announcements'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    priority = db.Column(db.String(20), default='normal')  # low | normal | high | urgent
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class WasteLog(db.Model):
+    """Tracks ingredient waste logged by employees."""
+    __tablename__ = 'waste_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    ingredient_name = db.Column(db.String(100), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False, default='units')
+    reason = db.Column(db.String(200), nullable=True, default='')
+    logged_by = db.Column(db.String(50), nullable=True, default='Employee')
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class QuickChecklist(db.Model):
+    """Daily opening/closing checklist items."""
+    __tablename__ = 'quick_checklists'
+    id = db.Column(db.Integer, primary_key=True)
+    task_name = db.Column(db.String(150), nullable=False)
+    checklist_type = db.Column(db.String(20), default='opening')  # opening | closing | cleaning
+    is_active = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+# ── Security helpers ────────────────────────────────────────────────────────
+
+MAX_FAILED_ATTEMPTS = 5   # auto-ban after this many failures within 30 minutes
+FAILED_WINDOW_MIN   = 30  # rolling window in minutes
+
+def get_client_ip():
+    """Extract real client IP, respecting X-Forwarded-For from trusted proxies."""
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or '0.0.0.0'
+
+def is_ip_blacklisted(ip: str) -> bool:
+    """Return True if the given IP is on the blacklist."""
+    try:
+        return BlacklistedIP.query.filter_by(ip_address=ip).first() is not None
+    except Exception:
+        return False
+
+def record_failed_attempt(ip: str, attempt_type: str = 'admin'):
+    """Record a failed login and auto-ban after MAX_FAILED_ATTEMPTS in FAILED_WINDOW_MIN."""
+    try:
+        ua = request.headers.get('User-Agent', '')[:300]
+        db.session.add(FailedLoginAttempt(ip_address=ip, attempt_type=attempt_type, user_agent=ua))
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return
+
+    # Count attempts in the rolling window
+    try:
+        cutoff = datetime.utcnow() - timedelta(minutes=FAILED_WINDOW_MIN)
+        count = FailedLoginAttempt.query.filter(
+            FailedLoginAttempt.ip_address == ip,
+            FailedLoginAttempt.created_at >= cutoff
+        ).count()
+        if count >= MAX_FAILED_ATTEMPTS:
+            existing = BlacklistedIP.query.filter_by(ip_address=ip).first()
+            if not existing:
+                db.session.add(BlacklistedIP(
+                    ip_address=ip,
+                    reason=f'Auto-banned: {count} failed login attempts in {FAILED_WINDOW_MIN} min',
+                    is_manual=False
+                ))
+                db.session.commit()
+                log_audit('Security: IP Auto-Banned', f'IP {ip} banned after {count} failed attempts')
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
 # ==========================================
 # 4. FRONTEND HTML TEMPLATES
 # ==========================================
@@ -450,6 +571,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:
     <p class="sub">Enter the 5-digit master PIN to continue</p>
     {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
     <form method="POST">
+      <input type="text" name="_email_confirm" style="display:none;position:absolute;left:-9999px;" tabindex="-1" autocomplete="off">
       <label class="lbl">Master PIN (5 digits)</label>
       <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code" title="Enter exactly 5 digits">
       <button type="submit" class="btn"><i class="fas fa-lock"></i> Login Securely</button>
@@ -602,7 +724,7 @@ body{background:linear-gradient(160deg,var(--accent-dark) 0%,var(--accent) 60%,v
       <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus
              maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric"
              autocomplete="one-time-code" title="Enter exactly 5 digits">
-      <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Take Over &amp; Sign In</button>
+      <button type="submit" class="btn" onclick="this.disabled=true;this.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Taking over…';this.form.submit();"><i class="fas fa-sign-in-alt"></i> Take Over &amp; Sign In</button>
     </form>
 
   </div>
@@ -936,8 +1058,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .filter-tab{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);font-size:0.74rem;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
 .filter-tab.active{background:var(--teal-dark);color:#fff;border-color:var(--teal-dark);}
 
-.pos-layout{display:flex;height:100%;overflow:hidden;}
-.pos-menu-area{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:10px;background:var(--bg);scrollbar-width:none;}
+.pos-layout{display:flex;flex:1;min-height:0;overflow:hidden;}
+.pos-menu-area{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:10px;background:var(--bg);scrollbar-width:none;}
 .pos-menu-area::-webkit-scrollbar{display:none;}
 .pos-sidebar{width:260px;flex-shrink:0;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 @media(max-width:680px){
@@ -1002,9 +1124,9 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .live-table-wrap{overflow-x:auto;overflow-y:auto;max-height:360px;-webkit-overflow-scrolling:touch;}
 .live-table-wrap::-webkit-scrollbar{width:4px;height:4px;}
 .live-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-.live-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
-.live-table th{padding:9px 12px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#FAFCFB;position:sticky;top:0;z-index:2;}
-.live-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);font-weight:600;}
+.live-table{width:100%;border-collapse:collapse;font-size:0.7rem;}
+.live-table th{padding:6px 8px;text-align:left;font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#FAFCFB;position:sticky;top:0;z-index:2;}
+.live-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);font-weight:600;}
 .live-table tr:last-child td{border-bottom:none;}
 .live-table tr:hover td{background:rgba(13,122,106,0.03);}
 .live-table .empty-row td{text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-style:italic;}
@@ -5772,6 +5894,215 @@ function updateShiftStats(){
     <span style="color:rgba(200,168,75,0.85);font-size:0.7rem;font-weight:800;">₱${revenue.toFixed(0)}</span>`;
 }
 setInterval(updateShiftStats,8000);
+
+/* ══════════════════════════════════════════════════════════
+   EMPLOYEE ADVANCED FEATURES
+══════════════════════════════════════════════════════════ */
+
+/* ── ANNOUNCEMENTS PANEL (employee side) ── */
+let _annLoaded = false;
+async function empLoadAnnouncements() {
+  try {
+    const r = await fetch('/api/employee/announcements');
+    if (!r.ok) return;
+    const data = await r.json();
+    const badge = document.getElementById('emp-ann-badge');
+    if (badge) { badge.textContent = data.length; badge.style.display = data.length ? 'flex' : 'none'; }
+    const el = document.getElementById('emp-ann-list');
+    if (!el) return;
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:#557570;padding:20px;font-size:0.82rem;font-weight:600;">No announcements.</div>'; return; }
+    const pColors = {urgent:'#D32F2F',high:'#E65100',normal:'var(--teal-dark)',low:'#9E9E9E'};
+    el.innerHTML = data.map(a => `
+      <div style="border-left:3px solid ${pColors[a.priority]||'var(--teal)'};background:#f4faf9;border-radius:0 10px 10px 0;padding:11px 13px;margin-bottom:9px;">
+        <div style="font-size:0.85rem;font-weight:900;color:#0A2925;margin-bottom:4px;">${escapeHTML(a.title)}</div>
+        <div style="font-size:0.78rem;color:#557570;font-weight:600;line-height:1.5;">${escapeHTML(a.message)}</div>
+        <div style="font-size:0.66rem;color:#9ca3af;margin-top:5px;">${a.created_at}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function openEmpAnnPanel() {
+  let panel = document.getElementById('emp-ann-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'emp-ann-panel';
+    panel.style.cssText = 'position:fixed;top:62px;right:0;width:320px;max-width:100vw;background:#fff;box-shadow:-4px 0 30px rgba(0,0,0,0.15);z-index:9100;height:calc(100vh - 62px);display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);';
+    panel.innerHTML = `
+      <div style="background:linear-gradient(135deg,#052A24,var(--teal-dark));padding:16px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="color:#fff;font-weight:900;font-size:0.95rem;">📣 Staff Announcements</div>
+        <button onclick="closeEmpAnnPanel()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="emp-ann-list" style="flex:1;overflow-y:auto;padding:14px;"></div>`;
+    document.body.appendChild(panel);
+  }
+  setTimeout(() => panel.style.transform = 'translateX(0)', 10);
+  empLoadAnnouncements();
+}
+function closeEmpAnnPanel() {
+  const p = document.getElementById('emp-ann-panel');
+  if (p) p.style.transform = 'translateX(100%)';
+}
+
+/* ── WASTE LOG (employee side) ── */
+function openWasteModal() {
+  let modal = document.getElementById('emp-waste-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'emp-waste-modal';
+    modal.className = 'emp-modal-overlay';
+    modal.innerHTML = `<div class="emp-modal" style="max-width:380px;width:100%;">
+      <button class="emp-modal-close" onclick="document.getElementById('emp-waste-modal').classList.remove('open')"><i class="fas fa-times"></i></button>
+      <div class="emp-modal-icon" style="background:rgba(230,81,0,0.1);color:var(--orange);"><i class="fas fa-trash-alt"></i></div>
+      <h3>Log Waste</h3>
+      <p>Record an ingredient that was discarded or spoiled.</p>
+      <input id="waste-ing" class="inp" placeholder="Ingredient name" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:9px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;" list="waste-ing-list">
+      <datalist id="waste-ing-list"></datalist>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px;">
+        <input id="waste-qty" type="number" min="0.01" step="0.01" class="inp" placeholder="Qty" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;">
+        <input id="waste-unit" class="inp" placeholder="Unit (ml/g/pcs)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;">
+      </div>
+      <select id="waste-reason" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;margin-bottom:12px;background:#fff;outline:none;">
+        <option value="">Select reason...</option>
+        <option>Expired</option>
+        <option>Spilled / Dropped</option>
+        <option>Customer cancellation</option>
+        <option>Overcook / Burned</option>
+        <option>End-of-day disposal</option>
+        <option>Other</option>
+      </select>
+      <div class="emp-modal-btns">
+        <button class="emp-modal-btn cancel" onclick="document.getElementById('emp-waste-modal').classList.remove('open')">Cancel</button>
+        <button class="emp-modal-btn confirm" onclick="submitEmpWaste()" style="background:linear-gradient(135deg,#E65100,#BF360C);">Log Waste</button>
+      </div>
+    </div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
+    document.body.appendChild(modal);
+    // Populate ingredient suggestions
+    fetch('/api/inventory').then(r=>r.json()).then(data=>{
+      const dl = document.getElementById('waste-ing-list');
+      if(dl) dl.innerHTML = data.map(i=>`<option value="${escapeHTML(i.name)}">`).join('');
+    }).catch(()=>{});
+  }
+  modal.classList.add('open');
+}
+
+async function submitEmpWaste() {
+  const ing = (document.getElementById('waste-ing').value||'').trim();
+  const qty = parseFloat(document.getElementById('waste-qty').value||0);
+  const unit = (document.getElementById('waste-unit').value||'').trim();
+  const reason = document.getElementById('waste-reason').value;
+  if (!ing || !qty || qty <= 0) return (typeof showToast==='function' ? showToast('Fill in ingredient and quantity','error') : alert('Fill in ingredient and quantity'));
+  try {
+    const r = await fetch('/api/employee/waste', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ingredient:ing,quantity:qty,unit:unit||'units',reason})});
+    if (r.ok) {
+      if(typeof showToast==='function') showToast('Waste logged ✓','success');
+      document.getElementById('emp-waste-modal').classList.remove('open');
+      document.getElementById('waste-ing').value='';
+      document.getElementById('waste-qty').value='';
+      document.getElementById('waste-unit').value='';
+      document.getElementById('waste-reason').value='';
+    } else {
+      const d = await r.json().catch(()=>({}));
+      if(typeof showToast==='function') showToast(d.error||'Error','error');
+    }
+  } catch(e) { if(typeof showToast==='function') showToast('Network error','error'); }
+}
+
+/* ── DAILY CHECKLIST (employee side) ── */
+let _checklistState = {};
+
+async function openChecklist(type) {
+  let modal = document.getElementById('emp-checklist-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'emp-checklist-modal';
+    modal.className = 'emp-modal-overlay';
+    modal.innerHTML = `<div class="emp-modal" style="max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+      <button class="emp-modal-close" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')"><i class="fas fa-times"></i></button>
+      <div class="emp-modal-icon" id="cl-icon" style="background:rgba(13,122,106,0.1);color:var(--teal);"><i class="fas fa-clipboard-check"></i></div>
+      <h3 id="cl-title">Checklist</h3>
+      <p id="cl-sub">Complete all tasks before proceeding.</p>
+      <div id="cl-items" style="text-align:left;margin-bottom:16px;"></div>
+      <div id="cl-progress" style="background:var(--border);height:8px;border-radius:4px;margin-bottom:14px;overflow:hidden;"><div id="cl-prog-bar" style="background:var(--teal);height:100%;border-radius:4px;transition:width 0.4s;width:0%;"></div></div>
+      <button class="emp-modal-btn confirm" style="width:100%;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')">Done</button>
+    </div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
+    document.body.appendChild(modal);
+  }
+  const titles = {opening:'Opening Checklist 🌅',closing:'Closing Checklist 🌙',cleaning:'Cleaning Checklist 🧹'};
+  const subs = {opening:'Complete before opening the store.',closing:'Complete before ending your shift.',cleaning:'Complete all cleaning tasks.'};
+  document.getElementById('cl-title').textContent = titles[type] || 'Checklist';
+  document.getElementById('cl-sub').textContent = subs[type] || '';
+  modal.classList.add('open');
+  const itemsEl = document.getElementById('cl-items');
+  itemsEl.innerHTML = '<div style="text-align:center;color:#557570;font-size:0.82rem;padding:12px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  try {
+    const r = await fetch('/api/checklist?type=' + type);
+    const data = await r.json();
+    if (!_checklistState[type]) _checklistState[type] = {};
+    itemsEl.innerHTML = data.map(item => `
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #e5f0ee;cursor:pointer;">
+        <input type="checkbox" id="cl-item-${item.id}" onchange="updateClProgress('${type}')" ${_checklistState[type][item.id]?'checked':''} style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;">
+        <span style="font-size:0.84rem;font-weight:700;color:#0A2925;line-height:1.4;">${escapeHTML(item.task)}</span>
+      </label>`).join('');
+    updateClProgress(type);
+  } catch(e) { itemsEl.innerHTML = '<div style="color:red;padding:10px;font-size:0.82rem;">Failed to load checklist</div>'; }
+}
+
+function updateClProgress(type) {
+  const checkboxes = document.querySelectorAll('[id^="cl-item-"]');
+  let done = 0;
+  checkboxes.forEach(cb => { if (cb.checked) done++; if (!_checklistState[type]) _checklistState[type]={}; _checklistState[type][cb.id.replace('cl-item-','')] = cb.checked; });
+  const total = checkboxes.length;
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  const bar = document.getElementById('cl-prog-bar');
+  if (bar) bar.style.width = pct + '%';
+}
+
+/* ── Add employee buttons to drawer (if drawer exists) ── */
+(function injectEmpDrawerBtns(){
+  const nav = document.querySelector('.emp-nav-drawer .drawer-nav');
+  if (!nav) return;
+  const annBtn = document.createElement('button');
+  annBtn.className = 'drawer-nav-item';
+  annBtn.id = 'enav-announcements';
+  annBtn.onclick = () => { openEmpAnnPanel(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
+  annBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-bullhorn"></i></div><div class="nav-label-wrap"><span class="nav-label">Announcements</span><span class="nav-sub">Staff bulletins</span></div><span id="emp-ann-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.6rem;font-weight:900;align-items:center;justify-content:center;border:2px solid #082E28;margin-left:auto;flex-shrink:0;"></span>`;
+  nav.appendChild(annBtn);
+
+  const wasteBtn = document.createElement('button');
+  wasteBtn.className = 'drawer-nav-item';
+  wasteBtn.onclick = () => { openWasteModal(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
+  wasteBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-trash-alt"></i></div><div class="nav-label-wrap"><span class="nav-label">Log Waste</span><span class="nav-sub">Track ingredient waste</span></div>`;
+  nav.appendChild(wasteBtn);
+
+  const checkBtn = document.createElement('button');
+  checkBtn.className = 'drawer-nav-item';
+  checkBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-clipboard-check"></i></div><div class="nav-label-wrap"><span class="nav-label">Daily Checklist</span><span class="nav-sub">Opening / Closing</span></div>`;
+  checkBtn.onclick = () => {
+    document.querySelector('.emp-nav-drawer').classList.remove('open');
+    document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open');
+    const picker = document.createElement('div');
+    picker.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px;';
+    picker.innerHTML=`<div style="background:#fff;border-radius:22px;padding:28px 24px;max-width:320px;width:100%;text-align:center;">
+      <div style="font-size:1.1rem;font-weight:900;color:#0A2925;margin-bottom:16px;font-family:'Playfair Display',serif;">Choose Checklist Type</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <button onclick="openChecklist('opening');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(13,122,106,0.08);color:var(--teal-dark);border:1.5px solid rgba(13,122,106,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🌅 Opening Checklist</button>
+        <button onclick="openChecklist('closing');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(230,81,0,0.08);color:#E65100;border:1.5px solid rgba(230,81,0,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🌙 Closing Checklist</button>
+        <button onclick="openChecklist('cleaning');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(21,101,192,0.08);color:#1565C0;border:1.5px solid rgba(21,101,192,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🧹 Cleaning Checklist</button>
+        <button onclick="this.closest('[style*=fixed]').remove();" style="padding:10px;border-radius:11px;background:#f3f4f6;color:#6b7280;border:none;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;">Cancel</button>
+      </div>
+    </div>`;
+    document.body.appendChild(picker);
+    picker.addEventListener('click', e => { if(e.target===picker) picker.remove(); });
+  };
+  nav.appendChild(checkBtn);
+})();
+
+// Load announcements on page load
+empLoadAnnouncements();
+// Refresh every 2 minutes
+setInterval(empLoadAnnouncements, 120000);
 </script>
 </body>
 </html>
@@ -6528,7 +6859,48 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <span class="admin-nav-desc">All admin activity</span>
       </div>
     </button>
-  </div>
+
+    <button class="admin-nav-item" id="nb-analytics" onclick="goScreen('analytics',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-chart-pie"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Analytics</span>
+        <span class="admin-nav-desc">Sales trends &amp; top items</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-promos" onclick="goScreen('promos',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-tags"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Promo Codes</span>
+        <span class="admin-nav-desc">Discounts &amp; offers</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-announce" onclick="goScreen('announce',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-bullhorn"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Announcements</span>
+        <span class="admin-nav-desc">Staff bulletins</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-waste" onclick="goScreen('waste',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-trash-alt"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Waste Log</span>
+        <span class="admin-nav-desc">Ingredient waste tracker</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-security" onclick="goScreen('security',this);closeAdminMenu()">
+      <div class="admin-nav-icon"><i class="fas fa-user-shield"></i></div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Security</span>
+        <span class="admin-nav-desc">IP blocks &amp; login attempts</span>
+      </div>
+    </button>
+
+  </div><!-- /admin-drawer-nav -->
 
   <div class="admin-drawer-footer">
     <div class="admin-drawer-time-chip">
@@ -7091,6 +7463,142 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   </div>
 
 </div><!-- /screens -->
+
+<!-- ══ NEW FEATURE SCREENS ══ -->
+<div class="screens" id="screens-ext" style="position:fixed;inset:0;top:62px;overflow:hidden;display:none;" id="ext-screens-wrap">
+
+  <!-- ANALYTICS SCREEN -->
+  <div id="s-analytics" class="screen" style="display:none;">
+    <div class="page-header">
+      <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
+      <p>Sales trends, top items &amp; hourly performance</p>
+    </div>
+    <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="loadAnalytics(7)" class="btn-secondary" id="an-7">7 Days</button>
+        <button onclick="loadAnalytics(14)" class="btn-secondary" id="an-14">14 Days</button>
+        <button onclick="loadAnalytics(30)" class="btn-secondary" id="an-30">30 Days</button>
+      </div>
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Revenue Trend (₱)</div>
+        <canvas id="an-revenue-chart" height="160"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="section card" style="padding:14px;">
+          <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Top Items</div>
+          <div id="an-top-items"></div>
+        </div>
+        <div class="section card" style="padding:14px;">
+          <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hourly Orders (Today)</div>
+          <canvas id="an-hourly-chart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMO CODES SCREEN -->
+  <div id="s-promos" class="screen" style="display:none;">
+    <div class="page-header">
+      <h2><i class="fas fa-tags"></i> Promo Codes</h2>
+      <p>Manage discount codes and special offers</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+      <div class="section card" style="padding:14px;margin-bottom:12px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:12px;">Create New Promo Code</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <input id="promo-code" class="inp" placeholder="Code (e.g. SAVE20)" style="text-transform:uppercase;">
+          <select id="promo-type" class="inp" style="margin-bottom:12px;">
+            <option value="percent">Percent (%)</option>
+            <option value="fixed">Fixed Amount (₱)</option>
+          </select>
+          <input id="promo-value" class="inp" type="number" placeholder="Discount value" min="0">
+          <input id="promo-min" class="inp" type="number" placeholder="Min order (₱ 0=none)" min="0">
+          <input id="promo-max-uses" class="inp" type="number" placeholder="Max uses (blank=unlimited)" min="1">
+          <input id="promo-expires" class="inp" type="date" placeholder="Expires (optional)">
+        </div>
+        <input id="promo-desc" class="inp" placeholder="Description (shown to customer)">
+        <button class="btn-primary" onclick="createPromo()"><i class="fas fa-plus"></i> Create Promo Code</button>
+      </div>
+      <div id="promo-list"><div style="text-align:center;color:var(--muted);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- ANNOUNCEMENTS SCREEN -->
+  <div id="s-announce" class="screen" style="display:none;">
+    <div class="page-header">
+      <h2><i class="fas fa-bullhorn"></i> Staff Announcements</h2>
+      <p>Post bulletins &amp; notices to the employee station</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+      <div class="section card" style="padding:14px;margin-bottom:12px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:12px;">Post New Announcement</div>
+        <input id="ann-title" class="inp" placeholder="Title (e.g. Reminder: Inventory Check)">
+        <textarea id="ann-msg" class="inp" placeholder="Message body…" rows="3" style="resize:vertical;line-height:1.5;"></textarea>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <select id="ann-priority" class="inp" style="margin-bottom:0;">
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">🚨 Urgent</option>
+            <option value="low">Low</option>
+          </select>
+          <button class="btn-primary" style="margin:0;width:auto;white-space:nowrap;" onclick="createAnnouncement()"><i class="fas fa-paper-plane"></i> Post</button>
+        </div>
+      </div>
+      <div id="ann-list"><div style="text-align:center;color:var(--muted);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- WASTE LOG SCREEN (ADMIN VIEW) -->
+  <div id="s-waste" class="screen" style="display:none;">
+    <div class="page-header">
+      <h2><i class="fas fa-trash-alt"></i> Waste Log</h2>
+      <p>Track ingredient waste reported by staff</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+      <div id="waste-list"><div style="text-align:center;color:var(--muted);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- SECURITY SCREEN -->
+  <div id="s-security" class="screen" style="display:none;">
+    <div class="page-header">
+      <h2><i class="fas fa-user-shield"></i> Security Center</h2>
+      <p>IP blacklist, brute-force detection &amp; threat monitoring</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Block IP manually -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:10px;">🚫 Block an IP Address</div>
+        <div style="display:flex;gap:8px;">
+          <input id="sec-ip-input" class="inp" placeholder="e.g. 192.168.1.100" style="margin:0;flex:1;">
+          <input id="sec-ip-reason" class="inp" placeholder="Reason (optional)" style="margin:0;flex:1;">
+          <button class="btn-secondary" style="white-space:nowrap;" onclick="blockIP()"><i class="fas fa-ban"></i> Block</button>
+        </div>
+      </div>
+
+      <!-- Blacklisted IPs -->
+      <div class="section card" style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:0.82rem;font-weight:900;color:var(--red);">🔴 Blacklisted IPs</div>
+          <button class="btn-secondary" onclick="loadBlacklist()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="blacklist-table"><div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+      </div>
+
+      <!-- Recent failed attempts -->
+      <div class="section card" style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:0.82rem;font-weight:900;color:var(--orange);">⚠️ Recent Failed Login Attempts (24h)</div>
+          <button class="btn-secondary" onclick="loadAttempts()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="attempts-table"><div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /screens-ext -->
 
 <!-- ══ MODALS ══ -->
 <div id="qo-modal" class="modal">
@@ -8297,6 +8805,339 @@ setInterval(()=>{
   const heroTitle=document.querySelector('.dash-hero-title');
   if(heroTitle)heroTitle.textContent=greet+', Admin 👋';
 })();
+
+/* ══════════════════════════════════════════════════════════
+   NEW ADVANCED FEATURE JAVASCRIPT
+══════════════════════════════════════════════════════════ */
+
+/* ── Extended screen routing ── */
+const _extScreens = ['analytics','promos','announce','waste','security'];
+
+(function patchGoScreen(){
+  const orig = typeof goScreen === 'function' ? goScreen : null;
+  window.goScreen = function(name, btn) {
+    // Hide extended screens
+    _extScreens.forEach(s => {
+      const el = document.getElementById('s-' + s);
+      if (el) el.style.display = 'none';
+    });
+    const extWrap = document.getElementById('screens-ext');
+    if (extWrap) extWrap.style.display = 'none';
+
+    if (_extScreens.includes(name)) {
+      // Hide normal screens
+      document.querySelectorAll('.screens .screen').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.screens .screen.active').forEach(s => s.classList.remove('active'));
+      // Show ext wrapper
+      if (extWrap) extWrap.style.display = 'block';
+      const el = document.getElementById('s-' + name);
+      if (el) el.style.display = 'flex';
+      // Active nav pill
+      document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      // Load data
+      if (name === 'analytics') loadAnalytics(7);
+      if (name === 'promos') { loadPromos(); }
+      if (name === 'announce') loadAnnouncements();
+      if (name === 'waste') loadWaste();
+      if (name === 'security') { loadBlacklist(); loadAttempts(); }
+    } else {
+      if (orig) orig(name, btn);
+    }
+  };
+})();
+
+/* ── ANALYTICS ── */
+let _anRevenueChart = null, _anHourlyChart = null, _anActiveDays = 7;
+
+async function loadAnalytics(days) {
+  _anActiveDays = days || 7;
+  [7,14,30].forEach(d => {
+    const b = document.getElementById('an-'+d);
+    if (b) b.style.fontWeight = (d===_anActiveDays) ? '900' : '700';
+  });
+  try {
+    const [trendR, topR, hourlyR] = await Promise.all([
+      apiFetch('/api/admin/analytics/sales_trend?days=' + _anActiveDays),
+      apiFetch('/api/admin/analytics/top_items?days=' + _anActiveDays),
+      apiFetch('/api/admin/analytics/hourly')
+    ]);
+    const trend = await trendR.json();
+    const top   = await topR.json();
+    const hourly = await hourlyR.json();
+
+    // Revenue chart
+    const rctx = document.getElementById('an-revenue-chart');
+    if (rctx) {
+      if (_anRevenueChart) _anRevenueChart.destroy();
+      _anRevenueChart = new Chart(rctx, {
+        type: 'line',
+        data: {
+          labels: trend.map(t => t.date),
+          datasets: [{
+            label: 'Revenue (₱)',
+            data: trend.map(t => t.revenue),
+            borderColor: '#7B4F2E', backgroundColor: 'rgba(123,79,46,0.1)',
+            borderWidth: 2.5, tension: 0.4, fill: true,
+            pointBackgroundColor: '#7B4F2E', pointRadius: 4
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // Hourly chart
+    const hctx = document.getElementById('an-hourly-chart');
+    if (hctx) {
+      if (_anHourlyChart) _anHourlyChart.destroy();
+      _anHourlyChart = new Chart(hctx, {
+        type: 'bar',
+        data: {
+          labels: hourly.filter(h => parseInt(h.hour) >= 8 && parseInt(h.hour) <= 22).map(h => h.hour),
+          datasets: [{
+            label: 'Orders',
+            data: hourly.filter(h => parseInt(h.hour) >= 8 && parseInt(h.hour) <= 22).map(h => h.orders),
+            backgroundColor: 'rgba(123,79,46,0.7)', borderRadius: 6
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+    }
+
+    // Top items
+    const el = document.getElementById('an-top-items');
+    if (el) {
+      if (!top.length) { el.innerHTML = '<div style="color:var(--muted);font-size:0.82rem;text-align:center;padding:16px;">No data yet</div>'; }
+      else {
+        const max = top[0].count || 1;
+        el.innerHTML = top.map((t,i) => `
+          <div style="margin-bottom:9px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:800;color:var(--text);margin-bottom:3px;">
+              <span>${i+1}. ${escapeHTML(t.name)}</span>
+              <span style="color:var(--brown);">${t.count}x</span>
+            </div>
+            <div style="background:var(--cream-dark);border-radius:4px;height:6px;">
+              <div style="background:var(--brown);height:6px;border-radius:4px;width:${Math.round((t.count/max)*100)}%;transition:width 0.5s;"></div>
+            </div>
+          </div>`).join('');
+      }
+    }
+  } catch(e) { showToast('Failed to load analytics','error'); }
+}
+
+/* ── PROMO CODES ── */
+async function loadPromos() {
+  const el = document.getElementById('promo-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  try {
+    const r = await apiFetch('/api/admin/promos');
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.84rem;">No promo codes yet.</div>'; return; }
+    el.innerHTML = data.map(p => `
+      <div style="background:#fff;border:1.5px solid var(--cream-dark);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-family:monospace;font-size:1rem;font-weight:900;color:var(--brown-dark);background:var(--cream);padding:3px 10px;border-radius:8px;letter-spacing:2px;">${escapeHTML(p.code)}</span>
+            <span style="font-size:0.66rem;font-weight:800;padding:2px 8px;border-radius:20px;${p.is_active?'background:rgba(39,174,96,0.1);color:var(--green)':'background:rgba(192,57,43,0.1);color:var(--red);'}">${p.is_active?'Active':'Inactive'}</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--muted);font-weight:600;">${escapeHTML(p.description||'')} · <b>${p.discount_type==='percent'?p.discount_value+'% off':'₱'+p.discount_value+' off'}</b>${p.min_order?` · Min ₱${p.min_order}`:''} · Used: ${p.used_count}${p.max_uses?'/'+p.max_uses:''}</div>
+          ${p.expires_at?`<div style="font-size:0.7rem;color:var(--orange);font-weight:700;margin-top:3px;">Expires: ${p.expires_at}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="togglePromo(${p.id},${!p.is_active})" class="btn-secondary" style="padding:6px 12px;font-size:0.74rem;">${p.is_active?'Disable':'Enable'}</button>
+          <button onclick="deletePromo(${p.id})" style="background:rgba(192,57,43,0.1);color:var(--red);border:1.5px solid rgba(192,57,43,0.2);padding:6px 12px;border-radius:8px;font-size:0.74rem;font-weight:800;cursor:pointer;">Delete</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; }
+}
+
+async function createPromo() {
+  const code = (document.getElementById('promo-code').value||'').trim().toUpperCase();
+  const type = document.getElementById('promo-type').value;
+  const value = parseFloat(document.getElementById('promo-value').value||0);
+  const min = parseFloat(document.getElementById('promo-min').value||0);
+  const maxUses = document.getElementById('promo-max-uses').value.trim();
+  const expires = document.getElementById('promo-expires').value;
+  const desc = (document.getElementById('promo-desc').value||'').trim();
+  if (!code || !value) return showToast('Code and discount value required','error');
+  try {
+    const r = await apiFetch('/api/admin/promos', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code, discount_type:type, discount_value:value, min_order:min, max_uses:maxUses||null, expires_at:expires||null, description:desc, is_active:true})
+    });
+    if (r && r.ok) {
+      showToast('Promo "' + code + '" created ✓','success');
+      ['promo-code','promo-value','promo-min','promo-max-uses','promo-expires','promo-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      loadPromos();
+    } else {
+      const d = await r.json().catch(()=>({}));
+      showToast(d.error||'Error creating promo','error');
+    }
+  } catch(e) { showToast('Network error','error'); }
+}
+
+async function togglePromo(id, newState) {
+  try {
+    const r = await apiFetch('/api/admin/promos/'+id, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({is_active:newState})});
+    if (r && r.ok) { showToast(newState?'Promo enabled':'Promo disabled'); loadPromos(); }
+  } catch(e) {}
+}
+
+async function deletePromo(id) {
+  if (!confirm('Delete this promo code?')) return;
+  try {
+    const r = await apiFetch('/api/admin/promos/'+id, {method:'DELETE'});
+    if (r && r.ok) { showToast('Promo deleted'); loadPromos(); }
+  } catch(e) {}
+}
+
+/* ── ANNOUNCEMENTS ── */
+async function loadAnnouncements() {
+  const el = document.getElementById('ann-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+  try {
+    const r = await apiFetch('/api/admin/announcements');
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.84rem;">No announcements yet.</div>'; return; }
+    const colors = {urgent:'#D32F2F',high:'#E65100',normal:'#1565C0',low:'#555'};
+    const labels = {urgent:'🚨 URGENT',high:'🔴 HIGH',normal:'📣 Normal',low:'🔵 Low'};
+    el.innerHTML = data.map(a => `
+      <div style="background:#fff;border:1.5px solid var(--cream-dark);border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid ${colors[a.priority]||'#555'};">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:0.9rem;font-weight:900;color:var(--text);">${escapeHTML(a.title)}</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span style="font-size:0.65rem;font-weight:800;color:${colors[a.priority]||'#555'};background:${colors[a.priority]||'#555'}18;padding:2px 8px;border-radius:20px;">${labels[a.priority]||a.priority}</span>
+            <button onclick="deleteAnn(${a.id})" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.9rem;" title="Delete">✕</button>
+          </div>
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);font-weight:600;line-height:1.6;">${escapeHTML(a.message)}</div>
+        <div style="font-size:0.68rem;color:#bbb;margin-top:6px;">${a.created_at}</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; }
+}
+
+async function createAnnouncement() {
+  const title = (document.getElementById('ann-title').value||'').trim();
+  const msg = (document.getElementById('ann-msg').value||'').trim();
+  const priority = document.getElementById('ann-priority').value;
+  if (!title || !msg) return showToast('Title and message required','error');
+  try {
+    const r = await apiFetch('/api/admin/announcements', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title,message:msg,priority})});
+    if (r && r.ok) {
+      showToast('Announcement posted ✓','success');
+      document.getElementById('ann-title').value=''; document.getElementById('ann-msg').value='';
+      loadAnnouncements();
+    } else { const d=await r.json().catch(()=>({})); showToast(d.error||'Error','error'); }
+  } catch(e) { showToast('Network error','error'); }
+}
+
+async function deleteAnn(id) {
+  try {
+    const r = await apiFetch('/api/admin/announcements/'+id, {method:'DELETE'});
+    if (r && r.ok) { showToast('Deleted'); loadAnnouncements(); }
+  } catch(e) {}
+}
+
+/* ── WASTE LOG ── */
+async function loadWaste() {
+  const el = document.getElementById('waste-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  try {
+    const r = await apiFetch('/api/admin/waste');
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px;font-size:0.84rem;">No waste logs yet.</div>'; return; }
+    const total = data.reduce((s,w)=>s+w.quantity,0);
+    el.innerHTML = `<div style="background:#fff;border:1.5px solid var(--cream-dark);border-radius:12px;overflow:hidden;">
+      <div style="padding:10px 14px;background:var(--cream);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.78rem;font-weight:900;color:var(--text);">${data.length} entries</span>
+        <span style="font-size:0.78rem;font-weight:800;color:var(--orange);">Total wasted: ${total.toFixed(2)} units</span>
+      </div>` +
+      data.map(w => `<div style="padding:10px 14px;border-bottom:1px solid var(--cream-dark);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,124,0,0.1);color:var(--orange);display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;"><i class="fas fa-trash-alt"></i></div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:0.84rem;font-weight:800;color:var(--text);">${escapeHTML(w.ingredient)}</div>
+          <div style="font-size:0.74rem;color:var(--muted);font-weight:600;">${w.reason||'No reason given'}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:0.88rem;font-weight:900;color:var(--orange);">${w.quantity} ${w.unit}</div>
+          <div style="font-size:0.68rem;color:#bbb;">${w.time}</div>
+        </div>
+      </div>`).join('') + '</div>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading waste log</div>'; }
+}
+
+/* ── SECURITY CENTER ── */
+async function loadBlacklist() {
+  const el = document.getElementById('blacklist-table');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
+  try {
+    const r = await apiFetch('/api/admin/security/blacklist');
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No blocked IPs.</div>'; return; }
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr style="background:var(--cream);"><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">IP</th><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Reason</th><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Date</th><th></th></tr></thead><tbody>' +
+      data.map(b => `<tr style="border-bottom:1px solid var(--cream-dark);">
+        <td style="padding:9px 12px;font-family:monospace;font-size:0.82rem;font-weight:800;color:var(--red);">${escapeHTML(b.ip)}</td>
+        <td style="padding:9px 12px;font-size:0.78rem;color:var(--muted);">${escapeHTML(b.reason)}</td>
+        <td style="padding:9px 12px;font-size:0.72rem;color:#aaa;">${b.created_at}</td>
+        <td style="padding:9px 12px;"><button onclick="unblockIP(${b.id})" style="background:rgba(39,174,96,0.1);color:var(--green);border:1.5px solid rgba(39,174,96,0.25);padding:4px 10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">Unblock</button></td>
+      </tr>`).join('') + '</tbody></table>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading blacklist</div>'; }
+}
+
+async function loadAttempts() {
+  const el = document.getElementById('attempts-table');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
+  try {
+    const r = await apiFetch('/api/admin/security/attempts');
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No failed attempts in 24h.</div>'; return; }
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr style="background:var(--cream);"><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">IP</th><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Type</th><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Time</th><th></th></tr></thead><tbody>' +
+      data.map(a => `<tr style="border-bottom:1px solid var(--cream-dark);">
+        <td style="padding:8px 12px;font-family:monospace;font-size:0.82rem;font-weight:800;color:var(--orange);">${escapeHTML(a.ip)}</td>
+        <td style="padding:8px 12px;font-size:0.76rem;color:var(--muted);">${escapeHTML(a.type)}</td>
+        <td style="padding:8px 12px;font-size:0.72rem;color:#aaa;">${a.time}</td>
+        <td style="padding:8px 12px;"><button onclick="secQuickBlock('${escapeHTML(a.ip)}')" style="background:rgba(192,57,43,0.1);color:var(--red);border:1.5px solid rgba(192,57,43,0.2);padding:4px 10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">Block</button></td>
+      </tr>`).join('') + '</tbody></table>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error</div>'; }
+}
+
+async function blockIP() {
+  const ip = (document.getElementById('sec-ip-input').value||'').trim();
+  const reason = (document.getElementById('sec-ip-reason').value||'Manually blocked by admin').trim();
+  if (!ip) return showToast('Enter an IP address','error');
+  try {
+    const r = await apiFetch('/api/admin/security/blacklist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ip,reason})});
+    if (r && r.ok) {
+      showToast('IP blocked ✓','success');
+      document.getElementById('sec-ip-input').value='';
+      document.getElementById('sec-ip-reason').value='';
+      loadBlacklist();
+    } else { const d=await r.json().catch(()=>({})); showToast(d.error||'Error','error'); }
+  } catch(e) { showToast('Network error','error'); }
+}
+
+async function secQuickBlock(ip) {
+  if (!confirm('Block IP ' + ip + '?')) return;
+  try {
+    const r = await apiFetch('/api/admin/security/blacklist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ip,reason:'Blocked from failed attempts list'})});
+    if (r && r.ok) { showToast('IP blocked ✓','success'); loadBlacklist(); loadAttempts(); }
+    else { const d=await r.json().catch(()=>({})); showToast(d.error||'Error','error'); }
+  } catch(e) {}
+}
+
+async function unblockIP(id) {
+  try {
+    const r = await apiFetch('/api/admin/security/blacklist/'+id, {method:'DELETE'});
+    if (r && r.ok) { showToast('IP unblocked ✓','success'); loadBlacklist(); }
+  } catch(e) {}
+}
 </script>
 </body>
 </html>
@@ -8307,7 +9148,7 @@ setInterval(()=>{
 # 5. REST API ROUTES & FLASK LOGIC
 # ==========================================
 
-SESSION_TIMEOUT = 90  # seconds of inactivity before a device lock expires
+SESSION_TIMEOUT = 0  # seconds of inactivity before a device lock expires
 
 def _session_active(last_ping):
     """True if a ping arrived within SESSION_TIMEOUT seconds."""
@@ -8553,8 +9394,18 @@ def manual_auth():
 @limiter.limit("10 per minute")
 def admin_login():
     error = None
+    client_ip = get_client_ip()
+    # ── IP Blacklist check ────────────────────────────────────────────────────
+    if is_ip_blacklisted(client_ip):
+        log_audit("Security: Blocked Access Attempt", f"Blacklisted IP {client_ip} tried to reach admin login")
+        return render_template_string(LOGIN_HTML, error="Access denied. Your IP has been blocked due to suspicious activity. Contact the store administrator."), 403
     if request.method == 'POST':
         pin = request.form.get('pin')
+        # Honeypot: bots fill hidden field — humans leave it blank
+        if request.form.get('_email_confirm', ''):
+            record_failed_attempt(client_ip, 'admin')
+            log_audit("Security: Honeypot Triggered", f"Bot/scraper detected at {client_ip}")
+            return render_template_string(LOGIN_HTML, error="Access Denied."), 403
         force = request.form.get('force') == '1'
         if master_pin_matches(pin):
             state = SystemState.query.first()
@@ -8572,8 +9423,10 @@ def admin_login():
             state.active_session_id = session['admin_id']
             state.last_ping = datetime.utcnow()
             db.session.commit()
-            log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login to dashboard")
+            log_audit("Admin Login", f"{'Force takeover — ' if force else ''}Successful login from {client_ip}")
             return redirect(url_for('admin_dashboard'))
+        # Wrong PIN — record attempt
+        record_failed_attempt(client_ip, 'admin')
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
         # If wrong PIN was entered on the force/locked page, show locked page again with error
         if request.form.get('force') == '1':
@@ -9544,6 +10397,429 @@ def get_audit_logs():
 # ==========================================
 # 10. SYSTEM INITIALIZATION & SEED DATA
 # ==========================================
+
+# ══════════════════════════════════════════════════════════════
+# 10-B.  NEW ADVANCED FEATURE ROUTES
+# ══════════════════════════════════════════════════════════════
+
+# ── SECURITY: IP BLACKLIST MANAGEMENT ─────────────────────────
+
+@app.route('/api/admin/security/blacklist', methods=['GET'])
+def security_get_blacklist():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    bans = BlacklistedIP.query.order_by(BlacklistedIP.created_at.desc()).all()
+    return jsonify([{
+        "id": b.id,
+        "ip": b.ip_address,
+        "reason": b.reason,
+        "manual": b.is_manual,
+        "created_at": b.created_at.strftime('%b %d %Y %I:%M %p')
+    } for b in bans])
+
+@app.route('/api/admin/security/blacklist', methods=['POST'])
+def security_add_blacklist():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json or {}
+    ip = (data.get('ip') or '').strip()
+    reason = (data.get('reason') or 'Manually blocked by admin').strip()[:300]
+    if not ip:
+        return jsonify({"error": "IP address required"}), 400
+    existing = BlacklistedIP.query.filter_by(ip_address=ip).first()
+    if existing:
+        return jsonify({"error": "IP already blacklisted"}), 409
+    db.session.add(BlacklistedIP(ip_address=ip, reason=reason, is_manual=True))
+    db.session.commit()
+    log_audit("Security: IP Blacklisted", f"Admin manually blocked {ip}: {reason}")
+    return jsonify({"ok": True})
+
+@app.route('/api/admin/security/blacklist/<int:bid>', methods=['DELETE'])
+def security_remove_blacklist(bid):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    ban = BlacklistedIP.query.get(bid)
+    if not ban:
+        return jsonify({"error": "Not found"}), 404
+    ip = ban.ip_address
+    db.session.delete(ban)
+    # Also remove failure log entries for that IP so fresh start
+    FailedLoginAttempt.query.filter_by(ip_address=ip).delete()
+    db.session.commit()
+    log_audit("Security: IP Unblocked", f"Admin removed {ip} from blacklist")
+    return jsonify({"ok": True})
+
+@app.route('/api/admin/security/attempts', methods=['GET'])
+def security_get_attempts():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    rows = (FailedLoginAttempt.query
+            .filter(FailedLoginAttempt.created_at >= cutoff)
+            .order_by(FailedLoginAttempt.created_at.desc())
+            .limit(200).all())
+    return jsonify([{
+        "ip": r.ip_address,
+        "type": r.attempt_type,
+        "ua": r.user_agent,
+        "time": r.created_at.strftime('%b %d %I:%M %p')
+    } for r in rows])
+
+# ── PROMO CODES ────────────────────────────────────────────────
+
+@app.route('/api/admin/promos', methods=['GET'])
+def promos_list():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    promos = PromoCode.query.order_by(PromoCode.created_at.desc()).all()
+    return jsonify([{
+        "id": p.id, "code": p.code, "description": p.description,
+        "discount_type": p.discount_type, "discount_value": p.discount_value,
+        "min_order": p.min_order, "max_uses": p.max_uses, "used_count": p.used_count,
+        "is_active": p.is_active,
+        "expires_at": p.expires_at.strftime('%Y-%m-%d') if p.expires_at else None,
+        "created_at": p.created_at.strftime('%b %d %Y')
+    } for p in promos])
+
+@app.route('/api/admin/promos', methods=['POST'])
+def promos_create():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json or {}
+    code = (data.get('code') or '').strip().upper()
+    if not code:
+        return jsonify({"error": "Code is required"}), 400
+    if PromoCode.query.filter_by(code=code).first():
+        return jsonify({"error": "Promo code already exists"}), 409
+    expires = None
+    if data.get('expires_at'):
+        try:
+            expires = datetime.strptime(data['expires_at'], '%Y-%m-%d')
+        except Exception:
+            pass
+    p = PromoCode(
+        code=code,
+        description=(data.get('description') or '')[:200],
+        discount_type=data.get('discount_type', 'percent'),
+        discount_value=float(data.get('discount_value', 0)),
+        min_order=float(data.get('min_order', 0)),
+        max_uses=int(data['max_uses']) if data.get('max_uses') else None,
+        is_active=bool(data.get('is_active', True)),
+        expires_at=expires
+    )
+    db.session.add(p)
+    db.session.commit()
+    log_audit("Promo Created", f"Code '{code}' — {data.get('discount_type')} {data.get('discount_value')}")
+    return jsonify({"ok": True, "id": p.id})
+
+@app.route('/api/admin/promos/<int:pid>', methods=['PATCH'])
+def promos_update(pid):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    p = PromoCode.query.get(pid)
+    if not p:
+        return jsonify({"error": "Not found"}), 404
+    data = request.json or {}
+    if 'is_active' in data:
+        p.is_active = bool(data['is_active'])
+    if 'description' in data:
+        p.description = data['description'][:200]
+    if 'discount_value' in data:
+        p.discount_value = float(data['discount_value'])
+    if 'min_order' in data:
+        p.min_order = float(data['min_order'])
+    db.session.commit()
+    log_audit("Promo Updated", f"Code '{p.code}' updated")
+    return jsonify({"ok": True})
+
+@app.route('/api/admin/promos/<int:pid>', methods=['DELETE'])
+def promos_delete(pid):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    p = PromoCode.query.get(pid)
+    if not p:
+        return jsonify({"error": "Not found"}), 404
+    code = p.code
+    db.session.delete(p)
+    db.session.commit()
+    log_audit("Promo Deleted", f"Code '{code}' deleted")
+    return jsonify({"ok": True})
+
+@app.route('/api/promo/validate', methods=['POST'])
+def promo_validate():
+    """Customer-facing promo code validation. No auth required."""
+    data = request.json or {}
+    code = (data.get('code') or '').strip().upper()
+    order_total = float(data.get('order_total', 0))
+    if not code:
+        return jsonify({"error": "Enter a promo code"}), 400
+    p = PromoCode.query.filter_by(code=code, is_active=True).first()
+    if not p:
+        return jsonify({"error": "Invalid or expired promo code"}), 404
+    if p.expires_at and get_ph_time() > p.expires_at:
+        return jsonify({"error": "This promo code has expired"}), 400
+    if p.max_uses is not None and p.used_count >= p.max_uses:
+        return jsonify({"error": "This promo code has reached its usage limit"}), 400
+    if order_total < p.min_order:
+        return jsonify({"error": f"Minimum order of ₱{p.min_order:.2f} required for this promo"}), 400
+    discount = (order_total * p.discount_value / 100) if p.discount_type == 'percent' else p.discount_value
+    discount = min(discount, order_total)
+    return jsonify({
+        "ok": True,
+        "code": p.code,
+        "description": p.description,
+        "discount_type": p.discount_type,
+        "discount_value": p.discount_value,
+        "discount_amount": round(discount, 2),
+        "new_total": round(order_total - discount, 2)
+    })
+
+# ── STAFF ANNOUNCEMENTS ────────────────────────────────────────
+
+@app.route('/api/admin/announcements', methods=['GET'])
+def announcements_list():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    rows = StaffAnnouncement.query.order_by(StaffAnnouncement.created_at.desc()).all()
+    return jsonify([{
+        "id": a.id, "title": a.title, "message": a.message,
+        "priority": a.priority, "is_active": a.is_active,
+        "created_at": a.created_at.strftime('%b %d %Y %I:%M %p')
+    } for a in rows])
+
+@app.route('/api/admin/announcements', methods=['POST'])
+def announcements_create():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json or {}
+    title = (data.get('title') or '').strip()[:120]
+    msg = (data.get('message') or '').strip()
+    if not title or not msg:
+        return jsonify({"error": "Title and message are required"}), 400
+    a = StaffAnnouncement(
+        title=title, message=msg,
+        priority=data.get('priority', 'normal'),
+        is_active=True
+    )
+    db.session.add(a)
+    db.session.commit()
+    log_audit("Announcement Created", f"'{title}' [{data.get('priority','normal')}]")
+    push_event('announcement', {"title": title, "message": msg, "priority": data.get('priority','normal')})
+    return jsonify({"ok": True, "id": a.id})
+
+@app.route('/api/admin/announcements/<int:aid>', methods=['DELETE'])
+def announcements_delete(aid):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    a = StaffAnnouncement.query.get(aid)
+    if not a:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(a)
+    db.session.commit()
+    log_audit("Announcement Deleted", f"ID {aid}")
+    return jsonify({"ok": True})
+
+@app.route('/api/employee/announcements', methods=['GET'])
+def employee_announcements():
+    if not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    rows = StaffAnnouncement.query.filter_by(is_active=True).order_by(StaffAnnouncement.created_at.desc()).limit(20).all()
+    return jsonify([{
+        "id": a.id, "title": a.title, "message": a.message,
+        "priority": a.priority,
+        "created_at": a.created_at.strftime('%b %d %I:%M %p')
+    } for a in rows])
+
+# ── WASTE LOG ──────────────────────────────────────────────────
+
+@app.route('/api/employee/waste', methods=['GET'])
+def waste_list():
+    if not session.get('is_employee') and not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    rows = WasteLog.query.order_by(WasteLog.created_at.desc()).limit(200).all()
+    return jsonify([{
+        "id": w.id, "ingredient": w.ingredient_name,
+        "quantity": w.quantity, "unit": w.unit,
+        "reason": w.reason, "logged_by": w.logged_by,
+        "time": w.created_at.strftime('%b %d %I:%M %p')
+    } for w in rows])
+
+@app.route('/api/employee/waste', methods=['POST'])
+def waste_log():
+    if not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json or {}
+    name = (data.get('ingredient') or '').strip()
+    qty = float(data.get('quantity', 0))
+    unit = (data.get('unit') or 'units').strip()
+    reason = (data.get('reason') or '').strip()[:200]
+    if not name or qty <= 0:
+        return jsonify({"error": "Ingredient name and quantity required"}), 400
+    # Optionally deduct from inventory
+    ing = Ingredient.query.filter(db.func.lower(Ingredient.name) == name.lower()).first()
+    if ing:
+        ing.stock = max(0, ing.stock - qty)
+        unit = ing.unit
+    db.session.add(WasteLog(ingredient_name=name, quantity=qty, unit=unit, reason=reason, logged_by='Employee'))
+    db.session.commit()
+    log_audit("Waste Logged", f"{qty} {unit} of {name} — {reason}")
+    return jsonify({"ok": True})
+
+@app.route('/api/admin/waste', methods=['GET'])
+def admin_waste_list():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    rows = WasteLog.query.order_by(WasteLog.created_at.desc()).limit(500).all()
+    return jsonify([{
+        "id": w.id, "ingredient": w.ingredient_name,
+        "quantity": w.quantity, "unit": w.unit,
+        "reason": w.reason, "logged_by": w.logged_by,
+        "time": w.created_at.strftime('%b %d %Y %I:%M %p')
+    } for w in rows])
+
+# ── DAILY CHECKLIST ────────────────────────────────────────────
+
+@app.route('/api/checklist', methods=['GET'])
+def checklist_get():
+    if not session.get('is_employee') and not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    ctype = request.args.get('type', 'opening')
+    rows = (QuickChecklist.query
+            .filter_by(checklist_type=ctype, is_active=True)
+            .order_by(QuickChecklist.display_order, QuickChecklist.id)
+            .all())
+    if not rows:
+        # seed defaults on first call
+        defaults = {
+            'opening': [
+                'Check and restock all ingredients',
+                'Prepare ice and cold water baths',
+                'Test blenders and POS system',
+                'Clean countertops and work surfaces',
+                'Brew tea bases and espresso shots',
+                'Ensure all cups and straws are stocked',
+                'Review any staff announcements',
+            ],
+            'closing': [
+                'Close customer ordering link',
+                'Drain and clean blenders',
+                'Dispose of leftover ingredients properly',
+                'Log any waste in the waste tracker',
+                'Wipe all surfaces and equipment',
+                'Count cash (if applicable)',
+                'Lock up and set alarm',
+            ],
+            'cleaning': [
+                'Sanitize blender jars with hot water',
+                'Wipe sealing machine',
+                'Mop floor behind counter',
+                'Clean refrigerator shelves',
+                'Empty trash bins',
+                'Sanitize touchscreen / POS terminal',
+            ],
+        }
+        for i, task in enumerate(defaults.get(ctype, [])):
+            db.session.add(QuickChecklist(task_name=task, checklist_type=ctype, display_order=i))
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        rows = (QuickChecklist.query
+                .filter_by(checklist_type=ctype, is_active=True)
+                .order_by(QuickChecklist.display_order, QuickChecklist.id)
+                .all())
+    return jsonify([{"id": r.id, "task": r.task_name, "type": r.checklist_type} for r in rows])
+
+@app.route('/api/admin/checklist', methods=['POST'])
+def checklist_add():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.json or {}
+    task = (data.get('task') or '').strip()[:150]
+    ctype = data.get('type', 'opening')
+    if not task:
+        return jsonify({"error": "Task name required"}), 400
+    c = QuickChecklist(task_name=task, checklist_type=ctype)
+    db.session.add(c)
+    db.session.commit()
+    log_audit("Checklist Item Added", f"[{ctype}] {task}")
+    return jsonify({"ok": True, "id": c.id})
+
+@app.route('/api/admin/checklist/<int:cid>', methods=['DELETE'])
+def checklist_delete(cid):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    c = QuickChecklist.query.get(cid)
+    if not c:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(c)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+# ── ADMIN ANALYTICS: SALES TRENDS ─────────────────────────────
+
+@app.route('/api/admin/analytics/sales_trend', methods=['GET'])
+def analytics_sales_trend():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    days = int(request.args.get('days', 7))
+    days = min(max(days, 1), 90)
+    ph_now = get_ph_time()
+    result = []
+    for i in range(days - 1, -1, -1):
+        day = ph_now.date() - timedelta(days=i)
+        day_start = datetime(day.year, day.month, day.day, 0, 0, 0)
+        day_end   = datetime(day.year, day.month, day.day, 23, 59, 59)
+        orders = Reservation.query.filter(
+            Reservation.created_at >= day_start,
+            Reservation.created_at <= day_end,
+            Reservation.status == 'Completed'
+        ).all()
+        total = sum(o.total_investment for o in orders)
+        result.append({
+            "date": day.strftime('%b %d'),
+            "revenue": round(total, 2),
+            "orders": len(orders)
+        })
+    return jsonify(result)
+
+@app.route('/api/admin/analytics/top_items', methods=['GET'])
+def analytics_top_items():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    days = int(request.args.get('days', 30))
+    days = min(max(days, 1), 90)
+    ph_now = get_ph_time()
+    cutoff = ph_now - timedelta(days=days)
+    completed = Reservation.query.filter(
+        Reservation.created_at >= cutoff,
+        Reservation.status == 'Completed'
+    ).all()
+    item_counts = {}
+    for r in completed:
+        for inf in r.infusions:
+            n = inf.foundation
+            if n not in item_counts:
+                item_counts[n] = {"name": n, "count": 0, "revenue": 0.0}
+            item_counts[n]["count"] += 1
+            item_counts[n]["revenue"] += round(inf.item_total, 2)
+    top = sorted(item_counts.values(), key=lambda x: x["count"], reverse=True)[:10]
+    return jsonify(top)
+
+@app.route('/api/admin/analytics/hourly', methods=['GET'])
+def analytics_hourly():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    ph_now = get_ph_time()
+    day_start = ph_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    orders = Reservation.query.filter(
+        Reservation.created_at >= day_start,
+        Reservation.status.in_(['Completed','Ready for Pick-up','Preparing Order'])
+    ).all()
+    hourly = {h: 0 for h in range(24)}
+    for o in orders:
+        hourly[o.created_at.hour] += 1
+    return jsonify([{"hour": f"{h}:00", "orders": c} for h, c in hourly.items()])
 
 def _initialize_db():
     """Run DB creation + seeding inside an app context.
