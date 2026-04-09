@@ -6934,7 +6934,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     </div>
   </div>
 
-  <div class="admin-drawer-section-label">Manage</div>
+  
 
   <div class="admin-drawer-nav">
     <button class="admin-nav-item active" id="nb-dashboard" onclick="goScreen('dashboard',this);closeAdminMenu()">
