@@ -1139,14 +1139,14 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .live-table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);-webkit-overflow-scrolling:touch;width:100%;}
 .live-table-wrap::-webkit-scrollbar{width:4px;height:4px;}
 .live-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-.live-table{width:100%;border-collapse:collapse;font-size:0.68rem;}
-.live-table th{padding:5px 7px;text-align:left;font-size:0.6rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#FAFCFB;position:sticky;top:0;z-index:2;}
-.live-table td{padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);font-weight:600;}
+.live-table{width:100%;border-collapse:collapse;font-size:0.65rem;table-layout:fixed;min-width:860px;}
+.live-table th{padding:5px 5px;text-align:left;font-size:0.58rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#FAFCFB;position:sticky;top:0;z-index:2;overflow:hidden;text-overflow:ellipsis;}
+.live-table td{padding:5px 5px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);font-weight:600;font-size:0.65rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .live-table tr:last-child td{border-bottom:none;}
 .live-table tr:hover td{background:rgba(13,122,106,0.03);}
 .live-table .empty-row td{text-align:center;padding:16px;color:var(--muted);font-size:0.78rem;font-style:italic;}
 .live-table .order-num{font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);font-size:0.8rem;white-space:nowrap;}
-.live-table .items-cell{max-width:160px;font-size:0.68rem;color:var(--muted);line-height:1.4;}
+.live-table .items-cell{white-space:normal;font-size:0.63rem;color:var(--muted);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-width:none;}
 .tbl-actions{display:flex;gap:5px;flex-wrap:wrap;}
 .tbl-btn{padding:5px 11px;border-radius:8px;border:none;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.71rem;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;transition:opacity 0.15s;}
 .tbl-btn:active{opacity:0.8;}
@@ -1621,14 +1621,14 @@ function playEmpPermBeep(){
         <div class="live-table-wrap">
           <table class="live-table">
             <colgroup>
-              <col style="width:10%">
+              <col style="width:12%">
+              <col style="width:7%">
+              <col style="width:15%">
               <col style="width:8%">
-              <col style="width:17%">
               <col style="width:8%">
-              <col style="width:8%">
-              <col style="width:30%">
+              <col style="width:26%">
+              <col style="width:13%">
               <col style="width:11%">
-              <col style="width:8%">
             </colgroup>
             <thead>
               <tr>
