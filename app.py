@@ -964,33 +964,27 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 /* ── LAYOUT: Desktop permanent sidebar ── */
 @media(min-width:768px){
   body{flex-direction:column;}
-  .topbar{
-    position:fixed;top:0;left:248px;right:0;z-index:200;
-    border-bottom:none;
-    border-left:none;
-  }
-  #emp-shift-stats{
-    position:fixed;top:var(--topbar-h);left:248px;right:0;
-    z-index:150;
-  }
-  .emp-nav-drawer{
-    transform:translateX(0) !important;
-    position:fixed;top:0;left:0;height:100vh;
-    box-shadow:none;
-    border-right:1px solid rgba(255,255,255,0.06);
-  }
+  .topbar{position:fixed;top:0;left:248px;right:0;z-index:200;border-bottom:none;border-left:none;}
+  #emp-shift-stats{position:fixed;top:var(--topbar-h);left:248px;right:0;z-index:150;}
+  .emp-nav-drawer{transform:translateX(0) !important;position:fixed;top:0;left:0;height:100vh;box-shadow:none;border-right:1px solid rgba(255,255,255,0.06);}
   .emp-nav-drawer::after{display:none;}
   .sidebar-toggle{display:none !important;}
   .drawer-close{display:none !important;}
   .nav-backdrop{display:none !important;}
   .screens{position:fixed;top:calc(var(--topbar-h) + 28px);left:248px;right:0;bottom:0;margin:0;overflow:hidden;}
-  .screen{overflow-y:auto;overflow-x:auto;}
-  .live-table-wrap{max-height:calc(100vh - 240px);max-width:100%;}
-  .filter-row{padding:8px 12px 2px;}
+  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box;}
+  .section,.live-section{padding:8px 14px 0;width:100%;box-sizing:border-box;}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;box-sizing:border-box;}
+  .live-table-wrap{width:100%;overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 260px);}
+  .live-table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;}
+  .live-table th{white-space:normal;word-break:break-word;font-size:0.58rem;}
+  .live-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.68rem;}
+  .live-table .items-cell{white-space:normal;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-width:none;}
+  .filter-row{padding:6px 14px 4px;flex-wrap:wrap;gap:5px;}
   .tbl-actions{flex-wrap:nowrap;}
   .pos-item-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr)) !important;}
-  /* POS layout fills the available area */
   .pos-menu-area{overflow-y:auto;}
+  .sa-body{padding:10px 14px;overflow-y:auto;max-height:calc(100vh - 180px);}
 }
 @media(max-width:767px){
   .sidebar-toggle{display:flex;}
@@ -1587,6 +1581,13 @@ function playEmpPermBeep(){
         </div>
         <div class="live-table-wrap">
           <table class="live-table">
+            <colgroup>
+              <col style="width:10%">
+              <col style="width:10%">
+              <col style="width:20%">
+              <col style="width:40%">
+              <col style="width:20%">
+            </colgroup>
             <thead>
               <tr>
                 <th>Time</th>
@@ -1619,6 +1620,16 @@ function playEmpPermBeep(){
         </div>
         <div class="live-table-wrap">
           <table class="live-table">
+            <colgroup>
+              <col style="width:10%">
+              <col style="width:8%">
+              <col style="width:17%">
+              <col style="width:8%">
+              <col style="width:8%">
+              <col style="width:30%">
+              <col style="width:11%">
+              <col style="width:8%">
+            </colgroup>
             <thead>
               <tr>
                 <th>Order #</th>
@@ -6801,7 +6812,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 14px 4px;}
 .lo-stat{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:11px;padding:10px 8px;text-align:center;}
 /* ── Live Orders: frozen header + scrollable body ── */
-.lo-screen-flex{display:flex !important;flex-direction:column;overflow:hidden !important;}
+.lo-screen-flex{flex-direction:column;overflow:hidden !important;}
 .lo-frozen-header{flex-shrink:0;background:var(--bg);z-index:10;}
 .lo-cards-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
 .lo-cards-scroll::-webkit-scrollbar{width:4px;}
@@ -7883,7 +7894,7 @@ function goScreen(name, btn){
     var scr = document.getElementById('s-' + name);
     if(!scr){ console.warn('goScreen: element not found → s-' + name); return; }
     scr.classList.add('active');
-    scr.style.display = (name === 'finance' || name === 'audit') ? 'flex' : 'block';
+    scr.style.display = (name === 'finance' || name === 'audit' || name === 'liveorders') ? 'flex' : 'block';
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'inventory')  fetchInventory();
