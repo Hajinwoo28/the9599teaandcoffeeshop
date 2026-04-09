@@ -1139,7 +1139,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .live-table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);-webkit-overflow-scrolling:touch;width:100%;}
 .live-table-wrap::-webkit-scrollbar{width:4px;height:4px;}
 .live-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-.live-table{width:100%;border-collapse:collapse;font-size:0.65rem;table-layout:fixed;min-width:860px;}
+.live-table{width:100%;border-collapse:collapse;font-size:0.65rem;table-layout:fixed;}
 .live-table th{padding:5px 5px;text-align:left;font-size:0.58rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#FAFCFB;position:sticky;top:0;z-index:2;overflow:hidden;text-overflow:ellipsis;}
 .live-table td{padding:5px 5px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);font-weight:600;font-size:0.65rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .live-table tr:last-child td{border-bottom:none;}
