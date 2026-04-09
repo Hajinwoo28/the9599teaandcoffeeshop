@@ -6957,8 +6957,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </button>
 
-    <div class="admin-drawer-divider"></div>
-
     <button class="admin-nav-item" id="nb-audit" onclick="goScreen('audit',this);closeAdminMenu()">
       <div class="admin-nav-icon"><i class="fas fa-shield-alt"></i></div>
       <div class="admin-nav-text">
