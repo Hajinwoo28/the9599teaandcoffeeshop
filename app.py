@@ -1357,6 +1357,18 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .emp-ord-detail-lbl{font-size:0.74rem;font-weight:700;color:#557570;}
 .emp-ord-detail-val{font-size:0.82rem;font-weight:800;color:#0A2925;}
 .emp-ord-modal-foot{padding:14px 22px 18px;border-top:1px solid #e5f0ee;display:flex;gap:9px;}
+/* Layout fix: global .screens{position:relative} overrides the earlier media-query
+   .screens{position:fixed}. Re-declaring here (later cascade) restores it so
+   .screens is correctly fixed at left:248px, eliminating the 248px right overflow. */
+@media(min-width:768px){
+  .screens{position:fixed !important;left:248px;right:0;top:calc(var(--topbar-h) + 28px);bottom:0;width:auto !important;margin:0 !important;}
+  .screen{overflow-x:hidden !important;overflow-y:auto;}
+  .live-table-wrap{overflow-x:auto;width:100%;box-sizing:border-box;}
+  .live-table{width:100%;table-layout:fixed;}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);width:100%;box-sizing:border-box;}
+  .section,.live-section{width:100%;box-sizing:border-box;padding:8px 14px 0;}
+  .live-card{width:100%;box-sizing:border-box;}
+}
 </style>
 </head>
 <body>
