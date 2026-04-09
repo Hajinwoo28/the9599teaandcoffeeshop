@@ -990,6 +990,20 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
   .drawer-close{display:flex !important;}
   .topbar{position:relative;}
   .screens{margin-top:0;}
+  /* employee tables scroll on mobile */
+  .live-table-wrap{max-height:280px;}
+  .live-table{min-width:480px;}
+  .stat-row{grid-template-columns:repeat(3,1fr);gap:6px;}
+  /* reduce section padding */
+  .section{padding:10px 10px 0;}
+}
+@media(max-width:480px){
+  .stat-row{grid-template-columns:repeat(3,1fr);gap:4px;}
+  .live-table th,.live-table td{padding:5px 6px;font-size:0.68rem;}
+  .pos-item-grid{grid-template-columns:repeat(2,1fr) !important;}
+  .page-header h2{font-size:1rem;}
+  /* hide timer on very small screens to save space */
+  .order-timer{display:none;}
 }
 
 .screens{flex:1;overflow:hidden;position:relative;}
@@ -1121,7 +1135,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .live-card-title.perm-title{color:var(--red);}
 .btn-refresh{background:var(--red);color:#fff;border:none;padding:6px 16px;border-radius:8px;font-family:'Nunito',sans-serif;font-size:0.76rem;font-weight:900;cursor:pointer;letter-spacing:0.3px;}
 .btn-refresh:active{opacity:0.85;}
-.live-table-wrap{overflow-x:auto;overflow-y:auto;max-height:360px;-webkit-overflow-scrolling:touch;}
+.live-table-wrap{overflow-x:auto;overflow-y:auto;max-height:360px;-webkit-overflow-scrolling:touch;width:100%;}
 .live-table-wrap::-webkit-scrollbar{width:4px;height:4px;}
 .live-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 .live-table{width:100%;border-collapse:collapse;font-size:0.7rem;}
@@ -6304,6 +6318,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* Use position:fixed instead of flex:1 so Edge always has a concrete height */
 .screens{position:fixed;top:var(--topbar-h);left:0;right:0;bottom:0;overflow:hidden;}
 .screen{position:absolute;top:0;right:0;bottom:0;left:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 16px;}
+/* ensure table wrappers can always scroll horizontally */
 .screen.active{display:block;}
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
@@ -6349,6 +6364,25 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .admin-hamburger-btn{display:flex;}
   .admin-drawer-close{display:flex !important;}
   .topbar{position:relative;}
+  /* tables: let content scroll, don't clip */
+  .tbl-wrap{max-height:320px;}
+  .kds-table{min-width:480px;}
+  /* KPI grid stacks to single column on small phones */
+  .dash-kpi-grid{grid-template-columns:1fr 1fr;gap:8px;padding:12px 10px 0;}
+  .dash-qa-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:0 10px;}
+  /* section inner padding reduction */
+  .screen-inner{padding:10px !important;}
+  /* page headers */
+  .page-header{padding:14px 12px 20px;}
+  .page-header h2{font-size:1rem;}
+}
+@media(max-width:480px){
+  .dash-kpi-grid{grid-template-columns:1fr 1fr;gap:6px;padding:10px 8px 0;}
+  .dash-kpi-val{font-size:1.2rem;}
+  .dash-qa-grid{grid-template-columns:repeat(2,1fr);gap:6px;}
+  .topbar-title{display:none;}
+  /* admin table columns: hide less important cols on tiny screens */
+  .kds-table .hide-xs{display:none;}
 }
 .admin-drawer-header{padding:20px 16px 14px;border-bottom:1px solid rgba(196,168,130,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;}
 .admin-drawer-logo{display:flex;align-items:center;gap:12px;}
@@ -6480,7 +6514,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .stat-card.s3 .sv{color:var(--red);}
 
 /* ── TABLES ── */
-.tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:400px;border:1.5px solid var(--cream-dark);border-radius:12px;}
+.tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:400px;border:1.5px solid var(--cream-dark);border-radius:12px;-webkit-overflow-scrolling:touch;width:100%;}
+.tbl-wrap::-webkit-scrollbar{width:4px;height:4px;}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
 .tbl-wrap::-webkit-scrollbar{height:4px;width:4px;}
 .tbl-wrap::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
 .kds-table{width:100%;border-collapse:collapse;min-width:480px;}
@@ -6609,7 +6645,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── SECTION SPACING ── */
 .section{margin:0 12px 8px;}
-.screen-inner{padding:28px 0 0;}
+.screen-inner{padding:16px 0 0;}
+/* tables: left-flush with no horizontal clipping */
+.section .tbl-wrap,.screen-inner .tbl-wrap{margin:0;border-radius:10px;}
+.fin-content-scroll .tbl-wrap{margin:0 14px;}
 
 /* ── FINANCE TABS ── */
 .fin-tab-bar{display:flex;gap:0;margin:0 14px 14px;background:var(--cream-dark);border-radius:12px;padding:4px;}
@@ -6807,7 +6846,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <div class="admin-drawer-section-label">Manage</div>
 
   <div class="admin-drawer-nav">
-    <button class="admin-nav-item" id="nb-dashboard" onclick="goScreen('dashboard',this);closeAdminMenu()">
+    <button class="admin-nav-item active" id="nb-dashboard" onclick="goScreen('dashboard',this);closeAdminMenu()">
       <div class="admin-nav-icon"><i class="fas fa-tachometer-alt"></i></div>
       <div class="admin-nav-text">
         <span class="admin-nav-label">Dashboard</span>
@@ -6815,7 +6854,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </button>
 
-    <button class="admin-nav-item active" id="nb-inventory" onclick="goScreen('inventory',this);closeAdminMenu()">
+    <button class="admin-nav-item" id="nb-inventory" onclick="goScreen('inventory',this);closeAdminMenu()">
       <div class="admin-nav-icon"><i class="fas fa-boxes"></i></div>
       <div class="admin-nav-text">
         <span class="admin-nav-label">Inventory</span>
@@ -6920,7 +6959,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 <div class="screens">
 
   <!-- DASHBOARD -->
-  <div id="s-dashboard" class="screen">
+  <div id="s-dashboard" class="screen active">
     <div class="dash-hero">
       <div class="dash-hero-title">Good day, Admin 👋</div>
       <div class="dash-hero-sub">9599 Tea &amp; Coffee — Admin Panel Overview</div>
@@ -7001,7 +7040,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   </div>
 
   <!-- INVENTORY -->
-  <div id="s-inventory" class="screen active">
+  <div id="s-inventory" class="screen">
     <div class="page-header">
       <h2><i class="fas fa-boxes"></i> Inventory</h2>
       <p>Stock levels by category — tap a tab to filter</p>
@@ -8627,6 +8666,17 @@ document.addEventListener('keydown',function(e){
   if(map[e.key]){goScreen(map[e.key],document.getElementById(screenIds[map[e.key]]));}
   if(e.key==='Escape'){closeAdmModal();closeOrdDetail();closeAddIngModal();}
 });
+
+/* ══ INIT: load dashboard data immediately since it is the default screen ══ */
+(function initAdminPanel(){
+  // Ensure all screens are hidden except dashboard
+  document.querySelectorAll('.screen').forEach(s=>{
+    if(s.id!=='s-dashboard'){s.style.display='none';s.classList.remove('active');}
+  });
+  const dash=document.getElementById('s-dashboard');
+  if(dash){dash.classList.add('active');dash.style.display='block';}
+  loadDashboard();
+})();
 
 /* ══ AUTO-REFRESH DASHBOARD ══ */
 setInterval(()=>{
