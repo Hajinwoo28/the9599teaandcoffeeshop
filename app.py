@@ -6475,11 +6475,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-nav-item:hover:not(.active) .admin-nav-desc{color:rgba(255,255,255,0.35);}
 .admin-drawer-divider{height:1px;background:rgba(196,168,130,0.08);margin:8px 16px;}
 .admin-drawer-footer{padding:8px 10px 12px;border-top:1px solid rgba(196,168,130,0.08);flex-shrink:0;display:flex;flex-direction:column;gap:4px;}
+.admin-drawer-footer-btns{display:flex;flex-direction:row;gap:4px;}
 /* Time chip in footer */
 .admin-drawer-time-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:8px 12px;margin-bottom:4px;}
 .admin-drawer-time-chip i{color:var(--tan);font-size:0.75rem;opacity:0.7;}
 .admin-drawer-time-val{font-size:0.75rem;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:0.3px;}
-.admin-drawer-action{width:100%;display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
+.admin-drawer-action{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 8px;border-radius:8px;background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.15);color:rgba(196,168,130,0.7);cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.65rem;font-weight:800;text-decoration:none;transition:all 0.15s;}
 .admin-drawer-action:hover{background:rgba(196,168,130,0.15);color:var(--cream);}
 .admin-drawer-action.danger{background:rgba(192,57,43,0.08);border-color:rgba(192,57,43,0.2);color:rgba(255,150,150,0.8);}
 .admin-drawer-action.danger:hover{background:rgba(192,57,43,0.2);color:#fff;border-color:rgba(192,57,43,0.45);}
@@ -6761,12 +6762,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .oh-filter-sel{padding:9px 12px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:700;color:var(--text);background:var(--white);outline:none;cursor:pointer;}
 
 /* ══ LIVE ORDERS SCREEN ══ */
-.lo-filter-bar{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;}
+.lo-filter-bar{display:flex;gap:6px;padding:8px 14px 6px;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;}
 .lo-filter-bar::-webkit-scrollbar{display:none;}
 .lo-filter-pill{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid var(--cream-dark);background:var(--white);font-size:0.74rem;font-weight:800;color:var(--muted);cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.18s;white-space:nowrap;}
 .lo-filter-pill:hover{border-color:var(--tan);color:var(--brown);}
 .lo-filter-pill.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);}
-.lo-cards-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:12px 14px;}
+.lo-cards-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:10px 14px 20px;}
 @media(min-width:600px){.lo-cards-grid{grid-template-columns:1fr 1fr;}}
 @media(min-width:1100px){.lo-cards-grid{grid-template-columns:1fr 1fr 1fr;}}
 .lo-card{background:var(--white);border-radius:16px;border:1.5px solid var(--cream-dark);box-shadow:0 3px 16px rgba(61,36,16,0.07);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;animation:slideInUp 0.25s ease both;cursor:pointer;}
@@ -6799,6 +6800,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-empty-sub{font-size:0.76rem;font-weight:600;}
 .lo-stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 14px 4px;}
 .lo-stat{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:11px;padding:10px 8px;text-align:center;}
+/* ── Live Orders: frozen header + scrollable body ── */
+.lo-screen-flex{display:flex !important;flex-direction:column;overflow:hidden !important;}
+.lo-frozen-header{flex-shrink:0;background:var(--bg);z-index:10;}
+.lo-cards-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
+.lo-cards-scroll::-webkit-scrollbar{width:4px;}
+.lo-cards-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
 .lo-stat-num{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;line-height:1;}
 .lo-stat-lbl{font-size:0.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
 
@@ -6927,7 +6934,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="admin-nav-icon"><i class="fas fa-chart-line"></i></div>
       <div class="admin-nav-text">
         <span class="admin-nav-label">Finance</span>
-        <span class="admin-nav-desc">Sales, reports &amp; expenses</span>
+        <span class="admin-nav-desc">Sales, expenses &amp; orders</span>
       </div>
     </button>
 
@@ -7007,12 +7014,14 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <i class="fas fa-clock"></i>
       <span class="admin-drawer-time-val" id="sidebar-clock">--:-- --</span>
     </div>
+    <div class="admin-drawer-footer-btns">
     <button class="admin-drawer-action" onclick="closeAdminMenu();location.reload()">
-      <i class="fas fa-sync-alt"></i> Reload Panel
+      <i class="fas fa-sync-alt"></i> Reload
     </button>
     <a href="/logout" class="admin-drawer-action danger">
-      <i class="fas fa-lock"></i> Lock &amp; Logout
+      <i class="fas fa-lock"></i> Lock
     </a>
+    </div>
   </div>
 </nav>
 
@@ -7060,9 +7069,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <div class="dash-qa-icon" style="background:rgba(123,79,46,0.1);color:var(--brown);"><i class="fas fa-boxes"></i></div>
         <div class="dash-qa-label">View Inventory</div>
       </button>
-      <button class="dash-qa-btn" onclick="goScreen('finance',document.getElementById('nb-finance'))">
+      <button class="dash-qa-btn" onclick="goScreen('analytics',document.getElementById('nb-analytics'))">
         <div class="dash-qa-icon" style="background:rgba(39,174,96,0.1);color:var(--green);"><i class="fas fa-chart-bar"></i></div>
-        <div class="dash-qa-label">Finance Reports</div>
+        <div class="dash-qa-label">Reports</div>
       </button>
       <button class="dash-qa-btn" onclick="goScreen('settings',document.getElementById('nb-settings'))">
         <div class="dash-qa-icon" style="background:rgba(25,118,210,0.1);color:var(--blue);"><i class="fas fa-cog"></i></div>
@@ -7177,7 +7186,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <div class="fin-sticky-top">
       <div class="page-header" style="padding:10px 16px 16px;">
         <h2 style="font-size:1rem;"><i class="fas fa-chart-line"></i> Finance</h2>
-        <p style="font-size:0.7rem;margin-top:1px;">Revenue, reports &amp; order history</p>
+        <p style="font-size:0.7rem;margin-top:1px;">Revenue, expenses &amp; order history</p>
       </div>
       <div class="fin-stats">
         <div class="fin-stat" style="border-top:3px solid var(--brown);">
@@ -7204,9 +7213,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="fin-tab-nav">
         <button class="fin-tab-pill active" id="ftab-today" onclick="finTab('today',this)">
           <i class="fas fa-sun"></i> Today
-        </button>
-        <button class="fin-tab-pill" id="ftab-reports" onclick="finTab('reports',this)">
-          <i class="fas fa-chart-bar"></i> Reports
         </button>
         <button class="fin-tab-pill" id="ftab-history" onclick="finTab('history',this)">
           <i class="fas fa-history"></i> Orders
@@ -7238,47 +7244,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="section card">
         <div class="card-title">Expense Log</div>
         <div id="exp-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No expenses today.</div></div>
-      </div>
-    </div>
-
-    <!-- ── REPORTS TAB ── -->
-    <div id="fin-reports" class="fin-tabpane">
-      <!-- Best-sellers (moved to top) -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
-          <span class="card-title" style="margin:0;">Best-Sellers</span>
-          <div class="period-pills">
-            <button class="period-pill active" id="bsp-today" onclick="loadBestSellers('today',this)">Today</button>
-            <button class="period-pill" id="bsp-week" onclick="loadBestSellers('week',this)">This Week</button>
-            <button class="period-pill" id="bsp-all" onclick="loadBestSellers('all',this)">All Time</button>
-          </div>
-        </div>
-        <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;">Loading…</div></div>
-      </div>
-
-      <!-- Sales Chart -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
-          <span class="card-title" style="margin:0;">Sales Overview</span>
-          <div class="period-pills">
-            <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
-            <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
-          </div>
-        </div>
-        <div id="chart-loading" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;"><i class="fas fa-spinner fa-spin"></i> Loading chart…</div>
-        <div style="position:relative;height:150px;">
-          <canvas id="sales-chart"></canvas>
-        </div>
-        <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;"></div>
-      </div>
-
-      <!-- Low Stock Alerts -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-          <span class="card-title" style="margin:0;">⚠️ Stock Alerts</span>
-          <button class="btn-secondary" style="font-size:0.72rem;padding:5px 10px;" onclick="loadLowStock()"><i class="fas fa-sync-alt"></i></button>
-        </div>
-        <div id="low-stock-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">Loading…</div></div>
       </div>
     </div>
 
@@ -7519,42 +7484,50 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   </div>
 
   <!-- LIVE ORDERS MONITOR -->
-  <div id="s-liveorders" class="screen">
-    <div class="page-header" style="padding:10px 16px 16px;">
-      <h2 style="font-size:1rem;"><i class="fas fa-stream"></i> Live Orders <span class="dot-live" style="margin-left:6px;"></span></h2>
-      <p style="font-size:0.7rem;margin-top:1px;">Real-time order monitor — auto-refreshes every 10s</p>
+  <div id="s-liveorders" class="screen lo-screen-flex">
+    <!-- ── Frozen header (never scrolls) ── -->
+    <div class="lo-frozen-header">
+      <div class="page-header" style="padding:10px 16px 16px;">
+        <h2 style="font-size:1rem;"><i class="fas fa-stream"></i> Live Orders <span class="dot-live" style="margin-left:6px;"></span></h2>
+        <p style="font-size:0.7rem;margin-top:1px;">Real-time order monitor — auto-refreshes every 10s</p>
+      </div>
+
+      <div class="lo-stats-bar">
+        <div class="lo-stat">
+          <div class="lo-stat-num" id="lo-stat-waiting" style="color:var(--orange);">0</div>
+          <div class="lo-stat-lbl">Waiting</div>
+        </div>
+        <div class="lo-stat">
+          <div class="lo-stat-num" id="lo-stat-preparing" style="color:var(--blue);">0</div>
+          <div class="lo-stat-lbl">Preparing</div>
+        </div>
+        <div class="lo-stat">
+          <div class="lo-stat-num" id="lo-stat-ready" style="color:var(--green);">0</div>
+          <div class="lo-stat-lbl">Ready</div>
+        </div>
+        <div class="lo-stat">
+          <div class="lo-stat-num" id="lo-stat-total" style="color:var(--brown);">0</div>
+          <div class="lo-stat-lbl">Total</div>
+        </div>
+      </div>
+
+      <div class="lo-filter-bar">
+        <button class="lo-filter-pill active" id="lof-all" onclick="setLoFilter('all',this)">All Orders</button>
+        <button class="lo-filter-pill" id="lof-waiting" onclick="setLoFilter('Waiting Confirmation',this)">⏳ Waiting</button>
+        <button class="lo-filter-pill" id="lof-preparing" onclick="setLoFilter('Preparing Order',this)">🔥 Preparing</button>
+        <button class="lo-filter-pill" id="lof-ready" onclick="setLoFilter('Ready for Pick-up',this)">✅ Ready</button>
+        <button class="lo-filter-pill" id="lof-online" onclick="setLoFilter('online',this)">🌐 Online</button>
+        <button class="lo-filter-pill" id="lof-walkin" onclick="setLoFilter('walkin',this)">🚶 Walk-In</button>
+      </div>
+      <!-- divider line below frozen area -->
+      <div style="height:2px;background:linear-gradient(90deg,var(--cream-dark),transparent);margin:4px 0 0;"></div>
     </div>
 
-    <div class="lo-stats-bar">
-      <div class="lo-stat">
-        <div class="lo-stat-num" id="lo-stat-waiting" style="color:var(--orange);">0</div>
-        <div class="lo-stat-lbl">Waiting</div>
+    <!-- ── Scrollable cards area ── -->
+    <div class="lo-cards-scroll">
+      <div class="lo-cards-grid" id="lo-cards-grid">
+        <div class="lo-empty"><div class="lo-empty-icon">📋</div><div class="lo-empty-text">Loading orders…</div></div>
       </div>
-      <div class="lo-stat">
-        <div class="lo-stat-num" id="lo-stat-preparing" style="color:var(--blue);">0</div>
-        <div class="lo-stat-lbl">Preparing</div>
-      </div>
-      <div class="lo-stat">
-        <div class="lo-stat-num" id="lo-stat-ready" style="color:var(--green);">0</div>
-        <div class="lo-stat-lbl">Ready</div>
-      </div>
-      <div class="lo-stat">
-        <div class="lo-stat-num" id="lo-stat-total" style="color:var(--brown);">0</div>
-        <div class="lo-stat-lbl">Total</div>
-      </div>
-    </div>
-
-    <div class="lo-filter-bar">
-      <button class="lo-filter-pill active" id="lof-all" onclick="setLoFilter('all',this)">All Orders</button>
-      <button class="lo-filter-pill" id="lof-waiting" onclick="setLoFilter('Waiting Confirmation',this)">⏳ Waiting</button>
-      <button class="lo-filter-pill" id="lof-preparing" onclick="setLoFilter('Preparing Order',this)">🔥 Preparing</button>
-      <button class="lo-filter-pill" id="lof-ready" onclick="setLoFilter('Ready for Pick-up',this)">✅ Ready</button>
-      <button class="lo-filter-pill" id="lof-online" onclick="setLoFilter('online',this)">🌐 Online</button>
-      <button class="lo-filter-pill" id="lof-walkin" onclick="setLoFilter('walkin',this)">🚶 Walk-In</button>
-    </div>
-
-    <div class="lo-cards-grid" id="lo-cards-grid">
-      <div class="lo-empty"><div class="lo-empty-icon">📋</div><div class="lo-empty-text">Loading orders…</div></div>
     </div>
   </div>
 
@@ -7568,9 +7541,49 @@ ens-wrap">
   <div id="s-analytics" class="screen" style="display:none;">
     <div class="page-header">
       <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
-      <p>Sales trends, top items &amp; hourly performance</p>
+      <p>Sales trends, reports, top items &amp; hourly performance</p>
     </div>
     <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+
+      <!-- Best-sellers (from Finance Reports) -->
+      <div class="section card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+          <span class="card-title" style="margin:0;">Best-Sellers</span>
+          <div class="period-pills">
+            <button class="period-pill active" id="bsp-today" onclick="loadBestSellers('today',this)">Today</button>
+            <button class="period-pill" id="bsp-week" onclick="loadBestSellers('week',this)">This Week</button>
+            <button class="period-pill" id="bsp-all" onclick="loadBestSellers('all',this)">All Time</button>
+          </div>
+        </div>
+        <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;">Loading…</div></div>
+      </div>
+
+      <!-- Sales Chart (from Finance Reports) -->
+      <div class="section card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+          <span class="card-title" style="margin:0;">Sales Overview</span>
+          <div class="period-pills">
+            <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
+            <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
+          </div>
+        </div>
+        <div id="chart-loading" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;"><i class="fas fa-spinner fa-spin"></i> Loading chart…</div>
+        <div style="position:relative;height:150px;">
+          <canvas id="sales-chart"></canvas>
+        </div>
+        <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;"></div>
+      </div>
+
+      <!-- Low Stock Alerts (from Finance Reports) -->
+      <div class="section card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <span class="card-title" style="margin:0;">⚠️ Stock Alerts</span>
+          <button class="btn-secondary" style="font-size:0.72rem;padding:5px 10px;" onclick="loadLowStock()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="low-stock-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">Loading…</div></div>
+      </div>
+
+      <!-- Analytics Charts -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button onclick="loadAnalytics(7)" class="btn-secondary" id="an-7">7 Days</button>
         <button onclick="loadAnalytics(14)" class="btn-secondary" id="an-14">14 Days</button>
@@ -7862,7 +7875,7 @@ function goScreen(name, btn){
     if(el) el.style.display = 'flex';
     if(btn) btn.classList.add('active');
     /* Load data */
-    if(name === 'analytics') loadAnalytics(7);
+    if(name === 'analytics'){ loadAnalytics(7); loadBestSellers('today',document.getElementById('bsp-today')); loadSalesChart(7,document.getElementById('pp-7')); loadLowStock(); }
     if(name === 'promos')    loadPromos();
     if(name === 'announce')  loadAnnouncements();
     if(name === 'waste')     loadWaste();
@@ -8147,7 +8160,6 @@ function finTab(name,btn){
   document.querySelectorAll('.fin-tab-pill').forEach(b=>{b.classList.remove('active');});
   const el=document.getElementById('fin-'+name);if(el)el.classList.add('active');
   if(btn)btn.classList.add('active');
-  if(name==='reports'){loadSalesChart(7,document.getElementById('pp-7'));loadBestSellers('today',document.getElementById('bsp-today'));loadLowStock();}
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
 }
 
