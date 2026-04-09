@@ -1544,10 +1544,6 @@ function playEmpPermBeep(){
 
   <!-- Footer -->
   <div class="drawer-footer">
-    <div class="drawer-time-chip">
-      <i class="fas fa-clock"></i>
-      <span class="drawer-time-val" id="sidebar-clock">--:-- --</span>
-    </div>
     <a href="/employee/logout" class="drawer-logout">
       <i class="fas fa-sign-out-alt"></i> Logout of Station
     </a>
@@ -2738,7 +2734,7 @@ function openReceiptWindow(r){
 }
 
 setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
-setInterval(()=>empFetch('/api/employee/ping'),30000);
+setInterval(()=>empFetch('/api/employee/ping'),60000);
 setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
 fetchOrders();
 fetchPermReqs();
@@ -6475,8 +6471,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-role-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 8px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
 @keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 6px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 12px rgba(76,175,80,0.9);}}
 .admin-drawer-role-info{flex:1;min-width:0;}
-.admin-drawer-role-title{font-size:0.66rem;font-weight:900;color:var(--tan);letter-spacing:1.5px;text-transform:uppercase;}
-.admin-drawer-role-sub{font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:1px;}
+.admin-drawer-role-title{font-size:0.56rem;font-weight:900;color:var(--tan);letter-spacing:1.5px;text-transform:uppercase;}
+.admin-drawer-role-sub{font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:1px;}
 
 .admin-drawer-section-label{font-size:0.62rem;font-weight:900;color:rgba(196,168,130,0.3);letter-spacing:2.5px;text-transform:uppercase;padding:12px 16px 6px;display:flex;align-items:center;gap:8px;}
 .admin-drawer-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06);}
@@ -7836,10 +7832,10 @@ setInterval(async()=>{
     const r=await fetch('/api/admin/ping');
     if(r.status===401||r.status===403){
       // Session was taken over by another device — redirect to lock screen
-      window.location.href='/admin';
+      window.location.href='/login';
     }
   }catch(e){}
-},30000);
+},60000);
 
 /* ══ TOAST ══ */
 function showToast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.innerText=msg;document.getElementById('toast-container').appendChild(t);setTimeout(()=>t.remove(),3000);}
@@ -9290,25 +9286,52 @@ def _get_state():
 
 @app.before_request
 def check_admin_session():
-    # ── Multi-session model ───────────────────────────────────────────────────
-    # Each browser/device must enter the PIN once per browser session.
-    # Multiple devices can be logged in simultaneously — no displacement.
-    # The session cookie handles persistence within the same browser.
+    # ── Single-session model ──────────────────────────────────────────────────
+    # Only the most-recently-authenticated device holds a valid session.
+    # When another device takes over, the old device's admin_id no longer
+    # matches state.active_session_id → 403 → client redirects to login.
 
-    # Guard admin API routes — must have a valid admin session
+    # Guard admin API routes — must have a valid, current admin session
     if request.path.startswith('/api/admin'):
         if not session.get('is_admin') or not session.get('admin_id'):
             return jsonify({"error": "Unauthorized"}), 403
+        # Validate that this device still holds the active session
+        try:
+            state = _get_state()
+            if state and state.active_session_id and session['admin_id'] != state.active_session_id:
+                session.pop('is_admin', None)
+                session.pop('admin_id', None)
+                return jsonify({"error": "Session taken over"}), 403
+        except Exception:
+            pass
 
-    # Guard /admin page — unauthenticated browsers are sent to login
+    # Guard /admin page — unauthenticated or displaced browsers go to login
     if request.path == '/admin' and request.method == 'GET':
         if not session.get('is_admin'):
             return redirect(url_for('admin_login'))
+        # Also kick displaced admin browsers back to login
+        try:
+            state = _get_state()
+            if state and state.active_session_id and session.get('admin_id') != state.active_session_id:
+                session.pop('is_admin', None)
+                session.pop('admin_id', None)
+                return redirect(url_for('admin_login'))
+        except Exception:
+            pass
 
-    # Guard employee API routes — must have a valid employee session
+    # Guard employee API routes — must have a valid, current employee session
     if request.path.startswith('/api/employee') or request.path.startswith('/api/orders') or request.path.startswith('/api/stream'):
         if not session.get('is_employee') and not session.get('is_admin'):
             return jsonify({"error": "Unauthorized"}), 403
+        if session.get('is_employee') and not session.get('is_admin'):
+            try:
+                state = _get_state()
+                if state and state.active_employee_session_id and session.get('employee_id') != state.active_employee_session_id:
+                    session.pop('is_employee', None)
+                    session.pop('employee_id', None)
+                    return jsonify({"error": "Session taken over"}), 403
+            except Exception:
+                pass
 
 @app.route('/')
 def storefront():
@@ -9470,6 +9493,23 @@ def admin_login():
     if is_ip_blacklisted(client_ip):
         log_audit("Security: Blocked Access Attempt", f"Blacklisted IP {client_ip} tried to reach admin login")
         return render_template_string(LOGIN_HTML, error="Access denied. Your IP has been blocked due to suspicious activity. Contact the store administrator."), 403
+
+    # ── Detect active session on another device ───────────────────────────────
+    force = request.form.get('force') == '1'
+    try:
+        state = _get_state()
+        session_active = bool(
+            state and state.last_ping and
+            (datetime.utcnow() - state.last_ping).total_seconds() < 90
+        )
+    except Exception:
+        session_active = False
+
+    # Show takeover page if another device is active and this isn't a forced POST
+    if request.method == 'GET' and session_active:
+        return render_template_string(LOCKED_HTML, role='Admin',
+                                       action_url=url_for('admin_login'), error=None)
+
     if request.method == 'POST':
         pin = request.form.get('pin')
         # Honeypot: bots fill hidden field — humans leave it blank
@@ -9481,7 +9521,6 @@ def admin_login():
             session.permanent = True
             session['is_admin'] = True
             session['admin_id'] = str(uuid.uuid4())
-            # Record last login for audit (no single-session gate)
             try:
                 state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
                                                      active_employee_session_id='', employee_last_ping=datetime.min)
@@ -9493,11 +9532,15 @@ def admin_login():
             except Exception:
                 try: db.session.rollback()
                 except Exception: pass
-            log_audit("Admin Login", f"Successful login from {client_ip}")
+            action = "Admin Takeover" if force else "Admin Login"
+            log_audit(action, f"Successful login from {client_ip}")
             return redirect(url_for('admin_dashboard'))
         # Wrong PIN
         record_failed_attempt(client_ip, 'admin')
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+        if force or session_active:
+            return render_template_string(LOCKED_HTML, role='Admin',
+                                           action_url=url_for('admin_login'), error=error)
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -9527,13 +9570,28 @@ def admin_dashboard():
 def employee_login():
     if session.get('is_employee'): return redirect(url_for('employee_dashboard'))
     error = None
+
+    # ── Detect active employee session on another device ──────────────────────
+    force = request.form.get('force') == '1'
+    try:
+        state = _get_state()
+        session_active = bool(
+            state and state.employee_last_ping and
+            (datetime.utcnow() - state.employee_last_ping).total_seconds() < 90
+        )
+    except Exception:
+        session_active = False
+
+    if request.method == 'GET' and session_active:
+        return render_template_string(LOCKED_HTML, role='Employee',
+                                       action_url=url_for('employee_login'), error=None)
+
     if request.method == 'POST':
         pin = request.form.get('pin')
         if master_pin_matches(pin):
             session.permanent = True
             session['is_employee'] = True
             session['employee_id'] = str(uuid.uuid4())
-            # Record for audit (no single-session gate)
             try:
                 state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
                                                       active_employee_session_id='', employee_last_ping=datetime.min)
@@ -9545,9 +9603,13 @@ def employee_login():
             except Exception:
                 try: db.session.rollback()
                 except Exception: pass
-            log_audit("Employee Login", "Staff logged in to employee station")
+            action = "Employee Takeover" if force else "Employee Login"
+            log_audit(action, "Staff logged in to employee station")
             return redirect(url_for('employee_dashboard'))
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
+        if force or session_active:
+            return render_template_string(LOCKED_HTML, role='Employee',
+                                           action_url=url_for('employee_login'), error=error)
     return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
 
 @app.route('/employee/logout')
