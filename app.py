@@ -6364,8 +6364,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .admin-hamburger-btn{display:flex;}
   .admin-drawer-close{display:flex !important;}
   .topbar{position:relative;}
-  /* tables: let content scroll, don't clip */
-  .tbl-wrap{max-height:320px;}
+  /* tables: constrain height on mobile so the page stays navigable */
+  .tbl-wrap{max-height:55vh;}
+  /* on mobile tables scroll horizontally; give them a safe min-width */
   .kds-table{min-width:480px;}
   /* KPI grid stacks to single column on small phones */
   .dash-kpi-grid{grid-template-columns:1fr 1fr;gap:8px;padding:12px 10px 0;}
@@ -6520,10 +6521,18 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .tbl-wrap::-webkit-scrollbar{height:4px;width:4px;}
 .tbl-wrap::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
 .kds-table{width:100%;border-collapse:collapse;min-width:480px;}
-.kds-table th,.kds-table td{padding:6px 9px;text-align:left;border-bottom:1px solid var(--cream-dark);font-size:0.74rem;}
-.kds-table th{background:var(--cream);color:var(--muted);position:sticky;top:0;z-index:2;font-weight:900;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.5px;}
+.kds-table th,.kds-table td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--cream-dark);font-size:0.81rem;}
+.kds-table th{background:var(--cream);color:var(--muted);position:sticky;top:0;z-index:2;font-weight:900;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;}
 .kds-table tbody tr:hover{background:#FAF6F0;}
 .kds-badge{font-size:0.68rem;padding:2px 8px;border-radius:20px;font-weight:800;}
+/* On desktop, let tables grow to fill the available vertical space */
+@media(min-width:768px){
+  .tbl-wrap{max-height:calc(100vh - 200px);}
+  .section .tbl-wrap,.screen-inner .tbl-wrap{max-height:calc(100vh - 260px);}
+  /* Tables have plenty of horizontal room beside the sidebar — no forced min-width needed */
+  .kds-table{min-width:0;width:100%;table-layout:fixed;}
+  .kds-table th,.kds-table td{word-break:break-word;}
+}
 /* ── Notification Bell ── */
 .bell-btn{position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.85);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:background 0.15s;flex-shrink:0;}
 .bell-btn:hover{background:rgba(255,255,255,0.18);}
@@ -7504,7 +7513,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 </div><!-- /screens -->
 
 <!-- ══ NEW FEATURE SCREENS ══ -->
-<div class="screens" id="screens-ext" style="position:fixed;inset:0;top:62px;overflow:hidden;display:none;" id="ext-screens-wrap">
+<div class="screens" id="screens-ext" style="position:fixed;inset:0;top:62px;overflow:hidden;display:none;left:0;">
+ens-wrap">
 
   <!-- ANALYTICS SCREEN -->
   <div id="s-analytics" class="screen" style="display:none;">
@@ -7781,21 +7791,52 @@ function openAllSettingsDrops(){
 }
 
 /* ══ SCREEN NAV ══ */
-function goScreen(name,btn){
-  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
-  document.querySelectorAll('.admin-nav-item').forEach(b=>b.classList.remove('active'));
-  const scr=document.getElementById('s-'+name);
-  if(!scr){console.warn('goScreen: element not found → s-'+name);return;}
-  scr.classList.add('active');
-  scr.style.display=(name==='finance'||name==='audit')?'flex':'block';
-  if(btn)btn.classList.add('active');
-  if(name==='inventory')fetchInventory();
-  if(name==='finance'){fetchFinance();fetchCustomerLogs();finTab('today',document.getElementById('ftab-today'));}
-  if(name==='settings'){fetchSchedule();fetchMenu();fetchClosedDays();openAllSettingsDrops();}
-  if(name==='audit'){auditPage=1;fetchAuditLogs();}
-  if(name==='dashboard'){loadDashboard();}
-  if(name==='liveorders'){fetchLiveOrders();}
+/* ── Unified screen router (core + extended screens) ── */
+var _extScreens = ['analytics','promos','announce','waste','security'];
+function goScreen(name, btn){
+  /* 1 — Hide every screen in BOTH containers */
+  document.querySelectorAll('.screen').forEach(function(s){
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  /* 2 — Deactivate nav pills */
+  document.querySelectorAll('.admin-nav-item').forEach(function(b){
+    b.classList.remove('active');
+  });
+  /* 3 — Hide / show the ext-screens wrapper */
+  var extWrap = document.getElementById('screens-ext');
+  if(extWrap) extWrap.style.display = 'none';
+
+  if(_extScreens.indexOf(name) !== -1){
+    /* ── Extended screen ── */
+    if(extWrap) extWrap.style.display = 'block';
+    var el = document.getElementById('s-' + name);
+    if(el) el.style.display = 'flex';
+    if(btn) btn.classList.add('active');
+    /* Load data */
+    if(name === 'analytics') loadAnalytics(7);
+    if(name === 'promos')    loadPromos();
+    if(name === 'announce')  loadAnnouncements();
+    if(name === 'waste')     loadWaste();
+    if(name === 'security'){ loadBlacklist(); loadAttempts(); }
+  } else {
+    /* ── Core screen ── */
+    var scr = document.getElementById('s-' + name);
+    if(!scr){ console.warn('goScreen: element not found → s-' + name); return; }
+    scr.classList.add('active');
+    scr.style.display = (name === 'finance' || name === 'audit') ? 'flex' : 'block';
+    if(btn) btn.classList.add('active');
+    /* Load data */
+    if(name === 'inventory')  fetchInventory();
+    if(name === 'finance'){   fetchFinance(); fetchCustomerLogs(); finTab('today', document.getElementById('ftab-today')); }
+    if(name === 'settings'){  fetchSchedule(); fetchMenu(); fetchClosedDays(); openAllSettingsDrops(); }
+    if(name === 'audit'){     auditPage = 1; fetchAuditLogs(); }
+    if(name === 'dashboard')  loadDashboard();
+    if(name === 'liveorders') fetchLiveOrders();
+  }
 }
+/* Make goScreen available globally immediately */
+window.goScreen = goScreen;
 
 function toggleAdminMenu(){
   const dd=document.getElementById('admin-nav-dropdown');
@@ -8542,41 +8583,12 @@ function connectSSE() {
     fetchPermReqs();
   });
 
-  _sseSource.addEventListener('employee_access_attempt', (e) => {
-    try { const d=JSON.parse(e.data); showSecurityAlert('access',d.time,d.ip,d.msg); } catch(_){}
-  });
-  _sseSource.addEventListener('employee_logged_in', (e) => {
-    try { const d=JSON.parse(e.data); showSecurityAlert(d.takeover?'takeover':'login',d.time,d.ip,d.msg); } catch(_){}
-  });
-  _sseSource.addEventListener('employee_session_takeover', (e) => {
-    try { const d=JSON.parse(e.data); showSecurityAlert('takeover',d.time,d.new_ip,d.msg); } catch(_){}
-  });
-
   _sseSource.onerror = () => {
     try { _sseSource.close(); } catch(e){}
     _sseSource = null;
+    // Reconnect after 5 s
     if (!_sseRetryTimer) _sseRetryTimer = setTimeout(connectSSE, 5000);
   };
-}
-
-let _secAlertTimer=null;
-function showSecurityAlert(type,time,ip,msg){
-  let b=document.getElementById('sec-alert-banner');
-  if(!b){
-    b=document.createElement('div');b.id='sec-alert-banner';
-    b.innerHTML='<style>@keyframes sabDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}#sec-alert-banner{font-family:Nunito,sans-serif;color:#fff;position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;align-items:center;gap:12px;padding:12px 18px;font-size:0.83rem;font-weight:700;animation:sabDown 0.3s ease;}.sab-icon{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}.sab-close{margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:0.85rem;}.sab-sub{font-size:0.7rem;opacity:0.75;}</style><div class="sab-icon" id="sab-icon"></div><div><div id="sab-msg"></div><div class="sab-sub" id="sab-sub"></div></div><button class="sab-close" onclick="this.parentElement.style.display='none'"><i class="fas fa-times"></i></button>';
-    document.body.appendChild(b);
-  }
-  var cols={access:'#1565C0',login:'#2E7D32',takeover:'#B71C1C'};
-  var icos={access:'<i class="fas fa-eye"></i>',login:'<i class="fas fa-sign-in-alt"></i>',takeover:'<i class="fas fa-exclamation-triangle"></i>'};
-  b.style.background=cols[type]||cols.access;
-  document.getElementById('sab-icon').innerHTML=icos[type]||icos.access;
-  document.getElementById('sab-msg').textContent=msg;
-  document.getElementById('sab-sub').textContent='Detected '+time+' · IP: '+ip;
-  b.style.display='flex';
-  if(_secAlertTimer)clearTimeout(_secAlertTimer);
-  _secAlertTimer=setTimeout(function(){b.style.display='none';},type==='takeover'?12000:6000);
-  if(type==='takeover'){try{playPermBeep();}catch(e){}}
 }
 
 connectSSE();
@@ -8889,42 +8901,7 @@ setInterval(()=>{
    NEW ADVANCED FEATURE JAVASCRIPT
 ══════════════════════════════════════════════════════════ */
 
-/* ── Extended screen routing ── */
-const _extScreens = ['analytics','promos','announce','waste','security'];
-
-(function patchGoScreen(){
-  const orig = typeof goScreen === 'function' ? goScreen : null;
-  window.goScreen = function(name, btn) {
-    // Hide extended screens
-    _extScreens.forEach(s => {
-      const el = document.getElementById('s-' + s);
-      if (el) el.style.display = 'none';
-    });
-    const extWrap = document.getElementById('screens-ext');
-    if (extWrap) extWrap.style.display = 'none';
-
-    if (_extScreens.includes(name)) {
-      // Hide normal screens
-      document.querySelectorAll('.screens .screen').forEach(s => s.style.display = 'none');
-      document.querySelectorAll('.screens .screen.active').forEach(s => s.classList.remove('active'));
-      // Show ext wrapper
-      if (extWrap) extWrap.style.display = 'block';
-      const el = document.getElementById('s-' + name);
-      if (el) el.style.display = 'flex';
-      // Active nav pill
-      document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
-      // Load data
-      if (name === 'analytics') loadAnalytics(7);
-      if (name === 'promos') { loadPromos(); }
-      if (name === 'announce') loadAnnouncements();
-      if (name === 'waste') loadWaste();
-      if (name === 'security') { loadBlacklist(); loadAttempts(); }
-    } else {
-      if (orig) orig(name, btn);
-    }
-  };
-})();
+/* goScreen is defined earlier as a unified function — no patching needed */
 
 /* ── ANALYTICS ── */
 let _anRevenueChart = null, _anHourlyChart = null, _anActiveDays = 7;
@@ -9472,57 +9449,27 @@ def admin_dashboard():
 @limiter.limit("10 per minute")
 def employee_login():
     if session.get('is_employee'): return redirect(url_for('employee_dashboard'))
-    # Notify admin panel when someone opens the login page
-    if request.method == 'GET':
-        client_ip = get_client_ip()
-        ua = request.headers.get('User-Agent', '')[:120]
-        push_event('employee_access_attempt', {
-            'ip': client_ip, 'ua': ua,
-            'time': get_ph_time().strftime('%I:%M:%S %p'),
-            'msg': f'Someone opened the Employee Login page from IP {client_ip}'
-        })
     error = None
     if request.method == 'POST':
         pin = request.form.get('pin')
         if master_pin_matches(pin):
-            client_ip = get_client_ip()
-            new_emp_id = str(uuid.uuid4())
-            takeover_occurred = False
+            session.permanent = True
+            session['is_employee'] = True
+            session['employee_id'] = str(uuid.uuid4())
+            # Record for audit (no single-session gate)
             try:
                 state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
                                                       active_employee_session_id='', employee_last_ping=datetime.min)
                 if not state.id:
                     db.session.add(state)
-                # Detect if an active employee session is being displaced
-                if state.active_employee_session_id and state.employee_last_ping:
-                    staleness = (datetime.utcnow() - state.employee_last_ping).total_seconds()
-                    if staleness < 180:
-                        takeover_occurred = True
-                        push_event('employee_session_takeover', {
-                            'old_session': state.active_employee_session_id[:8] + '...',
-                            'new_ip': client_ip,
-                            'time': get_ph_time().strftime('%I:%M:%S %p'),
-                            'msg': f'Session TAKEOVER: new login from {client_ip} replaced the active employee session!'
-                        })
-                        log_audit("Employee Session Takeover", f"New login from {client_ip} replaced active session")
-                state.active_employee_session_id = new_emp_id
+                state.active_employee_session_id = session['employee_id']
                 state.employee_last_ping = datetime.utcnow()
                 db.session.commit()
             except Exception:
                 try: db.session.rollback()
                 except Exception: pass
-            session.permanent = True
-            session['is_employee'] = True
-            session['employee_id'] = new_emp_id
-            push_event('employee_logged_in', {
-                'ip': client_ip,
-                'time': get_ph_time().strftime('%I:%M:%S %p'),
-                'takeover': takeover_occurred,
-                'msg': ('Employee station TAKEOVER login from ' if takeover_occurred else 'Employee station login from ') + client_ip
-            })
-            log_audit("Employee Login", f"Staff logged in from {client_ip}" + (" (TAKEOVER)" if takeover_occurred else ""))
+            log_audit("Employee Login", "Staff logged in to employee station")
             return redirect(url_for('employee_dashboard'))
-        record_failed_attempt(get_client_ip(), 'employee')
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
     return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
 
