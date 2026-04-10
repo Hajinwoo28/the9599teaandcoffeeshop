@@ -2803,6 +2803,216 @@ function openEmpOrdDetail(o){
   ov.classList.add('open');
 }
 function closeEmpOrdDetail(){const ov=document.getElementById('emp-ord-detail-overlay');if(ov)ov.classList.remove('open');}
+
+/* ══════════════════════════════════════════════════════════
+   EMPLOYEE ADVANCED FEATURES
+══════════════════════════════════════════════════════════ */
+
+/* ── ANNOUNCEMENTS PANEL (employee side) ── */
+let _annLoaded = false;
+async function empLoadAnnouncements() {
+  try {
+    const r = await fetch('/api/employee/announcements');
+    if (!r.ok) return;
+    const data = await r.json();
+    const badge = document.getElementById('emp-ann-badge');
+    if (badge) { badge.textContent = data.length; badge.style.display = data.length ? 'flex' : 'none'; }
+    const el = document.getElementById('emp-ann-list');
+    if (!el) return;
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:#557570;padding:20px;font-size:0.82rem;font-weight:600;">No announcements.</div>'; return; }
+    const pColors = {urgent:'#D32F2F',high:'#E65100',normal:'var(--teal-dark)',low:'#9E9E9E'};
+    el.innerHTML = data.map(a => `
+      <div style="border-left:3px solid ${pColors[a.priority]||'var(--teal)'};background:#f4faf9;border-radius:0 10px 10px 0;padding:11px 13px;margin-bottom:9px;">
+        <div style="font-size:0.85rem;font-weight:900;color:#0A2925;margin-bottom:4px;">${escapeHTML(a.title)}</div>
+        <div style="font-size:0.78rem;color:#557570;font-weight:600;line-height:1.5;">${escapeHTML(a.message)}</div>
+        <div style="font-size:0.66rem;color:#9ca3af;margin-top:5px;">${a.created_at}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function openEmpAnnPanel() {
+  let panel = document.getElementById('emp-ann-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'emp-ann-panel';
+    panel.style.cssText = 'position:fixed;top:62px;right:0;width:320px;max-width:100vw;background:#fff;box-shadow:-4px 0 30px rgba(0,0,0,0.15);z-index:9100;height:calc(100vh - 62px);display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);';
+    panel.innerHTML = `
+      <div style="background:linear-gradient(135deg,#052A24,var(--teal-dark));padding:16px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="color:#fff;font-weight:900;font-size:0.95rem;">📣 Staff Announcements</div>
+        <button onclick="closeEmpAnnPanel()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="emp-ann-list" style="flex:1;overflow-y:auto;padding:14px;"></div>`;
+    document.body.appendChild(panel);
+  }
+  setTimeout(() => panel.style.transform = 'translateX(0)', 10);
+  empLoadAnnouncements();
+}
+function closeEmpAnnPanel() {
+  const p = document.getElementById('emp-ann-panel');
+  if (p) p.style.transform = 'translateX(100%)';
+}
+
+/* ── WASTE LOG (employee side) ── */
+function openWasteModal() {
+  let modal = document.getElementById('emp-waste-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'emp-waste-modal';
+    modal.className = 'emp-modal-overlay';
+    modal.innerHTML = `<div class="emp-modal" style="max-width:380px;width:100%;">
+      <button class="emp-modal-close" onclick="document.getElementById('emp-waste-modal').classList.remove('open')"><i class="fas fa-times"></i></button>
+      <div class="emp-modal-icon" style="background:rgba(230,81,0,0.1);color:var(--orange);"><i class="fas fa-trash-alt"></i></div>
+      <h3>Log Waste</h3>
+      <p>Record an ingredient that was discarded or spoiled.</p>
+      <input id="waste-ing" class="inp" placeholder="Ingredient name" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:9px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;" list="waste-ing-list">
+      <datalist id="waste-ing-list"></datalist>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px;">
+        <input id="waste-qty" type="number" min="0.01" step="0.01" class="inp" placeholder="Qty" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;">
+        <input id="waste-unit" class="inp" placeholder="Unit (ml/g/pcs)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;">
+      </div>
+      <select id="waste-reason" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;margin-bottom:12px;background:#fff;outline:none;">
+        <option value="">Select reason...</option>
+        <option>Expired</option>
+        <option>Spilled / Dropped</option>
+        <option>Customer cancellation</option>
+        <option>Overcook / Burned</option>
+        <option>End-of-day disposal</option>
+        <option>Other</option>
+      </select>
+      <div class="emp-modal-btns">
+        <button class="emp-modal-btn cancel" onclick="document.getElementById('emp-waste-modal').classList.remove('open')">Cancel</button>
+        <button class="emp-modal-btn confirm" onclick="submitEmpWaste()" style="background:linear-gradient(135deg,#E65100,#BF360C);">Log Waste</button>
+      </div>
+    </div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
+    document.body.appendChild(modal);
+    // Populate ingredient suggestions
+    fetch('/api/inventory').then(r=>r.json()).then(data=>{
+      const dl = document.getElementById('waste-ing-list');
+      if(dl) dl.innerHTML = data.map(i=>`<option value="${escapeHTML(i.name)}">`).join('');
+    }).catch(()=>{});
+  }
+  modal.classList.add('open');
+}
+
+async function submitEmpWaste() {
+  const ing = (document.getElementById('waste-ing').value||'').trim();
+  const qty = parseFloat(document.getElementById('waste-qty').value||0);
+  const unit = (document.getElementById('waste-unit').value||'').trim();
+  const reason = document.getElementById('waste-reason').value;
+  if (!ing || !qty || qty <= 0) return (typeof showToast==='function' ? showToast('Fill in ingredient and quantity','error') : alert('Fill in ingredient and quantity'));
+  try {
+    const r = await fetch('/api/employee/waste', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ingredient:ing,quantity:qty,unit:unit||'units',reason})});
+    if (r.ok) {
+      if(typeof showToast==='function') showToast('Waste logged ✓','success');
+      document.getElementById('emp-waste-modal').classList.remove('open');
+      document.getElementById('waste-ing').value='';
+      document.getElementById('waste-qty').value='';
+      document.getElementById('waste-unit').value='';
+      document.getElementById('waste-reason').value='';
+    } else {
+      const d = await r.json().catch(()=>({}));
+      if(typeof showToast==='function') showToast(d.error||'Error','error');
+    }
+  } catch(e) { if(typeof showToast==='function') showToast('Network error','error'); }
+}
+
+/* ── DAILY CHECKLIST (employee side) ── */
+let _checklistState = {};
+
+async function openChecklist(type) {
+  let modal = document.getElementById('emp-checklist-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'emp-checklist-modal';
+    modal.className = 'emp-modal-overlay';
+    modal.innerHTML = `<div class="emp-modal" style="max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+      <button class="emp-modal-close" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')"><i class="fas fa-times"></i></button>
+      <div class="emp-modal-icon" id="cl-icon" style="background:rgba(13,122,106,0.1);color:var(--teal);"><i class="fas fa-clipboard-check"></i></div>
+      <h3 id="cl-title">Checklist</h3>
+      <p id="cl-sub">Complete all tasks before proceeding.</p>
+      <div id="cl-items" style="text-align:left;margin-bottom:16px;"></div>
+      <div id="cl-progress" style="background:var(--border);height:8px;border-radius:4px;margin-bottom:14px;overflow:hidden;"><div id="cl-prog-bar" style="background:var(--teal);height:100%;border-radius:4px;transition:width 0.4s;width:0%;"></div></div>
+      <button class="emp-modal-btn confirm" style="width:100%;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')">Done</button>
+    </div>`;
+    modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
+    document.body.appendChild(modal);
+  }
+  const titles = {opening:'Opening Checklist 🌅',closing:'Closing Checklist 🌙',cleaning:'Cleaning Checklist 🧹'};
+  const subs = {opening:'Complete before opening the store.',closing:'Complete before ending your shift.',cleaning:'Complete all cleaning tasks.'};
+  document.getElementById('cl-title').textContent = titles[type] || 'Checklist';
+  document.getElementById('cl-sub').textContent = subs[type] || '';
+  modal.classList.add('open');
+  const itemsEl = document.getElementById('cl-items');
+  itemsEl.innerHTML = '<div style="text-align:center;color:#557570;font-size:0.82rem;padding:12px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  try {
+    const r = await fetch('/api/checklist?type=' + type);
+    const data = await r.json();
+    if (!_checklistState[type]) _checklistState[type] = {};
+    itemsEl.innerHTML = data.map(item => `
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #e5f0ee;cursor:pointer;">
+        <input type="checkbox" id="cl-item-${item.id}" onchange="updateClProgress('${type}')" ${_checklistState[type][item.id]?'checked':''} style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;">
+        <span style="font-size:0.84rem;font-weight:700;color:#0A2925;line-height:1.4;">${escapeHTML(item.task)}</span>
+      </label>`).join('');
+    updateClProgress(type);
+  } catch(e) { itemsEl.innerHTML = '<div style="color:red;padding:10px;font-size:0.82rem;">Failed to load checklist</div>'; }
+}
+
+function updateClProgress(type) {
+  const checkboxes = document.querySelectorAll('[id^="cl-item-"]');
+  let done = 0;
+  checkboxes.forEach(cb => { if (cb.checked) done++; if (!_checklistState[type]) _checklistState[type]={}; _checklistState[type][cb.id.replace('cl-item-','')] = cb.checked; });
+  const total = checkboxes.length;
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  const bar = document.getElementById('cl-prog-bar');
+  if (bar) bar.style.width = pct + '%';
+}
+
+/* ── Add employee buttons to drawer (if drawer exists) ── */
+(function injectEmpDrawerBtns(){
+  const nav = document.querySelector('.emp-nav-drawer .drawer-nav');
+  if (!nav) return;
+  const annBtn = document.createElement('button');
+  annBtn.className = 'drawer-nav-item';
+  annBtn.id = 'enav-announcements';
+  annBtn.onclick = () => { openEmpAnnPanel(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
+  annBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-bullhorn"></i></div><div class="nav-label-wrap"><span class="nav-label">Announcements</span><span class="nav-sub">Staff bulletins</span></div><span id="emp-ann-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.6rem;font-weight:900;align-items:center;justify-content:center;border:2px solid #082E28;margin-left:auto;flex-shrink:0;"></span>`;
+  nav.appendChild(annBtn);
+
+  const wasteBtn = document.createElement('button');
+  wasteBtn.className = 'drawer-nav-item';
+  wasteBtn.onclick = () => { openWasteModal(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
+  wasteBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-trash-alt"></i></div><div class="nav-label-wrap"><span class="nav-label">Log Waste</span><span class="nav-sub">Track ingredient waste</span></div>`;
+  nav.appendChild(wasteBtn);
+
+  const checkBtn = document.createElement('button');
+  checkBtn.className = 'drawer-nav-item';
+  checkBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-clipboard-check"></i></div><div class="nav-label-wrap"><span class="nav-label">Daily Checklist</span><span class="nav-sub">Opening / Closing</span></div>`;
+  checkBtn.onclick = () => {
+    document.querySelector('.emp-nav-drawer').classList.remove('open');
+    document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open');
+    const picker = document.createElement('div');
+    picker.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px;';
+    picker.innerHTML=`<div style="background:#fff;border-radius:22px;padding:28px 24px;max-width:320px;width:100%;text-align:center;">
+      <div style="font-size:1.1rem;font-weight:900;color:#0A2925;margin-bottom:16px;font-family:'Playfair Display',serif;">Choose Checklist Type</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <button onclick="openChecklist('opening');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(13,122,106,0.08);color:var(--teal-dark);border:1.5px solid rgba(13,122,106,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🌅 Opening Checklist</button>
+        <button onclick="openChecklist('closing');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(230,81,0,0.08);color:#E65100;border:1.5px solid rgba(230,81,0,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🌙 Closing Checklist</button>
+        <button onclick="openChecklist('cleaning');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(21,101,192,0.08);color:#1565C0;border:1.5px solid rgba(21,101,192,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🧹 Cleaning Checklist</button>
+        <button onclick="this.closest('[style*=fixed]').remove();" style="padding:10px;border-radius:11px;background:#f3f4f6;color:#6b7280;border:none;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;">Cancel</button>
+      </div>
+    </div>`;
+    document.body.appendChild(picker);
+    picker.addEventListener('click', e => { if(e.target===picker) picker.remove(); });
+  };
+  nav.appendChild(checkBtn);
+})();
+
+// Load announcements on page load
+empLoadAnnouncements();
+// Refresh every 2 minutes
+setInterval(empLoadAnnouncements, 120000);
+
 </script>
 
 <!-- GRANT REPLY MODAL -->
@@ -5935,214 +6145,6 @@ function updateShiftStats(){
 }
 setInterval(updateShiftStats,8000);
 
-/* ══════════════════════════════════════════════════════════
-   EMPLOYEE ADVANCED FEATURES
-══════════════════════════════════════════════════════════ */
-
-/* ── ANNOUNCEMENTS PANEL (employee side) ── */
-let _annLoaded = false;
-async function empLoadAnnouncements() {
-  try {
-    const r = await fetch('/api/employee/announcements');
-    if (!r.ok) return;
-    const data = await r.json();
-    const badge = document.getElementById('emp-ann-badge');
-    if (badge) { badge.textContent = data.length; badge.style.display = data.length ? 'flex' : 'none'; }
-    const el = document.getElementById('emp-ann-list');
-    if (!el) return;
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:#557570;padding:20px;font-size:0.82rem;font-weight:600;">No announcements.</div>'; return; }
-    const pColors = {urgent:'#D32F2F',high:'#E65100',normal:'var(--teal-dark)',low:'#9E9E9E'};
-    el.innerHTML = data.map(a => `
-      <div style="border-left:3px solid ${pColors[a.priority]||'var(--teal)'};background:#f4faf9;border-radius:0 10px 10px 0;padding:11px 13px;margin-bottom:9px;">
-        <div style="font-size:0.85rem;font-weight:900;color:#0A2925;margin-bottom:4px;">${escapeHTML(a.title)}</div>
-        <div style="font-size:0.78rem;color:#557570;font-weight:600;line-height:1.5;">${escapeHTML(a.message)}</div>
-        <div style="font-size:0.66rem;color:#9ca3af;margin-top:5px;">${a.created_at}</div>
-      </div>`).join('');
-  } catch(e) {}
-}
-
-function openEmpAnnPanel() {
-  let panel = document.getElementById('emp-ann-panel');
-  if (!panel) {
-    panel = document.createElement('div');
-    panel.id = 'emp-ann-panel';
-    panel.style.cssText = 'position:fixed;top:62px;right:0;width:320px;max-width:100vw;background:#fff;box-shadow:-4px 0 30px rgba(0,0,0,0.15);z-index:9100;height:calc(100vh - 62px);display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);';
-    panel.innerHTML = `
-      <div style="background:linear-gradient(135deg,#052A24,var(--teal-dark));padding:16px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="color:#fff;font-weight:900;font-size:0.95rem;">📣 Staff Announcements</div>
-        <button onclick="closeEmpAnnPanel()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class="fas fa-times"></i></button>
-      </div>
-      <div id="emp-ann-list" style="flex:1;overflow-y:auto;padding:14px;"></div>`;
-    document.body.appendChild(panel);
-  }
-  setTimeout(() => panel.style.transform = 'translateX(0)', 10);
-  empLoadAnnouncements();
-}
-function closeEmpAnnPanel() {
-  const p = document.getElementById('emp-ann-panel');
-  if (p) p.style.transform = 'translateX(100%)';
-}
-
-/* ── WASTE LOG (employee side) ── */
-function openWasteModal() {
-  let modal = document.getElementById('emp-waste-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'emp-waste-modal';
-    modal.className = 'emp-modal-overlay';
-    modal.innerHTML = `<div class="emp-modal" style="max-width:380px;width:100%;">
-      <button class="emp-modal-close" onclick="document.getElementById('emp-waste-modal').classList.remove('open')"><i class="fas fa-times"></i></button>
-      <div class="emp-modal-icon" style="background:rgba(230,81,0,0.1);color:var(--orange);"><i class="fas fa-trash-alt"></i></div>
-      <h3>Log Waste</h3>
-      <p>Record an ingredient that was discarded or spoiled.</p>
-      <input id="waste-ing" class="inp" placeholder="Ingredient name" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:9px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;" list="waste-ing-list">
-      <datalist id="waste-ing-list"></datalist>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px;">
-        <input id="waste-qty" type="number" min="0.01" step="0.01" class="inp" placeholder="Qty" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;">
-        <input id="waste-unit" class="inp" placeholder="Unit (ml/g/pcs)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;outline:none;">
-      </div>
-      <select id="waste-reason" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;margin-bottom:12px;background:#fff;outline:none;">
-        <option value="">Select reason...</option>
-        <option>Expired</option>
-        <option>Spilled / Dropped</option>
-        <option>Customer cancellation</option>
-        <option>Overcook / Burned</option>
-        <option>End-of-day disposal</option>
-        <option>Other</option>
-      </select>
-      <div class="emp-modal-btns">
-        <button class="emp-modal-btn cancel" onclick="document.getElementById('emp-waste-modal').classList.remove('open')">Cancel</button>
-        <button class="emp-modal-btn confirm" onclick="submitEmpWaste()" style="background:linear-gradient(135deg,#E65100,#BF360C);">Log Waste</button>
-      </div>
-    </div>`;
-    modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
-    document.body.appendChild(modal);
-    // Populate ingredient suggestions
-    fetch('/api/inventory').then(r=>r.json()).then(data=>{
-      const dl = document.getElementById('waste-ing-list');
-      if(dl) dl.innerHTML = data.map(i=>`<option value="${escapeHTML(i.name)}">`).join('');
-    }).catch(()=>{});
-  }
-  modal.classList.add('open');
-}
-
-async function submitEmpWaste() {
-  const ing = (document.getElementById('waste-ing').value||'').trim();
-  const qty = parseFloat(document.getElementById('waste-qty').value||0);
-  const unit = (document.getElementById('waste-unit').value||'').trim();
-  const reason = document.getElementById('waste-reason').value;
-  if (!ing || !qty || qty <= 0) return (typeof showToast==='function' ? showToast('Fill in ingredient and quantity','error') : alert('Fill in ingredient and quantity'));
-  try {
-    const r = await fetch('/api/employee/waste', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ingredient:ing,quantity:qty,unit:unit||'units',reason})});
-    if (r.ok) {
-      if(typeof showToast==='function') showToast('Waste logged ✓','success');
-      document.getElementById('emp-waste-modal').classList.remove('open');
-      document.getElementById('waste-ing').value='';
-      document.getElementById('waste-qty').value='';
-      document.getElementById('waste-unit').value='';
-      document.getElementById('waste-reason').value='';
-    } else {
-      const d = await r.json().catch(()=>({}));
-      if(typeof showToast==='function') showToast(d.error||'Error','error');
-    }
-  } catch(e) { if(typeof showToast==='function') showToast('Network error','error'); }
-}
-
-/* ── DAILY CHECKLIST (employee side) ── */
-let _checklistState = {};
-
-async function openChecklist(type) {
-  let modal = document.getElementById('emp-checklist-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'emp-checklist-modal';
-    modal.className = 'emp-modal-overlay';
-    modal.innerHTML = `<div class="emp-modal" style="max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
-      <button class="emp-modal-close" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')"><i class="fas fa-times"></i></button>
-      <div class="emp-modal-icon" id="cl-icon" style="background:rgba(13,122,106,0.1);color:var(--teal);"><i class="fas fa-clipboard-check"></i></div>
-      <h3 id="cl-title">Checklist</h3>
-      <p id="cl-sub">Complete all tasks before proceeding.</p>
-      <div id="cl-items" style="text-align:left;margin-bottom:16px;"></div>
-      <div id="cl-progress" style="background:var(--border);height:8px;border-radius:4px;margin-bottom:14px;overflow:hidden;"><div id="cl-prog-bar" style="background:var(--teal);height:100%;border-radius:4px;transition:width 0.4s;width:0%;"></div></div>
-      <button class="emp-modal-btn confirm" style="width:100%;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')">Done</button>
-    </div>`;
-    modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
-    document.body.appendChild(modal);
-  }
-  const titles = {opening:'Opening Checklist 🌅',closing:'Closing Checklist 🌙',cleaning:'Cleaning Checklist 🧹'};
-  const subs = {opening:'Complete before opening the store.',closing:'Complete before ending your shift.',cleaning:'Complete all cleaning tasks.'};
-  document.getElementById('cl-title').textContent = titles[type] || 'Checklist';
-  document.getElementById('cl-sub').textContent = subs[type] || '';
-  modal.classList.add('open');
-  const itemsEl = document.getElementById('cl-items');
-  itemsEl.innerHTML = '<div style="text-align:center;color:#557570;font-size:0.82rem;padding:12px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-  try {
-    const r = await fetch('/api/checklist?type=' + type);
-    const data = await r.json();
-    if (!_checklistState[type]) _checklistState[type] = {};
-    itemsEl.innerHTML = data.map(item => `
-      <label style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #e5f0ee;cursor:pointer;">
-        <input type="checkbox" id="cl-item-${item.id}" onchange="updateClProgress('${type}')" ${_checklistState[type][item.id]?'checked':''} style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;">
-        <span style="font-size:0.84rem;font-weight:700;color:#0A2925;line-height:1.4;">${escapeHTML(item.task)}</span>
-      </label>`).join('');
-    updateClProgress(type);
-  } catch(e) { itemsEl.innerHTML = '<div style="color:red;padding:10px;font-size:0.82rem;">Failed to load checklist</div>'; }
-}
-
-function updateClProgress(type) {
-  const checkboxes = document.querySelectorAll('[id^="cl-item-"]');
-  let done = 0;
-  checkboxes.forEach(cb => { if (cb.checked) done++; if (!_checklistState[type]) _checklistState[type]={}; _checklistState[type][cb.id.replace('cl-item-','')] = cb.checked; });
-  const total = checkboxes.length;
-  const pct = total > 0 ? Math.round((done/total)*100) : 0;
-  const bar = document.getElementById('cl-prog-bar');
-  if (bar) bar.style.width = pct + '%';
-}
-
-/* ── Add employee buttons to drawer (if drawer exists) ── */
-(function injectEmpDrawerBtns(){
-  const nav = document.querySelector('.emp-nav-drawer .drawer-nav');
-  if (!nav) return;
-  const annBtn = document.createElement('button');
-  annBtn.className = 'drawer-nav-item';
-  annBtn.id = 'enav-announcements';
-  annBtn.onclick = () => { openEmpAnnPanel(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
-  annBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-bullhorn"></i></div><div class="nav-label-wrap"><span class="nav-label">Announcements</span><span class="nav-sub">Staff bulletins</span></div><span id="emp-ann-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.6rem;font-weight:900;align-items:center;justify-content:center;border:2px solid #082E28;margin-left:auto;flex-shrink:0;"></span>`;
-  nav.appendChild(annBtn);
-
-  const wasteBtn = document.createElement('button');
-  wasteBtn.className = 'drawer-nav-item';
-  wasteBtn.onclick = () => { openWasteModal(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
-  wasteBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-trash-alt"></i></div><div class="nav-label-wrap"><span class="nav-label">Log Waste</span><span class="nav-sub">Track ingredient waste</span></div>`;
-  nav.appendChild(wasteBtn);
-
-  const checkBtn = document.createElement('button');
-  checkBtn.className = 'drawer-nav-item';
-  checkBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-clipboard-check"></i></div><div class="nav-label-wrap"><span class="nav-label">Daily Checklist</span><span class="nav-sub">Opening / Closing</span></div>`;
-  checkBtn.onclick = () => {
-    document.querySelector('.emp-nav-drawer').classList.remove('open');
-    document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open');
-    const picker = document.createElement('div');
-    picker.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px;';
-    picker.innerHTML=`<div style="background:#fff;border-radius:22px;padding:28px 24px;max-width:320px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:900;color:#0A2925;margin-bottom:16px;font-family:'Playfair Display',serif;">Choose Checklist Type</div>
-      <div style="display:flex;flex-direction:column;gap:9px;">
-        <button onclick="openChecklist('opening');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(13,122,106,0.08);color:var(--teal-dark);border:1.5px solid rgba(13,122,106,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🌅 Opening Checklist</button>
-        <button onclick="openChecklist('closing');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(230,81,0,0.08);color:#E65100;border:1.5px solid rgba(230,81,0,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🌙 Closing Checklist</button>
-        <button onclick="openChecklist('cleaning');this.closest('[style*=fixed]').remove();" style="padding:12px;border-radius:11px;background:rgba(21,101,192,0.08);color:#1565C0;border:1.5px solid rgba(21,101,192,0.2);font-family:'Nunito',sans-serif;font-weight:800;cursor:pointer;">🧹 Cleaning Checklist</button>
-        <button onclick="this.closest('[style*=fixed]').remove();" style="padding:10px;border-radius:11px;background:#f3f4f6;color:#6b7280;border:none;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;">Cancel</button>
-      </div>
-    </div>`;
-    document.body.appendChild(picker);
-    picker.addEventListener('click', e => { if(e.target===picker) picker.remove(); });
-  };
-  nav.appendChild(checkBtn);
-})();
-
-// Load announcements on page load
-empLoadAnnouncements();
-// Refresh every 2 minutes
-setInterval(empLoadAnnouncements, 120000);
 </script>
 </body>
 </html>
