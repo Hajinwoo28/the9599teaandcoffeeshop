@@ -1882,22 +1882,7 @@ function playEmpBeep(){
   }catch(e){}
   return Promise.resolve();
 }
-// Distinct sound for incoming permission requests (ding-dong double-bell pattern)
-function playEmpPermBeep(){
-  var ctx=_getEmpAudioCtx();if(!ctx)return;
-  try{
-    [[0,330,0.18,'sine',0.35],[0.22,440,0.28,'sine',0.3],[0.6,330,0.18,'sine',0.35],[0.82,440,0.28,'sine',0.3]].forEach(function(t){
-      var osc=ctx.createOscillator(),gain=ctx.createGain();
-      osc.connect(gain);gain.connect(ctx.destination);
-      osc.type=t[3];osc.frequency.value=t[1];
-      var s=ctx.currentTime+t[0];
-      gain.gain.setValueAtTime(0,s);
-      gain.gain.linearRampToValueAtTime(t[4],s+0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);
-      osc.start(s);osc.stop(s+t[2]);
-    });
-  }catch(e){}
-}
+
 </script>
 
 <header class="topbar">
@@ -2049,38 +2034,6 @@ function playEmpPermBeep(){
       </div>
     </div>
 
-    <!-- Permission Requests -->
-    <div class="live-section">
-      <div class="live-card">
-        <div class="live-card-header">
-          <span class="live-card-title perm-title"><i class="fas fa-hand-paper"></i> Permission Requests</span>
-          <button class="btn-refresh" onclick="fetchPermReqs()"><i class="fas fa-sync-alt"></i> Refresh</button>
-        </div>
-        <div class="live-table-wrap">
-          <table class="live-table">
-            <colgroup>
-              <col style="width:10%">
-              <col style="width:10%">
-              <col style="width:20%">
-              <col style="width:40%">
-              <col style="width:20%">
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Code</th>
-                <th>Customer</th>
-                <th>Message</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="perm-tbody">
-              <tr class="empty-row"><td colspan="5">No pending requests</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
     <!-- Live Orders Table -->
     <div class="live-section">
@@ -2395,7 +2348,6 @@ function updateBell(){
   // Group by type
   const sections=[
     {key:'order',label:'📦 Orders',cls:'order-lbl'},
-    {key:'perm', label:'🔑 Permission Requests',cls:'perm-lbl'},
     {key:'stock',label:'⚠️ Stock Alerts',cls:'stock-lbl'},
   ];
   let html='';
@@ -2524,7 +2476,7 @@ async function fetchStockAlerts(){
 }
 
 /* ── ONLINE POS ── */
-let allOrders=[], activeFilter='All', knownPermCodes=new Set(), knownOrderIds=new Set();
+let allOrders=[], activeFilter='All', knownOrderIds=new Set();
 
 function setFilter(f,btn){
   activeFilter=f;
@@ -2802,68 +2754,7 @@ function closeCancelReasonModal(){
   fetchOrders();
 }
 
-/* ── PERMISSION REQUESTS (employee view) ── */
-async function fetchPermReqs(){
-  const tbody=document.getElementById('perm-tbody');
-  try{
-    const r=await empFetch('/api/permission_requests');
-    if(!r){return;}
-    if(r.status===403){location.href='/employee';return;}
-    if(!r.ok){if(tbody)tbody.innerHTML=`<tr class="empty-row"><td colspan="5">Could not load requests (${r.status})</td></tr>`;return;}
-    let data;
-    try{data=await r.json();}
-    catch(jsonErr){console.error('Permission API non-JSON:',jsonErr);if(tbody)tbody.innerHTML='<tr class="empty-row"><td colspan="5">Server error — try refreshing</td></tr>';return;}
-    if(!data.length){if(tbody)tbody.innerHTML='<tr class="empty-row"><td colspan="5">No pending requests</td></tr>';_bellPermItems=[];updateBell();return;}
-    data.forEach(p=>{if(!knownPermCodes.has(p.code)){playEmpPermBeep();knownPermCodes.add(p.code);}});
-    _bellPermItems=data;
-    // Update nav badges safely — elements may not exist on every screen
-    const permCount=data.length;
-    const orderPending=allOrders.filter(o=>o.status==='Waiting Confirmation').length;
-    const total=permCount+orderPending;
-    const badge=document.getElementById('nav-badge');
-    if(badge){if(total>0){badge.textContent=total;badge.style.display='flex';}else{badge.style.display='none';}}
-    const hamBadge=document.getElementById('hamburger-badge');
-    if(hamBadge){if(total>0){hamBadge.textContent=total;hamBadge.classList.add('show');}else{hamBadge.classList.remove('show');}}
-    const navItemBadge=document.getElementById('nav-item-badge');
-    if(navItemBadge){if(permCount>0){navItemBadge.textContent=permCount;navItemBadge.classList.add('show');}else{navItemBadge.classList.remove('show');}}
-    if(tbody)tbody.innerHTML=data.map(p=>`<tr class="perm-row-card">
-      <td style="white-space:nowrap;font-size:0.74rem;color:var(--muted);">${escapeHTML(p.time)}</td>
-      <td><span style="font-family:'Playfair Display',serif;font-weight:900;color:var(--teal-dark);font-size:0.82rem;">${escapeHTML(p.code)}</span></td>
-      <td style="font-weight:700;">${escapeHTML(p.name)}</td>
-      <td style="font-size:0.74rem;color:var(--muted);max-width:160px;">${escapeHTML(p.message||'—')}</td>
-      <td><button class="tbl-btn grant" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')"><i class="fas fa-check-circle"></i> Grant</button></td>
-    </tr>`).join('');
-    updateBell();
-  }catch(e){console.error('fetchPermReqs error:',e);if(tbody)tbody.innerHTML='<tr class="empty-row"><td colspan="5">Connection failed — check your network</td></tr>';}
-}
 
-async function grantPerm(id,name,code){
-  // Open a reply modal so the employee can send a message to the customer
-  window._grantPendingId=id;
-  window._grantPendingName=name;
-  window._grantPendingCode=code;
-  document.getElementById('grant-customer-name').innerText=name;
-  document.getElementById('grant-reply-text').value='';
-  document.getElementById('grant-reply-overlay').classList.add('show');
-}
-
-async function submitGrantWithReply(){
-  const id=window._grantPendingId,name=window._grantPendingName,code=window._grantPendingCode;
-  const reply=document.getElementById('grant-reply-text').value.trim();
-  try{
-    const r=await empFetch(`/api/permission_requests/${id}/grant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reply_message:reply})});
-    if(r.ok){
-      showToast(`✅ Granted for ${name}`,'success');
-      knownPermCodes.delete(code);
-      closeGrantModal();
-      fetchPermReqs();
-    } else showToast('Grant failed','error');
-  }catch(e){showToast('Network error','error');}
-}
-
-function closeGrantModal(){
-  document.getElementById('grant-reply-overlay').classList.remove('show');
-}
 
 function printOrderReceipt(orderId){
   const o=allOrders.find(x=>x.id===orderId);
@@ -3202,11 +3093,10 @@ function openReceiptWindow(r){
   if(w){w.document.write(html);w.document.close();}
 }
 
-setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();fetchPermReqs();}},5000);
+setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();}},5000);
 setInterval(()=>empFetch('/api/employee/ping'),60000);
 setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
 fetchOrders();
-fetchPermReqs();
 fetchStockAlerts(); // pre-load badge count on startup
 
 /* ── Employee Order Detail Modal ── */
@@ -3485,21 +3375,6 @@ setInterval(empLoadAnnouncements, 120000);
 </script>
 
 <!-- GRANT REPLY MODAL -->
-<div class="grant-reply-overlay" id="grant-reply-overlay">
-  <div class="grant-reply-sheet">
-    <div style="width:40px;height:4px;background:var(--border);border-radius:3px;margin:0 auto 16px;"></div>
-    <div class="grant-reply-title"><i class="fas fa-comment-dots" style="color:var(--teal);"></i> Message to Customer</div>
-    <div class="grant-reply-sub">
-      You're about to grant permission to <b id="grant-customer-name"></b>.<br>
-      Optionally, send them a message before they place their order.
-    </div>
-    <textarea class="grant-reply-textarea" id="grant-reply-text" placeholder="e.g. Hi! Please make sure your pickup time is accurate. Thank you! 🧋"></textarea>
-    <div class="grant-reply-actions">
-      <button class="btn-grant-skip" onclick="closeGrantModal()">Cancel</button>
-      <button class="btn-grant-send" onclick="submitGrantWithReply()"><i class="fas fa-check-circle"></i> Grant &amp; Send</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
@@ -8534,7 +8409,6 @@ function getStatusClass(s){return({'Waiting Confirmation':'status-waiting','Prep
 let adminNotifs=[],lastOrderIds=new Set(),firstLoad=true;
 function playBeep(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[0,880,0.3],[0.35,660,0.25],[0.65,780,0.35]].forEach(function(t){var osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';osc.frequency.value=t[1];var s=ctx.currentTime+t[0];gain.gain.setValueAtTime(0,s);gain.gain.linearRampToValueAtTime(0.4,s+0.02);gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);osc.start(s);osc.stop(s+t[2]);});}catch(e){}}
 // Distinct ding-dong double-bell for incoming permission requests
-function playPermBeep(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[0,330,0.18,'sine',0.35],[0.22,440,0.28,'sine',0.3],[0.6,330,0.18,'sine',0.35],[0.82,440,0.28,'sine',0.3]].forEach(function(t){var osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type=t[3];osc.frequency.value=t[1];var s=ctx.currentTime+t[0];gain.gain.setValueAtTime(0,s);gain.gain.linearRampToValueAtTime(t[4],s+0.02);gain.gain.exponentialRampToValueAtTime(0.001,s+t[2]);osc.start(s);osc.stop(s+t[2]);});}catch(e){}}
 function toggleNotif(){const p=document.getElementById('notif-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
 function clearNotifs(){adminNotifs=[];renderNotifUI();document.getElementById('notif-panel').style.display='none';}
 function addNotif(code,name,total){adminNotifs.unshift({code,name,total,time:new Date().toLocaleTimeString()});if(adminNotifs.length>20)adminNotifs.pop();renderNotifUI();playBeep();showToast(`New order from ${name} (${code})!`,'success');}
@@ -8576,20 +8450,7 @@ async function fetchOrders(){
 async function updateStatus(id,status){await apiFetch(`/api/orders/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});showToast('Status updated','success');fetchOrders();}
 function toggleItems(lid,tid){const l=document.getElementById(lid),b=document.getElementById(tid),h=l.style.display==='none';l.style.display=h?'block':'none';b.querySelector('i').className=h?'fas fa-chevron-up':'fas fa-chevron-down';}
 
-/* ══ PERMISSION REQUESTS ══ */
-let knownPermCodes=new Set(),firstPermLoad=true;
-async function fetchPermReqs(){
-  const tbody=document.getElementById('perm-tbody');
-  try{
-    const res=await apiFetch('/api/permission_requests');if(!res||!res.ok)return;
-    const data=await res.json();
-    if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--muted);font-size:0.81rem;">No pending requests</td></tr>';}
-    else{tbody.innerHTML=data.map(p=>`<tr><td style="font-size:0.75rem;">${escapeHTML(p.time)}</td><td><b style="color:var(--brown-dark);">${escapeHTML(p.code)}</b></td><td><b>${escapeHTML(p.name)}</b><br><span style="font-size:0.7rem;color:var(--muted);">${escapeHTML(p.address||'')}</span></td><td style="font-size:0.8rem;">${escapeHTML(p.message||'')}</td><td><button class="btn-primary" style="padding:5px 11px;margin-bottom:0;width:auto;" onclick="grantPerm(${p.id},'${escapeHTML(p.name)}','${escapeHTML(p.code)}')">✅ Grant</button></td></tr>`).join('');}
-    if(!firstPermLoad){data.forEach(p=>{if(!knownPermCodes.has(p.code)){playPermBeep();showToast(`🔔 Permission request from ${p.name}`,'error');}});}
-    data.forEach(p=>knownPermCodes.add(p.code));firstPermLoad=false;
-  }catch(e){}
-}
-async function grantPerm(id,name,code){const r=await apiFetch(`/api/permission_requests/${id}/grant`,{method:'POST'});if(r&&r.ok){showToast(`✅ Granted for ${name}`,'success');knownPermCodes.delete(code);fetchPermReqs();}}
+
 
 /* ══ POS ══ */
 let qoMenu=[],qoCart=[],qoPending=null;
@@ -9250,14 +9111,6 @@ function connectSSE() {
     fetchOrders();
   });
 
-  _sseSource.addEventListener('perm_new', (e) => {
-    try {
-      const d = JSON.parse(e.data);
-      playPermBeep();
-      showToast(`🔔 Permission request from ${d.name}`, 'error');
-    } catch(_) {}
-    fetchPermReqs();
-  });
 
   _sseSource.onerror = () => {
     try { _sseSource.close(); } catch(e){}
@@ -9271,11 +9124,9 @@ connectSSE();
 
 // Safety-net fallback: re-fetch every 30 s in case SSE misses anything
 setInterval(fetchOrders, 30000);
-setInterval(fetchPermReqs, 30000);
 setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById('s-audit').classList.contains('active'))fetchAuditLogs();},30000);
 
 // Initial data load on page open
-fetchPermReqs();
 fetchInventory();
 
 /* ══ RIPPLE EFFECT ══ */
@@ -10792,6 +10643,38 @@ def reserve_blend():
         return jsonify({"status": "blocked", "message": err_msg}), 429
     # ─────────────────────────────────────────────────────────────────────
 
+    # ── Duplicate order check ─────────────────────────────────────────────
+    norm_email = (email or '').lower().strip()
+    dup_window = get_ph_time() - timedelta(hours=2)
+    # Block if same email placed any order in the last 2 hours
+    if norm_email:
+        recent_by_email = Reservation.query.filter(
+            Reservation.patron_email == norm_email,
+            Reservation.created_at >= dup_window,
+            Reservation.order_source == 'Online'
+        ).first()
+        if recent_by_email:
+            return jsonify({
+                "status": "blocked",
+                "message": "This email was already used to place a recent order. Please wait before ordering again."
+            }), 429
+    # Block if identical item names are submitted again within 2 hours (any email)
+    incoming_items = data.get('items', [])
+    incoming_names = sorted([str(i.get('foundation','')).strip().lower() for i in incoming_items])
+    if incoming_names:
+        recent_orders = Reservation.query.filter(
+            Reservation.created_at >= dup_window,
+            Reservation.order_source == 'Online'
+        ).all()
+        for ro in recent_orders:
+            ro_names = sorted([inf.foundation.strip().lower() for inf in ro.infusions])
+            if ro_names == incoming_names:
+                return jsonify({
+                    "status": "blocked",
+                    "message": "This exact order was already placed recently. Please try a different combination."
+                }), 429
+    # ─────────────────────────────────────────────────────────────────────
+
     try:
         initial_status = "Waiting Confirmation"
         # Large orders need staff confirmation before they can be Prepared
@@ -10874,7 +10757,6 @@ def permission_request():
             pr = PermissionRequest(request_code=code, customer_name=name, address=address, message=message, granted=False)
             db.session.add(pr)
             db.session.commit()
-            push_event('perm_new', {'code': code, 'name': name})
         return jsonify({"status": "ok"})
     except Exception as e:
         db.session.rollback()
