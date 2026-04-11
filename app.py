@@ -454,10 +454,70 @@ class QuickChecklist(db.Model):
     display_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
+# ── ORDER BEHAVIORAL LIMIT MODELS ──────────────────────────────────────────
+
+class CustomerBlocklist(db.Model):
+    """Block specific phone number, email, or name from placing online orders."""
+    __tablename__ = 'customer_blocklist'
+    id = db.Column(db.Integer, primary_key=True)
+    block_type = db.Column(db.String(20), nullable=False)   # email | phone | name
+    value = db.Column(db.String(200), nullable=False)
+    reason = db.Column(db.String(300), nullable=True, default='')
+    added_by = db.Column(db.String(50), nullable=True, default='Admin')
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class CustomerReputation(db.Model):
+    """Tracks order history, no-show rate, watchlist, and prepayment requirement per customer."""
+    __tablename__ = 'customer_reputations'
+    id = db.Column(db.Integer, primary_key=True)
+    identifier = db.Column(db.String(200), nullable=False, unique=True)   # email (lowercase)
+    display_name = db.Column(db.String(120), nullable=True, default='')
+    total_orders = db.Column(db.Integer, default=0)
+    noshow_count = db.Column(db.Integer, default=0)       # unclaimed / cancelled after Ready
+    completed_count = db.Column(db.Integer, default=0)
+    is_watchlist = db.Column(db.Boolean, default=False)
+    requires_prepayment = db.Column(db.Boolean, default=False)
+    is_blocked = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.String(500), nullable=True, default='')
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class OrderMeta(db.Model):
+    """Extended metadata for behavioural controls on each order."""
+    __tablename__ = 'order_meta'
+    id = db.Column(db.Integer, primary_key=True)
+    reservation_id = db.Column(db.Integer, db.ForeignKey('reservations.id'), nullable=False, unique=True)
+    is_flagged = db.Column(db.Boolean, default=False)
+    flag_reason = db.Column(db.String(300), nullable=True, default='')
+    requires_staff_confirmation = db.Column(db.Boolean, default=False)  # large order ≥ threshold
+    staff_confirmed = db.Column(db.Boolean, default=False)
+    prepayment_required = db.Column(db.Boolean, default=False)
+    prepayment_amount = db.Column(db.Float, default=0.0)
+    prepayment_collected = db.Column(db.Boolean, default=False)
+    has_pickup_photo = db.Column(db.Boolean, default=False)
+    prev_status = db.Column(db.String(50), nullable=True, default='')   # tracks last status for no-show detection
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+class OrderPickupPhoto(db.Model):
+    """Base64 photo proof of pickup, snapped by staff when handing over the order."""
+    __tablename__ = 'order_pickup_photos'
+    id = db.Column(db.Integer, primary_key=True)
+    reservation_id = db.Column(db.Integer, db.ForeignKey('reservations.id'), nullable=False)
+    photo_data = db.Column(db.Text, nullable=False)   # base64-encoded image
+    taken_by = db.Column(db.String(50), nullable=True, default='Staff')
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
 # ── Security helpers ────────────────────────────────────────────────────────
 
 MAX_FAILED_ATTEMPTS = 5   # auto-ban after this many failures within 30 minutes
 FAILED_WINDOW_MIN   = 30  # rolling window in minutes
+
+# ── Order Behavioral Limit Configuration ────────────────────────────────────
+ORDER_COOLDOWN_MINUTES   = 30   # minimum gap between orders from the same email
+DAILY_ORDER_CAP          = 5    # max orders per day per email
+SUSPICIOUS_NAME_COUNT    = 5    # same name in 1 hour triggers a manual-review flag
+LARGE_ORDER_THRESHOLD    = 500.0  # ₱ — orders at/above this require staff confirmation
+LARGE_ORDER_PREPAY_PCT   = 0.20   # 20 % holding fee for large orders (refunded on pickup)
+NOSHOW_BLOCK_THRESHOLD   = 2    # after this many no-shows → require prepayment
 
 def get_client_ip():
     """Extract real client IP, respecting X-Forwarded-For from trusted proxies."""
@@ -509,8 +569,131 @@ def record_failed_attempt(ip: str, attempt_type: str = 'admin'):
         except Exception:
             pass
 
-# ==========================================
-# 4. FRONTEND HTML TEMPLATES
+# ── Order Behavioral Limit Helpers ─────────────────────────────────────────
+
+def check_order_limits(email, phone, name, total):
+    """
+    Gate-checks an incoming online order.
+    Returns (allowed: bool, error_msg: str, flags: list[str])
+    flags can contain: 'watchlist', 'prepayment_required', 'suspicious_pattern', 'large_order'
+    """
+    now = get_ph_time()
+    flags = []
+    norm_email = (email or '').lower().strip()
+    norm_name  = (name  or '').strip().lower()
+
+    # 1 — Contact-info blocklist (email / phone / name)
+    if norm_email:
+        bl = CustomerBlocklist.query.filter_by(block_type='email', value=norm_email).first()
+        if bl:
+            return False, f"This email is blocked from placing orders. Reason: {bl.reason or 'Contact the store.'}", []
+    if phone and phone.strip():
+        bl = CustomerBlocklist.query.filter_by(block_type='phone', value=phone.strip()).first()
+        if bl:
+            return False, f"This phone number is blocked. Reason: {bl.reason or 'Contact the store.'}", []
+    if norm_name:
+        bl = CustomerBlocklist.query.filter_by(block_type='name', value=norm_name).first()
+        if bl:
+            return False, f"This name is flagged in our system. Reason: {bl.reason or 'Contact the store.'}", []
+
+    # 2 — Customer reputation check
+    if norm_email:
+        rep = CustomerReputation.query.filter_by(identifier=norm_email).first()
+        if rep:
+            if rep.is_blocked:
+                return False, "Your account has been blocked from online ordering. Please visit us in-store.", []
+            if rep.is_watchlist:
+                flags.append('watchlist')
+            if rep.requires_prepayment:
+                flags.append('prepayment_required')
+
+    # 3 — Cooldown: no repeat order from same email within ORDER_COOLDOWN_MINUTES
+    if norm_email:
+        cooldown_since = now - timedelta(minutes=ORDER_COOLDOWN_MINUTES)
+        recent = Reservation.query.filter(
+            Reservation.patron_email == norm_email,
+            Reservation.created_at >= cooldown_since,
+            Reservation.order_source == 'Online'
+        ).first()
+        if recent:
+            elapsed = int((now - recent.created_at).total_seconds() / 60)
+            wait = max(1, ORDER_COOLDOWN_MINUTES - elapsed)
+            return False, f"You placed an order recently. Please wait {wait} more minute(s) before ordering again.", []
+
+    # 4 — Daily cap
+    if norm_email:
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_count = Reservation.query.filter(
+            Reservation.patron_email == norm_email,
+            Reservation.created_at >= today_start
+        ).count()
+        if today_count >= DAILY_ORDER_CAP:
+            return False, f"Daily order limit of {DAILY_ORDER_CAP} reached. Please try again tomorrow.", []
+
+    # 5 — Suspicious pattern: same name 5+ times in 1 hour → flag for review
+    if norm_name:
+        hour_ago = now - timedelta(hours=1)
+        name_count = Reservation.query.filter(
+            db.func.lower(Reservation.patron_name) == norm_name,
+            Reservation.created_at >= hour_ago
+        ).count()
+        if name_count >= SUSPICIOUS_NAME_COUNT:
+            flags.append('suspicious_pattern')
+
+    # 6 — Large order flag
+    if total >= LARGE_ORDER_THRESHOLD:
+        flags.append('large_order')
+
+    return True, "", flags
+
+
+def get_or_create_reputation(email):
+    """Get or create a CustomerReputation record (keyed on lowercase email)."""
+    norm = (email or '').lower().strip()
+    if not norm:
+        return None
+    rep = CustomerReputation.query.filter_by(identifier=norm).first()
+    if not rep:
+        rep = CustomerReputation(identifier=norm)
+        db.session.add(rep)
+        try:
+            db.session.flush()
+        except Exception:
+            pass
+    return rep
+
+
+def build_order_meta(reservation_id, flags, total, email):
+    """Create the OrderMeta record for a new order."""
+    rep = get_or_create_reputation(email) if email else None
+    prepay_req   = ('prepayment_required' in flags) or (rep.requires_prepayment if rep else False)
+    needs_confirm = total >= LARGE_ORDER_THRESHOLD
+    prepay_amount = round(total * LARGE_ORDER_PREPAY_PCT, 2) if needs_confirm else 0.0
+    is_flagged   = bool({'suspicious_pattern', 'watchlist'} & set(flags))
+    flag_reason  = '; '.join(f for f in flags if f in ('suspicious_pattern', 'watchlist', 'large_order'))
+
+    meta = OrderMeta(
+        reservation_id=reservation_id,
+        is_flagged=is_flagged,
+        flag_reason=flag_reason,
+        requires_staff_confirmation=needs_confirm,
+        staff_confirmed=False,
+        prepayment_required=prepay_req,
+        prepayment_amount=prepay_amount,
+        prepayment_collected=False,
+        has_pickup_photo=False,
+    )
+    db.session.add(meta)
+
+    # Increment reputation counter
+    if rep:
+        rep.total_orders = (rep.total_orders or 0) + 1
+        try:
+            db.session.flush()
+        except Exception:
+            pass
+
+    return meta
 # ==========================================
 
 LOGIN_HTML = """
@@ -7026,6 +7209,17 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </button>
 
+    <button class="admin-nav-item" id="nb-fraud" onclick="goScreen('fraud',this);closeAdminMenu()">
+      <div class="admin-nav-icon" style="position:relative;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="fraud-nav-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.52rem;font-weight:900;align-items:center;justify-content:center;border:2px solid var(--brown-dark);"></span>
+      </div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Fraud Control</span>
+        <span class="admin-nav-desc">Limits, blocklist &amp; reputation</span>
+      </div>
+    </button>
+
   </div><!-- /admin-drawer-nav -->
 
   <div class="admin-drawer-footer">
@@ -7723,6 +7917,87 @@ ens-wrap">
     </div>
   </div>
 
+  <!-- FRAUD CONTROL SCREEN -->
+  <div id="s-fraud" class="screen" style="display:none;">
+    <div class="page-header">
+      <h2><i class="fas fa-exclamation-triangle"></i> Fraud Control</h2>
+      <p>Order limits, blocklist, customer reputation &amp; staff controls</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:12px;">
+
+      <!-- ── Flagged / Pending-Approval Orders ── -->
+      <div class="section card" style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:0.82rem;font-weight:900;color:var(--red);">🚨 Flagged &amp; Pending-Approval Orders</div>
+          <button class="btn-secondary" onclick="loadFraudOrders()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="fraud-orders-list"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+
+      <!-- ── Block Contact Info ── -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:10px;">🚫 Block Customer (Email / Phone / Name)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:start;">
+          <select id="bl-type" class="inp" style="margin:0;">
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="name">Name</option>
+          </select>
+          <input id="bl-value" class="inp" placeholder="Value to block" style="margin:0;">
+          <input id="bl-reason" class="inp" placeholder="Reason (optional)" style="margin:0;">
+          <button class="btn-secondary" style="white-space:nowrap;margin:0;" onclick="addBlocklistEntry()"><i class="fas fa-ban"></i> Block</button>
+        </div>
+        <div style="margin-top:12px;" id="fraud-blocklist"><div style="text-align:center;color:var(--muted);padding:10px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+
+      <!-- ── Customer Reputation ── -->
+      <div class="section card" style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:0.82rem;font-weight:900;color:var(--brown-dark);">⭐ Customer Reputation &amp; History</div>
+          <button class="btn-secondary" onclick="loadReputations()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="fraud-reps"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+
+      <!-- ── Behavioural Limits Info ── -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:10px;">⚙️ Active Behavioural Limits</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Cooldown Period</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">30 min</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Between orders from same email</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Daily Order Cap</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">5 orders</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Per email per day</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Suspicious Pattern</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--orange);">5+ in 1 hour</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Same name → manual review flag</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">No-Show Threshold</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--red);">2 no-shows</div>
+            <div style="font-size:0.7rem;color:var(--muted);">→ Prepayment required</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Large Order Threshold</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">₱500+</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Requires staff confirmation</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Holding Fee</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">20%</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Of large-order total (refunded on pickup)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /screens-ext -->
 
 <!-- ══ MODALS ══ -->
@@ -7868,7 +8143,7 @@ function openAllSettingsDrops(){
 
 /* ══ SCREEN NAV ══ */
 /* ── Unified screen router (core + extended screens) ── */
-var _extScreens = ['analytics','promos','announce','waste','security'];
+var _extScreens = ['analytics','promos','announce','waste','security','fraud'];
 function goScreen(name, btn){
   /* 1 — Hide every screen in BOTH containers */
   document.querySelectorAll('.screen').forEach(function(s){
@@ -7895,6 +8170,7 @@ function goScreen(name, btn){
     if(name === 'announce')  loadAnnouncements();
     if(name === 'waste')     loadWaste();
     if(name === 'security'){ loadBlacklist(); loadAttempts(); }
+    if(name === 'fraud'){ loadFraudOrders(); loadFraudBlocklist(); loadReputations(); }
   } else {
     /* ── Core screen ── */
     var scr = document.getElementById('s-' + name);
@@ -8641,6 +8917,10 @@ function connectSSE() {
     try {
       const d = JSON.parse(e.data);
       addNotif(d.code, d.name, d.total);
+      // If order has flags, refresh fraud badge
+      if(d.flags && d.flags.length) {
+        loadFraudOrders();
+      }
     } catch(_) {}
     fetchOrders();
   });
@@ -8856,8 +9136,8 @@ function renderLoCards(){
     grid.innerHTML=`<div class="lo-empty" style="grid-column:1/-1;"><div class="lo-empty-icon">✅</div><div class="lo-empty-text">No orders here</div><div class="lo-empty-sub">Showing: ${_loFilter==='all'?'all orders':_loFilter}</div></div>`;
     return;
   }
-  const statusBarClass={'Waiting Confirmation':'waiting','Preparing Order':'preparing','Ready for Pick-up':'ready','Completed':'completed','Cancelled':'cancelled'};
-  const statusLabels={'Waiting Confirmation':'⏳ Waiting','Preparing Order':'🔥 Preparing','Ready for Pick-up':'✅ Ready','Completed':'🏁 Done','Cancelled':'❌ Cancelled'};
+  const statusBarClass={'Waiting Confirmation':'waiting','Preparing Order':'preparing','Ready for Pick-up':'ready','Completed':'completed','Cancelled':'cancelled','Pending Staff Approval':'late'};
+  const statusLabels={'Waiting Confirmation':'⏳ Waiting','Preparing Order':'🔥 Preparing','Ready for Pick-up':'✅ Ready','Completed':'🏁 Done','Cancelled':'❌ Cancelled','Pending Staff Approval':'🔒 Pending Approval'};
   grid.innerHTML=orders.map((o,idx)=>{
     const isOnline=o.source==='Online'||o.source==='online';
     const barCls=statusBarClass[o.status]||'waiting';
@@ -8865,7 +9145,17 @@ function renderLoCards(){
     const timerCls=mins===null?'fresh':mins<10?'fresh':mins<20?'moderate':'late';
     const timerTxt=mins===null?'—':mins<1?'Just now':`${mins}m ago`;
     const itemsText=o.items?o.items.map(i=>i.foundation+(i.size&&i.size!=='16 oz'?` (${i.size})`:'')+(i.addons?` +${i.addons}`:'')).join(' · '):'—';
-    return`<div class="lo-card" style="animation-delay:${idx*0.04}s" onclick="openOrdDetail(${JSON.stringify(o).replace(/"/g,'&quot;')})">
+    // Fraud badges
+    let fraudBadges='';
+    if(o.is_flagged)fraudBadges+=`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-flag" style="font-size:0.55rem;"></i> Flagged</span> `;
+    if(o.requires_staff_confirm&&!o.staff_confirmed)fraudBadges+=`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:0.55rem;"></i> Needs Approval</span> `;
+    if(o.prepayment_required&&!o.prepayment_collected)fraudBadges+=`<span style="background:rgba(123,79,46,0.12);color:var(--brown);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;">💰 Fee</span> `;
+    // Approval / photo actions in footer
+    let extraActions='';
+    if(o.requires_staff_confirm&&!o.staff_confirmed)extraActions+=`<button class="btn-primary" style="padding:3px 8px;margin:0;font-size:0.68rem;white-space:nowrap;" onclick="event.stopPropagation();staffConfirmOrder(${o.id}).then(()=>fetchLiveOrders())">✅ Approve</button>`;
+    extraActions+=`<button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.68rem;" title="Flag order" onclick="event.stopPropagation();flagOrderByStaff(${o.id})"><i class="fas fa-flag"></i></button>`;
+    extraActions+=`<button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.68rem;" title="Pickup photo" onclick="event.stopPropagation();openPickupPhotoModal(${o.id},'${escapeHTML(o.code||'')}')"><i class="fas fa-camera"></i></button>`;
+    return`<div class="lo-card" style="animation-delay:${idx*0.04}s${o.is_flagged?';border:2px solid rgba(192,57,43,0.35);':''}" onclick="openOrdDetail(${JSON.stringify(o).replace(/"/g,'&quot;')})">
       <div class="lo-card-bar ${barCls}"></div>
       <div class="lo-card-head">
         <span class="lo-card-code">#${escapeHTML(o.code||'—')}</span>
@@ -8873,18 +9163,23 @@ function renderLoCards(){
       </div>
       <div class="lo-card-body">
         <div class="lo-card-name">${escapeHTML(o.name||'—')}</div>
+        ${fraudBadges?`<div style="margin-bottom:3px;">${fraudBadges}</div>`:''}
         <div class="lo-card-items">${escapeHTML(itemsText)}</div>
         <div class="lo-card-total">₱${Number(o.total||0).toFixed(2)}</div>
       </div>
       <div class="lo-card-foot" onclick="event.stopPropagation()">
         <span class="lo-card-timer ${timerCls}"><i class="fas fa-clock" style="font-size:0.58rem;"></i> ${timerTxt}</span>
-        <select class="lo-status-sel" onchange="loUpdateStatus(${o.id},this.value,this)">
-          <option value="Waiting Confirmation" ${o.status==='Waiting Confirmation'?'selected':''}>⏳ Waiting</option>
-          <option value="Preparing Order" ${o.status==='Preparing Order'?'selected':''}>🔥 Preparing</option>
-          <option value="Ready for Pick-up" ${o.status==='Ready for Pick-up'?'selected':''}>✅ Ready</option>
-          <option value="Completed" ${o.status==='Completed'?'selected':''}>🏁 Completed</option>
-          <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
-        </select>
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+          ${extraActions}
+          <select class="lo-status-sel" style="min-width:120px;" onchange="loUpdateStatus(${o.id},this.value,this)">
+            <option value="Waiting Confirmation" ${o.status==='Waiting Confirmation'?'selected':''}>⏳ Waiting</option>
+            <option value="Pending Staff Approval" ${o.status==='Pending Staff Approval'?'selected':''}>🔒 Pending Approval</option>
+            <option value="Preparing Order" ${o.status==='Preparing Order'?'selected':''}>🔥 Preparing</option>
+            <option value="Ready for Pick-up" ${o.status==='Ready for Pick-up'?'selected':''}>✅ Ready</option>
+            <option value="Completed" ${o.status==='Completed'?'selected':''}>🏁 Completed</option>
+            <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
+          </select>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -8897,6 +9192,231 @@ async function loUpdateStatus(orderId,status,sel){
     else showToast('Update failed','error');
   }catch(e){showToast('Error','error');}
 }
+
+/* ══ FRAUD CONTROL ══ */
+async function loadFraudOrders(){
+  const el=document.getElementById('fraud-orders-list');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try{
+    const r=await apiFetch('/api/fraud/flagged_orders');
+    if(!r||!r.ok){el.innerHTML='<div style="color:var(--red);padding:10px;font-size:0.82rem;">Error loading orders.</div>';return;}
+    const data=await r.json();
+    // Update nav badge
+    const badge=document.getElementById('fraud-nav-badge');
+    if(badge){if(data.length){badge.style.display='flex';badge.textContent=data.length;}else{badge.style.display='none';}}
+    if(!data.length){el.innerHTML='<div style="color:var(--green);font-weight:700;font-size:0.82rem;padding:10px;text-align:center;"><i class="fas fa-check-circle"></i> No flagged or pending orders</div>';return;}
+    el.innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+      <thead><tr style="background:var(--cream);border-bottom:2px solid var(--cream-dark);">
+        <th style="padding:8px 10px;text-align:left;font-weight:900;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Code</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:900;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Customer</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:900;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Total</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:900;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Status</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:900;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Flags</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:900;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Actions</th>
+      </tr></thead><tbody>
+      ${data.map(o=>{
+        let flags=[];
+        if(o.is_flagged)flags.push(`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">🚩 ${escapeHTML(o.flag_reason||'Flagged')}</span>`);
+        if(o.requires_staff_confirmation&&!o.staff_confirmed)flags.push('<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">⏳ Needs Approval</span>');
+        if(o.prepayment_required&&!o.prepayment_collected)flags.push(`<span style="background:rgba(123,79,46,0.12);color:var(--brown);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">💰 Fee ₱${Number(o.prepayment_amount).toFixed(0)} due</span>`);
+        const actions=[];
+        if(o.requires_staff_confirmation&&!o.staff_confirmed)actions.push(`<button class="btn-primary" style="padding:4px 10px;margin:0;font-size:0.72rem;" onclick="staffConfirmOrder(${o.order_id})">✅ Approve</button>`);
+        if(o.prepayment_required&&!o.prepayment_collected)actions.push(`<button class="btn-secondary" style="padding:4px 10px;margin:0;font-size:0.72rem;" onclick="markPrepayCollected(${o.order_id})">💰 Fee Collected</button>`);
+        actions.push(`<button class="btn-secondary" style="padding:4px 8px;margin:0;font-size:0.72rem;" onclick="openPickupPhotoModal(${o.order_id},'${escapeHTML(o.code)}')"><i class="fas fa-camera"></i></button>`);
+        return`<tr style="border-bottom:1px solid var(--cream-dark);">
+          <td style="padding:8px 10px;font-family:monospace;font-weight:900;color:var(--brown-dark);">#${escapeHTML(o.code)}</td>
+          <td style="padding:8px 10px;"><div style="font-weight:800;">${escapeHTML(o.name)}</div><div style="font-size:0.7rem;color:var(--muted);">${escapeHTML(o.email)}</div></td>
+          <td style="padding:8px 10px;font-weight:900;color:var(--brown);">₱${Number(o.total).toFixed(2)}</td>
+          <td style="padding:8px 10px;">${escapeHTML(o.status)}</td>
+          <td style="padding:8px 10px;">${flags.join(' ')}</td>
+          <td style="padding:8px 10px;"><div style="display:flex;gap:5px;flex-wrap:wrap;">${actions.join('')}</div></td>
+        </tr>`;
+      }).join('')}
+      </tbody></table></div>`;
+  }catch(e){el.innerHTML='<div style="color:var(--red);padding:10px;font-size:0.82rem;">Network error.</div>';}
+}
+
+async function staffConfirmOrder(orderId){
+  const r=await apiFetch(`/api/fraud/staff_confirm/${orderId}`,{method:'POST'});
+  if(r&&r.ok){showToast('Order approved for preparation!','success');loadFraudOrders();}
+  else showToast('Error confirming order','error');
+}
+
+async function markPrepayCollected(orderId){
+  const r=await apiFetch(`/api/fraud/prepayment_collected/${orderId}`,{method:'POST'});
+  if(r&&r.ok){showToast('Holding fee marked as collected','success');loadFraudOrders();}
+  else showToast('Error','error');
+}
+
+async function flagOrderByStaff(orderId){
+  const reason=prompt('Reason for flagging this order (optional):');
+  if(reason===null)return; // cancelled
+  const r=await apiFetch(`/api/fraud/flag_order/${orderId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason||'Flagged by staff'})});
+  if(r&&r.ok){showToast('Order flagged & customer added to watchlist','success');fetchLiveOrders();}
+  else showToast('Error flagging order','error');
+}
+
+async function loadFraudBlocklist(){
+  const el=document.getElementById('fraud-blocklist');
+  if(!el)return;
+  try{
+    const r=await apiFetch('/api/fraud/blocklist');
+    if(!r||!r.ok)return;
+    const data=await r.json();
+    if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;text-align:center;padding:10px;">No blocked contacts.</div>';return;}
+    el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+      <thead><tr style="background:var(--cream);border-bottom:2px solid var(--cream-dark);">
+        <th style="padding:7px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Type</th>
+        <th style="padding:7px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Value</th>
+        <th style="padding:7px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Reason</th>
+        <th style="padding:7px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Added</th>
+        <th style="padding:7px 10px;"></th>
+      </tr></thead><tbody>
+      ${data.map(b=>`<tr style="border-bottom:1px solid var(--cream-dark);">
+        <td style="padding:7px 10px;"><span style="background:rgba(192,57,43,0.1);color:var(--red);padding:2px 8px;border-radius:8px;font-size:0.7rem;font-weight:900;text-transform:uppercase;">${escapeHTML(b.type)}</span></td>
+        <td style="padding:7px 10px;font-weight:800;">${escapeHTML(b.value)}</td>
+        <td style="padding:7px 10px;color:var(--muted);">${escapeHTML(b.reason||'—')}</td>
+        <td style="padding:7px 10px;font-size:0.7rem;color:var(--muted);">${escapeHTML(b.created_at)}</td>
+        <td style="padding:7px 10px;"><button class="btn-secondary" style="padding:3px 9px;margin:0;font-size:0.7rem;" onclick="removeBlocklistEntry(${b.id})"><i class="fas fa-trash-alt"></i></button></td>
+      </tr>`).join('')}
+      </tbody></table>`;
+  }catch(e){}
+}
+
+async function addBlocklistEntry(){
+  const bt=document.getElementById('bl-type').value;
+  const val=document.getElementById('bl-value').value.trim();
+  const reason=document.getElementById('bl-reason').value.trim();
+  if(!val)return showToast('Enter a value to block','error');
+  const r=await apiFetch('/api/fraud/blocklist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:bt,value:val,reason})});
+  if(r&&r.ok){showToast(`${bt} blocked successfully`,'success');document.getElementById('bl-value').value='';document.getElementById('bl-reason').value='';loadFraudBlocklist();}
+  else{const d=await r.json();showToast(d.error||'Error','error');}
+}
+
+async function removeBlocklistEntry(id){
+  if(!confirm('Remove this block?'))return;
+  const r=await apiFetch(`/api/fraud/blocklist/${id}`,{method:'DELETE'});
+  if(r&&r.ok){showToast('Entry removed','success');loadFraudBlocklist();}
+}
+
+async function loadReputations(){
+  const el=document.getElementById('fraud-reps');
+  if(!el)return;
+  try{
+    const r=await apiFetch('/api/fraud/reputations');
+    if(!r||!r.ok)return;
+    const data=await r.json();
+    if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;text-align:center;padding:10px;">No customer reputation records yet.</div>';return;}
+    el.innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+      <thead><tr style="background:var(--cream);border-bottom:2px solid var(--cream-dark);">
+        <th style="padding:8px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Email</th>
+        <th style="padding:8px 10px;text-align:center;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Orders</th>
+        <th style="padding:8px 10px;text-align:center;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">No-Shows</th>
+        <th style="padding:8px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Flags</th>
+        <th style="padding:8px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Actions</th>
+      </tr></thead><tbody>
+      ${data.map(rep=>{
+        const badges=[];
+        if(rep.is_blocked)badges.push('<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">🚫 Blocked</span>');
+        if(rep.is_watchlist)badges.push('<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">👁 Watchlist</span>');
+        if(rep.requires_prepayment)badges.push('<span style="background:rgba(123,79,46,0.12);color:var(--brown);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">💰 Prepay Required</span>');
+        const noshowColor=rep.noshow_count>=2?'var(--red)':rep.noshow_count>=1?'var(--orange)':'var(--green)';
+        return`<tr style="border-bottom:1px solid var(--cream-dark);">
+          <td style="padding:8px 10px;"><div style="font-weight:800;font-size:0.8rem;">${escapeHTML(rep.name||rep.identifier)}</div><div style="font-size:0.7rem;color:var(--muted);">${escapeHTML(rep.identifier)}</div></td>
+          <td style="padding:8px 10px;text-align:center;font-weight:800;">${rep.total_orders}</td>
+          <td style="padding:8px 10px;text-align:center;font-weight:900;color:${noshowColor};">${rep.noshow_count}</td>
+          <td style="padding:8px 10px;">${badges.join(' ')||'<span style="color:var(--muted);font-size:0.75rem;">—</span>'}</td>
+          <td style="padding:8px 10px;"><div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.7rem;" onclick="toggleRepFlag(${rep.id},'is_watchlist',${!rep.is_watchlist})">${rep.is_watchlist?'Remove Watchlist':'Add Watchlist'}</button>
+            <button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.7rem;" onclick="toggleRepFlag(${rep.id},'requires_prepayment',${!rep.requires_prepayment})">${rep.requires_prepayment?'Remove Prepay':'Require Prepay'}</button>
+            <button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.7rem;${rep.is_blocked?'color:var(--green);':'color:var(--red);'}" onclick="toggleRepFlag(${rep.id},'is_blocked',${!rep.is_blocked})">${rep.is_blocked?'Unblock':'Block'}</button>
+          </div></td>
+        </tr>`;
+      }).join('')}
+      </tbody></table></div>`;
+  }catch(e){}
+}
+
+async function toggleRepFlag(repId,field,value){
+  const r=await apiFetch(`/api/fraud/reputations/${repId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
+  if(r&&r.ok){showToast('Updated','success');loadReputations();}
+  else showToast('Error','error');
+}
+
+/* ══ PICKUP PHOTO MODAL ══ */
+let _pickupPhotoOrderId=null,_pickupPhotoStream=null;
+function openPickupPhotoModal(orderId,orderCode){
+  _pickupPhotoOrderId=orderId;
+  let overlay=document.getElementById('pickup-photo-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='pickup-photo-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML=`<div style="background:#fff;border-radius:20px;padding:24px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:var(--brown-dark);">📸 Pickup Photo — <span id="ppm-code"></span></div>
+        <button onclick="closePickupPhotoModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);">✕</button>
+      </div>
+      <video id="ppm-video" autoplay playsinline style="width:100%;border-radius:12px;background:#000;display:block;max-height:260px;object-fit:cover;"></video>
+      <canvas id="ppm-canvas" style="display:none;"></canvas>
+      <img id="ppm-preview" style="display:none;width:100%;border-radius:12px;max-height:260px;object-fit:cover;">
+      <div id="ppm-existing" style="display:none;margin-top:8px;font-size:0.77rem;font-weight:700;color:var(--green);"><i class="fas fa-check-circle"></i> Photo already on record.</div>
+      <div style="display:flex;gap:9px;margin-top:14px;">
+        <button id="ppm-snap-btn" class="btn-primary" style="flex:1;margin:0;" onclick="snapPickupPhoto()"><i class="fas fa-camera"></i> Take Photo</button>
+        <button id="ppm-retake-btn" class="btn-secondary" style="flex:1;margin:0;display:none;" onclick="retakePickupPhoto()"><i class="fas fa-redo"></i> Retake</button>
+        <button id="ppm-save-btn" class="btn-primary" style="flex:1;margin:0;display:none;" onclick="savePickupPhoto()"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('ppm-code').textContent='#'+orderCode;
+  document.getElementById('ppm-preview').style.display='none';
+  document.getElementById('ppm-snap-btn').style.display='';
+  document.getElementById('ppm-retake-btn').style.display='none';
+  document.getElementById('ppm-save-btn').style.display='none';
+  overlay.style.display='flex';
+  // Check existing photo
+  apiFetch(`/api/fraud/pickup_photo/${orderId}`).then(async r=>{
+    if(r&&r.ok){const d=await r.json();if(d.exists){document.getElementById('ppm-existing').style.display='block';}}
+  }).catch(()=>{});
+  // Start camera
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(stream=>{
+    _pickupPhotoStream=stream;
+    const v=document.getElementById('ppm-video');
+    v.srcObject=stream;v.style.display='block';
+  }).catch(()=>{showToast('Camera access denied','error');closePickupPhotoModal();});
+}
+function snapPickupPhoto(){
+  const v=document.getElementById('ppm-video'),c=document.getElementById('ppm-canvas'),p=document.getElementById('ppm-preview');
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  const dataURL=c.toDataURL('image/jpeg',0.7);
+  p.src=dataURL;p.style.display='block';v.style.display='none';
+  document.getElementById('ppm-snap-btn').style.display='none';
+  document.getElementById('ppm-retake-btn').style.display='';
+  document.getElementById('ppm-save-btn').style.display='';
+}
+function retakePickupPhoto(){
+  const v=document.getElementById('ppm-video'),p=document.getElementById('ppm-preview');
+  p.style.display='none';v.style.display='block';
+  document.getElementById('ppm-snap-btn').style.display='';
+  document.getElementById('ppm-retake-btn').style.display='none';
+  document.getElementById('ppm-save-btn').style.display='none';
+}
+async function savePickupPhoto(){
+  const photoData=document.getElementById('ppm-preview').src;
+  const r=await apiFetch(`/api/fraud/pickup_photo/${_pickupPhotoOrderId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo:photoData,taken_by:'Staff'})});
+  if(r&&r.ok){showToast('✅ Pickup photo saved!','success');closePickupPhotoModal();loadFraudOrders();}
+  else showToast('Error saving photo','error');
+}
+function closePickupPhotoModal(){
+  if(_pickupPhotoStream){_pickupPhotoStream.getTracks().forEach(t=>t.stop());_pickupPhotoStream=null;}
+  const overlay=document.getElementById('pickup-photo-overlay');
+  if(overlay)overlay.style.display='none';
+}
+
+/* ══ LIVE ORDERS: FLAG BUTTON ══ */
 
 /* ══ ORDER DETAIL MODAL ══ */
 function openOrdDetail(o){
@@ -9816,16 +10336,80 @@ def handle_inventory():
 @limiter.limit("5 per minute")
 def reserve_blend():
     data = request.json
+    email  = data.get('email', '')
+    phone  = data.get('phone', '')
+    name   = data.get('name', '')
+    total  = float(data.get('total', 0))
+
+    # ── Behavioral limit gate ─────────────────────────────────────────────
+    allowed, err_msg, flags = check_order_limits(email, phone, name, total)
+    if not allowed:
+        return jsonify({"status": "blocked", "message": err_msg}), 429
+    # ─────────────────────────────────────────────────────────────────────
+
     try:
-        new_res = Reservation(patron_name=data['name'], patron_email=data.get('email',''), patron_phone=data.get('phone',''), total_investment=data['total'], pickup_time=data['pickup_time'], order_source="Online", status="Waiting Confirmation", patron_address=data.get('address',''))
+        initial_status = "Waiting Confirmation"
+        # Large orders need staff confirmation before they can be Prepared
+        if 'large_order' in flags:
+            initial_status = "Pending Staff Approval"
+
+        new_res = Reservation(
+            patron_name=name,
+            patron_email=email,
+            patron_phone=phone,
+            total_investment=total,
+            pickup_time=data['pickup_time'],
+            order_source="Online",
+            status=initial_status,
+            patron_address=data.get('address','')
+        )
         db.session.add(new_res)
         db.session.flush()
         for i in data['items']:
-            new_inf = Infusion(reservation_id=new_res.id, foundation=i['foundation'], sweetener=i.get('sweetener','Standard'), ice_level=i.get('ice','Normal'), pearls=i.get('pearls','Take-Out'), cup_size=i.get('size','16 oz'), addons=i.get('addons',''), item_total=i['price'])
+            new_inf = Infusion(
+                reservation_id=new_res.id,
+                foundation=i['foundation'],
+                sweetener=i.get('sweetener','Standard'),
+                ice_level=i.get('ice','Normal'),
+                pearls=i.get('pearls','Take-Out'),
+                cup_size=i.get('size','16 oz'),
+                addons=i.get('addons',''),
+                item_total=i['price']
+            )
             db.session.add(new_inf)
+
+        # ── Create OrderMeta & update reputation ──────────────────────────
+        meta = build_order_meta(new_res.id, flags, total, email)
+
         db.session.commit()
-        push_event('order_new', {'code': new_res.reservation_code, 'name': data['name'], 'total': data['total']})
-        return jsonify({"status": "success", "reservation_code": new_res.reservation_code}), 201
+
+        push_event('order_new', {
+            'code': new_res.reservation_code,
+            'name': name,
+            'total': total,
+            'flags': flags
+        })
+
+        # Log suspicious patterns for audit trail
+        if 'suspicious_pattern' in flags:
+            log_audit("Suspicious Pattern Detected", f"Order {new_res.reservation_code}: {name} ordered 5+ times in 1 hour")
+        if 'large_order' in flags:
+            log_audit("Large Order — Staff Approval Required",
+                      f"Order {new_res.reservation_code}: ₱{total:.2f} — needs staff confirmation before prep")
+
+        resp = {
+            "status": "success",
+            "reservation_code": new_res.reservation_code,
+            "flags": flags,
+        }
+        if 'large_order' in flags:
+            resp["prepayment_amount"] = meta.prepayment_amount
+            resp["message"] = (
+                f"Your order has been received and is pending staff approval "
+                f"(large order ≥ ₱{LARGE_ORDER_THRESHOLD:.0f}). "
+                f"A holding fee of ₱{meta.prepayment_amount:.2f} may be collected on pickup."
+            )
+        return jsonify(resp), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -9887,6 +10471,201 @@ def grant_permission(req_id):
     db.session.commit()
     log_audit("Permission Granted", f"Code: {pr.request_code} for {pr.customer_name}")
     return jsonify({"status": "success"})
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FRAUD CONTROL — BLOCKLIST, REPUTATION, ORDER META ROUTES
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/fraud/blocklist', methods=['GET', 'POST'])
+def fraud_blocklist():
+    if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
+    if request.method == 'GET':
+        items = CustomerBlocklist.query.order_by(CustomerBlocklist.created_at.desc()).all()
+        return jsonify([{
+            'id': b.id, 'type': b.block_type, 'value': b.value,
+            'reason': b.reason or '', 'added_by': b.added_by or 'Admin',
+            'created_at': b.created_at.strftime('%b %d, %Y %I:%M %p')
+        } for b in items])
+    data = request.json or {}
+    bt   = data.get('type', '').strip().lower()
+    val  = (data.get('value') or '').strip()
+    reason = (data.get('reason') or '').strip()
+    if bt not in ('email', 'phone', 'name') or not val:
+        return jsonify({"error": "Invalid type or missing value"}), 400
+    if bt == 'email': val = val.lower()
+    if bt == 'name':  val = val.lower()
+    existing = CustomerBlocklist.query.filter_by(block_type=bt, value=val).first()
+    if existing:
+        return jsonify({"error": f"{bt.title()} already blocked"}), 409
+    bl = CustomerBlocklist(block_type=bt, value=val, reason=reason, added_by='Admin')
+    db.session.add(bl)
+    db.session.commit()
+    log_audit("Blocklist Entry Added", f"{bt}: {val} — {reason}")
+    return jsonify({"status": "success", "id": bl.id})
+
+@app.route('/api/fraud/blocklist/<int:bl_id>', methods=['DELETE'])
+def delete_blocklist_entry(bl_id):
+    if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
+    bl = CustomerBlocklist.query.get_or_404(bl_id)
+    log_audit("Blocklist Entry Removed", f"{bl.block_type}: {bl.value}")
+    db.session.delete(bl)
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+@app.route('/api/fraud/reputations', methods=['GET'])
+def fraud_reputations():
+    if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
+    reps = CustomerReputation.query.order_by(CustomerReputation.noshow_count.desc()).all()
+    return jsonify([{
+        'id': r.id, 'identifier': r.identifier, 'name': r.display_name or '',
+        'total_orders': r.total_orders, 'noshow_count': r.noshow_count,
+        'completed_count': r.completed_count, 'is_watchlist': r.is_watchlist,
+        'requires_prepayment': r.requires_prepayment, 'is_blocked': r.is_blocked,
+        'notes': r.notes or '',
+        'created_at': r.created_at.strftime('%b %d, %Y')
+    } for r in reps])
+
+@app.route('/api/fraud/reputations/<int:rep_id>', methods=['PUT'])
+def update_reputation(rep_id):
+    if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
+    rep = CustomerReputation.query.get_or_404(rep_id)
+    data = request.json or {}
+    if 'is_watchlist'        in data: rep.is_watchlist        = bool(data['is_watchlist'])
+    if 'requires_prepayment' in data: rep.requires_prepayment = bool(data['requires_prepayment'])
+    if 'is_blocked'          in data: rep.is_blocked          = bool(data['is_blocked'])
+    if 'notes'               in data: rep.notes               = (data['notes'] or '')[:500]
+    db.session.commit()
+    log_audit("Reputation Updated", f"{rep.identifier}: watchlist={rep.is_watchlist}, blocked={rep.is_blocked}")
+    return jsonify({"status": "success"})
+
+@app.route('/api/fraud/order_meta/<int:order_id>', methods=['GET'])
+def get_order_meta(order_id):
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    meta = OrderMeta.query.filter_by(reservation_id=order_id).first()
+    if not meta:
+        return jsonify({"exists": False})
+    return jsonify({
+        "exists": True, "is_flagged": meta.is_flagged, "flag_reason": meta.flag_reason,
+        "requires_staff_confirmation": meta.requires_staff_confirmation,
+        "staff_confirmed": meta.staff_confirmed,
+        "prepayment_required": meta.prepayment_required,
+        "prepayment_amount": meta.prepayment_amount,
+        "prepayment_collected": meta.prepayment_collected,
+        "has_pickup_photo": meta.has_pickup_photo,
+    })
+
+@app.route('/api/fraud/staff_confirm/<int:order_id>', methods=['POST'])
+def staff_confirm_order(order_id):
+    """Staff manually approves a large-order before preparation begins."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    order = Reservation.query.get_or_404(order_id)
+    meta  = OrderMeta.query.filter_by(reservation_id=order_id).first()
+    if not meta:
+        return jsonify({"error": "No metadata for this order"}), 404
+    meta.staff_confirmed = True
+    # Move order from Pending Staff Approval to Waiting Confirmation
+    if order.status == 'Pending Staff Approval':
+        order.status = 'Waiting Confirmation'
+    db.session.commit()
+    push_event('order_status', {'id': order_id, 'status': order.status})
+    log_audit("Staff Order Confirmation", f"Order {order.reservation_code} (₱{order.total_investment:.2f}) confirmed by staff")
+    return jsonify({"status": "success"})
+
+@app.route('/api/fraud/flag_order/<int:order_id>', methods=['POST'])
+def flag_order(order_id):
+    """Staff manually flags a suspicious order, adding the customer to watchlist."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    order = Reservation.query.get_or_404(order_id)
+    data  = request.json or {}
+    reason = (data.get('reason') or 'Flagged by staff').strip()
+    meta  = OrderMeta.query.filter_by(reservation_id=order_id).first()
+    if not meta:
+        meta = OrderMeta(reservation_id=order_id)
+        db.session.add(meta)
+    meta.is_flagged   = True
+    meta.flag_reason  = reason
+    # Add to watchlist
+    try:
+        rep = get_or_create_reputation(order.patron_email)
+        if rep:
+            rep.is_watchlist = True
+            rep.display_name = order.patron_name
+    except Exception:
+        pass
+    db.session.commit()
+    log_audit("Order Flagged by Staff", f"Order {order.reservation_code} — {reason}")
+    return jsonify({"status": "success"})
+
+@app.route('/api/fraud/prepayment_collected/<int:order_id>', methods=['POST'])
+def mark_prepayment_collected(order_id):
+    """Mark the holding fee as collected for a large order."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    meta = OrderMeta.query.filter_by(reservation_id=order_id).first()
+    if not meta:
+        return jsonify({"error": "No metadata"}), 404
+    meta.prepayment_collected = True
+    db.session.commit()
+    order = Reservation.query.get(order_id)
+    log_audit("Prepayment Collected", f"Order {order.reservation_code if order else order_id}: ₱{meta.prepayment_amount:.2f}")
+    return jsonify({"status": "success"})
+
+@app.route('/api/fraud/pickup_photo/<int:order_id>', methods=['POST', 'GET'])
+def pickup_photo(order_id):
+    """POST: staff saves base64 photo proof. GET: retrieve photo."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    order = Reservation.query.get_or_404(order_id)
+    if request.method == 'GET':
+        photo = OrderPickupPhoto.query.filter_by(reservation_id=order_id).order_by(OrderPickupPhoto.id.desc()).first()
+        if not photo:
+            return jsonify({"exists": False})
+        return jsonify({"exists": True, "photo": photo.photo_data, "taken_by": photo.taken_by,
+                        "created_at": photo.created_at.strftime('%b %d, %Y %I:%M %p')})
+    # POST
+    data = request.json or {}
+    photo_b64 = data.get('photo', '')
+    taken_by  = data.get('taken_by', 'Staff')
+    if not photo_b64:
+        return jsonify({"error": "No photo data"}), 400
+    photo = OrderPickupPhoto(reservation_id=order_id, photo_data=photo_b64, taken_by=taken_by)
+    db.session.add(photo)
+    meta = OrderMeta.query.filter_by(reservation_id=order_id).first()
+    if meta:
+        meta.has_pickup_photo = True
+    db.session.commit()
+    log_audit("Pickup Photo Saved", f"Order {order.reservation_code} — photo by {taken_by}")
+    return jsonify({"status": "success"})
+
+@app.route('/api/fraud/flagged_orders', methods=['GET'])
+def get_flagged_orders():
+    """Return all currently flagged / pending-confirmation orders."""
+    if not session.get('is_admin') and not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 403
+    metas = OrderMeta.query.filter(
+        db.or_(OrderMeta.is_flagged == True, OrderMeta.requires_staff_confirmation == True)
+    ).order_by(OrderMeta.created_at.desc()).limit(50).all()
+    results = []
+    for m in metas:
+        order = Reservation.query.get(m.reservation_id)
+        if not order: continue
+        results.append({
+            'order_id': order.id, 'code': order.reservation_code,
+            'name': order.patron_name, 'email': order.patron_email or '',
+            'total': order.total_investment, 'status': order.status,
+            'is_flagged': m.is_flagged, 'flag_reason': m.flag_reason,
+            'requires_staff_confirmation': m.requires_staff_confirmation,
+            'staff_confirmed': m.staff_confirmed,
+            'prepayment_required': m.prepayment_required,
+            'prepayment_amount': m.prepayment_amount,
+            'prepayment_collected': m.prepayment_collected,
+            'has_pickup_photo': m.has_pickup_photo,
+            'created_at': order.created_at.strftime('%b %d %I:%M %p') if order.created_at else '',
+        })
+    return jsonify(results)
 
 @app.route('/api/backup', methods=['GET'])
 def backup_data():
@@ -10178,6 +10957,21 @@ def update_order_status(order_id):
         order.cancel_reason = cancel_reason
     else:
         order.cancel_reason = ''
+
+    # ── No-show detection: Cancelled while "Ready for Pick-up" → increment no-show ──
+    if new_status == 'Cancelled' and prev_status == 'Ready for Pick-up':
+        try:
+            rep = get_or_create_reputation(order.patron_email)
+            if rep:
+                rep.noshow_count = (rep.noshow_count or 0) + 1
+                rep.display_name = order.patron_name
+                if rep.noshow_count >= NOSHOW_BLOCK_THRESHOLD:
+                    rep.requires_prepayment = True
+                log_audit("No-Show Detected",
+                          f"{order.patron_name} ({order.patron_email}): order {order.reservation_code} — no-show count now {rep.noshow_count}")
+        except Exception:
+            pass
+
     # Write customer record only once, when order is first marked Completed
     if new_status == 'Completed' and prev_status != 'Completed':
         try:
@@ -10192,6 +10986,14 @@ def update_order_status(order_id):
                 pickup_time=order.pickup_time
             )
             db.session.add(clog)
+            # Increment reputation completed counter
+            try:
+                rep = get_or_create_reputation(order.patron_email)
+                if rep:
+                    rep.completed_count = (rep.completed_count or 0) + 1
+                    rep.display_name = order.patron_name
+            except Exception:
+                pass
         except Exception:
             pass  # Never block status update due to log failure
     db.session.commit()
@@ -10237,6 +11039,7 @@ def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
     def _fmt_order(r):
+        meta = OrderMeta.query.filter_by(reservation_id=r.id).first()
         return {
             'id': r.id,
             'code': r.reservation_code,
@@ -10251,7 +11054,16 @@ def api_orders():
             'pickup_time': r.pickup_time,
             'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
             'over_limit': len(r.infusions) >= 2,
-            'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions]
+            'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions],
+            # ── fraud control metadata ──
+            'is_flagged':               meta.is_flagged if meta else False,
+            'flag_reason':              meta.flag_reason if meta else '',
+            'requires_staff_confirm':   meta.requires_staff_confirmation if meta else False,
+            'staff_confirmed':          meta.staff_confirmed if meta else True,
+            'prepayment_required':      meta.prepayment_required if meta else False,
+            'prepayment_amount':        meta.prepayment_amount if meta else 0.0,
+            'prepayment_collected':     meta.prepayment_collected if meta else False,
+            'has_pickup_photo':         meta.has_pickup_photo if meta else False,
         }
     return jsonify({'orders': [_fmt_order(r) for r in res]})
 
