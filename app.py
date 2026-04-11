@@ -45,7 +45,12 @@ app.wsgi_app = ProxyFix(
 # 1. ADVANCED SECURITY CONFIGURATION
 # ==========================================
 
-app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-9599-key')
+app.secret_key = os.environ.get('SECRET_KEY', '9599isthesecretkey')
+
+# Developer portal secret — set DEV_SECRET in env for production.
+DEV_SECRET = os.environ.get('DEV_SECRET', 'dev-9599-local').strip()
+if len(DEV_SECRET) < 8:
+    DEV_SECRET = 'dev-9599-local'
 
 # Google OAuth Client ID for Social Login
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com')
@@ -13552,6 +13557,664 @@ try:
 except Exception as _module_init_err:
     print(f"[Startup] DB init block failed at module level: {_module_init_err}")
     # App will still serve requests; lazy init will retry on first request.
+
+
+# ==========================================
+# 10b. DEVELOPER PORTAL (/dev)
+# ==========================================
+
+DEV_KEY = os.environ.get('DEV_KEY', 'dev-9599')
+
+DEV_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>9599 Dev Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg:#07080d;--surface:#0e1018;--card:#13151f;--border:#1e2235;
+    --accent:#00e5a0;--accent2:#5b7fff;--warn:#ff9500;--danger:#ff3b5c;
+    --text:#c8d0e8;--muted:#4a5270;--bright:#eef0f8;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{font-size:14px;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;z-index:1;}
+  .login-box{width:380px;background:var(--card);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:12px;padding:40px 36px 32px;box-shadow:0 0 60px rgba(0,229,160,.08),0 20px 60px rgba(0,0,0,.6);animation:fadeUp .5s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  .login-logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
+  .login-sub{font-size:.72rem;color:var(--muted);margin-bottom:28px;}
+  .field-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+  .dev-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--bright);font-family:'JetBrains Mono',monospace;font-size:.88rem;padding:10px 14px;outline:none;transition:border .2s;margin-bottom:18px;}
+  .dev-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,160,.12);}
+  .btn-login{width:100%;background:var(--accent);color:#060a07;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;border:none;border-radius:7px;padding:11px;cursor:pointer;transition:opacity .2s,transform .1s;}
+  .btn-login:hover{opacity:.88;}
+  .btn-login:active{transform:scale(.98);}
+  .login-error{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.3);border-radius:6px;padding:9px 12px;font-size:.75rem;color:#ff6b84;margin-bottom:14px;display:none;}
+  .login-error.show{display:block;}
+  #portal{display:none;position:relative;z-index:1;min-height:100vh;}
+  .topbar{display:flex;align-items:center;gap:12px;padding:0 28px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+  .topbar-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-right:auto;}
+  .topbar-badge{font-size:.65rem;background:rgba(0,229,160,.12);color:var(--accent);border:1px solid rgba(0,229,160,.25);border-radius:20px;padding:2px 10px;text-transform:uppercase;letter-spacing:.08em;}
+  .topbar-time{font-size:.72rem;color:var(--muted);}
+  .btn-icon{background:transparent;border:1px solid var(--border);color:var(--text);font-size:.78rem;border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;}
+  .btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-icon.danger:hover{border-color:var(--danger);color:var(--danger);}
+  .portal-layout{display:flex;}
+  .sidebar{width:210px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);min-height:calc(100vh - 52px);padding:18px 0;position:sticky;top:52px;align-self:flex-start;height:calc(100vh - 52px);overflow-y:auto;}
+  .nav-section{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.15em;padding:14px 20px 6px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:.78rem;color:var(--muted);cursor:pointer;transition:all .15s;border-left:2px solid transparent;user-select:none;}
+  .nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+  .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(0,229,160,.05);}
+  .nav-item i{width:16px;text-align:center;font-size:.8rem;}
+  .content{flex:1;padding:28px;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .section-header{margin-bottom:22px;}
+  .section-title{font-family:'Syne',sans-serif;font-size:1.35rem;font-weight:800;color:var(--bright);margin-bottom:4px;}
+  .section-sub{font-size:.72rem;color:var(--muted);}
+  .cards-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;transition:border-color .2s;}
+  .stat-card:hover{border-color:var(--accent);}
+  .stat-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+  .stat-value{font-size:1.6rem;font-weight:700;color:var(--bright);line-height:1;margin-bottom:4px;}
+  .stat-hint{font-size:.68rem;color:var(--muted);}
+  .accent{color:var(--accent);}.warn{color:var(--warn);}.danger{color:var(--danger);}.blue{color:var(--accent2);}
+  .panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:900px){.panel-grid{grid-template-columns:1fr;}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);font-size:.75rem;font-weight:700;color:var(--bright);text-transform:uppercase;letter-spacing:.1em;}
+  .panel-head i{color:var(--accent);margin-right:8px;}
+  .panel-body{padding:16px 18px;}
+  .dev-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+  .dev-table th{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:.62rem;font-weight:500;padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;}
+  .dev-table td{padding:9px 10px;border-bottom:1px solid rgba(30,34,53,.7);color:var(--text);vertical-align:middle;}
+  .dev-table tr:last-child td{border-bottom:none;}
+  .dev-table tr:hover td{background:rgba(255,255,255,.02);}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+  .badge-green{background:rgba(0,229,160,.12);color:var(--accent);}
+  .badge-red{background:rgba(255,59,92,.12);color:#ff6b84;}
+  .badge-warn{background:rgba(255,149,0,.12);color:var(--warn);}
+  .badge-blue{background:rgba(91,127,255,.12);color:var(--accent2);}
+  .badge-gray{background:rgba(74,82,112,.2);color:var(--muted);}
+  .action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .btn-action{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.73rem;font-weight:500;border-radius:7px;padding:8px 14px;cursor:pointer;transition:all .15s;}
+  .btn-action:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.05);}
+  .btn-action.warn-btn:hover{border-color:var(--warn);color:var(--warn);background:rgba(255,149,0,.05);}
+  .btn-action.danger-btn:hover{border-color:var(--danger);color:var(--danger);background:rgba(255,59,92,.05);}
+  .btn-action.primary{background:var(--accent);border-color:var(--accent);color:#060a07;font-weight:700;}
+  .btn-action.primary:hover{opacity:.88;color:#060a07;}
+  .log-stream{background:#070910;border:1px solid var(--border);border-radius:8px;padding:14px;max-height:280px;overflow-y:auto;font-size:.72rem;line-height:1.7;font-family:'JetBrains Mono',monospace;}
+  .log-stream::-webkit-scrollbar{width:4px;}
+  .log-stream::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .log-line{display:flex;gap:10px;}
+  .log-ts{color:var(--muted);flex-shrink:0;}
+  .log-msg{color:var(--text);}
+  .log-line.ok .log-msg{color:var(--accent);}
+  .log-line.warn .log-msg{color:var(--warn);}
+  .log-line.err .log-msg{color:var(--danger);}
+  .log-line.info .log-msg{color:var(--accent2);}
+  .empty-state{text-align:center;padding:30px 20px;color:var(--muted);font-size:.75rem;}
+  .empty-state i{font-size:1.6rem;margin-bottom:10px;display:block;}
+  .form-row{margin-bottom:14px;}
+  .form-row label{display:block;font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+  .dev-input-sm{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--bright);font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:8px 12px;outline:none;transition:border .2s;}
+  .dev-input-sm:focus{border-color:var(--accent);}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(7,8,13,.85);backdrop-filter:blur(6px);z-index:999;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;animation:fadeIn .2s;}
+  .modal{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:12px;width:480px;max-width:95vw;box-shadow:0 30px 80px rgba(0,0,0,.7);animation:scaleIn .2s ease;}
+  @keyframes scaleIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);}
+  .modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:var(--bright);}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;transition:color .15s;}
+  .modal-close:hover{color:var(--bright);}
+  .modal-body{padding:22px;}
+  .modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+  .modal-warning{background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.2);border-radius:7px;padding:12px 14px;font-size:.74rem;color:var(--warn);margin-bottom:16px;display:flex;gap:10px;}
+  .modal-warning i{flex-shrink:0;margin-top:2px;}
+  .env-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(30,34,53,.6);font-size:.74rem;}
+  .env-row:last-child{border-bottom:none;}
+  .env-key{color:var(--muted);}
+  .env-val{color:var(--bright);font-weight:500;}
+  .grant-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+  .grant-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .2s;text-align:center;}
+  .grant-card:hover{border-color:var(--accent);background:rgba(0,229,160,.04);}
+  .grant-card.emp:hover{border-color:var(--accent2);background:rgba(91,127,255,.04);}
+  .grant-card i{font-size:1.8rem;margin-bottom:10px;display:block;color:var(--accent);}
+  .grant-card.emp i{color:var(--accent2);}
+  .grant-card-title{font-size:.82rem;font-weight:700;color:var(--bright);margin-bottom:4px;}
+  .grant-card-sub{font-size:.68rem;color:var(--muted);}
+  .pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);display:inline-block;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .pulse-dot.off{background:var(--muted);box-shadow:none;animation:none;}
+  #toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 18px;font-size:.78rem;color:var(--bright);box-shadow:0 8px 30px rgba(0,0,0,.5);transform:translateY(80px);opacity:0;transition:all .3s ease;display:flex;align-items:center;gap:10px;}
+  #toast.show{transform:none;opacity:1;}
+  #toast.ok{border-left:3px solid var(--accent);}
+  #toast.err{border-left:3px solid var(--danger);}
+  #toast.warn{border-left:3px solid var(--warn);}
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">&#9632; Dev Portal</div>
+    <div class="login-sub">9599 Tea &amp; Coffee Shop &mdash; Internal Tooling</div>
+    <div class="login-error" id="login-err">Invalid developer key.</div>
+    <div class="field-label">Developer Key</div>
+    <input type="password" class="dev-input" id="dev-key-input" placeholder="Enter dev key&hellip;" autocomplete="off">
+    <button class="btn-login" onclick="devLogin()"><i class="fas fa-terminal" style="margin-right:7px;"></i> Authenticate</button>
+  </div>
+</div>
+<div id="portal">
+  <div class="topbar">
+    <div class="topbar-brand">&#9632; Dev Portal</div>
+    <span class="topbar-badge">INTERNAL ONLY</span>
+    <span class="pulse-dot" id="db-pulse"></span>
+    <span class="topbar-time" id="topbar-clock">&mdash;</span>
+    <button class="btn-icon" onclick="openTab('overview')"><i class="fas fa-home"></i></button>
+    <button class="btn-icon danger" onclick="devLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+  <div class="portal-layout">
+    <aside class="sidebar">
+      <div class="nav-section">System</div>
+      <div class="nav-item active" onclick="openTab('overview')" data-tab="overview"><i class="fas fa-th-large"></i> Overview</div>
+      <div class="nav-item" onclick="openTab('access')" data-tab="access"><i class="fas fa-key"></i> Access Grant</div>
+      <div class="nav-section">Security</div>
+      <div class="nav-item" onclick="openTab('security')" data-tab="security"><i class="fas fa-shield-alt"></i> Threat Control</div>
+      <div class="nav-item" onclick="openTab('audit')" data-tab="audit"><i class="fas fa-scroll"></i> Audit Log</div>
+      <div class="nav-section">Database</div>
+      <div class="nav-item" onclick="openTab('db')" data-tab="db"><i class="fas fa-database"></i> DB Inspector</div>
+      <div class="nav-section">Environment</div>
+      <div class="nav-item" onclick="openTab('env')" data-tab="env"><i class="fas fa-server"></i> Environment</div>
+      <div class="nav-section">Quick Links</div>
+      <div class="nav-item" onclick="window.open('/admin','_blank')"><i class="fas fa-user-shield"></i> Admin Panel &#8599;</div>
+      <div class="nav-item" onclick="window.open('/employee','_blank')"><i class="fas fa-user-tie"></i> Employee Site &#8599;</div>
+      <div class="nav-item" onclick="window.open('/','_blank')"><i class="fas fa-store"></i> Storefront &#8599;</div>
+    </aside>
+    <main class="content">
+      <div class="tab-panel active" id="tab-overview">
+        <div class="section-header">
+          <div class="section-title">System Overview</div>
+          <div class="section-sub">Live snapshot of the 9599 Tea &amp; Coffee POS system</div>
+        </div>
+        <div class="cards-row">
+          <div class="stat-card"><div class="stat-label">Total Orders</div><div class="stat-value accent" id="stat-orders">&mdash;</div><div class="stat-hint">all time</div></div>
+          <div class="stat-card"><div class="stat-label">Today's Revenue</div><div class="stat-value accent" id="stat-revenue">&mdash;</div><div class="stat-hint">PH time</div></div>
+          <div class="stat-card"><div class="stat-label">Blacklisted IPs</div><div class="stat-value warn" id="stat-banned">&mdash;</div><div class="stat-hint">active blocks</div></div>
+          <div class="stat-card"><div class="stat-label">Failed Logins</div><div class="stat-value warn" id="stat-fails">&mdash;</div><div class="stat-hint">last 24 hours</div></div>
+          <div class="stat-card"><div class="stat-label">Menu Items</div><div class="stat-value blue" id="stat-menu">&mdash;</div><div class="stat-hint">active</div></div>
+          <div class="stat-card"><div class="stat-label">Ingredients</div><div class="stat-value blue" id="stat-ings">&mdash;</div><div class="stat-hint">tracked</div></div>
+        </div>
+        <div class="panel-grid">
+          <div class="panel">
+            <div class="panel-head"><span><i class="fas fa-circle-notch"></i>Recent Activity</span>
+              <button class="btn-icon" onclick="loadAudit(5)"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div class="panel-body"><div class="log-stream" id="overview-log"><div class="empty-state"><i class="fas fa-terminal"></i>Loading&hellip;</div></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span><i class="fas fa-link"></i>Session Status</span>
+              <button class="btn-icon" onclick="loadSession()"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div class="panel-body" id="session-panel">Loading&hellip;</div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-access">
+        <div class="section-header">
+          <div class="section-title">Access Grant</div>
+          <div class="section-sub">Inject session credentials without going through the normal login flow</div>
+        </div>
+        <div class="grant-cards">
+          <div class="grant-card" onclick="openGrantModal('admin')">
+            <i class="fas fa-user-shield"></i>
+            <div class="grant-card-title">Admin Panel</div>
+            <div class="grant-card-sub">Full access to orders, finance, security &amp; settings</div>
+          </div>
+          <div class="grant-card emp" onclick="openGrantModal('employee')">
+            <i class="fas fa-user-tie"></i>
+            <div class="grant-card-title">Employee Site</div>
+            <div class="grant-card-sub">POS station, walk-in orders, inventory updates</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span><i class="fas fa-history"></i>Grant Log</span></div>
+          <div class="panel-body"><div class="log-stream" id="grant-log"><div class="empty-state"><i class="fas fa-key"></i>No grants yet this session.</div></div></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-security">
+        <div class="section-header">
+          <div class="section-title">Threat Control</div>
+          <div class="section-sub">Manage blacklisted IPs and brute-force attempts</div>
+        </div>
+        <div class="action-row">
+          <button class="btn-action" onclick="loadBlacklist();loadAttempts();"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button class="btn-action warn-btn" onclick="openBanModal()"><i class="fas fa-ban"></i> Manual Ban IP</button>
+          <button class="btn-action danger-btn" onclick="confirmClearAttempts()"><i class="fas fa-trash-alt"></i> Clear Failed Attempts</button>
+        </div>
+        <div class="panel-grid">
+          <div class="panel">
+            <div class="panel-head"><span><i class="fas fa-ban"></i>Blacklisted IPs</span><span id="ban-count" class="badge badge-red">0</span></div>
+            <div class="panel-body">
+              <table class="dev-table"><thead><tr><th>IP</th><th>Reason</th><th>Type</th><th>Action</th></tr></thead>
+              <tbody id="ban-tbody"><tr><td colspan="4"><div class="empty-state">Loading&hellip;</div></td></tr></tbody></table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span><i class="fas fa-exclamation-triangle"></i>Failed Attempts (24h)</span><span id="attempt-count" class="badge badge-warn">0</span></div>
+            <div class="panel-body">
+              <table class="dev-table"><thead><tr><th>IP</th><th>Type</th><th>When</th><th>Action</th></tr></thead>
+              <tbody id="attempt-tbody"><tr><td colspan="4"><div class="empty-state">Loading&hellip;</div></td></tr></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-audit">
+        <div class="section-header">
+          <div class="section-title">Audit Log</div>
+          <div class="section-sub">Full system event history</div>
+        </div>
+        <div class="action-row">
+          <button class="btn-action" onclick="loadAudit(50)"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span><i class="fas fa-scroll"></i>Event Stream</span></div>
+          <div class="panel-body"><div class="log-stream" style="max-height:500px;" id="full-audit-log"><div class="empty-state"><i class="fas fa-terminal"></i>Loading&hellip;</div></div></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-db">
+        <div class="section-header">
+          <div class="section-title">DB Inspector</div>
+          <div class="section-sub">Table stats, migrations, and maintenance</div>
+        </div>
+        <div class="action-row">
+          <button class="btn-action" onclick="loadDbStats()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button class="btn-action warn-btn" onclick="confirmReinit()"><i class="fas fa-redo-alt"></i> Re-init DB</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span><i class="fas fa-table"></i>Table Counts</span></div>
+          <div class="panel-body">
+            <table class="dev-table"><thead><tr><th>Table</th><th>Rows</th><th>Status</th></tr></thead>
+            <tbody id="db-tbody"><tr><td colspan="3"><div class="empty-state">Loading&hellip;</div></td></tr></tbody></table>
+          </div>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-env">
+        <div class="section-header">
+          <div class="section-title">Environment</div>
+          <div class="section-sub">Runtime configuration and deployment info</div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span><i class="fas fa-server"></i>Config Variables</span></div>
+          <div class="panel-body" id="env-panel">Loading&hellip;</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Grant Modal -->
+<div class="modal-overlay" id="grant-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="grant-modal-title">Grant Admin Access</span>
+      <button class="modal-close" onclick="closeModal('grant-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-warning"><i class="fas fa-exclamation-triangle"></i><span>This will immediately inject a session cookie granting full access. Only use in development or emergency recovery.</span></div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px;">After granting, you will be redirected to the target site in a new tab.</p>
+      <input type="hidden" id="grant-role">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action" onclick="closeModal('grant-modal')">Cancel</button>
+      <button class="btn-action primary" onclick="confirmGrant()"><i class="fas fa-unlock-alt"></i> Grant Access</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ban Modal -->
+<div class="modal-overlay" id="ban-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Ban IP Address</span>
+      <button class="modal-close" onclick="closeModal('ban-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>IP Address</label><input type="text" class="dev-input-sm" id="ban-ip-input" placeholder="e.g. 192.168.1.100"></div>
+      <div class="form-row"><label>Reason</label><input type="text" class="dev-input-sm" id="ban-reason-input" placeholder="e.g. Suspicious scanning activity"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action" onclick="closeModal('ban-modal')">Cancel</button>
+      <button class="btn-action danger-btn" style="border-color:var(--danger);color:var(--danger);" onclick="submitBan()"><i class="fas fa-ban"></i> Ban IP</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="confirm-title">Confirm Action</span>
+      <button class="modal-close" onclick="closeModal('confirm-modal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-warning"><i class="fas fa-exclamation-triangle"></i><span id="confirm-msg">Are you sure?</span></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn-action danger-btn" style="border-color:var(--danger);color:var(--danger);" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+let _toastTimer, grantLogLines=[];
+function updateClock(){const n=new Date();document.getElementById('topbar-clock').textContent=n.toLocaleTimeString('en-PH',{hour12:true,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+setInterval(updateClock,1000);updateClock();
+function toast(msg,type='ok'){const t=document.getElementById('toast');t.className='show '+type;t.innerHTML='<i class="fas '+(type==='ok'?'fa-check-circle':type==='err'?'fa-times-circle':'fa-exclamation-circle')+'"></i> '+msg;clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.className='',3200);}
+async function devLogin(){const key=document.getElementById('dev-key-input').value;const err=document.getElementById('login-err');const r=await fetch('/api/dev/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});if(r.ok){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';loadOverview();loadAudit(5);loadSession();}else{err.classList.add('show');document.getElementById('dev-key-input').value='';setTimeout(()=>err.classList.remove('show'),3000);}}
+document.getElementById('dev-key-input').addEventListener('keydown',e=>{if(e.key==='Enter')devLogin();});
+function devLogout(){fetch('/api/dev/logout',{method:'POST'}).then(()=>{document.getElementById('portal').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('dev-key-input').value='';});}
+function openTab(name){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item[data-tab]').forEach(n=>n.classList.remove('active'));document.getElementById('tab-'+name).classList.add('active');const el=document.querySelector('.nav-item[data-tab="'+name+'"]');if(el)el.classList.add('active');if(name==='security'){loadBlacklist();loadAttempts();}if(name==='audit')loadAudit(50);if(name==='db')loadDbStats();if(name==='env')loadEnv();}
+async function devFetch(url,opts={}){const r=await fetch(url,opts);if(r.status===401){toast('Session expired.','err');return null;}return r;}
+async function loadOverview(){const r=await devFetch('/api/dev/stats');if(!r)return;const d=await r.json();document.getElementById('stat-orders').textContent=d.orders??'—';document.getElementById('stat-revenue').textContent=d.revenue!=null?'₱'+d.revenue.toFixed(2):'—';document.getElementById('stat-banned').textContent=d.banned??'—';document.getElementById('stat-fails').textContent=d.failed_24h??'—';document.getElementById('stat-menu').textContent=d.menu_items??'—';document.getElementById('stat-ings').textContent=d.ingredients??'—';const p=document.getElementById('db-pulse');if(d.db_ok)p.classList.remove('off');else p.classList.add('off');}
+async function loadSession(){const r=await devFetch('/api/dev/sessions');if(!r)return;const d=await r.json();document.getElementById('session-panel').innerHTML='<div class="env-row"><span class="env-key">Admin Session</span><span class="'+(d.admin_active?'accent':'danger')+'">'+(d.admin_active?'&#9679; Active':'&#9675; Inactive')+'</span></div><div class="env-row"><span class="env-key">Admin Last Ping</span><span class="env-val">'+(d.admin_last_ping||'—')+'</span></div><div class="env-row"><span class="env-key">Employee Session</span><span class="'+(d.emp_active?'accent':'danger')+'">'+(d.emp_active?'&#9679; Active':'&#9675; Inactive')+'</span></div><div class="env-row"><span class="env-key">Employee Last Ping</span><span class="env-val">'+(d.emp_last_ping||'—')+'</span></div><div class="env-row"><span class="env-key">Your IP</span><span class="env-val">'+(d.client_ip||'—')+'</span></div>';}
+async function loadAudit(limit){limit=limit||50;const r=await devFetch('/api/dev/audit?limit='+limit);if(!r)return;const logs=await r.json();['overview-log','full-audit-log'].forEach(id=>{const el=document.getElementById(id);if(!el)return;if(!logs.length){el.innerHTML='<div class="empty-state"><i class="fas fa-terminal"></i>No events yet.</div>';return;}el.innerHTML=logs.map(l=>{const cls=l.action.includes('Login')?'ok':l.action.includes('Security')||l.action.includes('Ban')?'err':l.action.includes('Warn')?'warn':'';return'<div class="log-line '+cls+'"><span class="log-ts">'+l.ts+'</span><span class="log-msg">['+l.action+'] '+(l.details||'')+'</span></div>';}).join('');el.scrollTop=el.scrollHeight;});}
+async function loadBlacklist(){const r=await devFetch('/api/dev/blacklist');if(!r)return;const d=await r.json();document.getElementById('ban-count').textContent=d.length;const tbody=document.getElementById('ban-tbody');if(!d.length){tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><i class="fas fa-shield-alt"></i>No IPs blacklisted.</div></td></tr>';return;}tbody.innerHTML=d.map(b=>'<tr><td><span style="color:var(--bright);">'+b.ip+'</span></td><td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;">'+(b.reason||'—')+'</td><td><span class="badge '+(b.manual?'badge-warn':'badge-red')+'">'+(b.manual?'Manual':'Auto')+'</span></td><td><button class="btn-action danger-btn" style="padding:4px 10px;font-size:.68rem;" onclick="unbanIP('+b.id+',\''+b.ip+'\')"><i class="fas fa-unlock"></i> Unban</button></td></tr>').join('');}
+async function loadAttempts(){const r=await devFetch('/api/dev/attempts');if(!r)return;const d=await r.json();document.getElementById('attempt-count').textContent=d.length;const tbody=document.getElementById('attempt-tbody');if(!d.length){tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><i class="fas fa-check-circle"></i>No failed attempts in 24h.</div></td></tr>';return;}tbody.innerHTML=d.slice(0,50).map(a=>'<tr><td><span style="color:var(--bright);">'+a.ip+'</span></td><td><span class="badge badge-warn">'+a.type+'</span></td><td style="color:var(--muted);">'+a.ts+'</td><td><button class="btn-action warn-btn" style="padding:4px 10px;font-size:.68rem;" onclick="quickBan(\''+a.ip+'\')"><i class="fas fa-ban"></i> Ban</button></td></tr>').join('');}
+async function unbanIP(id,ip){const r=await devFetch('/api/dev/blacklist/'+id,{method:'DELETE'});if(r?.ok){toast(ip+' has been unbanned.');loadBlacklist();loadOverview();}else toast('Failed to unban.','err');}
+function quickBan(ip){document.getElementById('ban-ip-input').value=ip;document.getElementById('ban-reason-input').value='Banned from failed attempts list';openModal('ban-modal');}
+async function submitBan(){const ip=document.getElementById('ban-ip-input').value.trim();const reason=document.getElementById('ban-reason-input').value.trim();if(!ip){toast('Enter an IP address.','warn');return;}const r=await devFetch('/api/dev/blacklist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip,reason})});if(r?.ok){toast(ip+' has been banned.','warn');closeModal('ban-modal');loadBlacklist();loadOverview();}else toast('Failed to ban IP.','err');}
+function confirmClearAttempts(){showConfirm('Clear Failed Attempts','This will delete ALL failed login attempt records. Brute-force counters will reset.',async()=>{const r=await devFetch('/api/dev/attempts',{method:'DELETE'});if(r?.ok){toast('Failed attempts cleared.');loadAttempts();loadOverview();}else toast('Error.','err');});}
+async function loadDbStats(){const r=await devFetch('/api/dev/db_stats');if(!r)return;const d=await r.json();document.getElementById('db-tbody').innerHTML=d.map(t=>'<tr><td style="color:var(--accent2);">'+t.table+'</td><td style="color:var(--bright);font-weight:700;">'+t.count+'</td><td><span class="badge '+(t.count>0?'badge-green':'badge-gray')+'">'+(t.count>0?'OK':'Empty')+'</span></td></tr>').join('');}
+function confirmReinit(){showConfirm('Re-initialize Database','This will run db.create_all() and re-seed default data. Existing rows will NOT be deleted.',async()=>{const r=await devFetch('/api/dev/reinit_db',{method:'POST'});if(r?.ok){toast('Database re-initialized.');loadDbStats();loadOverview();}else toast('Error during re-init.','err');});}
+async function loadEnv(){const r=await devFetch('/api/dev/env');if(!r)return;const d=await r.json();document.getElementById('env-panel').innerHTML=d.map(e=>'<div class="env-row"><span class="env-key">'+e.key+'</span><span class="env-val '+(e.set?'accent':'')+'">'+e.value+'</span></div>').join('');}
+function openGrantModal(role){document.getElementById('grant-role').value=role;document.getElementById('grant-modal-title').textContent=role==='admin'?'Grant Admin Access':'Grant Employee Access';openModal('grant-modal');}
+async function confirmGrant(){const role=document.getElementById('grant-role').value;const r=await devFetch('/api/dev/grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});if(r?.ok){const d=await r.json();closeModal('grant-modal');const line='['+new Date().toLocaleTimeString()+'] Granted '+role+' session \u2192 redirecting\u2026';grantLogLines.unshift(line);document.getElementById('grant-log').innerHTML=grantLogLines.map(l=>'<div class="log-line ok"><span class="log-msg">'+l+'</span></div>').join('');toast(role+' access granted!');setTimeout(()=>window.open(d.redirect,'_blank'),400);}else toast('Grant failed.','err');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openBanModal(){document.getElementById('ban-ip-input').value='';document.getElementById('ban-reason-input').value='';openModal('ban-modal');}
+let _confirmCallback=null;
+function showConfirm(title,msg,cb){document.getElementById('confirm-title').textContent=title;document.getElementById('confirm-msg').textContent=msg;_confirmCallback=cb;openModal('confirm-modal');}
+document.getElementById('confirm-ok-btn').addEventListener('click',()=>{closeModal('confirm-modal');if(_confirmCallback){_confirmCallback();_confirmCallback=null;}});
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
+(async()=>{const r=await fetch('/api/dev/check');if(r.ok){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';loadOverview();loadAudit(5);loadSession();}})();
+</script>
+</body>
+</html>
+"""
+
+
+def _dev_auth_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('is_dev'):
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/dev')
+def dev_portal():
+    return render_template_string(DEV_HTML)
+
+
+@app.route('/api/dev/auth', methods=['POST'])
+@limiter.limit("10 per minute")
+def dev_auth():
+    data = request.get_json(silent=True) or {}
+    if data.get('key') == DEV_KEY:
+        session['is_dev'] = True
+        return jsonify({"status": "ok"})
+    return jsonify({"error": "Invalid key"}), 401
+
+
+@app.route('/api/dev/check')
+def dev_check():
+    if session.get('is_dev'):
+        return jsonify({"ok": True})
+    return jsonify({"ok": False}), 401
+
+
+@app.route('/api/dev/logout', methods=['POST'])
+def dev_logout_api():
+    session.pop('is_dev', None)
+    return jsonify({"status": "ok"})
+
+
+@app.route('/api/dev/grant', methods=['POST'])
+@_dev_auth_required
+def dev_grant():
+    data = request.get_json(silent=True) or {}
+    role = data.get('role', '')
+    if role == 'admin':
+        session.permanent = True
+        session['is_admin'] = True
+        session['admin_id'] = str(uuid.uuid4())
+        try:
+            state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
+                                                 active_employee_session_id='', employee_last_ping=datetime.min)
+            if not state.id:
+                db.session.add(state)
+            state.active_session_id = session['admin_id']
+            state.last_ping = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            try: db.session.rollback()
+            except Exception: pass
+        log_audit("Dev Grant", f"Dev portal injected admin session from {get_client_ip()}")
+        return jsonify({"status": "ok", "redirect": "/admin"})
+    elif role == 'employee':
+        session.permanent = True
+        session['is_employee'] = True
+        session['employee_id'] = str(uuid.uuid4())
+        try:
+            state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
+                                                 active_employee_session_id='', employee_last_ping=datetime.min)
+            if not state.id:
+                db.session.add(state)
+            state.active_employee_session_id = session['employee_id']
+            state.employee_last_ping = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            try: db.session.rollback()
+            except Exception: pass
+        log_audit("Dev Grant", f"Dev portal injected employee session from {get_client_ip()}")
+        return jsonify({"status": "ok", "redirect": "/employee"})
+    return jsonify({"error": "Invalid role"}), 400
+
+
+@app.route('/api/dev/stats')
+@_dev_auth_required
+def dev_stats():
+    now = get_ph_time()
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff_24h = now - timedelta(hours=24)
+    db_ok = True
+    try:
+        total_orders  = Reservation.query.count()
+        today_revenue = sum(o.total_investment for o in Reservation.query.filter(Reservation.created_at >= day_start).all())
+        banned        = BlacklistedIP.query.count()
+        failed_24h    = FailedLoginAttempt.query.filter(FailedLoginAttempt.created_at >= cutoff_24h).count()
+        menu_items    = MenuItem.query.count()
+        ingredients   = Ingredient.query.count()
+    except Exception:
+        db_ok = False
+        total_orders = today_revenue = banned = failed_24h = menu_items = ingredients = 0
+    return jsonify({"orders": total_orders, "revenue": today_revenue, "banned": banned,
+                    "failed_24h": failed_24h, "menu_items": menu_items, "ingredients": ingredients, "db_ok": db_ok})
+
+
+@app.route('/api/dev/sessions')
+@_dev_auth_required
+def dev_sessions():
+    try:
+        state = _get_state()
+        now = datetime.utcnow()
+        admin_active = bool(state and state.last_ping and (now - state.last_ping).total_seconds() < 90)
+        emp_active   = bool(state and state.employee_last_ping and (now - state.employee_last_ping).total_seconds() < 90)
+        admin_ping   = state.last_ping.strftime('%Y-%m-%d %H:%M:%S') if (state and state.last_ping and state.last_ping != datetime.min) else None
+        emp_ping     = state.employee_last_ping.strftime('%Y-%m-%d %H:%M:%S') if (state and state.employee_last_ping and state.employee_last_ping != datetime.min) else None
+    except Exception:
+        admin_active = emp_active = False
+        admin_ping = emp_ping = None
+    return jsonify({"admin_active": admin_active, "admin_last_ping": admin_ping,
+                    "emp_active": emp_active, "emp_last_ping": emp_ping, "client_ip": get_client_ip()})
+
+
+@app.route('/api/dev/audit')
+@_dev_auth_required
+def dev_audit():
+    limit = min(int(request.args.get('limit', 50)), 200)
+    try:
+        logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+        return jsonify([{"ts": l.created_at.strftime('%H:%M:%S') if l.created_at else '—',
+                         "action": l.action or '', "details": l.details or ''} for l in logs])
+    except Exception as e:
+        return jsonify([{"ts": "error", "action": str(e), "details": ""}])
+
+
+@app.route('/api/dev/blacklist', methods=['GET'])
+@_dev_auth_required
+def dev_blacklist_get():
+    try:
+        items = BlacklistedIP.query.order_by(BlacklistedIP.created_at.desc()).all()
+        return jsonify([{"id": b.id, "ip": b.ip_address, "reason": b.reason, "manual": b.is_manual} for b in items])
+    except Exception:
+        return jsonify([])
+
+
+@app.route('/api/dev/blacklist', methods=['POST'])
+@_dev_auth_required
+def dev_blacklist_add():
+    data = request.get_json(silent=True) or {}
+    ip = (data.get('ip') or '').strip()
+    reason = (data.get('reason') or 'Manually banned via Dev Portal').strip()
+    if not ip:
+        return jsonify({"error": "IP required"}), 400
+    try:
+        existing = BlacklistedIP.query.filter_by(ip_address=ip).first()
+        if not existing:
+            db.session.add(BlacklistedIP(ip_address=ip, reason=reason, is_manual=True))
+            db.session.commit()
+        log_audit("Dev: IP Banned", f"Dev portal banned {ip}: {reason}")
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/blacklist/<int:ban_id>', methods=['DELETE'])
+@_dev_auth_required
+def dev_blacklist_delete(ban_id):
+    try:
+        entry = BlacklistedIP.query.get(ban_id)
+        if entry:
+            ip = entry.ip_address
+            db.session.delete(entry)
+            db.session.commit()
+            log_audit("Dev: IP Unbanned", f"Dev portal unbanned {ip}")
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/attempts', methods=['GET'])
+@_dev_auth_required
+def dev_attempts_get():
+    cutoff = get_ph_time() - timedelta(hours=24)
+    try:
+        items = FailedLoginAttempt.query.filter(FailedLoginAttempt.created_at >= cutoff).order_by(FailedLoginAttempt.created_at.desc()).limit(100).all()
+        return jsonify([{"ip": a.ip_address, "type": a.attempt_type or 'admin',
+                         "ts": a.created_at.strftime('%H:%M:%S') if a.created_at else '—'} for a in items])
+    except Exception:
+        return jsonify([])
+
+
+@app.route('/api/dev/attempts', methods=['DELETE'])
+@_dev_auth_required
+def dev_attempts_clear():
+    try:
+        FailedLoginAttempt.query.delete()
+        db.session.commit()
+        log_audit("Dev: Attempts Cleared", "Dev portal cleared all failed login attempt records")
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/db_stats')
+@_dev_auth_required
+def dev_db_stats():
+    tables = [
+        ('reservations', Reservation), ('infusions', Infusion), ('menu_items', MenuItem),
+        ('ingredients', Ingredient), ('recipe_items', RecipeItem), ('expenses', Expense),
+        ('audit_logs', AuditLog), ('customer_logs', CustomerLog), ('blacklisted_ips', BlacklistedIP),
+        ('failed_login_attempts', FailedLoginAttempt), ('order_meta', OrderMeta),
+        ('promo_codes', PromoCode), ('staff_announcements', StaffAnnouncement),
+        ('waste_logs', WasteLog), ('customer_reputations', CustomerReputation),
+        ('customer_blocklist', CustomerBlocklist), ('system_state', SystemState),
+        ('closed_days', ClosedDay), ('store_schedule', StoreScheduleEntry),
+    ]
+    result = []
+    for name, model in tables:
+        try:
+            count = model.query.count()
+            result.append({"table": name, "count": count})
+        except Exception:
+            result.append({"table": name, "count": "err"})
+    return jsonify(result)
+
+
+@app.route('/api/dev/reinit_db', methods=['POST'])
+@_dev_auth_required
+def dev_reinit_db():
+    try:
+        _initialize_db()
+        log_audit("Dev: DB Re-initialized", "Dev portal triggered db.create_all() + seed")
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/env')
+@_dev_auth_required
+def dev_env():
+    def mask(val):
+        if not val: return None
+        if len(val) <= 4: return '****'
+        return val[:2] + '*' * (len(val) - 4) + val[-2:]
+    checks = [
+        ("DATABASE_URL", os.environ.get('DATABASE_URL')),
+        ("SECRET_KEY", os.environ.get('SECRET_KEY')),
+        ("ADMIN_PIN", os.environ.get('ADMIN_PIN')),
+        ("DEV_KEY", os.environ.get('DEV_KEY')),
+        ("GOOGLE_CLIENT_ID", os.environ.get('GOOGLE_CLIENT_ID')),
+        ("VERCEL", os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV')),
+        ("RENDER", os.environ.get('RENDER')),
+        ("DYNO", os.environ.get('DYNO')),
+    ]
+    result = []
+    for key, val in checks:
+        if val:
+            result.append({"key": key, "value": mask(val), "set": True})
+        else:
+            result.append({"key": key, "value": "NOT SET", "set": False})
+    result.append({"key": "DB_ENGINE", "value": app.config['SQLALCHEMY_DATABASE_URI'].split(':')[0], "set": True})
+    result.append({"key": "ON_CLOUD", "value": str(_ON_CLOUD), "set": _ON_CLOUD})
+    return jsonify(result)
+
 
 # ==========================================
 # 11. APPLICATION RUNNER
