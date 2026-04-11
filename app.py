@@ -255,6 +255,9 @@ _sse_lock = threading.Lock()
 _customer_sse_subscribers = []   # one per connected customer browser tab
 _customer_sse_lock = threading.Lock()
 
+_emp_sse_subscribers = []   # one per connected employee browser tab
+_emp_sse_lock = threading.Lock()
+
 def push_customer_event(event_type, data=None):
     """Broadcast an SSE event to every connected customer browser tab."""
     msg = f"event: {event_type}\\ndata: {json.dumps(data or {})}\\n\\n"
@@ -267,6 +270,17 @@ def push_customer_event(event_type, data=None):
                 dead.append(q)
         for q in dead:
             _customer_sse_subscribers.remove(q)
+
+def push_employee_event(event_type, data=None):
+    """Broadcast an SSE event to every connected employee tab."""
+    msg = f"event: {event_type}\ndata: {json.dumps(data or {})}\n\n"
+    with _emp_sse_lock:
+        dead = []
+        for q in _emp_sse_subscribers:
+            try: q.put_nowait(msg)
+            except Exception: dead.append(q)
+        for q in dead:
+            _emp_sse_subscribers.remove(q)
 
 def push_event(event_type, data=None):
     """Broadcast an SSE event to every connected admin client and mirror to customers."""
@@ -297,6 +311,7 @@ class Reservation(db.Model):
     created_at = db.Column(db.DateTime, default=get_ph_time)
     cancel_reason = db.Column(db.String(300), nullable=True, default='')
     patron_address = db.Column(db.String(300), nullable=True, default='')
+    is_paid = db.Column(db.Boolean, default=False, nullable=False)
     infusions = db.relationship('Infusion', backref='reservation', lazy=True, cascade="all, delete-orphan")
 
 class Infusion(db.Model):
@@ -931,6 +946,112 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     return True, ''     # always succeeds in dev so you can test without credits
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# EMAIL VERIFICATION — sends a secure link to the customer's Gmail
+# Configure via environment variables:
+#   GMAIL_SENDER       — your Gmail address (e.g. store@gmail.com)
+#   GMAIL_APP_PASSWORD — 16-char App Password from Google Account → Security
+#   APP_BASE_URL       — public URL of the app (e.g. https://yourapp.vercel.app)
+#                        Falls back to request.host_url at send-time if not set.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def send_verification_email(to_email, verify_url):
+    """
+    Send an HTML email with a 'Verify Your Email' button.
+    Returns (success: bool, error_message: str).
+    """
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    sender       = os.environ.get('GMAIL_SENDER', '').strip()
+    app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+
+    if not sender or not app_password:
+        # Dev fallback — print the link to the terminal
+        print(f"\n{'='*60}")
+        print(f"  [DEV EMAIL VERIFICATION] No Gmail credentials configured.")
+        print(f"  To: {to_email}")
+        print(f"  Link: {verify_url}")
+        print(f"  Set GMAIL_SENDER and GMAIL_APP_PASSWORD to send real emails.")
+        print(f"{'='*60}\n")
+        return True, ''
+
+    subject  = "✅ Verify Your Email — 9599 Tea & Coffee"
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5EFE6;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EFE6;padding:40px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#4a1e0c,#8B5E3C);padding:32px 40px;text-align:center;">
+            <div style="font-size:2rem;margin-bottom:8px;">🧋</div>
+            <div style="color:#F5EFE6;font-size:1.4rem;font-weight:900;letter-spacing:1px;">9599 Tea &amp; Coffee</div>
+            <div style="color:#D7CCC8;font-size:0.78rem;letter-spacing:3px;margin-top:4px;font-weight:700;">EMAIL VERIFICATION</div>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px 28px;">
+            <p style="color:#3E2723;font-size:1rem;font-weight:700;margin:0 0 10px;">Hi there! 👋</p>
+            <p style="color:#5D4037;font-size:0.93rem;line-height:1.7;margin:0 0 24px;">
+              Thank you for choosing <strong>9599 Tea &amp; Coffee</strong>. To keep your order secure
+              and confirm your identity, please verify your email address by clicking the button below.
+              This link is valid for <strong>15 minutes</strong>.
+            </p>
+            <!-- CTA Button -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center" style="padding:10px 0 28px;">
+                <a href="{verify_url}"
+                   style="display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#ffffff;
+                          text-decoration:none;font-weight:900;font-size:1rem;letter-spacing:0.5px;
+                          padding:16px 44px;border-radius:14px;box-shadow:0 4px 16px rgba(92,51,23,0.35);">
+                  ✅ Verify Your Email
+                </a>
+              </td></tr>
+            </table>
+            <p style="color:#8D6E63;font-size:0.78rem;line-height:1.6;margin:0 0 8px;">
+              If you didn't request this, you can safely ignore this email — no order will be placed.
+            </p>
+            <p style="color:#8D6E63;font-size:0.75rem;line-height:1.5;margin:0;">
+              Or copy this link into your browser:<br>
+              <a href="{verify_url}" style="color:#8B5E3C;word-break:break-all;font-size:0.72rem;">{verify_url}</a>
+            </p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#FBF7F2;border-top:1px solid #EFEBE4;padding:18px 40px;text-align:center;">
+            <p style="color:#BCAAA4;font-size:0.72rem;margin:0;">
+              © 9599 Tea &amp; Coffee &nbsp;·&nbsp; San Antonio, Quezon &nbsp;·&nbsp; This is an automated message.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From']    = f"9599 Tea & Coffee <{sender}>"
+        msg['To']      = to_email
+        msg.attach(MIMEText(html_body, 'html'))
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(sender, app_password)
+            smtp.sendmail(sender, to_email, msg.as_string())
+        return True, ''
+    except smtplib.SMTPAuthenticationError:
+        return False, "Email authentication failed. Check GMAIL_SENDER and GMAIL_APP_PASSWORD."
+    except Exception as e:
+        return False, f"Email send error: {str(e)}"
 
 
 def get_or_create_reputation(email):
@@ -1584,6 +1705,9 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .cart-item-price{font-size:0.76rem;font-weight:900;color:var(--teal-dark);white-space:nowrap;margin-top:1px;}
 .cart-item-del{background:none;border:none;color:var(--muted);cursor:pointer;padding:3px;border-radius:6px;font-size:0.85rem;flex-shrink:0;margin-top:1px;}
 .cart-item-del:hover{color:var(--red);background:rgba(211,47,47,0.08);}
+.cart-item-edit{background:none;border:none;color:var(--muted);cursor:pointer;padding:3px;border-radius:6px;font-size:0.78rem;flex-shrink:0;}
+.cart-item-edit:hover{color:var(--teal-dark);background:rgba(0,105,92,0.08);}
+.cart-item-actions{display:flex;flex-direction:column;align-items:center;gap:1px;}
 .cart-empty{text-align:center;padding:22px 14px;color:var(--muted);font-size:0.76rem;font-weight:600;}
 .cart-empty i{font-size:1.8rem;display:block;margin-bottom:8px;opacity:0.3;}
 
@@ -2912,14 +3036,16 @@ function openCustomize(menuId){
   document.querySelectorAll('#opt-flavor .opt-btn').forEach((b,i)=>{b.classList.toggle('selected',i===0);});
   // Show flavor only for French Fries; hide all drink options for snacks
   ['lbl-flavor','opt-flavor'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isFries?'':'none';});
+  const isMatcha=currentItem.category==='Matcha Series';
+  const isCoffee=currentItem.category==='Coffee';
   ['lbl-size','opt-size','lbl-sugar','opt-sugar','lbl-ice','opt-ice','lbl-addons','opt-addons'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     if(isSnack){el.style.display='none';return;}
     if(showWT&&(id==='lbl-ice'||id==='opt-ice')){el.style.display='';return;}
-    if(isFruitSoda&&(id==='lbl-sugar'||id==='opt-sugar')){el.style.display='none';return;}
+    if((id==='lbl-sugar'||id==='opt-sugar')&&!isCoffee){el.style.display='none';return;}
     el.style.display='';
   });
-  const allowedEmpAddons=isFruitSoda?['Nata']:null;
+  const allowedEmpAddons=(isFruitSoda||isMatcha)?['Nata']:null;
   [{id:'eaddon-pearls',name:'Pearls'},{id:'eaddon-nata',name:'Nata'},{id:'eaddon-coffee-jelly',name:'Coffee Jelly'}].forEach(({id,name})=>{const el=document.getElementById(id);if(el)el.style.display=(allowedEmpAddons&&!allowedEmpAddons.includes(name))?'none':'';});
   document.getElementById('customize-modal').classList.add('show');
 }
@@ -2950,7 +3076,14 @@ function toggleAddon(name,btn){
   else{currentOpts.addons.push(name);btn.classList.add('selected');}
 }
 
-function closeCustomizeModal(){document.getElementById('customize-modal').classList.remove('show');}
+function closeCustomizeModal(){
+  document.getElementById('customize-modal').classList.remove('show');
+  if(_editingCartId){
+    _editingCartId=null;
+    const addBtn=document.querySelector('#customize-modal .add-to-cart-btn');
+    if(addBtn){addBtn.innerHTML='<i class="fas fa-plus-circle"></i> Add to Cart';addBtn.onclick=addToCart;}
+  }
+}
 
 function addToCart(){
   if(!currentItem) return;
@@ -2985,7 +3118,10 @@ function renderCart(){
         ${mods||addons?`<div class="cart-item-mods">${escapeHTML(mods+addons)}</div>`:''}
         <div class="cart-item-price">₱${i.price.toFixed(2)}</div>
       </div>
-      <button class="cart-item-del" onclick="removeFromCart(${i.id})"><i class="fas fa-times"></i></button>
+      <div class="cart-item-actions">
+        <button class="cart-item-edit" onclick="editCartItem(${i.id})" title="Edit"><i class="fas fa-pen"></i></button>
+        <button class="cart-item-del" onclick="removeFromCart(${i.id})" title="Remove"><i class="fas fa-times"></i></button>
+      </div>
     </div>`;
   }).join('');
   totalEl.textContent='₱'+total.toFixed(2);
@@ -2995,6 +3131,73 @@ function renderCart(){
 
 function removeFromCart(id){cart=cart.filter(i=>i.id!==id);renderCart();}
 function clearCart(){cart=[];renderCart();}
+
+let _editingCartId=null;
+function editCartItem(id){
+  const item=cart.find(i=>i.id===id);
+  if(!item) return;
+  _editingCartId=id;
+  currentItem=menuItems.find(m=>m.id===item.menuId);
+  if(!currentItem) return;
+  // Populate currentOpts from saved item
+  currentOpts={size:item.size||'16 oz',sugar:item.sugar||'100%',ice:item.ice||'Normal Ice',addons:item.addons?item.addons.split(', ').filter(Boolean):[],waterTemp:item.waterTemp||'Cold',flavor:'Sour Cream'};
+  document.getElementById('modal-item-name').textContent=currentItem.name+' (Edit)';
+  // Reset all buttons
+  ['opt-size','opt-sugar','opt-ice','opt-water-temp'].forEach(id=>document.querySelectorAll(`#${id} .opt-btn`).forEach(b=>b.classList.remove('selected')));
+  document.querySelectorAll('#opt-addons .opt-btn').forEach(b=>b.classList.remove('selected'));
+  // Restore size selection
+  document.querySelectorAll('#opt-size .opt-btn').forEach(b=>{if(b.textContent.trim().startsWith(currentOpts.size))b.classList.add('selected');});
+  // Restore sugar
+  document.querySelectorAll('#opt-sugar .opt-btn').forEach(b=>{if(b.textContent.trim()===currentOpts.sugar)b.classList.add('selected');});
+  // Restore ice
+  document.querySelectorAll('#opt-ice .opt-btn').forEach(b=>{if(b.textContent.includes(currentOpts.ice))b.classList.add('selected');});
+  // Restore waterTemp
+  if(currentOpts.waterTemp){document.querySelectorAll('#opt-water-temp .opt-btn').forEach(b=>{if(b.textContent.includes(currentOpts.waterTemp))b.classList.add('selected');});}
+  // Restore addons
+  currentOpts.addons.forEach(name=>{
+    const map={Pearls:'eaddon-pearls',Nata:'eaddon-nata','Coffee Jelly':'eaddon-coffee-jelly'};
+    const el=document.getElementById(map[name]);if(el)el.classList.add('selected');
+  });
+  // Show/hide sections same as openCustomize
+  const showWT=WATER_TEMP_ITEMS.includes(currentItem.name);
+  document.getElementById('lbl-water-temp').style.display=showWT?'':'none';
+  document.getElementById('opt-water-temp').style.display=showWT?'':'none';
+  const isSnack=currentItem.category==='Snacks';
+  const isFruitSoda=currentItem.category==='Fruit Soda';
+  const isMatcha=currentItem.category==='Matcha Series';
+  const isCoffee=currentItem.category==='Coffee';
+  ['lbl-size','opt-size','lbl-sugar','opt-sugar','lbl-ice','opt-ice','lbl-addons','opt-addons'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(isSnack){el.style.display='none';return;}
+    if((id==='lbl-sugar'||id==='opt-sugar')&&!isCoffee){el.style.display='none';return;}
+    el.style.display='';
+  });
+  const allowedEmpAddons=(isFruitSoda||isMatcha)?['Nata']:null;
+  [{id:'eaddon-pearls',name:'Pearls'},{id:'eaddon-nata',name:'Nata'},{id:'eaddon-coffee-jelly',name:'Coffee Jelly'}].forEach(({id,name})=>{const el=document.getElementById(id);if(el)el.style.display=(allowedEmpAddons&&!allowedEmpAddons.includes(name))?'none':'';});
+  // Change the Add button to Save
+  const addBtn=document.querySelector('#customize-modal .add-to-cart-btn');
+  if(addBtn){addBtn.innerHTML='<i class="fas fa-save"></i> Save Changes';addBtn.onclick=saveEditedCartItem;}
+  document.getElementById('customize-modal').classList.add('show');
+}
+
+function saveEditedCartItem(){
+  if(!currentItem||!_editingCartId) return;
+  const idx=cart.findIndex(i=>i.id===_editingCartId);
+  if(idx<0) return;
+  const sizeSur=SIZE_SURCHARGE[currentOpts.size]||0;
+  const addonSur=currentOpts.addons.length*ADD_ON_PRICE;
+  const price=currentItem.price+sizeSur+addonSur;
+  const isFries=FRIES_FLAVOR_ITEMS.includes(currentItem.name);
+  const foundationName=isFries?`${currentItem.name} (${currentOpts.flavor})`:currentItem.name;
+  cart[idx]={...cart[idx],foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price};
+  _editingCartId=null;
+  // Restore Add button
+  const addBtn=document.querySelector('#customize-modal .add-to-cart-btn');
+  if(addBtn){addBtn.innerHTML='<i class="fas fa-plus-circle"></i> Add to Cart';addBtn.onclick=addToCart;}
+  closeCustomizeModal();
+  renderCart();
+  showToast('Item updated!','success');
+}
 
 async function checkout(){
   if(!cart.length) return;
@@ -3074,7 +3277,7 @@ function openReceiptWindow(r){
   .divider-solid{border:none;border-top:1px solid #333;margin:10px 0;}.divider-dash{border:none;border-top:1px dashed #999;margin:10px 0;}
   table{width:100%;border-collapse:collapse;}th{text-align:left;padding:6px 8px;border-bottom:1px solid #333;font-weight:bold;}th.right{text-align:right;}
   .total-section td{padding:6px 8px;font-weight:bold;}.footer{text-align:center;font-size:0.9rem;margin-top:18px;color:#333;}.footer .est{font-size:0.78rem;color:#888;margin-top:4px;}
-  @media print{@page{margin:10mm;size:A5;}body{padding:0;}}<\/style><\/head>
+  @media print{@page{margin:10mm;size:auto;}body{padding:0;}tr{page-break-inside:avoid;}}<\/style><\/head>
   <body><div class="header-section"><img src="/static/images/9599.jpg" class="logo-img" onerror="this.style.display='none'">
   <div class="shop-name">9599 Tea &amp; Coffee<\/div><div class="shop-tagline">Parne Na!<\/div>
   <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\/div>
@@ -3089,7 +3292,7 @@ function openReceiptWindow(r){
   <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\/div><\/div>
   ${'<\u0073cript>'}window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}${'<\/\u0073cript>'}
   <\/body><\/html>`;
-  const w=window.open('','_blank','width=680,height=900');
+  const w=window.open('','_blank','width=700,height='+Math.min(screen.height-80,1100));
   if(w){w.document.write(html);w.document.close();}
 }
 
@@ -3098,6 +3301,23 @@ setInterval(()=>empFetch('/api/employee/ping'),60000);
 setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
 fetchOrders();
 fetchStockAlerts(); // pre-load badge count on startup
+
+// ── Employee SSE — real-time stock updates from admin ──
+(function connectEmpSSE(){
+  let _empSrc=null,_empRetry=null;
+  function connect(){
+    if(_empSrc){try{_empSrc.close();}catch(e){}}
+    _empSrc=new EventSource('/api/employee/stream');
+    _empSrc.addEventListener('connected',()=>{ if(_empRetry){clearTimeout(_empRetry);_empRetry=null;} });
+    _empSrc.addEventListener('ping',()=>{});
+    _empSrc.addEventListener('stock_update',()=>{
+      fetchStockAlerts();
+      if(typeof showToast==='function') showToast('📦 Stock levels updated by admin','info');
+    });
+    _empSrc.onerror=()=>{ try{_empSrc.close();}catch(e){} _empSrc=null; if(!_empRetry)_empRetry=setTimeout(connect,5000); };
+  }
+  connect();
+})();
 
 /* ── Employee Order Detail Modal ── */
 function openEmpOrdDetail(o){
@@ -3178,13 +3398,23 @@ async function empLoadAnnouncements() {
     if (badge) { badge.textContent = data.length; badge.style.display = data.length ? 'flex' : 'none'; }
     const el = document.getElementById('emp-ann-list');
     if (!el) return;
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:#557570;padding:20px;font-size:0.82rem;font-weight:600;">No announcements.</div>'; return; }
-    const pColors = {urgent:'#D32F2F',high:'#E65100',normal:'var(--teal-dark)',low:'#9E9E9E'};
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:#557570;padding:28px 16px;font-size:0.82rem;font-weight:700;"><i class="fas fa-bell-slash" style="font-size:1.5rem;opacity:0.35;display:block;margin-bottom:8px;"></i>No announcements at the moment.</div>'; return; }
+    const pColors = {urgent:'#C62828',high:'#BF360C',normal:'#1565C0',low:'#4A4A4A'};
+    const pBg     = {urgent:'#FFEBEE',high:'#FFF3E0',normal:'#E3F2FD',low:'#F5F5F5'};
+    const pBorder = {urgent:'#FFCDD2',high:'#FFCCBC',normal:'#BBDEFB',low:'#E0E0E0'};
+    const pEmoji  = {urgent:'🚨',high:'🔴',normal:'📣',low:'ℹ️'};
+    const pLabel  = {urgent:'URGENT',high:'HIGH',normal:'Normal',low:'Low'};
     el.innerHTML = data.map(a => `
-      <div style="border-left:3px solid ${pColors[a.priority]||'var(--teal)'};background:#f4faf9;border-radius:0 10px 10px 0;padding:11px 13px;margin-bottom:9px;">
-        <div style="font-size:0.85rem;font-weight:900;color:#0A2925;margin-bottom:4px;">${escapeHTML(a.title)}</div>
-        <div style="font-size:0.78rem;color:#557570;font-weight:600;line-height:1.5;">${escapeHTML(a.message)}</div>
-        <div style="font-size:0.66rem;color:#9ca3af;margin-top:5px;">${a.created_at}</div>
+      <div style="background:${pBg[a.priority]||'#E3F2FD'};border:1.5px solid ${pBorder[a.priority]||'#BBDEFB'};border-left:5px solid ${pColors[a.priority]||'#1565C0'};border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span style="font-size:1rem;">${pEmoji[a.priority]||'📣'}</span>
+            <span style="font-size:0.88rem;font-weight:900;color:${pColors[a.priority]||'#1565C0'};">${escapeHTML(a.title)}</span>
+          </div>
+          <span style="font-size:0.62rem;font-weight:900;color:${pColors[a.priority]||'#1565C0'};background:${pBorder[a.priority]||'#BBDEFB'};padding:2px 8px;border-radius:20px;letter-spacing:0.5px;">${pLabel[a.priority]||a.priority}</span>
+        </div>
+        <div style="font-size:0.8rem;color:#444;font-weight:600;line-height:1.6;">${escapeHTML(a.message)}</div>
+        <div style="font-size:0.65rem;color:#9ca3af;margin-top:7px;display:flex;align-items:center;gap:5px;"><i class="fas fa-clock"></i>${a.created_at}</div>
       </div>`).join('');
   } catch(e) {}
 }
@@ -3837,11 +4067,29 @@ function playGrantedSound() {
                     style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
                     onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
             </div>
+            <!-- ── EMAIL + VERIFICATION STEP ─────────────────────────────── -->
             <div style="text-align:left; margin-bottom:12px;">
-                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Email Address *</label>
-                <input id="gate-email" type="email" placeholder="e.g. juan@email.com" autocomplete="email"
-                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
-                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
+                <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Email Address <span style="color:#C0392B;">*</span></label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="gate-email" type="email" placeholder="e.g. juan@gmail.com" autocomplete="email"
+                        style="flex:1; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
+                        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'"
+                        oninput="gateEmailChanged()">
+                    <!-- Verified badge (hidden until verified) -->
+                    <span id="gate-email-verified-badge" style="display:none; background:#E8F5E9; color:#2E7D32; border:1.5px solid #A5D6A7; border-radius:8px; padding:6px 10px; font-size:0.72rem; font-weight:900; white-space:nowrap; flex-shrink:0;"><i class="fas fa-check-circle"></i> Verified</span>
+                </div>
+                <!-- Verify button (shown after typing email) -->
+                <div id="gate-verify-email-row" style="display:none; margin-top:9px;">
+                    <button id="gate-verify-email-btn" type="button" onclick="gateSendEmailVerification()"
+                        style="width:100%; padding:11px 14px; border-radius:11px; background:linear-gradient(135deg,#1565C0,#0D47A1); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity 0.2s; box-shadow:0 3px 12px rgba(13,71,161,0.3);">
+                        <i class="fas fa-envelope-circle-check"></i> Verify Your Email
+                    </button>
+                    <div id="gate-email-verify-status" style="margin-top:7px; font-size:0.8rem; font-weight:700; min-height:16px; text-align:center;"></div>
+                </div>
+                <!-- Instruction shown while waiting for click -->
+                <div id="gate-email-verify-note" style="display:none; margin-top:7px; background:#E3F2FD; border:1.5px solid #90CAF9; border-radius:10px; padding:9px 12px; font-size:0.78rem; font-weight:700; color:#1565C0; line-height:1.5;">
+                    <i class="fas fa-info-circle"></i> A verification link will be sent to your Gmail. Click it to unlock the order button.
+                </div>
             </div>
             <div style="text-align:left; margin-bottom:16px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number *</label>
@@ -3865,9 +4113,10 @@ function playGrantedSound() {
                 </div>
             </div>
 
-            <button id="gate-btn" onclick="handleManualSignIn()"
-                style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px;">
-                <i class="fas fa-mug-hot"></i> Continue to Order
+            <button id="gate-btn" onclick="handleManualSignIn()" disabled
+                style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:not-allowed; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; opacity:0.45;"
+                id="gate-btn">
+                <i class="fas fa-lock" id="gate-btn-icon"></i> <span id="gate-btn-text">Verify Email to Continue</span>
             </button>
             <div id="gate-error" style="display:none; margin-top:12px; background:#FFF0F0; color:#C0392B; padding:10px 14px; border-radius:10px; font-size:0.82rem; font-weight:700; border:1.5px solid #F5C6C6;">
                 <i class="fas fa-exclamation-circle"></i> <span id="gate-error-msg"></span>
@@ -4007,7 +4256,155 @@ function playGrantedSound() {
         });
     });
 
-    async function handleGoogleLogin(response) {
+    /* ── EMAIL VERIFICATION HELPERS ─────────────────────────────────────── */
+    let _gateEmailVerified = false;
+
+    function gateEmailChanged() {
+        const email = document.getElementById('gate-email').value.trim();
+        const verifyRow  = document.getElementById('gate-verify-email-row');
+        const verifyNote = document.getElementById('gate-email-verify-note');
+        const badge      = document.getElementById('gate-email-verified-badge');
+        const status     = document.getElementById('gate-email-verify-status');
+        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+        // If the email changed, reset verified state
+        if (_gateEmailVerified) {
+            _gateEmailVerified = false;
+            badge.style.display = 'none';
+            status.textContent = '';
+            _gateUpdateContinueBtn();
+        }
+
+        if (isValid) {
+            verifyRow.style.display = 'block';
+            verifyNote.style.display = 'block';
+        } else {
+            verifyRow.style.display  = 'none';
+            verifyNote.style.display = 'none';
+        }
+    }
+
+    async function gateSendEmailVerification() {
+        const email  = document.getElementById('gate-email').value.trim();
+        const btn    = document.getElementById('gate-verify-email-btn');
+        const status = document.getElementById('gate-email-verify-status');
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            status.textContent = '⚠️ Enter a valid email first.';
+            status.style.color = '#C0392B';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+        status.textContent = '';
+
+        try {
+            const res = await fetch('/api/auth/send_email_verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                status.textContent = '📬 Verification email sent! Check your Gmail inbox and click the link.';
+                status.style.color = '#1565C0';
+                btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email';
+                btn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)';
+                // Poll for server-side verification every 2 seconds
+                _gatePollVerification(email);
+            } else {
+                status.textContent = '❌ ' + (data.error || 'Could not send email. Try again.');
+                status.style.color = '#C0392B';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Verify Your Email';
+            }
+        } catch(e) {
+            status.textContent = '❌ Connection error. Please try again.';
+            status.style.color = '#C0392B';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Verify Your Email';
+        }
+    }
+
+    let _verifyPollInterval = null;
+    function _gatePollVerification(email) {
+        if (_verifyPollInterval) clearInterval(_verifyPollInterval);
+        _verifyPollInterval = setInterval(async () => {
+            try {
+                const res  = await fetch('/api/auth/check_email_verification?email=' + encodeURIComponent(email));
+                const data = await res.json();
+                if (data.verified) {
+                    clearInterval(_verifyPollInterval);
+                    _gateMarkEmailVerified();
+                }
+            } catch(e) {}
+        }, 2000);
+    }
+
+    function _gateMarkEmailVerified() {
+        _gateEmailVerified = true;
+        const badge  = document.getElementById('gate-email-verified-badge');
+        const status = document.getElementById('gate-email-verify-status');
+        const note   = document.getElementById('gate-email-verify-note');
+        const row    = document.getElementById('gate-verify-email-row');
+        if (badge)  { badge.style.display = 'inline-flex'; }
+        if (status) { status.textContent = '✅ Email verified! You may now proceed.'; status.style.color = '#2E7D32'; }
+        if (note)   { note.style.display = 'none'; }
+        if (row)    {
+            const vBtn = document.getElementById('gate-verify-email-btn');
+            if (vBtn) vBtn.style.display = 'none';
+        }
+        _gateUpdateContinueBtn();
+    }
+
+    function _gateUpdateContinueBtn() {
+        const btn     = document.getElementById('gate-btn');
+        const icon    = document.getElementById('gate-btn-icon');
+        const txtSpan = document.getElementById('gate-btn-text');
+        if (_gateEmailVerified) {
+            btn.disabled      = false;
+            btn.style.opacity = '1';
+            btn.style.cursor  = 'pointer';
+            if (icon)    { icon.className = 'fas fa-mug-hot'; }
+            if (txtSpan) { txtSpan.textContent = 'Continue to Order'; }
+        } else {
+            btn.disabled      = true;
+            btn.style.opacity = '0.45';
+            btn.style.cursor  = 'not-allowed';
+            if (icon)    { icon.className = 'fas fa-lock'; }
+            if (txtSpan) { txtSpan.textContent = 'Verify Email to Continue'; }
+        }
+    }
+
+    /* ── CUSTOMER SITE ANNOUNCEMENTS ─────────────────────────────────────── */
+    (async function loadGateAnnouncements() {
+        try {
+            const res  = await fetch('/api/public/announcements');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.length) return;
+            const pColors   = { urgent:'#C62828', high:'#E65100', normal:'#1565C0', low:'#4A4A4A' };
+            const pBg       = { urgent:'#FFEBEE', high:'#FFF3E0', normal:'#E3F2FD', low:'#F5F5F5' };
+            const pBorder   = { urgent:'#FFCDD2', high:'#FFE0B2', normal:'#BBDEFB', low:'#E0E0E0' };
+            const pEmoji    = { urgent:'🚨', high:'🔴', normal:'📣', low:'ℹ️' };
+            const container = document.createElement('div');
+            container.id    = 'gate-announcements';
+            container.style.cssText = 'margin-bottom:18px;display:flex;flex-direction:column;gap:8px;';
+            container.innerHTML = `<div style="font-size:0.68rem;font-weight:900;color:var(--text-light);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">📣 Store Announcements</div>` +
+                data.map(a => `
+                <div style="background:${pBg[a.priority]||'#E3F2FD'};border:1.5px solid ${pBorder[a.priority]||'#BBDEFB'};border-left:4px solid ${pColors[a.priority]||'#1565C0'};border-radius:12px;padding:11px 13px;animation:fadeSlideIn 0.4s ease;">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                        <span style="font-size:0.85rem;">${pEmoji[a.priority]||'📣'}</span>
+                        <span style="font-size:0.83rem;font-weight:900;color:${pColors[a.priority]||'#1565C0'};">${escapeHTML(a.title)}</span>
+                    </div>
+                    <div style="font-size:0.78rem;color:#444;font-weight:600;line-height:1.55;">${escapeHTML(a.message)}</div>
+                    <div style="font-size:0.62rem;color:#999;margin-top:5px;">${a.created_at}</div>
+                </div>`).join('');
+            const form = document.getElementById('manual-signin-form');
+            if (form) form.insertBefore(container, form.firstChild);
+        } catch(e) {}
+    })();
         try {
             const res = await fetch('/api/auth/google', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ token: response.credential }) });
             if (res.ok) location.reload();
@@ -4018,6 +4415,39 @@ function playGrantedSound() {
 
 {% else %}
 <!-- MAIN STOREFRONT -->
+
+<!-- ── CUSTOMER ANNOUNCEMENTS BANNER ──────────────────────────────────── -->
+<div id="customer-announcements-bar" style="display:none; background:transparent; padding:10px 12px 0; max-width:700px; margin:0 auto;"></div>
+<script>
+(async function loadCustomerAnnouncements() {
+    try {
+        const res  = await fetch('/api/public/announcements');
+        if (!res.ok) return;
+        const data = await res.json();
+        const bar  = document.getElementById('customer-announcements-bar');
+        if (!data.length || !bar) return;
+        const pColors = { urgent:'#C62828', high:'#BF360C', normal:'#1565C0', low:'#4A4A4A' };
+        const pBg     = { urgent:'#FFEBEE', high:'#FFF3E0', normal:'#E3F2FD', low:'#F5F5F5' };
+        const pBorder = { urgent:'#FFCDD2', high:'#FFCCBC', normal:'#BBDEFB', low:'#E0E0E0' };
+        const pEmoji  = { urgent:'🚨', high:'🔴', normal:'📣', low:'ℹ️' };
+        bar.style.display = 'block';
+        bar.innerHTML = data.map(a => `
+          <div style="background:${pBg[a.priority]||'#E3F2FD'};border:1.5px solid ${pBorder[a.priority]||'#BBDEFB'};
+               border-left:5px solid ${pColors[a.priority]||'#1565C0'};border-radius:14px;padding:12px 15px;
+               margin-bottom:8px;box-shadow:0 2px 10px rgba(0,0,0,0.05);animation:fadeSlideIn 0.4s ease;">
+            <div style="display:flex;align-items:flex-start;gap:9px;">
+              <span style="font-size:1.1rem;flex-shrink:0;margin-top:1px;">${pEmoji[a.priority]||'📣'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.85rem;font-weight:900;color:${pColors[a.priority]||'#1565C0'};margin-bottom:3px;">${escapeHTML(a.title)}</div>
+                <div style="font-size:0.8rem;color:#444;font-weight:600;line-height:1.55;">${escapeHTML(a.message)}</div>
+              </div>
+              <button onclick="this.closest('[style]').remove()"
+                style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.85rem;flex-shrink:0;padding:2px 4px;line-height:1;" title="Dismiss">✕</button>
+            </div>
+          </div>`).join('');
+    } catch(e) {}
+})();
+</script>
 
 <!-- Promo Ticker -->
 <div class="promo-ticker">
@@ -4106,7 +4536,10 @@ function playGrantedSound() {
         </div>
         <div class="loc-info-row">
             <i class="fas fa-phone-alt"></i>
-            <div>Contact us via our shop page for inquiries.</div>
+            <div>
+                <b>Customer Concerns:</b> <a href="tel:09994587112" style="color:var(--teal-dark);font-weight:800;text-decoration:none;">0999 458 7112</a><br>
+                <span style="font-size:0.82rem; color:#A1887F;">For feedback, questions, or concerns about your order.</span>
+            </div>
         </div>
 
         <hr class="loc-divider">
@@ -4280,6 +4713,19 @@ function playGrantedSound() {
         </div>
         <!-- ── End OTP Block ── -->
 
+        <!-- ── GCash Payment Block ── -->
+        <div style="margin:14px 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f0f7ff,#dbeafe); border:1.5px solid #93c5fd; border-radius:14px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <span style="font-size:1.1rem;">💙</span>
+                <span style="font-weight:800; font-size:0.88rem; color:#1e40af;">GCash Payment</span>
+                <span style="margin-left:auto; background:#2563eb; color:#fff; font-size:0.68rem; font-weight:800; padding:3px 9px; border-radius:20px; letter-spacing:0.5px;">ONLINE</span>
+            </div>
+            <div style="font-size:0.82rem; color:#1e3a8a; font-weight:600; margin-bottom:6px;">Send your payment to:</div>
+            <div style="font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:900; color:#1d4ed8; letter-spacing:3px; text-align:center; background:#eff6ff; border-radius:10px; padding:10px; border:1.5px dashed #93c5fd; margin-bottom:6px;">0926 419 5603</div>
+            <div style="font-size:0.75rem; color:#3b82f6; font-weight:700; text-align:center;">Send the exact amount and include your name as the GCash note.</div>
+        </div>
+        <!-- ── End GCash Block ── -->
+
         <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()" disabled style="opacity:0.45; cursor:not-allowed;">
             <i class="fas fa-plane"></i> Confirm &amp; Place Order
         </button>
@@ -4413,11 +4859,12 @@ function playGrantedSound() {
                 <span>TOTAL</span><span id="receipt-total"></span>
             </div>
             <div style="text-align:center; margin-top:10px; font-size:0.72rem; color:var(--text-light);">Thank you for your order! 🧋</div>
+            <div style="text-align:center; margin-top:6px; font-size:0.72rem; color:var(--text-light);">Questions? Call/text <a href="tel:09994587112" style="color:var(--teal-dark);font-weight:800;text-decoration:none;">0999 458 7112</a></div>
         </div>
 
         <div style="display:flex; gap:10px; flex-direction:column;">
             <button class="btn-add" style="width:100%; background:var(--gold); color:#fff;" onclick="openUpdateOrderModal()">
-                <i class="fas fa-edit"></i> Add / Update My Order
+                <i class="fas fa-plus-circle"></i> Add Items to My Order
             </button>
             <button class="btn-cancel" style="flex:1;" onclick="closeSuccessAndReset()">Done</button>
         </div>
@@ -4425,36 +4872,21 @@ function playGrantedSound() {
 </div>
 
 <!-- Order Update Request Modal -->
+<!-- Order Update Modal (direct edit — no permission needed) -->
 <div id="update-order-modal" class="modal">
-    <div class="modal-content" style="text-align:center; max-width:440px;">
+    <div class="modal-content" style="text-align:center; max-width:400px;">
         <div style="font-size:2.2rem; margin-bottom:8px;">✏️</div>
-        <h2 style="margin-bottom:6px;">Add / Update Your Order</h2>
+        <h2 style="margin-bottom:6px;">Update Your Order</h2>
         <p style="color:var(--text-light); font-weight:600; font-size:0.85rem; margin-bottom:16px; line-height:1.5;">
-            Send a request to the employee. They'll review it and approve your changes.
+            Your order is still open. Pick items from the menu to add them to your existing order.
         </p>
-
         <div style="font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:900; color:var(--gold); margin-bottom:16px; border:2px dashed var(--gold); padding:10px 16px; border-radius:12px; background:var(--gold-light); letter-spacing:3px;" id="update-code-display"></div>
-
-        <div id="update-form-section" style="text-align:left;">
-            <div style="margin-bottom:10px;">
-                <label class="pickup-label">Your Name</label>
-                <input type="text" id="update-name-display" class="name-input" readonly style="background:var(--gold-light); cursor:default; margin-bottom:0;">
-            </div>
-            <div style="margin-bottom:10px;">
-                <label class="pickup-label">What would you like to add or change? <span style="color:var(--danger);">*</span></label>
-                <textarea id="update-message-input" class="name-input" rows="3"
-                    placeholder="e.g. Please add 1 Taro Milktea (16oz, less ice) and change my Mocha to Iced Americano."
-                    style="resize:none; line-height:1.5;"></textarea>
-            </div>
-
-            <div id="update-send-status" style="font-size:0.85rem; font-weight:700; margin-bottom:12px; min-height:20px;"></div>
-
-            <div style="display:flex; gap:10px;">
-                <button class="btn-cancel" onclick="closeUpdateOrderModal()">Cancel</button>
-                <button class="btn-add" id="update-send-btn" onclick="sendUpdateRequest()">
-                    <i class="fas fa-paper-plane"></i> Send Request
-                </button>
-            </div>
+        <div id="update-order-status-badge" style="display:inline-block; padding:4px 14px; border-radius:20px; font-size:0.76rem; font-weight:800; margin-bottom:16px;"></div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-cancel" onclick="closeUpdateOrderModal()">Cancel</button>
+            <button class="btn-add" id="update-confirm-btn" onclick="confirmDirectEdit()" style="background:var(--gold); color:#fff;">
+                <i class="fas fa-shopping-bag"></i> Add Items
+            </button>
         </div>
     </div>
 </div>
@@ -4493,7 +4925,7 @@ function playGrantedSound() {
 
         <div style="display:flex; gap:10px; flex-direction:column;">
             <button class="btn-add" id="mo-update-btn" style="width:100%; background:var(--gold); color:#fff; display:none;" onclick="openUpdateOrderModalFromBasket()">
-                <i class="fas fa-edit"></i> Add / Update My Order
+                <i class="fas fa-plus-circle"></i> Add Items to My Order
             </button>
             <button class="btn-cancel" onclick="document.getElementById('my-order-modal').style.display='none'">Close</button>
         </div>
@@ -4524,8 +4956,7 @@ function playGrantedSound() {
     let pendingPrice = 49;
     let pendingCat = '';
     let orderType = 'Dine-In';
-    let updateModeCode = null;        // set when customer has permission to update an order
-    let _pendingUpdateOrderCode = null; // the real order code when an update request is in flight
+    let updateModeCode = null;        // set when customer is in order-edit mode
     let _capturedGeoAddress = document.getElementById('customer-address') ? document.getElementById('customer-address').value : '';  // pre-filled from sign-in location
 
     // ── Persist cart across viewport changes ──────────────────────────────
@@ -4838,15 +5269,18 @@ function playGrantedSound() {
 
         const DRINK_CATS = ['Milktea', 'Coffee', 'Milk Series', 'Matcha Series', 'Fruit Soda', 'Frappe'];
 
-        if (cat === 'Milktea' || cat === 'Coffee') {
+        if (cat === 'Milktea') {
+            // Size + ice + add-ons (no sugar)
+            openSizeModal(name, cat, price, false, true);
+        } else if (cat === 'Coffee') {
             // Size + sugar + ice + add-ons
             openSizeModal(name, cat, price, true, true);
         } else if (cat === 'Milk Series') {
-            // Size + sugar + ice + add-ons
-            openSizeModal(name, cat, price, true, true);
-        } else if (cat === 'Matcha Series') {
             // Size + ice + add-ons (no sugar)
             openSizeModal(name, cat, price, false, true);
+        } else if (cat === 'Matcha Series') {
+            // Size + ice + Nata only (no sugar)
+            openSizeModal(name, cat, price, false, true, ['Nata']);
         } else if (cat === 'Fruit Soda') {
             // Size + ice + Nata add-on only (no sugar)
             openSizeModal(name, cat, price, false, true, ['Nata']);
@@ -5091,12 +5525,13 @@ function playGrantedSound() {
                 cr.innerHTML = '<b>Reason:</b> ' + escapeHTML(data.cancel_reason);
             }
 
-            // Show update button only for active orders
-            if (['Waiting Confirmation', 'Confirmed'].includes(data.status)) {
+            // Show update button only for orders that are still open
+            if (['Waiting Confirmation', 'Preparing Order'].includes(data.status)) {
                 const btn = document.getElementById('mo-update-btn');
                 btn.style.display = 'flex';
                 btn.dataset.code = code;
                 btn.dataset.name = data.name;
+                btn.dataset.status = data.status;
             }
         } catch(e) {
             document.getElementById('mo-loading').style.display = 'none';
@@ -5107,17 +5542,18 @@ function playGrantedSound() {
 
     function openUpdateOrderModalFromBasket() {
         const btn = document.getElementById('mo-update-btn');
-        const code = btn.dataset.code || '';
-        const name = btn.dataset.name || 'Customer';
-        // Close the my-order modal, pre-fill and open the update modal
+        const code   = btn.dataset.code   || '';
+        const status = btn.dataset.status || '';
+        _pendingUpdateOrderCode = code;
         document.getElementById('my-order-modal').style.display = 'none';
         document.getElementById('update-code-display').innerText = code;
-        document.getElementById('update-name-display').value = name;
-        document.getElementById('update-message-input').value = '';
-        document.getElementById('update-send-status').innerText = '';
-        document.getElementById('update-send-btn').disabled = false;
-        document.getElementById('update-send-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-        document.getElementById('update-form-section').style.display = 'block';
+        const badge = document.getElementById('update-order-status-badge');
+        if (badge) {
+            badge.textContent = status;
+            const isPreparing = status === 'Preparing Order';
+            badge.style.background = isPreparing ? 'rgba(230,81,0,0.1)' : 'rgba(21,101,192,0.1)';
+            badge.style.color      = isPreparing ? '#E65100'            : '#1565C0';
+        }
         document.getElementById('update-order-modal').style.display = 'flex';
     }
 
@@ -5190,88 +5626,44 @@ function playGrantedSound() {
 
 
 
-    let updatePermPoll = null;
+    let _pendingUpdateOrderCode = null;
 
     function openUpdateOrderModal() {
+        // Called from the success modal (order was just placed — always Waiting Confirmation)
         const code = document.getElementById('display-code').innerText.trim();
-        const name = document.getElementById('customer-name').value.trim() || '{{ session.get("customer_name","Customer") }}';
+        _pendingUpdateOrderCode = code;
         document.getElementById('update-code-display').innerText = code;
-        document.getElementById('update-name-display').value = name;
-        document.getElementById('update-message-input').value = '';
-        document.getElementById('update-send-status').innerText = '';
-        document.getElementById('update-send-btn').disabled = false;
-        document.getElementById('update-send-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-        document.getElementById('update-form-section').style.display = 'block';
+        const badge = document.getElementById('update-order-status-badge');
+        if (badge) { badge.textContent = 'Waiting Confirmation'; badge.style.background = 'rgba(21,101,192,0.1)'; badge.style.color = '#1565C0'; }
+        document.getElementById('update-order-modal').style.display = 'flex';
+    }
+
+    function openUpdateOrderModalFromBasket() {
+        const btn = document.getElementById('mo-update-btn');
+        const code   = btn.dataset.code   || '';
+        const status = btn.dataset.status || '';
+        _pendingUpdateOrderCode = code;
+        document.getElementById('my-order-modal').style.display = 'none';
+        document.getElementById('update-code-display').innerText = code;
+        const badge = document.getElementById('update-order-status-badge');
+        if (badge) {
+            badge.textContent = status;
+            const isPreparing = status === 'Preparing Order';
+            badge.style.background = isPreparing ? 'rgba(230,81,0,0.1)' : 'rgba(21,101,192,0.1)';
+            badge.style.color      = isPreparing ? '#E65100'            : '#1565C0';
+        }
         document.getElementById('update-order-modal').style.display = 'flex';
     }
 
     function closeUpdateOrderModal() {
         document.getElementById('update-order-modal').style.display = 'none';
-        if(updatePermPoll) { clearInterval(updatePermPoll); updatePermPoll = null; }
+        _pendingUpdateOrderCode = null;
     }
 
-    async function sendUpdateRequest() {
-        const message = document.getElementById('update-message-input').value.trim();
-        if(!message) {
-            const s = document.getElementById('update-send-status');
-            s.style.color = 'var(--danger)';
-            s.innerText = 'Please describe what you want to add or change.';
-            return;
-        }
-        const code = document.getElementById('update-code-display').innerText.trim();
-        const name = document.getElementById('update-name-display').value.trim() || document.getElementById('customer-name').value || '{{ session.get("customer_name","Customer") }}';
-        _pendingUpdateOrderCode = code;   // save the real order code for activateEditMode
-        const requestCode = 'UPD-' + code + '-' + Math.floor(Math.random()*9000+1000);
-        const payload = {
-            name,
-            address: 'Order #' + code,
-            message: '[UPDATE REQUEST for order ' + code + '] ' + message,
-            code: requestCode
-        };
-        const btn = document.getElementById('update-send-btn');
-        const stat = document.getElementById('update-send-status');
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-        stat.style.color = 'var(--text-light)'; stat.innerText = '';
-        try {
-            const res = await fetch('/api/permission_request', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-            if(res.ok) {
-                stat.style.color = '#2E7D32';
-                stat.innerText = '✅ Request sent! Waiting for employee approval…';
-                updatePermPoll = setInterval(() => checkUpdateStatus(requestCode), 3000);
-            } else {
-                stat.style.color = 'var(--danger)';
-                stat.innerText = 'Error sending request. Please try again.';
-                btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-            }
-        } catch(e) {
-            stat.style.color = 'var(--danger)'; stat.innerText = 'Network error. Please try again.';
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-        }
-    }
-
-    async function checkUpdateStatus(code) {
-        try {
-            const res = await fetch(`/api/permission_status?code=${encodeURIComponent(code)}`);
-            const data = await res.json();
-            if(data.granted) {
-                clearInterval(updatePermPoll); updatePermPoll = null;
-                const stat = document.getElementById('update-send-status');
-                const replyMsg = data.reply_message && data.reply_message.trim();
-                stat.style.color = '#2E7D32';
-                stat.innerHTML = '✅ <b>Permission granted! Opening menu…</b>'
-                    + (replyMsg ? '<br><div style="background:#F1F8F1;border:1px solid #A5D6A7;border-radius:10px;padding:10px 13px;margin-top:8px;font-size:0.85rem;color:#2E7D32;line-height:1.5;">'
-                        + '<span style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;color:#1B5E20;">📣 From the staff:</span>'
-                        + escapeHTML(replyMsg) + '</div>' : '');
-                document.getElementById('update-send-btn').style.display = 'none';
-                addNotifMessage('✅ Your order update request was approved!');
-                playGrantedSound();
-                // Close modal and activate edit mode after a short pause so customer reads the message
-                setTimeout(() => {
-                    document.getElementById('update-order-modal').style.display = 'none';
-                    activateEditMode(_pendingUpdateOrderCode || '');
-                }, 1600);
-            }
-        } catch(e){}
+    function confirmDirectEdit() {
+        const code = _pendingUpdateOrderCode || document.getElementById('update-code-display').innerText.trim();
+        document.getElementById('update-order-modal').style.display = 'none';
+        activateEditMode(code);
     }
 
     // ── Edit Mode (order update after permission granted) ─────────────────
@@ -5294,7 +5686,7 @@ function playGrantedSound() {
         }
         // Open the order sheet so the customer sees the update mode banner immediately
         openOrderSheet();
-        showToast('✅ Permission granted! Pick items to add to your order.', 'success');
+        showToast('✅ Edit mode active! Pick items to add to your order.', 'success');
     }
 
     function deactivateEditMode() {
@@ -5747,7 +6139,7 @@ function playGrantedSound() {
             .total-section td { padding: 6px 8px; font-weight: bold; }
             .footer { text-align: center; font-size: 0.9rem; margin-top: 18px; color: #333; }
             .footer .est { font-size: 0.78rem; color: #888; margin-top: 4px; }
-            @media print { @page { margin: 10mm; size: A5; } body { padding: 0; } }
+            @media print { @page { margin: 10mm; size: auto; } body { padding: 0; } tr { page-break-inside: avoid; } }
         </style></head>
         <body>
         <div class="header-section">
@@ -5785,7 +6177,7 @@ function playGrantedSound() {
         ${'<\u0073cript>'}window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }${'<\/\u0073cript>'}
         </body></html>`;
 
-        const w = window.open('', '_blank', 'width=680,height=900');
+        const w = window.open('', '_blank', 'width=700,height='+Math.min(screen.height-80,1100));
         if(w) { w.document.write(html); w.document.close(); }
     }
 
@@ -5873,7 +6265,7 @@ function playGrantedSound() {
             <div style="flex:1;">
                 <div style="font-weight:800;font-size:1rem;margin-bottom:3px;">Order #${escapeHTML(code)} has been cancelled</div>
                 <div style="font-size:0.88rem;opacity:0.9;font-weight:600;">Reason: ${escapeHTML(reason)}</div>
-                <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. Please contact the shop for assistance.</div>
+                <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. For assistance, call/text us at <b>0999 458 7112</b>.</div>
             </div>
             <button onclick="document.getElementById('cancel-banner').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;flex-shrink:0;">✕ Close</button>`;
         document.body.prepend(banner);
@@ -6721,9 +7113,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .logo-circle .lf{font-size:1rem;}
 .brand{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:var(--cream);line-height:1.1;}
 .brand-sub{font-size:0.6rem;color:var(--tan);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
-.admin-pill{background:var(--brown);border:1px solid var(--tan);color:var(--tan);font-size:0.62rem;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:4px;}
+.admin-pill{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.3);color:var(--tan);font-size:0.65rem;font-weight:800;padding:3px 8px;border-radius:14px;letter-spacing:0.3px;opacity:0.85;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .topbar-right{display:flex;align-items:center;gap:9px;position:relative;flex-shrink:0;}
-.clock-chip{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.4);color:var(--tan);padding:5px 12px;border-radius:20px;font-size:0.79rem;font-weight:800;white-space:nowrap;}
+.clock-chip{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.3);color:var(--tan);padding:3px 8px;border-radius:14px;font-size:0.65rem;font-weight:800;white-space:nowrap;letter-spacing:0.3px;opacity:0.85;}
 .notif-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.35);color:var(--tan);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;font-size:0.9rem;flex-shrink:0;transition:background 0.15s;}
 .notif-btn:hover{background:rgba(196,168,130,0.2);}
 .nbadge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.58rem;font-weight:900;display:none;align-items:center;justify-content:center;border:2px solid var(--brown-dark);}
@@ -6935,8 +7327,26 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .inv-stock-bar.ok{background:linear-gradient(90deg,var(--green),#52c77a);}
 .inv-stock-bar.low{background:linear-gradient(90deg,var(--orange),#ffa040);}
 .inv-stock-bar.critical{background:linear-gradient(90deg,var(--red),#e05555);}
-.inv-inline-edit{width:90px;padding:5px 8px;border:1.5px solid var(--cream-dark);border-radius:8px;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;color:var(--text);background:var(--white);outline:none;text-align:right;}
+.inv-inline-edit{width:72px;padding:4px 7px;border:1.5px solid var(--cream-dark);border-radius:8px;font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;color:var(--text);background:var(--white);outline:none;text-align:right;}
 .inv-inline-edit:focus{border-color:var(--brown);background:#fff;}
+.inv-stepper-btn{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--cream-dark);background:var(--white);color:var(--brown);font-size:0.85rem;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;padding:0;line-height:1;}
+.inv-stepper-btn:hover{background:var(--brown);color:var(--cream);border-color:var(--brown);}
+.inv-stepper-btn.minus:hover{background:var(--red);border-color:var(--red);}
+.inv-row-critical{background:rgba(192,57,43,0.04)!important;}
+.inv-row-low{background:rgba(245,124,0,0.04)!important;}
+.inv-name-cell{display:flex;flex-direction:column;gap:3px;}
+.inv-name-main{font-size:0.83rem;font-weight:800;color:var(--text);}
+.inv-unit-badge{display:inline-block;background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;font-size:0.6rem;font-weight:800;color:var(--muted);padding:1px 5px;letter-spacing:0.3px;text-transform:uppercase;}
+.inv-action-btn{padding:3px 9px;border-radius:7px;font-size:0.68rem;font-weight:800;cursor:pointer;border:1.5px solid;transition:all 0.15s;font-family:'Nunito',sans-serif;white-space:nowrap;}
+.inv-action-btn.restock{border-color:rgba(39,174,96,0.4);color:var(--green);background:rgba(39,174,96,0.08);}
+.inv-action-btn.restock:hover{background:var(--green);color:#fff;border-color:var(--green);}
+.inv-action-btn.del{border-color:rgba(192,57,43,0.3);color:var(--red);background:rgba(192,57,43,0.06);}
+.inv-action-btn.del:hover{background:var(--red);color:#fff;border-color:var(--red);}
+.inv-progress-wrap{width:100%;background:var(--cream-dark);border-radius:4px;height:5px;margin-top:4px;overflow:hidden;}
+.inv-progress-fill{height:100%;border-radius:4px;transition:width 0.5s ease;}
+.inv-progress-fill.ok{background:linear-gradient(90deg,#27ae60,#52c77a);}
+.inv-progress-fill.low{background:linear-gradient(90deg,var(--orange),#ffa040);}
+.inv-progress-fill.critical{background:linear-gradient(90deg,var(--red),#e05555);}
 
 /* ── IMPROVED AUDIT LOG ── */
 .audit-toolbar{display:flex;gap:8px;padding:14px 14px 0;flex-wrap:wrap;align-items:center;}
@@ -7518,7 +7928,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <div id="s-inventory" class="screen">
     <div class="page-header">
       <h2><i class="fas fa-boxes"></i> Inventory</h2>
-      <p>Stock levels by category — tap a tab to filter</p>
+      <p>Manage stock levels — tap a row to restock or edit</p>
     </div>
     <div class="screen-inner">
 
@@ -7571,7 +7981,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </div>
         <div class="tbl-wrap">
           <table class="kds-table" style="min-width:300px;">
-            <thead><tr><th>Ingredient</th><th>Category</th><th>Stock</th><th>Status</th></tr></thead>
+            <thead><tr><th>Ingredient</th><th>Category</th><th style="min-width:160px;">Stock</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="inv-tbody"></tbody>
           </table>
         </div>
@@ -7619,6 +8029,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         <button class="fin-tab-pill active" id="ftab-today" onclick="finTab('today',this)">
           <i class="fas fa-sun"></i> Today
         </button>
+        <button class="fin-tab-pill" id="ftab-expenses" onclick="finTab('expenses',this)">
+          <i class="fas fa-receipt"></i> Expenses
+        </button>
         <button class="fin-tab-pill" id="ftab-history" onclick="finTab('history',this)">
           <i class="fas fa-history"></i> Orders
         </button>
@@ -7640,6 +8053,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           </table>
         </div>
       </div>
+
+    <!-- ── EXPENSES TAB ── -->
+    <div id="fin-expenses" class="fin-tabpane">
       <div class="section card">
         <div class="card-title">Log Expense</div>
         <input type="text" class="inp" id="exp-desc" placeholder="Description (e.g. Ice, Packaging)">
@@ -7669,7 +8085,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
         </div>
         <div class="tbl-wrap">
           <table class="kds-table" style="min-width:420px;">
-            <thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Address / Location</th><th>Process</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Address / Location</th><th>Process</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
             <tbody id="oh-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">Loading…</td></tr></tbody>
           </table>
         </div>
@@ -7950,6 +8366,32 @@ ens-wrap">
     </div>
     <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
 
+      <!-- Date Range Picker -->
+      <div class="section card" style="padding:12px 14px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <i class="fas fa-calendar-alt" style="color:var(--brown);font-size:1rem;"></i>
+          <span style="font-size:0.8rem;font-weight:900;color:var(--text);">Date Range</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <button class="period-pill active" id="an-pill-7"  onclick="anSetPreset(7,this)">7 Days</button>
+            <button class="period-pill"        id="an-pill-14" onclick="anSetPreset(14,this)">14 Days</button>
+            <button class="period-pill"        id="an-pill-30" onclick="anSetPreset(30,this)">30 Days</button>
+            <button class="period-pill"        id="an-pill-custom" onclick="anToggleCustom()">📅 Custom</button>
+          </div>
+        </div>
+        <div id="an-custom-range" style="display:none;margin-top:10px;display:none;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">From</label>
+            <input type="date" id="an-date-from" class="inp" style="padding:5px 9px;font-size:0.8rem;width:140px;" onchange="anCustomChanged()">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">To</label>
+            <input type="date" id="an-date-to" class="inp" style="padding:5px 9px;font-size:0.8rem;width:140px;" onchange="anCustomChanged()">
+          </div>
+          <button class="btn-primary" style="padding:6px 14px;font-size:0.78rem;" onclick="anApplyCustom()"><i class="fas fa-check"></i> Apply</button>
+          <span id="an-range-label" style="font-size:0.74rem;font-weight:700;color:var(--brown);"></span>
+        </div>
+      </div>
+
       <!-- Best-sellers (from Finance Reports) -->
       <div class="section card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
@@ -7989,24 +8431,17 @@ ens-wrap">
       </div>
 
       <!-- Analytics Charts -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button onclick="loadAnalytics(7)" class="btn-secondary" id="an-7">7 Days</button>
-        <button onclick="loadAnalytics(14)" class="btn-secondary" id="an-14">14 Days</button>
-        <button onclick="loadAnalytics(30)" class="btn-secondary" id="an-30">30 Days</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:0.74rem;font-weight:800;color:var(--muted);">Showing:</span>
+        <span id="an-active-label" style="font-size:0.74rem;font-weight:900;color:var(--brown);background:rgba(123,79,46,0.1);padding:3px 10px;border-radius:20px;">Last 7 Days</span>
       </div>
       <div class="section card" style="padding:14px;">
         <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Revenue Trend (₱)</div>
         <canvas id="an-revenue-chart" height="160"></canvas>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="section card" style="padding:14px;">
-          <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Top Items</div>
-          <div id="an-top-items"></div>
-        </div>
-        <div class="section card" style="padding:14px;">
+      <div class="section card" style="padding:14px;">
           <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hourly Orders (Today)</div>
           <canvas id="an-hourly-chart" height="200"></canvas>
-        </div>
       </div>
     </div>
   </div>
@@ -8081,6 +8516,13 @@ ens-wrap">
       <p>IP blacklist, brute-force detection &amp; threat monitoring</p>
     </div>
     <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:12px;">
+      <!-- Your IP -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:8px;">🖥️ Your Current IP Address</div>
+        <div id="sec-my-ip" style="font-family:monospace;font-size:1.05rem;font-weight:900;color:var(--brown);background:var(--cream);border-radius:8px;padding:10px 14px;border:1.5px solid var(--cream-dark);">Loading…</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:5px;">This is the IP address this device is using to access the admin panel.</div>
+      </div>
+
 
       <!-- Block IP manually -->
       <div class="section card" style="padding:14px;">
@@ -8361,11 +8803,11 @@ function goScreen(name, btn){
     if(el) el.style.display = 'flex';
     if(btn) btn.classList.add('active');
     /* Load data */
-    if(name === 'analytics'){ loadAnalytics(7); loadBestSellers('today',document.getElementById('bsp-today')); loadSalesChart(7,document.getElementById('pp-7')); loadLowStock(); }
+    if(name === 'analytics'){ anSetPreset(7, document.getElementById('an-pill-7')); loadBestSellers('today',document.getElementById('bsp-today')); loadSalesChart(7,document.getElementById('pp-7')); loadLowStock(); }
     if(name === 'promos')    loadPromos();
     if(name === 'announce')  loadAnnouncements();
     if(name === 'waste')     loadWaste();
-    if(name === 'security'){ loadBlacklist(); loadAttempts(); }
+    if(name === 'security'){ loadMyIP(); loadBlacklist(); loadAttempts(); }
     if(name === 'fraud'){ loadFraudOrders(); loadFraudBlocklist(); loadReputations(); }
   } else {
     /* ── Core screen ── */
@@ -8572,30 +9014,45 @@ function renderInventoryTable(){
     return;
   }
 
+  const catEmoji={'Teas & Bases':'🍵','Syrups & Flavors':'🍯','Dairy':'🥛','Add-ons':'🧋','Snacks':'🍟','Consumables & Packaging':'📦'};
   tbody.innerHTML=filtered.map(i=>{
     const threshold=i.unit==='pcs'?50:(i.unit==='ml'?500:200);
     const maxVal=Math.max(threshold*4,i.stock,1);
     const pct=Math.min(100,Math.round((i.stock/maxVal)*100));
     const level=i.stock<=0?'critical':(i.stock<=threshold?'low':'ok');
     const color=level==='critical'?'var(--red)':(level==='low'?'var(--orange)':'var(--green)');
+    const rowCls=level==='critical'?'inv-row-critical':(level==='low'?'inv-row-low':'');
     const statusBadge=level==='critical'
-      ?`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-times-circle" style="font-size:0.62rem;"></i> Out</span>`
+      ?`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-times-circle" style="font-size:0.6rem;"></i> Out</span>`
       :(level==='low'
-        ?`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-exclamation-triangle" style="font-size:0.62rem;"></i> Low</span>`
-        :`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.62rem;"></i> OK</span>`);
-    return`<tr>
+        ?`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-exclamation-triangle" style="font-size:0.6rem;"></i> Low</span>`
+        :`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> OK</span>`);
+    const emoji=catEmoji[i.category]||'📦';
+    return`<tr class="${rowCls}">
       <td>
-        <b style="font-size:0.83rem;color:var(--text);">${escapeHTML(i.name)}</b>
-        <div class="inv-stock-bar-wrap"><div class="inv-stock-bar ${level}" style="width:${pct}%;"></div></div>
+        <div class="inv-name-cell">
+          <span class="inv-name-main">${escapeHTML(i.name)}</span>
+          <div class="inv-progress-wrap"><div class="inv-progress-fill ${level}" style="width:${pct}%;"></div></div>
+        </div>
       </td>
-      <td style="color:var(--muted);font-size:0.8rem;white-space:nowrap;">${escapeHTML(i.category)}</td>
+      <td style="font-size:0.78rem;white-space:nowrap;">
+        <span style="display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-weight:700;">${emoji} ${escapeHTML(i.category)}</span>
+      </td>
       <td>
-        <div style="display:flex;align-items:center;gap:6px;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <button class="inv-stepper-btn minus" onclick="invStep(${i.id},-1)" title="Decrease">−</button>
           <input type="number" class="inv-inline-edit stock-inp" data-id="${i.id}" value="${i.stock}" min="0" style="border-color:${color};color:${color};">
-          <span style="font-size:0.72rem;color:var(--muted);font-weight:700;">${escapeHTML(i.unit)}</span>
+          <button class="inv-stepper-btn" onclick="invStep(${i.id},1)" title="Increase">+</button>
+          <span class="inv-unit-badge">${escapeHTML(i.unit)}</span>
         </div>
       </td>
       <td>${statusBadge}</td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="inv-action-btn restock" onclick="invRestock(${i.id})" title="Quick restock"><i class="fas fa-plus-circle"></i> Restock</button>
+          <button class="inv-action-btn del" onclick="invDelete(${i.id},'${escapeHTML(i.name)}')" title="Delete ingredient"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
     </tr>`;
   }).join('');
 
@@ -8617,6 +9074,51 @@ function renderInventoryTable(){
 
 // Alias for backward compat
 function renderInvTable(){renderInventoryTable();}
+
+
+function invStep(id, delta) {
+  const inp = document.querySelector(`.stock-inp[data-id="${id}"]`);
+  if (!inp) return;
+  const newVal = Math.max(0, (parseFloat(inp.value) || 0) + delta);
+  inp.value = newVal;
+  // Update border color live
+  const i = invAllData.find(x => x.id === id);
+  if (i) {
+    const threshold = i.unit === 'pcs' ? 50 : (i.unit === 'ml' ? 500 : 200);
+    const color = newVal <= 0 ? 'var(--red)' : newVal <= threshold ? 'var(--orange)' : 'var(--green)';
+    inp.style.borderColor = color;
+    inp.style.color = color;
+  }
+}
+
+async function invRestock(id) {
+  const i = invAllData.find(x => x.id === id);
+  if (!i) return;
+  const threshold = i.unit === 'pcs' ? 50 : (i.unit === 'ml' ? 500 : 200);
+  const restockAmt = threshold * 4;
+  const inp = document.querySelector(`.stock-inp[data-id="${id}"]`);
+  if (!inp) return;
+  inp.value = restockAmt;
+  inp.style.borderColor = 'var(--green)';
+  inp.style.color = 'var(--green)';
+  // Auto-save just this item
+  try {
+    const r = await apiFetch('/api/inventory', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify([{id, stock: restockAmt}])});
+    if (r && r.ok) {
+      showToast(`${i.name} restocked to ${restockAmt} ${i.unit}`, 'success');
+      fetchInventory();
+    } else showToast('Restock failed', 'error');
+  } catch(e) { showToast('Network error', 'error'); }
+}
+
+async function invDelete(id, name) {
+  if (!confirm(`Delete "${name}" from inventory? This cannot be undone.`)) return;
+  try {
+    const r = await apiFetch(`/api/inventory/${id}`, {method: 'DELETE'});
+    if (r && r.ok) { showToast(`${name} removed`, 'success'); fetchInventory(); }
+    else showToast('Delete failed', 'error');
+  } catch(e) { showToast('Network error', 'error'); }
+}
 
 async function saveInventory(){
   const payload=Array.from(document.querySelectorAll('.stock-inp')).map(inp=>({id:parseInt(inp.dataset.id),stock:parseFloat(inp.value)||0}));
@@ -8777,7 +9279,7 @@ async function loadOrderHistory(page){
   const info=document.getElementById('oh-page-info');
   const prevBtn=document.getElementById('oh-prev');
   const nextBtn=document.getElementById('oh-next');
-  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
   try{
     const r=await apiFetch(`/api/orders/history?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page}`);
     if(!r||!r.ok)return;
@@ -8801,15 +9303,16 @@ async function loadOrderHistory(page){
       <td style="max-width:180px;">${addrCell}</td>
       <td>${processCell}</td>
       <td style="color:var(--brown);font-weight:800;font-size:0.82rem;white-space:nowrap;">₱${o.total.toFixed(2)}</td>
+      <td>${o.is_paid?`<span style="background:rgba(39,174,96,0.15);color:#1a7a3c;padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> GCash Paid</span>`:`<span style="background:rgba(120,120,120,0.1);color:var(--muted);padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">Cash</span>`}</td>
       <td><span style="background:${statusColors[o.status]||'var(--muted)'};color:#fff;padding:3px 8px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">${statusLabels[o.status]||o.status}</span></td>
-    </tr>`}).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
+    </tr>`}).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
     const total=data.total,perPage=data.per_page,totalPages=Math.ceil(total/perPage);
     const start=(page-1)*perPage+1;
     const end=Math.min(page*perPage,total);
     if(info)info.innerText=total?`${start}–${end} of ${total} orders`:'No orders';
     if(prevBtn){prevBtn.disabled=page<=1;prevBtn.style.opacity=page<=1?'0.4':'1';}
     if(nextBtn){nextBtn.disabled=page>=totalPages;nextBtn.style.opacity=page>=totalPages?'0.4':'1';}
-  }catch(e){tbody.innerHTML='<tr><td colspan="5" class="error-state">Network Error</td></tr>';}
+  }catch(e){tbody.innerHTML='<tr><td colspan="8" class="error-state">Network Error</td></tr>';}
 }
 
 /* ══ SCHEDULE ══ */
@@ -9322,11 +9825,11 @@ function renderLoCards(){
     if(o.is_flagged)fraudBadges+=`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-flag" style="font-size:0.55rem;"></i> Flagged</span> `;
     if(o.requires_staff_confirm&&!o.staff_confirmed)fraudBadges+=`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:0.55rem;"></i> Needs Approval</span> `;
     if(o.prepayment_required&&!o.prepayment_collected)fraudBadges+=`<span style="background:rgba(123,79,46,0.12);color:var(--brown);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;">💰 Fee</span> `;
+    if(o.is_paid)fraudBadges+=`<span style="background:rgba(39,174,96,0.13);color:var(--green);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-check-circle" style="font-size:0.55rem;"></i> GCash Paid</span> `;
     // Approval / photo actions in footer
     let extraActions='';
     if(o.requires_staff_confirm&&!o.staff_confirmed)extraActions+=`<button class="btn-primary" style="padding:3px 8px;margin:0;font-size:0.68rem;white-space:nowrap;" onclick="event.stopPropagation();staffConfirmOrder(${o.id}).then(()=>fetchLiveOrders())">✅ Approve</button>`;
     extraActions+=`<button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.68rem;" title="Flag order" onclick="event.stopPropagation();flagOrderByStaff(${o.id})"><i class="fas fa-flag"></i></button>`;
-    extraActions+=`<button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.68rem;" title="Pickup photo" onclick="event.stopPropagation();openPickupPhotoModal(${o.id},'${escapeHTML(o.code||'')}')"><i class="fas fa-camera"></i></button>`;
     return`<div class="lo-card" style="animation-delay:${idx*0.04}s${o.is_flagged?';border:2px solid rgba(192,57,43,0.35);':''}" onclick="openOrdDetail(${JSON.stringify(o).replace(/"/g,'&quot;')})">
       <div class="lo-card-bar ${barCls}"></div>
       <div class="lo-card-head">
@@ -9395,7 +9898,6 @@ async function loadFraudOrders(){
         const actions=[];
         if(o.requires_staff_confirmation&&!o.staff_confirmed)actions.push(`<button class="btn-primary" style="padding:4px 10px;margin:0;font-size:0.72rem;" onclick="staffConfirmOrder(${o.order_id})">✅ Approve</button>`);
         if(o.prepayment_required&&!o.prepayment_collected)actions.push(`<button class="btn-secondary" style="padding:4px 10px;margin:0;font-size:0.72rem;" onclick="markPrepayCollected(${o.order_id})">💰 Fee Collected</button>`);
-        actions.push(`<button class="btn-secondary" style="padding:4px 8px;margin:0;font-size:0.72rem;" onclick="openPickupPhotoModal(${o.order_id},'${escapeHTML(o.code)}')"><i class="fas fa-camera"></i></button>`);
         return`<tr style="border-bottom:1px solid var(--cream-dark);">
           <td style="padding:8px 10px;font-family:monospace;font-weight:900;color:var(--brown-dark);">#${escapeHTML(o.code)}</td>
           <td style="padding:8px 10px;"><div style="font-weight:800;">${escapeHTML(o.name)}</div><div style="font-size:0.7rem;color:var(--muted);">${escapeHTML(o.email)}</div></td>
@@ -9672,21 +10174,77 @@ setInterval(()=>{
 
 /* ── ANALYTICS ── */
 let _anRevenueChart = null, _anHourlyChart = null, _anActiveDays = 7;
+let _anStartDate = null, _anEndDate = null, _anIsCustom = false;
+
+function anSetPreset(days, btn) {
+  _anActiveDays = days;
+  _anIsCustom = false;
+  _anStartDate = null; _anEndDate = null;
+  document.querySelectorAll('#s-analytics .period-pill').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('an-custom-range').style.display = 'none';
+  const label = document.getElementById('an-active-label');
+  if (label) label.textContent = 'Last ' + days + ' Days';
+  loadAnalytics(days);
+}
+
+function anToggleCustom() {
+  const row = document.getElementById('an-custom-range');
+  const showing = row.style.display === 'flex';
+  row.style.display = showing ? 'none' : 'flex';
+  if (!showing) {
+    // Pre-fill with current range
+    const today = new Date();
+    const start = new Date(today); start.setDate(start.getDate() - (_anActiveDays - 1));
+    document.getElementById('an-date-to').value   = today.toISOString().slice(0,10);
+    document.getElementById('an-date-from').value = start.toISOString().slice(0,10);
+    document.querySelectorAll('#s-analytics .period-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('an-pill-custom').classList.add('active');
+  }
+}
+
+function anCustomChanged() {
+  const from = document.getElementById('an-date-from').value;
+  const to   = document.getElementById('an-date-to').value;
+  const lbl  = document.getElementById('an-range-label');
+  if (from && to && from <= to) {
+    const d1 = new Date(from), d2 = new Date(to);
+    const diff = Math.round((d2-d1)/(1000*60*60*24)) + 1;
+    lbl.textContent = diff + ' day' + (diff===1?'':'s') + ' selected';
+  } else {
+    lbl.textContent = from && to && from > to ? '⚠️ End must be after start' : '';
+  }
+}
+
+function anApplyCustom() {
+  const from = document.getElementById('an-date-from').value;
+  const to   = document.getElementById('an-date-to').value;
+  if (!from || !to) { showToast('Please select both start and end dates', 'error'); return; }
+  if (from > to)    { showToast('End date must be after start date', 'error'); return; }
+  _anIsCustom = true;
+  _anStartDate = from;
+  _anEndDate   = to;
+  const d1 = new Date(from), d2 = new Date(to);
+  const fmt = d => d.toLocaleDateString('en-PH', {month:'short', day:'numeric', year:'numeric'});
+  const label = document.getElementById('an-active-label');
+  if (label) label.textContent = fmt(d1) + ' – ' + fmt(d2);
+  loadAnalytics();
+}
 
 async function loadAnalytics(days) {
-  _anActiveDays = days || 7;
-  [7,14,30].forEach(d => {
-    const b = document.getElementById('an-'+d);
-    if (b) b.style.fontWeight = (d===_anActiveDays) ? '900' : '700';
-  });
+  if (days) { _anActiveDays = days; }
   try {
-    const [trendR, topR, hourlyR] = await Promise.all([
-      apiFetch('/api/admin/analytics/sales_trend?days=' + _anActiveDays),
-      apiFetch('/api/admin/analytics/top_items?days=' + _anActiveDays),
+    let trendUrl;
+    if (_anIsCustom && _anStartDate && _anEndDate) {
+      trendUrl = `/api/admin/analytics/sales_trend?start=${_anStartDate}&end=${_anEndDate}`;
+    } else {
+      trendUrl = '/api/admin/analytics/sales_trend?days=' + _anActiveDays;
+    }
+    const [trendR, hourlyR] = await Promise.all([
+      apiFetch(trendUrl),
       apiFetch('/api/admin/analytics/hourly')
     ]);
     const trend = await trendR.json();
-    const top   = await topR.json();
     const hourly = await hourlyR.json();
 
     // Revenue chart
@@ -9716,10 +10274,10 @@ async function loadAnalytics(days) {
       _anHourlyChart = new Chart(hctx, {
         type: 'bar',
         data: {
-          labels: hourly.filter(h => parseInt(h.hour) >= 8 && parseInt(h.hour) <= 22).map(h => h.hour),
+          labels: hourly.filter(h => parseInt(h.hour) >= 10 && parseInt(h.hour) <= 19).map(h => h.hour),
           datasets: [{
             label: 'Orders',
-            data: hourly.filter(h => parseInt(h.hour) >= 8 && parseInt(h.hour) <= 22).map(h => h.orders),
+            data: hourly.filter(h => parseInt(h.hour) >= 10 && parseInt(h.hour) <= 19).map(h => h.orders),
             backgroundColor: 'rgba(123,79,46,0.7)', borderRadius: 6
           }]
         },
@@ -9727,24 +10285,6 @@ async function loadAnalytics(days) {
       });
     }
 
-    // Top items
-    const el = document.getElementById('an-top-items');
-    if (el) {
-      if (!top.length) { el.innerHTML = '<div style="color:var(--muted);font-size:0.82rem;text-align:center;padding:16px;">No data yet</div>'; }
-      else {
-        const max = top[0].count || 1;
-        el.innerHTML = top.map((t,i) => `
-          <div style="margin-bottom:9px;">
-            <div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:800;color:var(--text);margin-bottom:3px;">
-              <span>${i+1}. ${escapeHTML(t.name)}</span>
-              <span style="color:var(--brown);">${t.count}x</span>
-            </div>
-            <div style="background:var(--cream-dark);border-radius:4px;height:6px;">
-              <div style="background:var(--brown);height:6px;border-radius:4px;width:${Math.round((t.count/max)*100)}%;transition:width 0.5s;"></div>
-            </div>
-          </div>`).join('');
-      }
-    }
   } catch(e) { showToast('Failed to load analytics','error'); }
 }
 
@@ -9823,20 +10363,22 @@ async function loadAnnouncements() {
   try {
     const r = await apiFetch('/api/admin/announcements');
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.84rem;">No announcements yet.</div>'; return; }
-    const colors = {urgent:'#D32F2F',high:'#E65100',normal:'#1565C0',low:'#555'};
-    const labels = {urgent:'🚨 URGENT',high:'🔴 HIGH',normal:'📣 Normal',low:'🔵 Low'};
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:28px;font-size:0.84rem;"><i class="fas fa-bell-slash" style="font-size:1.4rem;opacity:0.3;display:block;margin-bottom:8px;"></i>No announcements yet.</div>'; return; }
+    const colors  = {urgent:'#C62828',high:'#BF360C',normal:'#1565C0',low:'#4A4A4A'};
+    const bgMap   = {urgent:'#FFEBEE',high:'#FFF3E0',normal:'#E3F2FD',low:'#F9F9F9'};
+    const borMap  = {urgent:'#FFCDD2',high:'#FFCCBC',normal:'#BBDEFB',low:'#E0E0E0'};
+    const labels  = {urgent:'🚨 URGENT',high:'🔴 HIGH',normal:'📣 Normal',low:'ℹ️ Low'};
     el.innerHTML = data.map(a => `
-      <div style="background:#fff;border:1.5px solid var(--cream-dark);border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid ${colors[a.priority]||'#555'};">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <div style="font-size:0.9rem;font-weight:900;color:var(--text);">${escapeHTML(a.title)}</div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <span style="font-size:0.65rem;font-weight:800;color:${colors[a.priority]||'#555'};background:${colors[a.priority]||'#555'}18;padding:2px 8px;border-radius:20px;">${labels[a.priority]||a.priority}</span>
-            <button onclick="deleteAnn(${a.id})" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.9rem;" title="Delete">✕</button>
+      <div style="background:${bgMap[a.priority]||'#E3F2FD'};border:1.5px solid ${borMap[a.priority]||'#BBDEFB'};border-left:5px solid ${colors[a.priority]||'#1565C0'};border-radius:14px;padding:15px 16px;margin-bottom:11px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+          <div style="font-size:0.92rem;font-weight:900;color:${colors[a.priority]||'#1565C0'};">${escapeHTML(a.title)}</div>
+          <div style="display:flex;gap:7px;align-items:center;">
+            <span style="font-size:0.64rem;font-weight:900;color:${colors[a.priority]||'#1565C0'};background:${borMap[a.priority]||'#BBDEFB'};padding:3px 10px;border-radius:20px;letter-spacing:0.4px;">${labels[a.priority]||a.priority}</span>
+            <button onclick="deleteAnn(${a.id})" style="background:rgba(0,0,0,0.06);border:none;color:#999;cursor:pointer;font-size:0.82rem;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;" title="Delete">✕</button>
           </div>
         </div>
-        <div style="font-size:0.82rem;color:var(--muted);font-weight:600;line-height:1.6;">${escapeHTML(a.message)}</div>
-        <div style="font-size:0.68rem;color:#bbb;margin-top:6px;">${a.created_at}</div>
+        <div style="font-size:0.83rem;color:#444;font-weight:600;line-height:1.65;">${escapeHTML(a.message)}</div>
+        <div style="font-size:0.68rem;color:#bbb;margin-top:8px;display:flex;align-items:center;gap:5px;"><i class="fas fa-clock"></i>${a.created_at}</div>
       </div>`).join('');
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; }
 }
@@ -9893,12 +10435,24 @@ async function loadWaste() {
 }
 
 /* ── SECURITY CENTER ── */
+async function loadMyIP() {
+  const el = document.getElementById('sec-my-ip');
+  if (!el) return;
+  try {
+    const r = await apiFetch('/api/admin/security/my_ip');
+    if (!r || !r.ok) { el.textContent = 'Unavailable'; return; }
+    const d = await r.json();
+    el.textContent = d.ip || 'Unknown';
+  } catch(e) { el.textContent = 'Unavailable'; }
+}
+
 async function loadBlacklist() {
   const el = document.getElementById('blacklist-table');
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
   try {
     const r = await apiFetch('/api/admin/security/blacklist');
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading blacklist</div>'; return; }
     const data = await r.json();
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No blocked IPs.</div>'; return; }
     el.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
@@ -9918,6 +10472,7 @@ async function loadAttempts() {
   el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
   try {
     const r = await apiFetch('/api/admin/security/attempts');
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; return; }
     const data = await r.json();
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No failed attempts in 24h.</div>'; return; }
     el.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
@@ -10014,7 +10569,7 @@ def check_admin_session():
             pass
 
     # Guard employee API routes — must have a valid, current employee session
-    if request.path.startswith('/api/employee') or request.path.startswith('/api/orders') or request.path.startswith('/api/stream'):
+    if request.path.startswith('/api/employee') or request.path.startswith('/api/orders') or request.path.startswith('/api/stream') or request.path == '/api/employee/stream':
         if not session.get('is_employee') and not session.get('is_admin'):
             return jsonify({"error": "Unauthorized"}), 403
         if session.get('is_employee') and not session.get('is_admin'):
@@ -10026,6 +10581,23 @@ def check_admin_session():
                     return jsonify({"error": "Session taken over"}), 403
             except Exception:
                 pass
+
+
+@app.route('/api/inventory/<int:ing_id>', methods=['DELETE'])
+def delete_ingredient(ing_id):
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    ing = Ingredient.query.get(ing_id)
+    if not ing:
+        return jsonify({"error": "Not found"}), 404
+    name = ing.name
+    RecipeItem.query.filter_by(ingredient_id=ing_id).delete()
+    db.session.delete(ing)
+    db.session.commit()
+    push_employee_event('stock_update', {})
+    log_audit("Inventory: Ingredient Deleted", f"Admin deleted ingredient: {name}")
+    return jsonify({"ok": True})
+
 
 @app.route('/')
 def storefront():
@@ -10166,6 +10738,11 @@ def manual_auth():
         return jsonify({"error": "A valid email address is required."}), 400
     if not lat or not lng:
         return jsonify({"error": "Location is required. Please use 'Use My Current Location'."}), 400
+    # Require email verification before granting access
+    verified_email = session.get('email_verified_for', '').strip().lower()
+    if verified_email != email.lower():
+        return jsonify({"error": "Please verify your email first. Click 'Verify Your Email' and check your inbox."}), 403
+
     session['customer_verified'] = True
     session['customer_name']     = name
     session['customer_email']    = email
@@ -10174,6 +10751,107 @@ def manual_auth():
     session['customer_lng']      = lng
     session['customer_address']  = address
     return jsonify({"status": "success"})
+
+
+@app.route('/api/auth/send_email_verification', methods=['POST'])
+@limiter.limit("5 per minute")
+def send_email_verification():
+    """Send a verification link to the customer's Gmail before they can place orders."""
+    data  = request.json or {}
+    email = (data.get('email') or '').strip()
+    if not email or '@' not in email:
+        return jsonify({"error": "A valid email address is required."}), 400
+
+    # Generate a signed token valid for 15 minutes
+    token = token_serializer.dumps(email.lower(), salt='email-verify-2024')
+
+    # Build the verification URL
+    base_url = (os.environ.get('APP_BASE_URL') or request.host_url).rstrip('/')
+    verify_url = f"{base_url}/verify-email/{token}"
+
+    ok, err = send_verification_email(email, verify_url)
+    if not ok:
+        return jsonify({"error": f"Could not send email: {err}"}), 500
+
+    # Store pending email in session so we can validate the token later
+    session['pending_verify_email'] = email.lower()
+    return jsonify({"status": "sent", "message": "Verification email sent! Check your Gmail inbox."})
+
+
+@app.route('/verify-email/<token>')
+def verify_email_token(token):
+    """Customer clicks the link in their email — marks email as verified in session."""
+    try:
+        email = token_serializer.loads(token, salt='email-verify-2024', max_age=900)  # 15 min
+    except SignatureExpired:
+        return """<!DOCTYPE html><html><head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Link Expired | 9599 Tea & Coffee</title>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;800&display=swap" rel="stylesheet">
+        <style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
+        .c{{background:#fff;border-radius:20px;padding:48px 36px;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,0.08);}}</style>
+        </head><body><div class="c">
+        <div style="font-size:3rem;margin-bottom:16px;">⏰</div>
+        <h2 style="color:#C0392B;margin-bottom:10px;font-size:1.35rem;">Link Expired</h2>
+        <p style="color:#666;font-size:0.9rem;line-height:1.6;margin-bottom:24px;">Your verification link has expired (valid 15 min). Please go back and request a new one.</p>
+        <a href="/" style="display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:800;font-size:0.92rem;">← Back to Order Page</a>
+        </div></body></html>""", 400
+    except BadSignature:
+        return """<!DOCTYPE html><html><head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Invalid Link | 9599 Tea & Coffee</title>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;800&display=swap" rel="stylesheet">
+        <style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
+        .c{{background:#fff;border-radius:20px;padding:48px 36px;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,0.08);}}</style>
+        </head><body><div class="c">
+        <div style="font-size:3rem;margin-bottom:16px;">❌</div>
+        <h2 style="color:#C0392B;margin-bottom:10px;font-size:1.35rem;">Invalid Link</h2>
+        <p style="color:#666;font-size:0.9rem;line-height:1.6;margin-bottom:24px;">This verification link is invalid or was already used. Please go back and request a new one.</p>
+        <a href="/" style="display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:800;font-size:0.92rem;">← Back to Order Page</a>
+        </div></body></html>""", 400
+
+    # Mark this email as verified in the session
+    session['email_verified_for'] = email
+    return """<!DOCTYPE html><html><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Email Verified! | 9599 Tea & Coffee</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;800;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+    *{{box-sizing:border-box;margin:0;padding:0;}}
+    body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
+    .c{{background:#fff;border-radius:24px;padding:52px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.08);border:1.5px solid #EFEBE4;}}
+    .icon{{width:80px;height:80px;background:linear-gradient(135deg,#E8F5E9,#C8E6C9);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;font-size:2.4rem;border:2px solid #A5D6A7;}}
+    h2{{font-family:'Playfair Display',serif;color:#1B5E20;font-size:1.7rem;margin-bottom:10px;}}
+    p{{color:#5D4037;font-size:0.92rem;line-height:1.7;margin-bottom:28px;}}
+    a{{display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;text-decoration:none;padding:15px 36px;border-radius:14px;font-weight:900;font-size:0.97rem;box-shadow:0 4px 16px rgba(92,51,23,0.3);letter-spacing:0.3px;}}
+    </style>
+    </head><body><div class="c">
+    <div class="icon">✅</div>
+    <h2>Email Verified!</h2>
+    <p>Your email has been successfully verified. You can now go back to the order page and continue placing your order.</p>
+    <a href="/">🧋 Continue to Order</a>
+    </div></body></html>"""
+
+
+@app.route('/api/auth/check_email_verification')
+def check_email_verification():
+    """Polling endpoint: customer page checks if server-session marks email as verified."""
+    email = request.args.get('email', '').strip().lower()
+    verified = session.get('email_verified_for', '').strip().lower()
+    return jsonify({"verified": bool(email and verified == email)})
+
+
+@app.route('/api/public/announcements', methods=['GET'])
+def public_announcements():
+    """Public endpoint — returns active staff announcements for the customer site."""
+    rows = StaffAnnouncement.query.filter_by(is_active=True)\
+        .order_by(StaffAnnouncement.created_at.desc()).limit(5).all()
+    return jsonify([{
+        "id": a.id, "title": a.title, "message": a.message,
+        "priority": a.priority,
+        "created_at": a.created_at.strftime('%b %d, %I:%M %p')
+    } for a in rows])
+
 
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
@@ -10502,6 +11180,7 @@ def handle_inventory():
             ing = Ingredient.query.get(item_data['id'])
             if ing: ing.stock = float(item_data['stock'])
         db.session.commit()
+        push_employee_event('stock_update', {})
         return jsonify({"status": "success"})
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -10689,7 +11368,8 @@ def reserve_blend():
             pickup_time=data['pickup_time'],
             order_source="Online",
             status=initial_status,
-            patron_address=data.get('address','')
+            patron_address=data.get('address',''),
+            is_paid=True  # GCash online payment — auto-marked as paid
         )
         db.session.add(new_res)
         db.session.flush()
@@ -11327,6 +12007,39 @@ def update_order_status(order_id):
     push_event('order_status', {'id': order_id, 'status': new_status})
     return jsonify({"status": "success"})
 
+
+@app.route('/api/employee/stream')
+def employee_sse_stream():
+    """Server-Sent Events for employee panel — real-time stock updates from admin."""
+    if not session.get('is_employee') and not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    q = queue.Queue(maxsize=30)
+    with _emp_sse_lock:
+        _emp_sse_subscribers.append(q)
+
+    def generate():
+        try:
+            yield "event: connected\ndata: {}\n\n"
+            while True:
+                try:
+                    msg = q.get(timeout=25)
+                    yield msg
+                except queue.Empty:
+                    yield "event: ping\ndata: {}\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            with _emp_sse_lock:
+                if q in _emp_sse_subscribers:
+                    _emp_sse_subscribers.remove(q)
+
+    resp = Response(generate(), mimetype='text/event-stream')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['X-Accel-Buffering'] = 'no'
+    resp.headers['Connection'] = 'keep-alive'
+    return resp
+
 @app.route('/api/stream')
 def sse_stream():
     """Server-Sent Events endpoint — pushes real-time updates to the admin panel."""
@@ -11419,6 +12132,7 @@ def api_orders():
             'prepayment_required':      meta.prepayment_required if meta else False,
             'prepayment_amount':        meta.prepayment_amount if meta else 0.0,
             'prepayment_collected':     meta.prepayment_collected if meta else False,
+            'is_paid':                  r.is_paid if hasattr(r, 'is_paid') else (r.order_source == 'Online'),
             'has_pickup_photo':         meta.has_pickup_photo if meta else False,
         }
     return jsonify({'orders': [_fmt_order(r) for r in res]})
@@ -11523,7 +12237,12 @@ def finance_low_stock():
     ings = Ingredient.query.order_by(Ingredient.stock).all()
     result = []
     for ing in ings:
-        threshold = 500 if ing.unit in ('ml', 'grams') else 20
+        if ing.unit == 'pcs':
+            threshold = 50
+        elif ing.unit in ('ml', 'grams', 'g'):
+            threshold = 500
+        else:
+            threshold = 200
         pct = (ing.stock / max(threshold * 4, 1)) * 100
         if ing.stock <= 0:
             level = 'critical'
@@ -11562,7 +12281,8 @@ def order_history():
             "address": o.patron_address or '',
             "date": o.created_at.strftime('%b %d, %Y'),
             "time": o.created_at.strftime('%I:%M %p'),
-            "items": [i.foundation for i in o.infusions]
+            "items": [i.foundation for i in o.infusions],
+            "is_paid": o.is_paid if hasattr(o, "is_paid") else (o.order_source == "Online")
         } for o in orders]
     })
 
@@ -11608,6 +12328,12 @@ def get_audit_logs():
 # ══════════════════════════════════════════════════════════════
 
 # ── SECURITY: IP BLACKLIST MANAGEMENT ─────────────────────────
+
+@app.route('/api/admin/security/my_ip', methods=['GET'])
+def security_my_ip():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    return jsonify({"ip": get_client_ip()})
 
 @app.route('/api/admin/security/blacklist', methods=['GET'])
 def security_get_blacklist():
@@ -11967,14 +12693,25 @@ def checklist_delete(cid):
 def analytics_sales_trend():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    days = int(request.args.get('days', 7))
-    days = min(max(days, 1), 90)
     ph_now = get_ph_time()
+    start_str = request.args.get('start')
+    end_str   = request.args.get('end')
+    if start_str and end_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date   = datetime.strptime(end_str,   '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format"}), 400
+    else:
+        days = int(request.args.get('days', 7))
+        days = min(max(days, 1), 90)
+        end_date   = ph_now.date()
+        start_date = end_date - timedelta(days=days - 1)
     result = []
-    for i in range(days - 1, -1, -1):
-        day = ph_now.date() - timedelta(days=i)
-        day_start = datetime(day.year, day.month, day.day, 0, 0, 0)
-        day_end   = datetime(day.year, day.month, day.day, 23, 59, 59)
+    current = start_date
+    while current <= end_date:
+        day_start = datetime(current.year, current.month, current.day, 0, 0, 0)
+        day_end   = datetime(current.year, current.month, current.day, 23, 59, 59)
         orders = Reservation.query.filter(
             Reservation.created_at >= day_start,
             Reservation.created_at <= day_end,
@@ -11982,24 +12719,41 @@ def analytics_sales_trend():
         ).all()
         total = sum(o.total_investment for o in orders)
         result.append({
-            "date": day.strftime('%b %d'),
+            "date": current.strftime('%b %d'),
             "revenue": round(total, 2),
             "orders": len(orders)
         })
+        current += timedelta(days=1)
     return jsonify(result)
 
 @app.route('/api/admin/analytics/top_items', methods=['GET'])
 def analytics_top_items():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    days = int(request.args.get('days', 30))
-    days = min(max(days, 1), 90)
     ph_now = get_ph_time()
-    cutoff = ph_now - timedelta(days=days)
-    completed = Reservation.query.filter(
-        Reservation.created_at >= cutoff,
-        Reservation.status == 'Completed'
-    ).all()
+    start_str = request.args.get('start')
+    end_str   = request.args.get('end')
+    if start_str and end_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date   = datetime.strptime(end_str,   '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format"}), 400
+        cutoff_start = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
+        cutoff_end   = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+        completed = Reservation.query.filter(
+            Reservation.created_at >= cutoff_start,
+            Reservation.created_at <= cutoff_end,
+            Reservation.status == 'Completed'
+        ).all()
+    else:
+        days = int(request.args.get('days', 30))
+        days = min(max(days, 1), 90)
+        cutoff = ph_now - timedelta(days=days)
+        completed = Reservation.query.filter(
+            Reservation.created_at >= cutoff,
+            Reservation.status == 'Completed'
+        ).all()
     item_counts = {}
     for r in completed:
         for inf in r.infusions:
@@ -12361,6 +13115,35 @@ try:
             print(f"Migration warning (non-fatal): {migration_otp}")
 
 
+
+        # Migrate: add is_paid column to reservations (auto-set for GCash online orders)
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='reservations' AND column_name='is_paid'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
+                col_exists = any(row[1] == 'is_paid' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    "ALTER TABLE reservations ADD COLUMN is_paid BOOLEAN NOT NULL DEFAULT 0"
+                ))
+                # Back-fill: mark existing Online orders as paid
+                db.session.execute(db.text(
+                    "UPDATE reservations SET is_paid = 1 WHERE order_source = 'Online'"
+                ))
+                db.session.commit()
+                print("Migration: added is_paid column to reservations + back-filled Online orders")
+            else:
+                print("Migration: reservations.is_paid already exists, skipped")
+        except Exception as migration_is_paid:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_is_paid}")
 
         # ── 0. Seed store schedule (only if not already in DB) ──────────────
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
