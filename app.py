@@ -8053,6 +8053,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           </table>
         </div>
       </div>
+    </div><!-- end fin-today -->
 
     <!-- ── EXPENSES TAB ── -->
     <div id="fin-expenses" class="fin-tabpane">
@@ -8516,20 +8517,24 @@ ens-wrap">
       <p>IP blacklist, brute-force detection &amp; threat monitoring</p>
     </div>
     <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:12px;">
+
       <!-- Your IP -->
       <div class="section card" style="padding:14px;">
-        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:8px;">🖥️ Your Current IP Address</div>
-        <div id="sec-my-ip" style="font-family:monospace;font-size:1.05rem;font-weight:900;color:var(--brown);background:var(--cream);border-radius:8px;padding:10px 14px;border:1.5px solid var(--cream-dark);">Loading…</div>
-        <div style="font-size:0.7rem;color:var(--muted);margin-top:5px;">This is the IP address this device is using to access the admin panel.</div>
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:8px;">🖥️ Your Current Device IP</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div id="sec-my-ip" style="font-family:monospace;font-size:1.05rem;font-weight:900;color:var(--brown);background:var(--cream);border-radius:8px;padding:10px 14px;border:1.5px solid var(--cream-dark);flex:1;min-width:140px;">Loading…</div>
+          <button class="btn-secondary" onclick="secCopyMyIP()" style="white-space:nowrap;"><i class="fas fa-copy"></i> Copy</button>
+          <button class="btn-secondary" onclick="secFillMyIP()" style="white-space:nowrap;"><i class="fas fa-arrow-down"></i> Use to Block</button>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:5px;">The IP address of the device currently accessing this admin panel.</div>
       </div>
-
 
       <!-- Block IP manually -->
       <div class="section card" style="padding:14px;">
         <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:10px;">🚫 Block an IP Address</div>
-        <div style="display:flex;gap:8px;">
-          <input id="sec-ip-input" class="inp" placeholder="e.g. 192.168.1.100" style="margin:0;flex:1;">
-          <input id="sec-ip-reason" class="inp" placeholder="Reason (optional)" style="margin:0;flex:1;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input id="sec-ip-input" class="inp" placeholder="e.g. 192.168.1.100" style="margin:0;flex:1;min-width:140px;">
+          <input id="sec-ip-reason" class="inp" placeholder="Reason (optional)" style="margin:0;flex:1;min-width:140px;">
           <button class="btn-secondary" style="white-space:nowrap;" onclick="blockIP()"><i class="fas fa-ban"></i> Block</button>
         </div>
       </div>
@@ -8546,7 +8551,7 @@ ens-wrap">
       <!-- Recent failed attempts -->
       <div class="section card" style="padding:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:0.82rem;font-weight:900;color:var(--orange);">⚠️ Recent Failed Login Attempts (24h)</div>
+          <div style="font-size:0.82rem;font-weight:900;color:var(--orange);">⚠️ Devices That Tried to Access (24h)</div>
           <button class="btn-secondary" onclick="loadAttempts()"><i class="fas fa-sync-alt"></i></button>
         </div>
         <div id="attempts-table"><div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
@@ -9136,6 +9141,7 @@ function finTab(name,btn){
   const el=document.getElementById('fin-'+name);if(el)el.classList.add('active');
   if(btn)btn.classList.add('active');
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
+  if(name==='expenses'){fetchFinance();}
 }
 
 /* ══ FINANCE ══ */
@@ -10474,16 +10480,50 @@ async function loadAttempts() {
     const r = await apiFetch('/api/admin/security/attempts');
     if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No failed attempts in 24h.</div>'; return; }
-    el.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
-      '<thead><tr style="background:var(--cream);"><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">IP</th><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Type</th><th style="text-align:left;padding:8px 12px;font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Time</th><th></th></tr></thead><tbody>' +
-      data.map(a => `<tr style="border-bottom:1px solid var(--cream-dark);">
-        <td style="padding:8px 12px;font-family:monospace;font-size:0.82rem;font-weight:800;color:var(--orange);">${escapeHTML(a.ip)}</td>
-        <td style="padding:8px 12px;font-size:0.76rem;color:var(--muted);">${escapeHTML(a.type)}</td>
-        <td style="padding:8px 12px;font-size:0.72rem;color:#aaa;">${a.time}</td>
-        <td style="padding:8px 12px;"><button onclick="secQuickBlock('${escapeHTML(a.ip)}')" style="background:rgba(192,57,43,0.1);color:var(--red);border:1.5px solid rgba(192,57,43,0.2);padding:4px 10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">Block</button></td>
-      </tr>`).join('') + '</tbody></table>';
-  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error</div>'; }
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:16px;font-size:0.82rem;"><i class="fas fa-shield-alt" style="opacity:0.3;display:block;font-size:1.5rem;margin-bottom:6px;"></i>No failed attempts in the last 24 hours.</div>'; return; }
+    el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
+      '<thead><tr style="background:var(--cream);">' +
+      '<th style="text-align:left;padding:8px 12px;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;white-space:nowrap;">IP Address</th>' +
+      '<th style="text-align:left;padding:8px 12px;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Type</th>' +
+      '<th style="text-align:left;padding:8px 12px;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Device / Browser</th>' +
+      '<th style="text-align:left;padding:8px 12px;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;white-space:nowrap;">Time</th>' +
+      '<th></th></tr></thead><tbody>' +
+      data.map(a => {
+        const ua = a.ua || '';
+        let device = '—';
+        if (ua) {
+          let os = ua.match(/\(([^)]+)\)/)?.[1]?.split(';')[0]?.trim() || '';
+          let browser = '';
+          if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+          else if (ua.includes('Firefox')) browser = 'Firefox';
+          else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+          else if (ua.includes('Edg')) browser = 'Edge';
+          else if (ua.includes('OPR') || ua.includes('Opera')) browser = 'Opera';
+          device = [browser, os].filter(Boolean).join(' · ') || ua.slice(0, 40);
+        }
+        return `<tr style="border-bottom:1px solid var(--cream-dark);">
+          <td style="padding:8px 12px;font-family:monospace;font-size:0.82rem;font-weight:800;color:var(--orange);">${escapeHTML(a.ip)}</td>
+          <td style="padding:8px 12px;font-size:0.76rem;color:var(--muted);font-weight:700;">${escapeHTML(a.type)}</td>
+          <td style="padding:8px 12px;font-size:0.73rem;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(ua)}">${escapeHTML(device)}</td>
+          <td style="padding:8px 12px;font-size:0.72rem;color:#aaa;white-space:nowrap;">${a.time}</td>
+          <td style="padding:8px 12px;"><button onclick="secQuickBlock('${escapeHTML(a.ip)}')" style="background:rgba(192,57,43,0.1);color:var(--red);border:1.5px solid rgba(192,57,43,0.2);padding:4px 10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap;">🚫 Block</button></td>
+        </tr>`;
+      }).join('') + '</tbody></table></div>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; }
+}
+
+function secCopyMyIP() {
+  const ip = document.getElementById('sec-my-ip').textContent.trim();
+  if (!ip || ip === 'Loading…' || ip === 'Unavailable') return;
+  navigator.clipboard.writeText(ip).then(() => showToast('IP copied to clipboard ✓', 'success')).catch(() => showToast('Copy failed', 'error'));
+}
+
+function secFillMyIP() {
+  const ip = document.getElementById('sec-my-ip').textContent.trim();
+  if (!ip || ip === 'Loading…' || ip === 'Unavailable') return;
+  document.getElementById('sec-ip-input').value = ip;
+  document.getElementById('sec-ip-input').focus();
+  showToast('Your IP filled in — add a reason and click Block if needed', 'info');
 }
 
 async function blockIP() {
@@ -12788,6 +12828,27 @@ def _initialize_db():
         db.create_all()
     except Exception as _e:
         print(f"db.create_all() skipped: {_e}")
+    # Belt-and-suspenders: explicitly create any tables that may be missing
+    # in an existing database that predates these models being added.
+    _critical = [
+        ("order_meta", "CREATE TABLE IF NOT EXISTS order_meta (id INTEGER PRIMARY KEY AUTOINCREMENT, reservation_id INTEGER NOT NULL UNIQUE REFERENCES reservations(id), is_flagged BOOLEAN NOT NULL DEFAULT 0, flag_reason VARCHAR(300) DEFAULT \'\', requires_staff_confirmation BOOLEAN NOT NULL DEFAULT 0, staff_confirmed BOOLEAN NOT NULL DEFAULT 0, prepayment_required BOOLEAN NOT NULL DEFAULT 0, prepayment_amount FLOAT DEFAULT 0.0, prepayment_collected BOOLEAN NOT NULL DEFAULT 0, has_pickup_photo BOOLEAN NOT NULL DEFAULT 0, prev_status VARCHAR(50) DEFAULT \'\', created_at DATETIME)"),
+        ("blacklisted_ips", "CREATE TABLE IF NOT EXISTS blacklisted_ips (id INTEGER PRIMARY KEY AUTOINCREMENT, ip_address VARCHAR(60) NOT NULL UNIQUE, reason VARCHAR(300) DEFAULT \'\', is_manual BOOLEAN DEFAULT 0, created_at DATETIME)"),
+        ("failed_login_attempts", "CREATE TABLE IF NOT EXISTS failed_login_attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, ip_address VARCHAR(60) NOT NULL, attempt_type VARCHAR(20) DEFAULT \'admin\', user_agent VARCHAR(300) DEFAULT \'\', created_at DATETIME)"),
+        ("staff_announcements", "CREATE TABLE IF NOT EXISTS staff_announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, title VARCHAR(120) NOT NULL, message TEXT NOT NULL, priority VARCHAR(20) DEFAULT \'normal\', is_active BOOLEAN DEFAULT 1, created_at DATETIME)"),
+        ("waste_logs", "CREATE TABLE IF NOT EXISTS waste_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, ingredient_name VARCHAR(100) NOT NULL, quantity FLOAT NOT NULL, unit VARCHAR(20) DEFAULT \'units\', reason VARCHAR(200) DEFAULT \'\', logged_by VARCHAR(50) DEFAULT \'Employee\', created_at DATETIME)"),
+        ("customer_blocklist", "CREATE TABLE IF NOT EXISTS customer_blocklist (id INTEGER PRIMARY KEY AUTOINCREMENT, block_type VARCHAR(20) NOT NULL, value VARCHAR(200) NOT NULL, reason VARCHAR(300) DEFAULT \'\', added_by VARCHAR(50) DEFAULT \'Admin\', created_at DATETIME)"),
+        ("customer_reputations", "CREATE TABLE IF NOT EXISTS customer_reputations (id INTEGER PRIMARY KEY AUTOINCREMENT, identifier VARCHAR(200) NOT NULL UNIQUE, display_name VARCHAR(120) DEFAULT \'\', total_orders INTEGER DEFAULT 0, noshow_count INTEGER DEFAULT 0, completed_count INTEGER DEFAULT 0, is_watchlist BOOLEAN DEFAULT 0, requires_prepayment BOOLEAN DEFAULT 0, is_blocked BOOLEAN DEFAULT 0, notes VARCHAR(500) DEFAULT \'\', created_at DATETIME)"),
+        ("promo_codes", "CREATE TABLE IF NOT EXISTS promo_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, code VARCHAR(30) NOT NULL UNIQUE, description VARCHAR(200) DEFAULT \'\', discount_type VARCHAR(20) DEFAULT \'percent\', discount_value FLOAT NOT NULL DEFAULT 0.0, min_order FLOAT NOT NULL DEFAULT 0.0, max_uses INTEGER, used_count INTEGER DEFAULT 0, is_active BOOLEAN DEFAULT 1, expires_at DATETIME, created_at DATETIME)"),
+        ("item_availability_queries", "CREATE TABLE IF NOT EXISTS item_availability_queries (id INTEGER PRIMARY KEY AUTOINCREMENT, reservation_id INTEGER NOT NULL REFERENCES reservations(id), order_code VARCHAR(20) NOT NULL, unavailable_items TEXT DEFAULT \'[]\', reason VARCHAR(100) DEFAULT \'Out of Stock\', customer_decision VARCHAR(20), created_at DATETIME)"),
+        ("quick_checklists", "CREATE TABLE IF NOT EXISTS quick_checklists (id INTEGER PRIMARY KEY AUTOINCREMENT, task_name VARCHAR(150) NOT NULL, checklist_type VARCHAR(20) DEFAULT \'opening\', is_active BOOLEAN DEFAULT 1, display_order INTEGER DEFAULT 0, created_at DATETIME)"),
+        ("order_pickup_photos", "CREATE TABLE IF NOT EXISTS order_pickup_photos (id INTEGER PRIMARY KEY AUTOINCREMENT, reservation_id INTEGER NOT NULL REFERENCES reservations(id), photo_data TEXT NOT NULL, taken_by VARCHAR(50) DEFAULT \'Staff\', created_at DATETIME)"),
+    ]
+    for _tname, _ddl in _critical:
+        try:
+            db.session.execute(db.text(_ddl))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 # Lazy init: guarantees tables exist even if the module-level call below fails
 _db_initialized = False
@@ -13144,6 +13205,135 @@ try:
         except Exception as migration_is_paid:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_is_paid}")
+
+        # ── Ensure all newer tables exist in existing databases ──────────────
+        # db.create_all() only creates tables that are completely absent.
+        # These explicit CREATE TABLE IF NOT EXISTS statements guarantee every
+        # required table exists even when upgrading from a very old DB file.
+        _new_table_ddl = [
+            ("order_meta", """
+                CREATE TABLE IF NOT EXISTS order_meta (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    reservation_id INTEGER NOT NULL UNIQUE REFERENCES reservations(id),
+                    is_flagged BOOLEAN NOT NULL DEFAULT 0,
+                    flag_reason VARCHAR(300) DEFAULT '',
+                    requires_staff_confirmation BOOLEAN NOT NULL DEFAULT 0,
+                    staff_confirmed BOOLEAN NOT NULL DEFAULT 0,
+                    prepayment_required BOOLEAN NOT NULL DEFAULT 0,
+                    prepayment_amount FLOAT DEFAULT 0.0,
+                    prepayment_collected BOOLEAN NOT NULL DEFAULT 0,
+                    has_pickup_photo BOOLEAN NOT NULL DEFAULT 0,
+                    prev_status VARCHAR(50) DEFAULT '',
+                    created_at DATETIME
+                )"""),
+            ("order_pickup_photos", """
+                CREATE TABLE IF NOT EXISTS order_pickup_photos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    reservation_id INTEGER NOT NULL REFERENCES reservations(id),
+                    photo_data TEXT NOT NULL,
+                    taken_by VARCHAR(50) DEFAULT 'Staff',
+                    created_at DATETIME
+                )"""),
+            ("failed_login_attempts", """
+                CREATE TABLE IF NOT EXISTS failed_login_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip_address VARCHAR(60) NOT NULL,
+                    attempt_type VARCHAR(20) DEFAULT 'admin',
+                    user_agent VARCHAR(300) DEFAULT '',
+                    created_at DATETIME
+                )"""),
+            ("blacklisted_ips", """
+                CREATE TABLE IF NOT EXISTS blacklisted_ips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip_address VARCHAR(60) NOT NULL UNIQUE,
+                    reason VARCHAR(300) DEFAULT 'Too many failed attempts',
+                    is_manual BOOLEAN DEFAULT 0,
+                    created_at DATETIME
+                )"""),
+            ("promo_codes", """
+                CREATE TABLE IF NOT EXISTS promo_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code VARCHAR(30) NOT NULL UNIQUE,
+                    description VARCHAR(200) DEFAULT '',
+                    discount_type VARCHAR(20) DEFAULT 'percent',
+                    discount_value FLOAT NOT NULL DEFAULT 0.0,
+                    min_order FLOAT NOT NULL DEFAULT 0.0,
+                    max_uses INTEGER,
+                    used_count INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT 1,
+                    expires_at DATETIME,
+                    created_at DATETIME
+                )"""),
+            ("staff_announcements", """
+                CREATE TABLE IF NOT EXISTS staff_announcements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title VARCHAR(120) NOT NULL,
+                    message TEXT NOT NULL,
+                    priority VARCHAR(20) DEFAULT 'normal',
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at DATETIME
+                )"""),
+            ("waste_logs", """
+                CREATE TABLE IF NOT EXISTS waste_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ingredient_name VARCHAR(100) NOT NULL,
+                    quantity FLOAT NOT NULL,
+                    unit VARCHAR(20) DEFAULT 'units',
+                    reason VARCHAR(200) DEFAULT '',
+                    logged_by VARCHAR(50) DEFAULT 'Employee',
+                    created_at DATETIME
+                )"""),
+            ("quick_checklists", """
+                CREATE TABLE IF NOT EXISTS quick_checklists (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_name VARCHAR(150) NOT NULL,
+                    checklist_type VARCHAR(20) DEFAULT 'opening',
+                    is_active BOOLEAN DEFAULT 1,
+                    display_order INTEGER DEFAULT 0,
+                    created_at DATETIME
+                )"""),
+            ("customer_blocklist", """
+                CREATE TABLE IF NOT EXISTS customer_blocklist (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    block_type VARCHAR(20) NOT NULL,
+                    value VARCHAR(200) NOT NULL,
+                    reason VARCHAR(300) DEFAULT '',
+                    added_by VARCHAR(50) DEFAULT 'Admin',
+                    created_at DATETIME
+                )"""),
+            ("customer_reputations", """
+                CREATE TABLE IF NOT EXISTS customer_reputations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    identifier VARCHAR(200) NOT NULL UNIQUE,
+                    display_name VARCHAR(120) DEFAULT '',
+                    total_orders INTEGER DEFAULT 0,
+                    noshow_count INTEGER DEFAULT 0,
+                    completed_count INTEGER DEFAULT 0,
+                    is_watchlist BOOLEAN DEFAULT 0,
+                    requires_prepayment BOOLEAN DEFAULT 0,
+                    is_blocked BOOLEAN DEFAULT 0,
+                    notes VARCHAR(500) DEFAULT '',
+                    created_at DATETIME
+                )"""),
+            ("item_availability_queries", """
+                CREATE TABLE IF NOT EXISTS item_availability_queries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    reservation_id INTEGER NOT NULL REFERENCES reservations(id),
+                    order_code VARCHAR(20) NOT NULL,
+                    unavailable_items TEXT DEFAULT '[]',
+                    reason VARCHAR(100) DEFAULT 'Out of Stock',
+                    customer_decision VARCHAR(20),
+                    created_at DATETIME
+                )"""),
+        ]
+        for tbl_name, ddl in _new_table_ddl:
+            try:
+                db.session.execute(db.text(ddl))
+                db.session.commit()
+                print(f"Migration: ensured table '{tbl_name}' exists")
+            except Exception as _tbl_err:
+                db.session.rollback()
+                print(f"Migration warning for '{tbl_name}' (non-fatal): {_tbl_err}")
 
         # ── 0. Seed store schedule (only if not already in DB) ──────────────
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
