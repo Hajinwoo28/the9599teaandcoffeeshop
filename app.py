@@ -12333,33 +12333,43 @@ def finance_low_stock():
 @app.route('/api/orders/history', methods=['GET'])
 def order_history():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
-    q = request.args.get('q', '').strip()
-    status_filter = request.args.get('status', '')
-    page = max(1, int(request.args.get('page', 1)))
-    per_page = 20
-    query = Reservation.query
-    if q:
-        query = query.filter(db.or_(
-            Reservation.patron_name.ilike(f'%{q}%'),
-            Reservation.reservation_code.ilike(f'%{q}%')
-        ))
-    if status_filter:
-        query = query.filter(Reservation.status == status_filter)
-    total = query.count()
-    orders = query.order_by(Reservation.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
-    return jsonify({
-        "total": total, "page": page, "per_page": per_page,
-        "orders": [{
-            "id": o.id, "code": o.reservation_code, "name": o.patron_name,
-            "total": o.total_investment, "status": o.status, "source": o.order_source,
-            "pickup": o.pickup_time,
-            "address": o.patron_address or '',
-            "date": o.created_at.strftime('%b %d, %Y'),
-            "time": o.created_at.strftime('%I:%M %p'),
-            "items": [i.foundation for i in o.infusions],
-            "is_paid": o.is_paid if hasattr(o, "is_paid") else (o.order_source == "Online")
-        } for o in orders]
-    })
+    try:
+        q = request.args.get('q', '').strip()
+        status_filter = request.args.get('status', '')
+        page = max(1, int(request.args.get('page', 1)))
+        per_page = 20
+        query = Reservation.query
+        if q:
+            query = query.filter(db.or_(
+                Reservation.patron_name.ilike(f'%{q}%'),
+                Reservation.reservation_code.ilike(f'%{q}%')
+            ))
+        if status_filter:
+            query = query.filter(Reservation.status == status_filter)
+        total = query.count()
+        orders = query.order_by(Reservation.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+        def _safe_row(o):
+            try:
+                is_paid_val = o.is_paid
+            except Exception:
+                is_paid_val = (o.order_source == "Online")
+            return {
+                "id": o.id, "code": o.reservation_code, "name": o.patron_name or '',
+                "total": o.total_investment or 0.0, "status": o.status or '', "source": o.order_source or '',
+                "pickup": o.pickup_time or '',
+                "address": o.patron_address if o.patron_address is not None else '',
+                "date": o.created_at.strftime('%b %d, %Y') if o.created_at else '',
+                "time": o.created_at.strftime('%I:%M %p') if o.created_at else '',
+                "items": [i.foundation for i in o.infusions],
+                "is_paid": is_paid_val
+            }
+        return jsonify({
+            "total": total, "page": page, "per_page": per_page,
+            "orders": [_safe_row(o) for o in orders]
+        })
+    except Exception as e:
+        print(f"order_history error: {e}")
+        return jsonify({"error": str(e), "total": 0, "page": 1, "per_page": 20, "orders": []}), 500
 
 @app.route('/api/expenses', methods=['POST'])
 def add_expense():
@@ -12901,8 +12911,11 @@ _db_initialized = False
 def _lazy_db_init():
     global _db_initialized
     if not _db_initialized:
-        _initialize_db()
-        _db_initialized = True
+        try:
+            _initialize_db()
+            _db_initialized = True   # only mark done if init actually succeeded
+        except Exception as _init_err:
+            print(f"_lazy_db_init error (will retry next request): {_init_err}")
 
 try:
   with app.app_context():
@@ -14226,6 +14239,70 @@ def dev_reinit_db():
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/force_migrate', methods=['POST'])
+@_dev_auth_required
+def dev_force_migrate():
+    """Force-run all column migrations. Call this once after deploying to fix missing columns."""
+    results = []
+    is_pg = 'postgresql' in str(db.engine.url)
+
+    def col_exists(table, col):
+        try:
+            if is_pg:
+                r = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    f"WHERE table_name='{table}' AND column_name='{col}'"
+                )).scalar()
+                return r > 0
+            else:
+                rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
+                return any(row[1] == col for row in rows)
+        except Exception as e:
+            return False
+
+    def run_alter(table, col, col_def_sqlite, col_def_pg=None):
+        if col_exists(table, col):
+            results.append({"col": f"{table}.{col}", "status": "already_exists"})
+            return
+        col_def = (col_def_pg or col_def_sqlite) if is_pg else col_def_sqlite
+        try:
+            db.session.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}"))
+            db.session.commit()
+            results.append({"col": f"{table}.{col}", "status": "added"})
+        except Exception as e:
+            db.session.rollback()
+            results.append({"col": f"{table}.{col}", "status": "error", "msg": str(e)})
+
+    # reservations columns
+    run_alter("reservations", "cancel_reason", "VARCHAR(300) DEFAULT ''")
+    run_alter("reservations", "patron_address", "VARCHAR(300) DEFAULT ''")
+    run_alter("reservations", "order_source", "VARCHAR(30) DEFAULT 'Online'")
+    run_alter("reservations", "patron_phone", "VARCHAR(30) DEFAULT ''")
+    run_alter("reservations", "is_paid",
+              "BOOLEAN NOT NULL DEFAULT 0",
+              "BOOLEAN NOT NULL DEFAULT FALSE")
+
+    # menu_items columns
+    run_alter("menu_items", "is_out_of_stock",
+              "BOOLEAN NOT NULL DEFAULT 0",
+              "BOOLEAN NOT NULL DEFAULT FALSE")
+
+    # customer_logs columns
+    run_alter("customer_logs", "items", "TEXT NOT NULL DEFAULT ''")
+    run_alter("customer_logs", "pickup_time", "VARCHAR(50) NOT NULL DEFAULT ''")
+    run_alter("customer_logs", "phone", "VARCHAR(30) NOT NULL DEFAULT ''")
+
+    # Also run create_all for any missing tables
+    try:
+        db.create_all()
+        results.append({"col": "db.create_all()", "status": "ok"})
+    except Exception as e:
+        results.append({"col": "db.create_all()", "status": "error", "msg": str(e)})
+
+    log_audit("Dev: Force Migrate", f"Ran force_migrate: {len(results)} operations")
+    return jsonify({"results": results})
 
 
 @app.route('/api/dev/env')
