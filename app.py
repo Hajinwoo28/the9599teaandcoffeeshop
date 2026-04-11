@@ -12904,18 +12904,86 @@ def _initialize_db():
         except Exception:
             db.session.rollback()
 
-# Lazy init: guarantees tables exist even if the module-level call below fails
+# ── Schema-guard: runs before every request until schema is verified ─────────
+# On Vercel/serverless the module reloads on cold-starts; startup migrations can
+# fail silently against an existing Postgres DB that has stale schema.
+# This guard proactively ensures every critical column exists before any route
+# handler runs, so 500s caused by "column does not exist" are self-healing.
+_schema_ok = False   # flips True once every column is confirmed present
+
+def _ensure_schema():
+    """Add any missing columns to the live DB.  Safe to call repeatedly."""
+    global _schema_ok
+    if _schema_ok:
+        return
+    try:
+        db.create_all()   # creates completely missing tables (idempotent)
+    except Exception as e:
+        print(f"_ensure_schema: db.create_all() warning: {e}")
+
+    is_pg = 'postgresql' in str(db.engine.url)
+
+    def _col_exists(table, col):
+        try:
+            if is_pg:
+                return db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    f"WHERE table_name=:t AND column_name=:c"
+                ), {"t": table, "c": col}).scalar() > 0
+            else:
+                rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
+                return any(r[1] == col for r in rows)
+        except Exception:
+            return False
+
+    def _add_col(table, col, defn_sqlite, defn_pg=None):
+        if _col_exists(table, col):
+            return True   # already there
+        defn = (defn_pg or defn_sqlite) if is_pg else defn_sqlite
+        try:
+            db.session.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {col} {defn}"))
+            db.session.commit()
+            print(f"_ensure_schema: added {table}.{col}")
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"_ensure_schema: could not add {table}.{col}: {e}")
+            return False
+
+    # reservations – columns added after initial release
+    all_ok = True
+    all_ok &= _add_col("reservations", "cancel_reason",  "VARCHAR(300) DEFAULT ''")
+    all_ok &= _add_col("reservations", "patron_address", "VARCHAR(300) DEFAULT ''")
+    all_ok &= _add_col("reservations", "order_source",   "VARCHAR(30)  DEFAULT 'Online'")
+    all_ok &= _add_col("reservations", "patron_phone",   "VARCHAR(30)  DEFAULT ''")
+    all_ok &= _add_col("reservations", "is_paid",
+                        "BOOLEAN NOT NULL DEFAULT 0",
+                        "BOOLEAN NOT NULL DEFAULT FALSE")
+    # menu_items
+    all_ok &= _add_col("menu_items", "is_out_of_stock",
+                        "BOOLEAN NOT NULL DEFAULT 0",
+                        "BOOLEAN NOT NULL DEFAULT FALSE")
+    # customer_logs
+    all_ok &= _add_col("customer_logs", "items",       "TEXT        NOT NULL DEFAULT ''")
+    all_ok &= _add_col("customer_logs", "pickup_time", "VARCHAR(50) NOT NULL DEFAULT ''")
+    all_ok &= _add_col("customer_logs", "phone",       "VARCHAR(30) NOT NULL DEFAULT ''")
+
+    if all_ok:
+        _schema_ok = True   # stop checking once every column is confirmed
+
+
 _db_initialized = False
 
 @app.before_request
 def _lazy_db_init():
     global _db_initialized
+    _ensure_schema()          # self-healing schema guard (fast no-op once schema is ok)
     if not _db_initialized:
         try:
             _initialize_db()
-            _db_initialized = True   # only mark done if init actually succeeded
+            _db_initialized = True
         except Exception as _init_err:
-            print(f"_lazy_db_init error (will retry next request): {_init_err}")
+            print(f"_lazy_db_init error (will retry): {_init_err}")
 
 try:
   with app.app_context():
