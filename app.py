@@ -12151,36 +12151,54 @@ def customer_sse_stream():
 @app.route('/api/orders')
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
-    res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
-    def _fmt_order(r):
-        meta = OrderMeta.query.filter_by(reservation_id=r.id).first()
-        return {
-            'id': r.id,
-            'code': r.reservation_code,
-            'source': r.order_source,
-            'name': r.patron_name,
-            'email': r.patron_email or '',
-            'phone': r.patron_phone or '',
-            'address': r.patron_address or '',
-            'process_type': r.order_source or '',
-            'total': r.total_investment,
-            'status': r.status,
-            'pickup_time': r.pickup_time,
-            'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
-            'over_limit': len(r.infusions) >= 2,
-            'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total} for i in r.infusions],
-            # ── fraud control metadata ──
-            'is_flagged':               meta.is_flagged if meta else False,
-            'flag_reason':              meta.flag_reason if meta else '',
-            'requires_staff_confirm':   meta.requires_staff_confirmation if meta else False,
-            'staff_confirmed':          meta.staff_confirmed if meta else True,
-            'prepayment_required':      meta.prepayment_required if meta else False,
-            'prepayment_amount':        meta.prepayment_amount if meta else 0.0,
-            'prepayment_collected':     meta.prepayment_collected if meta else False,
-            'is_paid':                  r.is_paid if hasattr(r, 'is_paid') else (r.order_source == 'Online'),
-            'has_pickup_photo':         meta.has_pickup_photo if meta else False,
-        }
-    return jsonify({'orders': [_fmt_order(r) for r in res]})
+    try:
+        res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
+        def _fmt_order(r):
+            try:
+                meta = OrderMeta.query.filter_by(reservation_id=r.id).first()
+            except Exception:
+                meta = None
+            # Safely read is_paid: fall back to order_source check if column missing
+            try:
+                is_paid_val = r.is_paid
+            except Exception:
+                is_paid_val = (r.order_source == 'Online')
+            return {
+                'id': r.id,
+                'code': r.reservation_code,
+                'source': r.order_source or '',
+                'name': r.patron_name or '',
+                'email': r.patron_email or '',
+                'phone': r.patron_phone if r.patron_phone is not None else '',
+                'address': r.patron_address if r.patron_address is not None else '',
+                'process_type': r.order_source or '',
+                'total': r.total_investment or 0.0,
+                'status': r.status or '',
+                'pickup_time': r.pickup_time or '',
+                'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
+                'over_limit': len(r.infusions) >= 2,
+                'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total or 0.0} for i in r.infusions],
+                # ── fraud control metadata ──
+                'is_flagged':               meta.is_flagged if meta else False,
+                'flag_reason':              meta.flag_reason if meta else '',
+                'requires_staff_confirm':   meta.requires_staff_confirmation if meta else False,
+                'staff_confirmed':          meta.staff_confirmed if meta else True,
+                'prepayment_required':      meta.prepayment_required if meta else False,
+                'prepayment_amount':        meta.prepayment_amount if meta else 0.0,
+                'prepayment_collected':     meta.prepayment_collected if meta else False,
+                'is_paid':                  is_paid_val,
+                'has_pickup_photo':         meta.has_pickup_photo if meta else False,
+            }
+        orders_list = []
+        for r in res:
+            try:
+                orders_list.append(_fmt_order(r))
+            except Exception as row_err:
+                print(f"api_orders: skipping order id={r.id} due to error: {row_err}")
+        return jsonify({'orders': orders_list})
+    except Exception as e:
+        print(f"api_orders error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/admin/manual_order', methods=['POST'])
 def admin_manual_order():
@@ -12226,36 +12244,48 @@ def admin_manual_order():
 @app.route('/api/finance/daily', methods=['GET'])
 def daily_finance():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
-    now = get_ph_time()
-    s = now.replace(hour=0, minute=0, second=0)
-    e = now.replace(hour=23, minute=59, second=59)
-    ords = Reservation.query.filter(Reservation.created_at >= s, Reservation.created_at <= e).all()
-    exps = Expense.query.filter(Expense.created_at >= s, Expense.created_at <= e).all()
-    return jsonify({ "system_total": sum(o.total_investment for o in ords), "expenses_total": sum(x.amount for x in exps), "expenses": [{"desc": x.description, "amount": x.amount} for x in exps] })
+    try:
+        now = get_ph_time()
+        s = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        e = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        ords = Reservation.query.filter(Reservation.created_at >= s, Reservation.created_at <= e).all()
+        exps = Expense.query.filter(Expense.created_at >= s, Expense.created_at <= e).all()
+        return jsonify({
+            "system_total": round(sum(o.total_investment or 0.0 for o in ords), 2),
+            "expenses_total": round(sum(x.amount or 0.0 for x in exps), 2),
+            "expenses": [{"desc": x.description, "amount": x.amount or 0.0} for x in exps]
+        })
+    except Exception as e:
+        print(f"daily_finance error: {e}")
+        return jsonify({"error": str(e), "system_total": 0, "expenses_total": 0, "expenses": []}), 500
 
 @app.route('/api/finance/report', methods=['GET'])
 def finance_report():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
-    mode = request.args.get('mode', 'weekly')
-    days = 30 if mode == 'monthly' else 7
-    now = get_ph_time()
-    result = []
-    for i in range(days - 1, -1, -1):
-        day = now - timedelta(days=i)
-        s = day.replace(hour=0, minute=0, second=0, microsecond=0)
-        e = day.replace(hour=23, minute=59, second=59, microsecond=999999)
-        ords = Reservation.query.filter(Reservation.created_at >= s, Reservation.created_at <= e).all()
-        exps = Expense.query.filter(Expense.created_at >= s, Expense.created_at <= e).all()
-        revenue = sum(o.total_investment for o in ords)
-        expenses = sum(x.amount for x in exps)
-        result.append({
-            "date": day.strftime('%b %d'),
-            "revenue": round(revenue, 2),
-            "expenses": round(expenses, 2),
-            "profit": round(revenue - expenses, 2),
-            "orders": len(ords)
-        })
-    return jsonify(result)
+    try:
+        mode = request.args.get('mode', 'weekly')
+        days = 30 if mode == 'monthly' else 7
+        now = get_ph_time()
+        result = []
+        for i in range(days - 1, -1, -1):
+            day = now - timedelta(days=i)
+            s = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            e = day.replace(hour=23, minute=59, second=59, microsecond=999999)
+            ords = Reservation.query.filter(Reservation.created_at >= s, Reservation.created_at <= e).all()
+            exps = Expense.query.filter(Expense.created_at >= s, Expense.created_at <= e).all()
+            revenue = sum(o.total_investment or 0.0 for o in ords)
+            expenses = sum(x.amount or 0.0 for x in exps)
+            result.append({
+                "date": day.strftime('%b %d'),
+                "revenue": round(revenue, 2),
+                "expenses": round(expenses, 2),
+                "profit": round(revenue - expenses, 2),
+                "orders": len(ords)
+            })
+        return jsonify(result)
+    except Exception as e:
+        print(f"finance_report error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/finance/bestsellers', methods=['GET'])
 def finance_bestsellers():
@@ -12738,38 +12768,42 @@ def checklist_delete(cid):
 def analytics_sales_trend():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    ph_now = get_ph_time()
-    start_str = request.args.get('start')
-    end_str   = request.args.get('end')
-    if start_str and end_str:
-        try:
-            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
-            end_date   = datetime.strptime(end_str,   '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({"error": "Invalid date format"}), 400
-    else:
-        days = int(request.args.get('days', 7))
-        days = min(max(days, 1), 90)
-        end_date   = ph_now.date()
-        start_date = end_date - timedelta(days=days - 1)
-    result = []
-    current = start_date
-    while current <= end_date:
-        day_start = datetime(current.year, current.month, current.day, 0, 0, 0)
-        day_end   = datetime(current.year, current.month, current.day, 23, 59, 59)
-        orders = Reservation.query.filter(
-            Reservation.created_at >= day_start,
-            Reservation.created_at <= day_end,
-            Reservation.status == 'Completed'
-        ).all()
-        total = sum(o.total_investment for o in orders)
-        result.append({
-            "date": current.strftime('%b %d'),
-            "revenue": round(total, 2),
-            "orders": len(orders)
-        })
-        current += timedelta(days=1)
-    return jsonify(result)
+    try:
+        ph_now = get_ph_time()
+        start_str = request.args.get('start')
+        end_str   = request.args.get('end')
+        if start_str and end_str:
+            try:
+                start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+                end_date   = datetime.strptime(end_str,   '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"error": "Invalid date format"}), 400
+        else:
+            days = int(request.args.get('days', 7))
+            days = min(max(days, 1), 90)
+            end_date   = ph_now.date()
+            start_date = end_date - timedelta(days=days - 1)
+        result = []
+        current = start_date
+        while current <= end_date:
+            day_start = datetime(current.year, current.month, current.day, 0, 0, 0)
+            day_end   = datetime(current.year, current.month, current.day, 23, 59, 59)
+            orders = Reservation.query.filter(
+                Reservation.created_at >= day_start,
+                Reservation.created_at <= day_end,
+                Reservation.status == 'Completed'
+            ).all()
+            total = sum(o.total_investment or 0.0 for o in orders)
+            result.append({
+                "date": current.strftime('%b %d'),
+                "revenue": round(total, 2),
+                "orders": len(orders)
+            })
+            current += timedelta(days=1)
+        return jsonify(result)
+    except Exception as e:
+        print(f"analytics_sales_trend error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/admin/analytics/top_items', methods=['GET'])
 def analytics_top_items():
@@ -12814,16 +12848,21 @@ def analytics_top_items():
 def analytics_hourly():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    ph_now = get_ph_time()
-    day_start = ph_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    orders = Reservation.query.filter(
-        Reservation.created_at >= day_start,
-        Reservation.status.in_(['Completed','Ready for Pick-up','Preparing Order'])
-    ).all()
-    hourly = {h: 0 for h in range(24)}
-    for o in orders:
-        hourly[o.created_at.hour] += 1
-    return jsonify([{"hour": f"{h}:00", "orders": c} for h, c in hourly.items()])
+    try:
+        ph_now = get_ph_time()
+        day_start = ph_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        orders = Reservation.query.filter(
+            Reservation.created_at >= day_start,
+            Reservation.status.in_(['Completed','Ready for Pick-up','Preparing Order'])
+        ).all()
+        hourly = {h: 0 for h in range(24)}
+        for o in orders:
+            if o.created_at is not None:
+                hourly[o.created_at.hour] += 1
+        return jsonify([{"hour": f"{h}:00", "orders": c} for h, c in hourly.items()])
+    except Exception as e:
+        print(f"analytics_hourly error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 def _initialize_db():
     """Run DB creation + seeding inside an app context.
@@ -13571,6 +13610,7 @@ DEV_HTML = r"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>9599 Dev Portal</title>
+<link rel="icon" type="image/jpeg" href="data:image/jpeg;base64,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">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
