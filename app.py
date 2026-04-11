@@ -3085,8 +3085,8 @@ function closeCustomizeModal(){
   document.getElementById('customize-modal').classList.remove('show');
   if(_editingCartId){
     _editingCartId=null;
-    const addBtn=document.querySelector('#customize-modal .add-to-cart-btn');
-    if(addBtn){addBtn.innerHTML='<i class="fas fa-plus-circle"></i> Add to Cart';addBtn.onclick=addToCart;}
+    const addBtn=document.querySelector('#customize-modal .btn-modal-add');
+    if(addBtn){addBtn.innerHTML='<i class="fas fa-plus"></i> Add to Cart';addBtn.onclick=addToCart;}
   }
 }
 
@@ -3180,8 +3180,8 @@ function editCartItem(id){
   const allowedEmpAddons=(isFruitSoda||isMatcha)?['Nata']:null;
   [{id:'eaddon-pearls',name:'Pearls'},{id:'eaddon-nata',name:'Nata'},{id:'eaddon-coffee-jelly',name:'Coffee Jelly'}].forEach(({id,name})=>{const el=document.getElementById(id);if(el)el.style.display=(allowedEmpAddons&&!allowedEmpAddons.includes(name))?'none':'';});
   // Change the Add button to Save
-  const addBtn=document.querySelector('#customize-modal .add-to-cart-btn');
-  if(addBtn){addBtn.innerHTML='<i class="fas fa-save"></i> Save Changes';addBtn.onclick=saveEditedCartItem;}
+  const addBtn=document.querySelector('#customize-modal .btn-modal-add');
+  if(addBtn){addBtn.innerHTML='<i class="fas fa-save"></i> Save';addBtn.onclick=saveEditedCartItem;}
   document.getElementById('customize-modal').classList.add('show');
 }
 
@@ -3197,8 +3197,8 @@ function saveEditedCartItem(){
   cart[idx]={...cart[idx],foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price};
   _editingCartId=null;
   // Restore Add button
-  const addBtn=document.querySelector('#customize-modal .add-to-cart-btn');
-  if(addBtn){addBtn.innerHTML='<i class="fas fa-plus-circle"></i> Add to Cart';addBtn.onclick=addToCart;}
+  const addBtn=document.querySelector('#customize-modal .btn-modal-add');
+  if(addBtn){addBtn.innerHTML='<i class="fas fa-plus"></i> Add to Cart';addBtn.onclick=addToCart;}
   closeCustomizeModal();
   renderCart();
   showToast('Item updated!','success');
