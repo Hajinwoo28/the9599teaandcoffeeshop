@@ -252,9 +252,25 @@ def log_audit(action, details=""):
 _sse_subscribers = []   # list of queue.Queue, one per connected admin tab
 _sse_lock = threading.Lock()
 
+_customer_sse_subscribers = []   # one per connected customer browser tab
+_customer_sse_lock = threading.Lock()
+
+def push_customer_event(event_type, data=None):
+    """Broadcast an SSE event to every connected customer browser tab."""
+    msg = f"event: {event_type}\\ndata: {json.dumps(data or {})}\\n\\n"
+    with _customer_sse_lock:
+        dead = []
+        for q in _customer_sse_subscribers:
+            try:
+                q.put_nowait(msg)
+            except queue.Full:
+                dead.append(q)
+        for q in dead:
+            _customer_sse_subscribers.remove(q)
+
 def push_event(event_type, data=None):
-    """Broadcast an SSE event to every connected admin client."""
-    msg = f"event: {event_type}\ndata: {json.dumps(data or {})}\n\n"
+    """Broadcast an SSE event to every connected admin client and mirror to customers."""
+    msg = f"event: {event_type}\\ndata: {json.dumps(data or {})}\\n\\n"
     with _sse_lock:
         dead = []
         for q in _sse_subscribers:
@@ -264,6 +280,7 @@ def push_event(event_type, data=None):
                 dead.append(q)
         for q in dead:
             _sse_subscribers.remove(q)
+    push_customer_event(event_type, data)
 
 
 class Reservation(db.Model):
@@ -528,7 +545,6 @@ FAILED_WINDOW_MIN   = 30  # rolling window in minutes
 
 # ── Order Behavioral Limit Configuration ────────────────────────────────────
 ORDER_COOLDOWN_MINUTES   = 30   # minimum gap between orders from the same email
-DAILY_ORDER_CAP          = 5    # max orders per day per email
 SUSPICIOUS_NAME_COUNT    = 5    # same name in 1 hour triggers a manual-review flag
 LARGE_ORDER_THRESHOLD    = 500.0  # ₱ — orders at/above this require staff confirmation
 LARGE_ORDER_PREPAY_PCT   = 0.20   # 20 % holding fee for large orders (refunded on pickup)
@@ -635,17 +651,7 @@ def check_order_limits(email, phone, name, total):
             wait = max(1, ORDER_COOLDOWN_MINUTES - elapsed)
             return False, f"You placed an order recently. Please wait {wait} more minute(s) before ordering again.", []
 
-    # 4 — Daily cap
-    if norm_email:
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_count = Reservation.query.filter(
-            Reservation.patron_email == norm_email,
-            Reservation.created_at >= today_start
-        ).count()
-        if today_count >= DAILY_ORDER_CAP:
-            return False, f"Daily order limit of {DAILY_ORDER_CAP} reached. Please try again tomorrow.", []
-
-    # 5 — Suspicious pattern: same name 5+ times in 1 hour → flag for review
+    # 4 — Suspicious pattern: same name 5+ times in 1 hour → flag for review
     if norm_name:
         hour_ago = now - timedelta(hours=1)
         name_count = Reservation.query.filter(
@@ -4633,42 +4639,6 @@ function playGrantedSound() {
     </div>
 </div>
 
-<!-- Order Limit Modal -->
-<div id="perm-modal" class="modal">
-    <div class="modal-content" style="text-align:center; max-width:440px;">
-        <div style="font-size:2.5rem; margin-bottom:10px;">🛑</div>
-        <h2 style="color:var(--danger); margin-bottom:8px;">Order Limit Reached</h2>
-        <p style="color:var(--text-light); font-size:0.9rem; font-weight:600; margin-bottom:18px; line-height:1.5;">
-            You can only order up to <b style="color:var(--text-dark);">2 items</b> at once.<br>
-            To order 2 or more, please request permission from the admin.
-        </p>
-
-        <div id="perm-request-code" style="font-family:'Playfair Display',serif; font-size:1.4rem; font-weight:900; color:var(--text-dark); margin-bottom:18px; border:2px dashed var(--border-color); padding:10px 16px; border-radius:12px; background:var(--gold-light); letter-spacing:3px;"></div>
-
-        <div id="perm-form-section">
-            <div style="text-align:left; margin-bottom:6px;">
-                <label class="pickup-label">Your Name</label>
-                <input type="text" id="perm-name-display" class="name-input" readonly style="background:var(--gold-light); cursor:default; margin-bottom:12px;">
-            </div>
-            <div style="text-align:left; margin-bottom:6px;">
-                <label class="pickup-label">Your Address / Location <span id="perm-address-label" style="color:var(--danger);">*</span></label>
-                <input type="text" id="perm-address-input" class="name-input" placeholder="e.g. Brgy. Poblacion, San Antonio, Quezon" style="margin-bottom:12px;">
-            </div>
-            <div style="text-align:left; margin-bottom:12px;">
-                <label class="pickup-label">Message to Admin <span style="color:var(--danger);">*</span></label>
-                <textarea id="perm-message-input" class="name-input" rows="3" placeholder="e.g. Office bulk order for our team of 8 people." style="resize:none; line-height:1.5;"></textarea>
-            </div>
-
-            <div id="perm-send-status" style="font-size:0.85rem; font-weight:700; color:var(--badge-new); margin-bottom:12px; min-height:20px;"></div>
-
-            <div style="display:flex; gap:10px;">
-                <button class="btn-cancel" onclick="closePermModal()">Cancel</button>
-                <button class="btn-add" id="perm-send-btn" onclick="sendPermissionRequest()"><i class="fas fa-paper-plane"></i> Send Request</button>
-                <button class="btn-add" id="perm-place-btn" style="display:none; background:#388E3C;" onclick="submitOrderWithOverride()"><i class="fas fa-check"></i> Place Order</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
     let menuItems = [];
@@ -5343,19 +5313,7 @@ function playGrantedSound() {
         } catch(e) { return -1; }
     }
 
-    /* Permission Logic */
-    let permissionGranted = false;
-    let permPoll = null;
 
-    function closePermModal() {
-        document.getElementById('perm-modal').style.display = 'none';
-        document.getElementById('perm-send-status').innerText = '';
-        document.getElementById('perm-send-btn').disabled = false;
-        document.getElementById('perm-send-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-        document.getElementById('perm-send-btn').style.display = 'inline-flex';
-        document.getElementById('perm-place-btn').style.display = 'none';
-        if(permPoll) { clearInterval(permPoll); permPoll = null; }
-    }
 
     let updatePermPoll = null;
 
@@ -5527,75 +5485,6 @@ function playGrantedSound() {
         }
     }
 
-    async function sendPermissionRequest() {
-        const address = document.getElementById('perm-address-input').value.trim();
-        const message = document.getElementById('perm-message-input').value.trim();
-        if(!address) {
-            document.getElementById('perm-send-status').style.color = 'var(--danger)';
-            document.getElementById('perm-send-status').innerText = _capturedGeoAddress
-                ? 'Please fill in your message to the admin.'
-                : 'Please fill in your address and message.';
-            return;
-        }
-        if(!message) {
-            document.getElementById('perm-send-status').style.color = 'var(--danger)';
-            document.getElementById('perm-send-status').innerText = 'Please fill in your message to the admin.';
-            return;
-        }
-        const payload = {
-            name: document.getElementById('customer-name').value,
-            address,
-            message,
-            code: document.getElementById('perm-request-code').innerText
-        };
-        const btn = document.getElementById('perm-send-btn');
-        const stat = document.getElementById('perm-send-status');
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-        stat.style.color = 'var(--text-light)';
-        stat.innerText = '';
-        try {
-            const res = await fetch('/api/permission_request', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-            if(res.ok) {
-                stat.style.color = 'var(--badge-new)';
-                stat.innerText = '✅ Request sent! Waiting for admin approval...';
-                permPoll = setInterval(()=>checkPermissionStatus(payload.code), 3000);
-            } else {
-                stat.style.color = 'var(--danger)';
-                stat.innerText = 'Error sending request. Please try again.';
-                btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-            }
-        } catch(e) {
-            stat.style.color = 'var(--danger)';
-            stat.innerText = 'Network error. Please try again.';
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-        }
-    }
-
-    async function checkPermissionStatus(code) {
-        try {
-            const res = await fetch(`/api/permission_status?code=${encodeURIComponent(code)}`);
-            const data = await res.json();
-            if(data.granted) {
-                permissionGranted = true;
-                clearInterval(permPoll); permPoll = null;
-                document.getElementById('perm-send-btn').style.display = 'none';
-                document.getElementById('perm-place-btn').style.display = 'inline-flex';
-                const replyMsg = data.reply_message && data.reply_message.trim();
-                const statusEl = document.getElementById('perm-send-status');
-                statusEl.style.color = '#388E3C';
-                if(replyMsg) {
-                    statusEl.innerHTML = '✅ <b>Permission Granted!</b> You may now place your order.<br><br>'
-                        + '<div style="background:#F1F8F1;border:1px solid #A5D6A7;border-radius:10px;padding:10px 13px;margin-top:4px;font-size:0.85rem;color:#2E7D32;line-height:1.5;">'
-                        + '<span style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;color:#1B5E20;">📣 Message from the staff:</span>'
-                        + escapeHTML(replyMsg)
-                        + '</div>';
-                } else {
-                    statusEl.innerText = '✅ Permission Granted! You may now place your order.';
-                }
-                playGrantedSound();
-            }
-        } catch(e){}
-    }
 
     // ── Geolocation & map ────────────────────────────────────────────────────
     let geoMap = null;
@@ -5861,37 +5750,6 @@ function playGrantedSound() {
             return;
         }
 
-        const totalItems = cart.length;
-        if(totalItems >= 2 && !permissionGranted) {
-            btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
-            playAlertSound();
-            document.getElementById('perm-request-code').innerText = "REQ-" + Math.floor(Math.random()*90000 + 10000);
-            document.getElementById('perm-name-display').value = document.getElementById('customer-name').value || '{{ session.get("customer_name","Customer") }}';
-            // Auto-fill address from geolocation if already captured
-            const _addrInput = document.getElementById('perm-address-input');
-            const _addrLabel = document.getElementById('perm-address-label');
-            if (_capturedGeoAddress) {
-                _addrInput.value = _capturedGeoAddress;
-                _addrInput.readOnly = true;
-                _addrInput.style.background = 'var(--gold-light)';
-                _addrInput.style.cursor = 'default';
-                if (_addrLabel) _addrLabel.style.display = 'none';
-            } else {
-                _addrInput.value = '';
-                _addrInput.readOnly = false;
-                _addrInput.style.background = '';
-                _addrInput.style.cursor = '';
-                if (_addrLabel) _addrLabel.style.display = '';
-            }
-            document.getElementById('perm-message-input').value = '';
-            document.getElementById('perm-send-status').innerText = '';
-            document.getElementById('perm-send-btn').disabled = false;
-            document.getElementById('perm-send-btn').innerHTML = '<i class="fas fa-paper-plane"></i> Send Request';
-            document.getElementById('perm-send-btn').style.display = 'inline-flex';
-            document.getElementById('perm-place-btn').style.display = 'none';
-            document.getElementById('perm-modal').style.display = 'flex';
-            return;
-        }
 
         const payload = {
             name: document.getElementById('customer-name').value,
@@ -5952,12 +5810,6 @@ function playGrantedSound() {
         } catch(e) { showToast("Connection Error", "error"); btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false; }
     }
 
-    async function submitOrderWithOverride() {
-        document.getElementById('perm-modal').style.display = 'none';
-        if(permPoll) clearInterval(permPoll);
-        permissionGranted = true;
-        openPickupModal();
-    }
 
     function closeSuccessAndReset() {
         // Hide the modal without reloading the page (reload would trigger the closed-store page)
@@ -6180,6 +6032,28 @@ function playGrantedSound() {
 
     // Close modal on back button (mobile)
     window.addEventListener('popstate', () => closeLocModal());
+
+    // ── Real-time auto-reload: mirrors admin/employee changes to customer site ──
+    (function() {
+        let _cSource = null, _cRetry = null;
+        function connectCustomerSSE() {
+            if (_cSource) { try { _cSource.close(); } catch(e){} }
+            _cSource = new EventSource('/api/customer_stream');
+            _cSource.addEventListener('connected', () => {
+                if (_cRetry) { clearTimeout(_cRetry); _cRetry = null; }
+            });
+            _cSource.addEventListener('ping', () => {});
+            ['order_status','order_new','order_updated','announcement','menu_update'].forEach(ev => {
+                _cSource.addEventListener(ev, () => { location.reload(); });
+            });
+            _cSource.onerror = () => {
+                try { _cSource.close(); } catch(e) {}
+                _cSource = null;
+                if (!_cRetry) _cRetry = setTimeout(connectCustomerSSE, 5000);
+            };
+        }
+        connectCustomerSSE();
+    })();
 </script>
 
 <!-- ── Item Availability Decision Modal (customer) ─────────────────── -->
@@ -7110,12 +6984,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
 
 /* Admin pill in header */
-.admin-drawer-role-pill{display:flex;align-items:center;gap:7px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:8px;padding:6px 12px;margin:0 10px 10px;}
-.admin-drawer-role-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 8px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
-@keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 6px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 12px rgba(76,175,80,0.9);}}
+.admin-drawer-role-pill{display:flex;align-items:center;gap:5px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:6px;padding:3px 8px;margin:0 10px 8px;}
+.admin-drawer-role-dot{width:5px;height:5px;border-radius:50%;background:#4CAF50;box-shadow:0 0 6px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
+@keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 4px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 8px rgba(76,175,80,0.9);}}
 .admin-drawer-role-info{flex:1;min-width:0;}
-.admin-drawer-role-title{font-size:0.56rem;font-weight:900;color:var(--tan);letter-spacing:1.5px;text-transform:uppercase;}
-.admin-drawer-role-sub{font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:1px;}
+.admin-drawer-role-title{font-size:0.48rem;font-weight:900;color:var(--tan);letter-spacing:1.2px;text-transform:uppercase;}
+.admin-drawer-role-sub{font-size:0.52rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:0px;}
 
 .admin-drawer-section-label{font-size:0.62rem;font-weight:900;color:rgba(196,168,130,0.3);letter-spacing:2.5px;text-transform:uppercase;padding:12px 16px 6px;display:flex;align-items:center;gap:8px;}
 .admin-drawer-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06);}
@@ -11605,6 +11479,35 @@ def sse_stream():
     resp.headers['Connection'] = 'keep-alive'
     return resp
 
+@app.route('/api/customer_stream')
+def customer_sse_stream():
+    """Public SSE stream — pushes real-time updates to customer storefront."""
+    q = queue.Queue(maxsize=30)
+    with _customer_sse_lock:
+        _customer_sse_subscribers.append(q)
+
+    def generate():
+        try:
+            yield "event: connected\ndata: {}\n\n"
+            while True:
+                try:
+                    msg = q.get(timeout=20)
+                    yield msg
+                except queue.Empty:
+                    yield "event: ping\ndata: {}\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            with _customer_sse_lock:
+                if q in _customer_sse_subscribers:
+                    _customer_sse_subscribers.remove(q)
+
+    resp = Response(generate(), mimetype='text/event-stream')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['X-Accel-Buffering'] = 'no'
+    resp.headers['Connection'] = 'keep-alive'
+    return resp
+
 @app.route('/api/orders')
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
@@ -12838,4 +12741,4 @@ if __name__ == '__main__':
         print("==================================================")
         
         Timer(1.5, open_browser).start()
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True)
