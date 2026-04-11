@@ -6,6 +6,7 @@ import threading
 import json
 import io
 import queue
+import random
 import requests
 from flask import (
     Flask, 
@@ -506,6 +507,20 @@ class OrderPickupPhoto(db.Model):
     taken_by = db.Column(db.String(50), nullable=True, default='Staff')
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
+class PhoneOTP(db.Model):
+    """Stores one-time passwords sent to customers for phone verification before ordering."""
+    __tablename__ = 'phone_otps'
+    id         = db.Column(db.Integer, primary_key=True)
+    phone      = db.Column(db.String(30), nullable=False, index=True)
+    code       = db.Column(db.String(6), nullable=False)
+    attempts   = db.Column(db.Integer, default=0)       # wrong guesses on this code
+    verified   = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+    def is_expired(self):
+        """OTP expires after 5 minutes."""
+        return (get_ph_time() - self.created_at).total_seconds() > 300
+
 # ── Security helpers ────────────────────────────────────────────────────────
 
 MAX_FAILED_ATTEMPTS = 5   # auto-ban after this many failures within 30 minutes
@@ -645,6 +660,271 @@ def check_order_limits(email, phone, name, total):
         flags.append('large_order')
 
     return True, "", flags
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHONE OTP — SMS HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _normalize_ph_number(raw: str) -> str:
+    """
+    Normalize a Philippine phone number to international E.164 format.
+    09xxxxxxxxx  → +639xxxxxxxxx
+    639xxxxxxxxx → +639xxxxxxxxx
+    Already +63  → unchanged
+    """
+    n = re.sub(r'\D', '', raw)          # strip all non-digits
+    if n.startswith('0') and len(n) == 11:
+        return '+63' + n[1:]
+    if n.startswith('63') and len(n) == 12:
+        return '+' + n
+    if n.startswith('639') and len(n) == 12:
+        return '+' + n
+    return '+' + n                      # pass-through for other formats
+
+
+def send_otp_sms(phone: str, code: str) -> tuple:
+    """
+    Send a 6-digit OTP via SMS.
+
+    Provider priority (first one with credentials configured wins):
+    ─────────────────────────────────────────────────────────────
+    A. SMS Gateway for Android  — FREE (uses your SIM plan)
+       Vercel: use cloud relay  → SMS_GATEWAY_URL=https://api.sms-gate.app
+       Local:  use local IP     → SMS_GATEWAY_URL=http://192.168.x.x:8080
+       Also set: SMS_GATEWAY_USER, SMS_GATEWAY_PASS
+       Optional: SMS_GATEWAY_SIM=sim1|sim2  (dual-SIM phones)
+       Repo: https://github.com/capcom6/android-sms-gateway
+
+    B. Itexmo (PH local)        — ~₱0.25–0.50/SMS  itexmo.com
+       Set: ITEXMO_API_CODE, ITEXMO_API_PASSWORD
+
+    C. PHIL-SMS (PH local)      — ~₱0.50–0.80/SMS  phil-sms.com
+       Set: PHILSMS_TOKEN
+
+    D. Semaphore (PH local)     — ~₱0.50/SMS  semaphore.co
+       Set: SEMAPHORE_API_KEY
+       Optional: SEMAPHORE_SENDER_NAME (max 11 chars, default: 9599Tea)
+
+    E. Vonage / Nexmo (global)  — ~₱0.40–0.50/SMS  vonage.com
+       Set: VONAGE_API_KEY, VONAGE_API_SECRET, VONAGE_FROM
+
+    F. Twilio (global)          — ~₱0.45/SMS  twilio.com
+       Set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+
+    G. Dev fallback             — prints OTP to terminal (no SMS sent)
+       Used automatically when none of the above are configured.
+    ─────────────────────────────────────────────────────────────
+    Returns (success: bool, error_message: str).
+    """
+    import base64
+    international = _normalize_ph_number(phone)
+    message = (
+        f"Your 9599 Tea & Coffee verification code is: {code}. "
+        f"Valid for 5 minutes. Do NOT share this code with anyone."
+    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # A. SMS GATEWAY FOR ANDROID — FREE (self-hosted, uses your SIM plan)
+    #    Best choice for Vercel: set SMS_GATEWAY_URL=https://api.sms-gate.app
+    #    and enable Cloud Server in the Android app.
+    # ══════════════════════════════════════════════════════════════════════════
+    gw_url  = os.environ.get('SMS_GATEWAY_URL', '').rstrip('/')
+    gw_user = os.environ.get('SMS_GATEWAY_USER', '')
+    gw_pass = os.environ.get('SMS_GATEWAY_PASS', '')
+
+    if gw_url and gw_user and gw_pass:
+        try:
+            credentials = base64.b64encode(f"{gw_user}:{gw_pass}".encode()).decode()
+            payload = {
+                "message":      message,
+                "phoneNumbers": [international],
+            }
+            # Optional: choose a specific SIM on dual-SIM devices
+            sim_slot = os.environ.get('SMS_GATEWAY_SIM', '').strip()
+            if sim_slot:
+                payload["simNumber"] = 1 if sim_slot.lower() == 'sim1' else 2
+
+            # Cloud relay (api.sms-gate.app) uses a different endpoint path
+            is_cloud = 'sms-gate.app' in gw_url
+            endpoint = (
+                f"{gw_url}/3rdparty/v1/message" if is_cloud
+                else f"{gw_url}/message"
+            )
+
+            resp = requests.post(
+                endpoint,
+                json=payload,
+                headers={
+                    "Authorization": f"Basic {credentials}",
+                    "Content-Type":  "application/json",
+                },
+                timeout=15
+            )
+            if resp.status_code in (200, 201, 202):
+                return True, ''
+            return False, f"SMS Gateway error ({resp.status_code}): {resp.text[:300]}"
+
+        except requests.exceptions.ConnectionError:
+            return False, (
+                "Cannot reach the Android SMS Gateway. "
+                "For Vercel: make sure Cloud Server is ON in the app and "
+                "SMS_GATEWAY_URL=https://api.sms-gate.app is set correctly."
+            )
+        except Exception as e:
+            return False, f"SMS Gateway for Android error: {str(e)}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # B. ITEXMO — PH local, ~₱0.25–0.50/SMS
+    #    Register at itexmo.com → get API Code and API Password
+    #    Set: ITEXMO_API_CODE, ITEXMO_API_PASSWORD
+    # ══════════════════════════════════════════════════════════════════════════
+    itexmo_code = os.environ.get('ITEXMO_API_CODE', '')
+    itexmo_pass = os.environ.get('ITEXMO_API_PASSWORD', '')
+
+    if itexmo_code and itexmo_pass:
+        try:
+            resp = requests.post(
+                'https://www.itexmo.com/php_api/api.php',
+                data={
+                    '1': international,
+                    '2': message,
+                    '3': itexmo_code,
+                    'passwd': itexmo_pass,
+                },
+                timeout=10
+            )
+            # Itexmo returns "0" on success
+            if resp.text.strip() == '0':
+                return True, ''
+            return False, f"Itexmo error: {resp.text.strip()[:200]}"
+        except Exception as e:
+            return False, f"Itexmo error: {str(e)}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # C. PHIL-SMS — PH local, ~₱0.50–0.80/SMS
+    #    Register at phil-sms.com → get API Token
+    #    Set: PHILSMS_TOKEN
+    # ══════════════════════════════════════════════════════════════════════════
+    philsms_token = os.environ.get('PHILSMS_TOKEN', '')
+
+    if philsms_token:
+        try:
+            resp = requests.post(
+                'https://app.philsms.com/api/v3/sms/send',
+                json={
+                    'recipient': international,
+                    'sender_id': 'PhilSMS',
+                    'type':      'plain',
+                    'message':   message,
+                },
+                headers={
+                    'Authorization': f'Bearer {philsms_token}',
+                    'Content-Type':  'application/json',
+                    'Accept':        'application/json',
+                },
+                timeout=10
+            )
+            data = resp.json()
+            if data.get('status') == 'Success' or resp.status_code == 200:
+                return True, ''
+            return False, f"PHIL-SMS error: {data.get('message', resp.text)[:200]}"
+        except Exception as e:
+            return False, f"PHIL-SMS error: {str(e)}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # D. SEMAPHORE — PH local, ~₱0.50/SMS
+    #    Register at semaphore.co → get API Key
+    #    Set: SEMAPHORE_API_KEY
+    #    Optional: SEMAPHORE_SENDER_NAME (max 11 chars alphanumeric)
+    # ══════════════════════════════════════════════════════════════════════════
+    sem_key    = os.environ.get('SEMAPHORE_API_KEY', '')
+    sem_sender = os.environ.get('SEMAPHORE_SENDER_NAME', '9599Tea')
+
+    if sem_key:
+        try:
+            resp = requests.post(
+                'https://api.semaphore.co/api/v4/messages',
+                data={
+                    'apikey':     sem_key,
+                    'number':     international,
+                    'message':    message,
+                    'sendername': sem_sender,
+                },
+                timeout=10
+            )
+            if resp.status_code == 200:
+                return True, ''
+            return False, f"Semaphore error ({resp.status_code}): {resp.text[:200]}"
+        except Exception as e:
+            return False, f"Semaphore error: {str(e)}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # E. VONAGE (formerly Nexmo) — global, ~₱0.40–0.50/SMS
+    #    Register at vonage.com → Dashboard → API Settings
+    #    Set: VONAGE_API_KEY, VONAGE_API_SECRET
+    #    Optional: VONAGE_FROM (sender name/number, default: 9599Tea)
+    # ══════════════════════════════════════════════════════════════════════════
+    vonage_key    = os.environ.get('VONAGE_API_KEY', '')
+    vonage_secret = os.environ.get('VONAGE_API_SECRET', '')
+    vonage_from   = os.environ.get('VONAGE_FROM', '9599Tea')
+
+    if vonage_key and vonage_secret:
+        try:
+            resp = requests.post(
+                'https://rest.nexmo.com/sms/json',
+                data={
+                    'api_key':    vonage_key,
+                    'api_secret': vonage_secret,
+                    'to':         international,
+                    'from':       vonage_from,
+                    'text':       message,
+                },
+                timeout=10
+            )
+            result = resp.json()
+            status = result.get('messages', [{}])[0].get('status', '99')
+            if status == '0':
+                return True, ''
+            err_text = result.get('messages', [{}])[0].get('error-text', 'Unknown error')
+            return False, f"Vonage error: {err_text}"
+        except Exception as e:
+            return False, f"Vonage error: {str(e)}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # F. TWILIO — global, ~₱0.45/SMS
+    #    Register at twilio.com → get Account SID, Auth Token, Phone Number
+    #    Set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+    #    Run: pip install twilio
+    # ══════════════════════════════════════════════════════════════════════════
+    twilio_sid   = os.environ.get('TWILIO_ACCOUNT_SID', '')
+    twilio_token = os.environ.get('TWILIO_AUTH_TOKEN', '')
+    twilio_from  = os.environ.get('TWILIO_PHONE_NUMBER', '')
+
+    if twilio_sid and twilio_token and twilio_from:
+        try:
+            from twilio.rest import Client
+            client = Client(twilio_sid, twilio_token)
+            client.messages.create(body=message, from_=twilio_from, to=international)
+            return True, ''
+        except Exception as e:
+            return False, f"Twilio error: {str(e)}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # G. DEV FALLBACK — no SMS provider configured
+    #    OTP is printed to the terminal so you can test locally without credits.
+    #    Set any provider above before going live on Vercel.
+    # ══════════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*55}")
+    print(f"  [DEV OTP]  No SMS provider configured.")
+    print(f"  Phone : {international}")
+    print(f"  Code  : {code}")
+    print(f"  Configure one of the providers (A–F) in your .env")
+    print(f"  or Vercel Environment Variables to send real SMS.")
+    print(f"{'='*55}\n")
+    return True, ''     # always succeeds in dev so you can test without credits
+
+
 
 
 def get_or_create_reputation(email):
@@ -4090,8 +4370,37 @@ function playGrantedSound() {
         </div>
         <div style="text-align:center; font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:900; color:var(--gold); margin-bottom:4px;" id="pickup-time-preview">12:00 PM</div>
 
-        <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()">
-            <i class="fas fa-plane"></i> Confirm & Place Order
+        <!-- ── Phone OTP Verification Block ── -->
+        <div id="otp-verify-block" style="margin:14px 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:1.5px solid #86efac; border-radius:14px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                <span style="font-size:1.1rem;">📱</span>
+                <span style="font-weight:800; font-size:0.88rem; color:#166534;">Verify Your Phone Number</span>
+                <div id="otp-verified-badge" style="display:none; margin-left:auto; background:#16a34a; color:#fff; font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:20px; letter-spacing:0.5px;">✓ VERIFIED</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input type="tel" id="otp-phone-display"
+                       placeholder="Your phone number"
+                       style="flex:1; padding:9px 12px; border:1.5px solid #bbf7d0; border-radius:10px; background:#f0fdf4; font-size:0.88rem; font-weight:700; color:#166534; font-family:'DM Sans',sans-serif; outline:none;">
+                <button type="button" id="otp-send-btn" onclick="otpSendCode()"
+                        style="padding:9px 14px; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:800; font-size:0.8rem; white-space:nowrap; font-family:'DM Sans',sans-serif; box-shadow:0 3px 10px rgba(22,163,74,0.35); transition:opacity 0.2s;">
+                    Send Code
+                </button>
+            </div>
+            <div id="otp-code-row" style="display:none; margin-top:10px; display:none; gap:8px; align-items:center;">
+                <input type="text" id="otp-code-input" maxlength="6" placeholder="Enter 6-digit code"
+                       inputmode="numeric" autocomplete="one-time-code"
+                       style="flex:1; padding:10px; border:1.5px solid #bbf7d0; border-radius:10px; font-size:1.4rem; font-weight:900; text-align:center; letter-spacing:6px; background:#fff; color:#166534; font-family:'DM Sans',sans-serif; outline:none; width:100%;">
+                <button type="button" onclick="otpVerifyCode()"
+                        style="padding:9px 14px; background:linear-gradient(135deg,#0d9488,#0f766e); color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:800; font-size:0.8rem; white-space:nowrap; font-family:'DM Sans',sans-serif; box-shadow:0 3px 10px rgba(13,148,136,0.35);">
+                    Verify
+                </button>
+            </div>
+            <p id="otp-status-msg" style="margin-top:8px; font-size:0.78rem; font-weight:700; color:#374151; min-height:16px;"></p>
+        </div>
+        <!-- ── End OTP Block ── -->
+
+        <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()" disabled style="opacity:0.45; cursor:not-allowed;">
+            <i class="fas fa-plane"></i> Confirm &amp; Place Order
         </button>
         <button class="pickup-cancel-btn" onclick="closePickupModal()">Cancel</button>
     </div>
@@ -4997,6 +5306,7 @@ function playGrantedSound() {
     function openPickupModal() {
         if(cart.length === 0) return;
         document.getElementById('pickup-modal').classList.add('show');
+        otpInitModal();   // pre-fill phone & restore verified state if already done
     }
 
     function closePickupModal() {
@@ -5376,6 +5686,146 @@ function playGrantedSound() {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // PHONE OTP — CLIENT-SIDE LOGIC
+    // ══════════════════════════════════════════════════════════════════════
+
+    let _otpVerified   = false;   // in-memory flag; server session is the real authority
+    let _otpResendTimer = null;
+
+    /** Called when the pickup modal opens — pre-fills phone & resets OTP state if unverified. */
+    function otpInitModal() {
+        const phone = document.getElementById('customer-phone').value.trim();
+        const display = document.getElementById('otp-phone-display');
+        if (display) display.value = phone;
+
+        // If already verified this session, show badge and unlock button right away
+        if (_otpVerified) {
+            _otpShowVerifiedState();
+        } else {
+            _otpResetState();
+        }
+    }
+
+    function _otpResetState() {
+        _otpVerified = false;
+        document.getElementById('otp-verified-badge').style.display = 'none';
+        document.getElementById('otp-code-row').style.display = 'none';
+        document.getElementById('otp-status-msg').textContent = '';
+        document.getElementById('otp-status-msg').style.color = '#374151';
+        document.getElementById('otp-send-btn').style.display = '';
+        document.getElementById('otp-send-btn').disabled = false;
+        document.getElementById('otp-send-btn').textContent = 'Send Code';
+        const confirmBtn = document.getElementById('pickup-confirm-btn');
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.45';
+        confirmBtn.style.cursor = 'not-allowed';
+    }
+
+    function _otpShowVerifiedState() {
+        _otpVerified = true;
+        document.getElementById('otp-verified-badge').style.display = 'flex';
+        document.getElementById('otp-code-row').style.display = 'none';
+        document.getElementById('otp-send-btn').style.display = 'none';
+        otpSetStatus('✅ Phone verified! You can now place your order.', 'green');
+        const confirmBtn = document.getElementById('pickup-confirm-btn');
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.cursor = 'pointer';
+    }
+
+    function otpSetStatus(msg, color) {
+        const el = document.getElementById('otp-status-msg');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.color = color === 'green' ? '#16a34a' : color === 'red' ? '#dc2626' : '#374151';
+    }
+
+    /** Send OTP — called when customer taps "Send Code". */
+    async function otpSendCode() {
+        const phone = document.getElementById('otp-phone-display').value.trim();
+        if (!phone) {
+            otpSetStatus('No phone number found. Please go back and enter your phone.', 'red');
+            return;
+        }
+
+        const sendBtn = document.getElementById('otp-send-btn');
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending…';
+        otpSetStatus('', '');
+
+        try {
+            const res = await fetch('/api/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+            });
+            const data = await res.json();
+
+            if (data.status === 'sent') {
+                document.getElementById('otp-code-row').style.display = 'flex';
+                document.getElementById('otp-code-row').style.flexDirection = 'column';
+                document.getElementById('otp-code-input').value = '';
+                otpSetStatus('📨 Code sent! Check your SMS inbox. Valid for 5 minutes.', 'green');
+                // 60-second resend cooldown
+                let secs = 60;
+                sendBtn.textContent = `Resend (${secs}s)`;
+                _otpResendTimer = setInterval(() => {
+                    secs--;
+                    sendBtn.textContent = `Resend (${secs}s)`;
+                    if (secs <= 0) {
+                        clearInterval(_otpResendTimer);
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = 'Resend Code';
+                    }
+                }, 1000);
+            } else {
+                otpSetStatus(data.message || 'Failed to send code. Try again.', 'red');
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Resend Code';
+            }
+        } catch (e) {
+            otpSetStatus('Network error. Please check your connection and try again.', 'red');
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send Code';
+        }
+    }
+
+    /** Verify OTP — called when customer taps "Verify". */
+    async function otpVerifyCode() {
+        const phone = document.getElementById('otp-phone-display').value.trim();
+        const code  = (document.getElementById('otp-code-input').value || '').trim();
+
+        if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+            otpSetStatus('Please enter the 6-digit code from the SMS.', 'red');
+            return;
+        }
+
+        otpSetStatus('Verifying…', '');
+
+        try {
+            const res = await fetch('/api/otp/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, code })
+            });
+            const data = await res.json();
+
+            if (data.status === 'verified') {
+                if (_otpResendTimer) clearInterval(_otpResendTimer);
+                _otpShowVerifiedState();
+            } else {
+                otpSetStatus(data.message || 'Verification failed. Try again.', 'red');
+                document.getElementById('otp-code-input').value = '';
+                document.getElementById('otp-code-input').focus();
+            }
+        } catch (e) {
+            otpSetStatus('Network error. Please check your connection and try again.', 'red');
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+
     async function submitOrder() {
         if(updateModeCode) { submitOrderUpdate(); return; }  // safety guard
         if(cart.length === 0) return;
@@ -5457,8 +5907,7 @@ function playGrantedSound() {
         try {
             const res = await fetch('/reserve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
             const data = await res.json();
-            if(res.ok) {
-                const code = data.reservation_code;
+            if(res.ok) {                const code = data.reservation_code;
                 document.getElementById('display-code').innerText = code;
 
                 // Build receipt preview
@@ -5490,7 +5939,16 @@ function playGrantedSound() {
                 let orders = JSON.parse(localStorage.getItem('myOrders')) || [];
                 orders.push({code, status: 'Waiting Confirmation'});
                 localStorage.setItem('myOrders', JSON.stringify(orders));
-            } else { showToast("Error: " + data.message, "error"); btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false; }
+            } else {
+                // Handle OTP not verified — send back to pickup modal with message
+                if (data.status === 'otp_required') {
+                    openPickupModal();
+                    otpSetStatus('⚠️ ' + (data.message || 'Please verify your phone first.'), 'red');
+                } else {
+                    showToast("Error: " + data.message, "error");
+                }
+                btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
+            }
         } catch(e) { showToast("Connection Error", "error"); btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false; }
     }
 
@@ -7092,18 +7550,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 <!-- ══ ADMIN SIDE DRAWER ══ -->
 <nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
-  <div class="admin-drawer-header">
-    <div class="admin-drawer-logo">
-      <div class="admin-drawer-logo-ring">
-        <div class="admin-drawer-logo-circle">
-          <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
-        </div>
-      </div>
-      <div>
-        <div class="admin-drawer-brand-name">9599 Tea &amp; Coffee</div>
-        <div class="admin-drawer-brand-sub">Admin Panel</div>
-      </div>
-    </div>
+  <div class="admin-drawer-header" style="justify-content:flex-end;">
     <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
   </div>
 
@@ -10332,6 +10779,115 @@ def handle_inventory():
         db.session.commit()
         return jsonify({"status": "success"})
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PHONE OTP — SEND & VERIFY ROUTES
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/otp/send', methods=['POST'])
+@limiter.limit("3 per 10 minutes")
+def otp_send():
+    """
+    Request a 6-digit OTP for the given phone number.
+    Rate-limited to 3 requests per 10 minutes to prevent SMS-bombing.
+    """
+    data  = request.get_json(silent=True) or {}
+    phone = (data.get('phone') or '').strip()
+
+    if not phone or not re.fullmatch(r'[\d\s\+\-\(\)]{7,20}', phone):
+        return jsonify({"status": "error", "message": "Invalid phone number. Please enter a valid PH mobile number."}), 400
+
+    # Invalidate any previous unverified OTP for this number
+    try:
+        PhoneOTP.query.filter_by(phone=phone, verified=False).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    code = str(random.randint(100000, 999999))
+    otp  = PhoneOTP(phone=phone, code=code)
+    db.session.add(otp)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Could not save OTP. Please try again."}), 500
+
+    ok, err = send_otp_sms(phone, code)
+    if not ok:
+        # Remove the saved OTP if SMS delivery failed
+        try:
+            db.session.delete(otp)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return jsonify({"status": "error", "message": err or "Failed to send SMS. Please try again."}), 502
+
+    # Clear any previous session verification so the customer must re-verify
+    session.pop('otp_verified_phone', None)
+    return jsonify({"status": "sent", "message": f"A 6-digit code was sent to {phone}. It expires in 5 minutes."})
+
+
+@app.route('/api/otp/verify', methods=['POST'])
+@limiter.limit("10 per 10 minutes")
+def otp_verify():
+    """
+    Verify the OTP code entered by the customer.
+    On success, stores the verified phone in the server-side session.
+    """
+    data  = request.get_json(silent=True) or {}
+    phone = (data.get('phone') or '').strip()
+    code  = (data.get('code')  or '').strip()
+
+    if not phone or not code:
+        return jsonify({"status": "error", "message": "Phone and code are both required."}), 400
+
+    # Always fetch the most recent unverified OTP for this number
+    otp = (PhoneOTP.query
+           .filter_by(phone=phone, verified=False)
+           .order_by(PhoneOTP.created_at.desc())
+           .first())
+
+    if not otp:
+        return jsonify({"status": "error", "message": "No active OTP found. Please request a new code."}), 400
+
+    if otp.is_expired():
+        try:
+            db.session.delete(otp)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return jsonify({"status": "error", "message": "Code has expired. Please request a new one."}), 400
+
+    if otp.attempts >= 5:
+        try:
+            db.session.delete(otp)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return jsonify({"status": "error", "message": "Too many wrong attempts. Please request a new code."}), 429
+
+    if otp.code != code:
+        otp.attempts += 1
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        remaining = max(0, 5 - otp.attempts)
+        return jsonify({"status": "error", "message": f"Incorrect code. {remaining} attempt(s) remaining."}), 400
+
+    # ✅ Code is correct — mark as verified and store in session
+    otp.verified = True
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    session['otp_verified_phone'] = phone
+    log_audit("Phone OTP Verified", f"Phone {phone} verified successfully")
+    return jsonify({"status": "verified", "message": "Phone number verified! You may now place your order."})
+
+
+
 @app.route('/reserve', methods=['POST'])
 @limiter.limit("5 per minute")
 def reserve_blend():
@@ -10340,6 +10896,21 @@ def reserve_blend():
     phone  = data.get('phone', '')
     name   = data.get('name', '')
     total  = float(data.get('total', 0))
+
+    # ── OTP gate: phone must have been verified this session ──────────────────
+    verified_phone = session.get('otp_verified_phone', '')
+    if not verified_phone:
+        return jsonify({
+            "status": "otp_required",
+            "message": "Please verify your phone number before placing an order."
+        }), 403
+    # Normalize both numbers and compare so formatting differences don't block
+    if _normalize_ph_number(verified_phone) != _normalize_ph_number(phone):
+        return jsonify({
+            "status": "otp_required",
+            "message": "Verified phone does not match. Please re-verify your current phone number."
+        }), 403
+    # ─────────────────────────────────────────────────────────────────────────
 
     # ── Behavioral limit gate ─────────────────────────────────────────────
     allowed, err_msg, flags = check_order_limits(email, phone, name, total)
@@ -11957,6 +12528,54 @@ try:
         except Exception as migration_err6:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_err6}")
+
+        # Migrate: create phone_otps table for OTP verification (added for fake-order prevention)
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_name='phone_otps'"
+                )).scalar()
+                table_exists = (result > 0)
+            else:
+                result = db.session.execute(db.text(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='phone_otps'"
+                )).fetchone()
+                table_exists = (result is not None)
+
+            if not table_exists:
+                if is_postgres:
+                    db.session.execute(db.text("""
+                        CREATE TABLE phone_otps (
+                            id         SERIAL PRIMARY KEY,
+                            phone      VARCHAR(30) NOT NULL,
+                            code       VARCHAR(6) NOT NULL,
+                            attempts   INTEGER DEFAULT 0,
+                            verified   BOOLEAN DEFAULT FALSE,
+                            created_at TIMESTAMP DEFAULT NOW()
+                        )
+                    """))
+                else:
+                    db.session.execute(db.text("""
+                        CREATE TABLE phone_otps (
+                            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                            phone      VARCHAR(30) NOT NULL,
+                            code       VARCHAR(6) NOT NULL,
+                            attempts   INTEGER DEFAULT 0,
+                            verified   BOOLEAN DEFAULT 0,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                db.session.commit()
+                print("Migration: created phone_otps table")
+            else:
+                print("Migration: phone_otps table already exists, skipped")
+        except Exception as migration_otp:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_otp}")
+
+
 
         # ── 0. Seed store schedule (only if not already in DB) ──────────────
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
