@@ -7092,7 +7092,18 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 <!-- ══ ADMIN SIDE DRAWER ══ -->
 <nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
-  <div class="admin-drawer-header" style="justify-content:flex-end;">
+  <div class="admin-drawer-header">
+    <div class="admin-drawer-logo">
+      <div class="admin-drawer-logo-ring">
+        <div class="admin-drawer-logo-circle">
+          <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+        </div>
+      </div>
+      <div>
+        <div class="admin-drawer-brand-name">9599 Tea &amp; Coffee</div>
+        <div class="admin-drawer-brand-sub">Admin Panel</div>
+      </div>
+    </div>
     <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
   </div>
 
