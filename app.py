@@ -4143,26 +4143,20 @@ function playGrantedSound() {
             <!-- Location (required) -->
             <div style="text-align:left; margin-bottom:20px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:7px;">Your Location <span style="color:#C0392B;">*</span></label>
+                <!-- Always-visible address input — GPS button fills it automatically -->
+                <input id="gate-manual-addr" type="text" placeholder="Tap GPS button, or type your address here"
+                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.92rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s; box-sizing:border-box; margin-bottom:8px;"
+                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'"
+                    oninput="gateManualAddrInput()">
                 <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button"
-                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.93rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.3); opacity:1;">
-                    <i class="fas fa-map-marker-alt"></i> Use My Current Location
+                    style="width:100%; padding:11px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.25); opacity:1;">
+                    <i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)
                 </button>
                 <input type="hidden" id="gate-lat" value="">
                 <input type="hidden" id="gate-lng" value="">
-                <div id="gate-geo-status" style="margin-top:8px; font-size:0.82rem; font-weight:700; color:var(--text-light); min-height:18px;"></div>
-                <div id="gate-geo-note" style="margin-top:6px; font-size:0.75rem; color:#C0392B; font-weight:700; display:none;">
+                <div id="gate-geo-status" style="margin-top:7px; font-size:0.8rem; font-weight:700; color:var(--text-light); min-height:16px;"></div>
+                <div id="gate-geo-note" style="margin-top:5px; font-size:0.75rem; color:#C0392B; font-weight:700; display:none;">
                     <i class="fas fa-exclamation-circle"></i> Location is required to continue.
-                </div>
-                <!-- Manual address fallback (shown when geolocation is unavailable) -->
-                <div id="gate-manual-addr-wrap" style="display:none; margin-top:10px;">
-                    <div style="font-size:0.74rem; font-weight:800; color:#1565C0; margin-bottom:6px; display:flex; align-items:center; gap:5px;">
-                        <i class="fas fa-pencil-alt"></i> Enter your address manually instead:
-                    </div>
-                    <input id="gate-manual-addr" type="text" placeholder="e.g. 123 Rizal St, San Pablo, Laguna"
-                        style="width:100%; padding:12px 14px; border:2px solid #90CAF9; border-radius:11px; font-size:0.9rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#EFF6FF; outline:none; transition:border-color 0.2s; box-sizing:border-box;"
-                        onfocus="this.style.borderColor='#1565C0'" onblur="this.style.borderColor='#90CAF9'"
-                        oninput="gateManualAddrInput()">
-                    <div id="gate-manual-addr-status" style="margin-top:5px; font-size:0.75rem; font-weight:700; min-height:14px;"></div>
                 </div>
             </div>
 
@@ -4280,60 +4274,41 @@ function playGrantedSound() {
     }
 
     // ── Gate geolocation ─────────────────────────────────────────────────────
-    let _gateGeoAddr = '';   // stores reverse-geocoded address from sign-in location button
-    let _gateManualMode = false;  // true when using manual address entry
-
-    function gateShowManualFallback(reason) {
-        const wrap   = document.getElementById('gate-manual-addr-wrap');
-        const status = document.getElementById('gate-geo-status');
-        const btn    = document.getElementById('gate-geo-btn');
-        if (wrap) wrap.style.display = 'block';
-        if (status) {
-            status.style.color = '#C0392B';
-            status.innerText   = reason;
-        }
-        if (btn) {
-            btn.disabled = true;
-            btn.style.opacity = '0.45';
-            btn.style.cursor  = 'not-allowed';
-        }
-        _gateManualMode = true;
-    }
+    let _gateGeoAddr = '';
 
     function gateManualAddrInput() {
-        const input  = document.getElementById('gate-manual-addr');
-        const mStat  = document.getElementById('gate-manual-addr-status');
-        const val    = (input ? input.value.trim() : '');
+        const input = document.getElementById('gate-manual-addr');
+        const val   = input ? input.value.trim() : '';
+        const note  = document.getElementById('gate-geo-note');
         if (val.length >= 5) {
             _gateGeoAddr = val;
-            // Use fake coords so backend location check passes; real address stored in _gateGeoAddr
             document.getElementById('gate-lat').value = '14.0000';
             document.getElementById('gate-lng').value = '121.0000';
-            if (mStat) { mStat.style.color = '#2E7D32'; mStat.textContent = '✅ Address saved.'; }
+            if (note) note.style.display = 'none';
         } else {
             document.getElementById('gate-lat').value = '';
             document.getElementById('gate-lng').value = '';
-            if (mStat) { mStat.style.color = '#C0392B'; mStat.textContent = val.length ? 'Please enter a more complete address.' : ''; }
         }
     }
 
     function gateUseMyLocation() {
-        const btn    = document.getElementById('gate-geo-btn');
-        const status = document.getElementById('gate-geo-status');
-        const note   = document.getElementById('gate-geo-note');
-        note.style.display = 'none';
+        const btn       = document.getElementById('gate-geo-btn');
+        const status    = document.getElementById('gate-geo-status');
+        const addrInput = document.getElementById('gate-manual-addr');
+        const note      = document.getElementById('gate-geo-note');
+        if (note) note.style.display = 'none';
 
         if (!navigator.geolocation) {
-            gateShowManualFallback('⚠️ Your browser does not support geolocation. Enter your address below.');
+            status.style.color = '#C0392B';
+            status.innerText   = '⚠️ GPS not supported. Type your address in the field above.';
             return;
         }
 
-        // Visual feedback immediately on click
         btn.disabled = true;
-        btn.style.opacity = '0.85';
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location…';
+        btn.style.opacity = '0.8';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting GPS location…';
         status.style.color = '#1565C0';
-        status.innerText   = '📡 Waiting for GPS… allow location if prompted.';
+        status.innerText   = '📡 Locating… allow location access if prompted.';
 
         try {
             navigator.geolocation.getCurrentPosition(
@@ -4342,38 +4317,48 @@ function playGrantedSound() {
                     const lng = pos.coords.longitude;
                     document.getElementById('gate-lat').value = lat;
                     document.getElementById('gate-lng').value = lng;
-                    status.style.color = '#2E7D32';
-                    status.innerText   = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
                     btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
                     btn.style.opacity    = '1';
-                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Confirmed ✓';
-                    // Reverse geocode
+                    btn.disabled  = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> GPS Location Captured ✓';
+                    status.style.color = '#2E7D32';
+                    status.innerText   = '📍 Getting address…';
                     try {
-                        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers:{'Accept-Language':'en'} });
+                        const r = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+                            { headers: { 'Accept-Language': 'en' } }
+                        );
                         const d = await r.json();
                         _gateGeoAddr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                        status.innerText = '📍 ' + _gateGeoAddr;
                     } catch(_) {
                         _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                     }
+                    if (addrInput) {
+                        addrInput.value = _gateGeoAddr;
+                        addrInput.style.borderColor = '#4CAF50';
+                    }
+                    status.innerText = '📍 ' + _gateGeoAddr;
                 },
                 (err) => {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)';
+                    status.style.color = '#E65100';
                     const msgs = {
-                        1: '⚠️ Permission denied. Please allow location in your browser settings.',
-                        2: '⚠️ Unable to get your position. Check GPS signal.',
-                        3: '⚠️ Location request timed out.'
+                        1: '⚠️ Permission denied. Type your address in the field above.',
+                        2: '⚠️ GPS signal lost. Type your address in the field above.',
+                        3: '⚠️ GPS timed out. Type your address in the field above.'
                     };
-                    const isHttpBlock = !window.isSecureContext && location.protocol !== 'https:' &&
-                                        !['localhost','127.0.0.1','::1'].includes(location.hostname);
-                    const msg = isHttpBlock
-                        ? '⚠️ GPS requires HTTPS. Use the address field below or access via localhost.'
-                        : (msgs[err.code] || '⚠️ Could not get location.');
-                    gateShowManualFallback(msg);
+                    status.innerText = msgs[err.code] || '⚠️ GPS failed. Type your address above.';
                 },
                 { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
             );
         } catch(e) {
-            gateShowManualFallback('⚠️ Geolocation unavailable. Enter your address below.');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)';
+            status.style.color = '#C0392B';
+            status.innerText   = '⚠️ GPS unavailable. Type your address in the field above.';
         }
     }
 
@@ -4392,8 +4377,7 @@ function playGrantedSound() {
         if (!phone) { showGateError('Please enter your phone number.'); return; }
         if (!lat || !lng) {
             document.getElementById('gate-geo-note').style.display = 'block';
-            document.getElementById('gate-geo-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            showGateError('Please use your current location before continuing.'); return;
+            showGateError('Please tap the GPS button or type your address to continue.'); return;
         }
 
         // If email not yet verified, show the verification popup first
