@@ -317,6 +317,8 @@ class Reservation(db.Model):
     cancel_reason = db.Column(db.String(300), nullable=True, default='')
     patron_address = db.Column(db.String(300), nullable=True, default='')
     is_paid = db.Column(db.Boolean, default=False, nullable=False)
+    user_agent = db.Column(db.String(300), nullable=True, default='')
+    ip_address = db.Column(db.String(60), nullable=True, default='')
     infusions = db.relationship('Infusion', backref='reservation', lazy=True, cascade="all, delete-orphan")
 
 class Infusion(db.Model):
@@ -379,6 +381,8 @@ class CustomerLog(db.Model):
     order_total = db.Column(db.Float, nullable=True, default=0.0)
     items = db.Column(db.Text, nullable=True, default='')
     pickup_time = db.Column(db.String(50), nullable=True, default='')
+    user_agent = db.Column(db.String(300), nullable=True, default='')
+    ip_address = db.Column(db.String(60), nullable=True, default='')
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
 class PermissionRequest(db.Model):
@@ -11414,7 +11418,9 @@ def reserve_blend():
             order_source="Online",
             status=initial_status,
             patron_address=data.get('address',''),
-            is_paid=True  # GCash online payment — auto-marked as paid
+            is_paid=True,  # GCash online payment — auto-marked as paid
+            user_agent=request.headers.get('User-Agent','')[:300],
+            ip_address=get_client_ip()
         )
         db.session.add(new_res)
         db.session.flush()
@@ -12035,7 +12041,9 @@ def update_order_status(order_id):
                 order_source=order.order_source,
                 order_total=order.total_investment,
                 items=items_summary,
-                pickup_time=order.pickup_time
+                pickup_time=order.pickup_time,
+                user_agent=order.user_agent or '',
+                ip_address=order.ip_address or ''
             )
             db.session.add(clog)
             # Increment reputation completed counter
@@ -12967,6 +12975,11 @@ def _ensure_schema():
     all_ok &= _add_col("customer_logs", "items",       "TEXT        NOT NULL DEFAULT ''")
     all_ok &= _add_col("customer_logs", "pickup_time", "VARCHAR(50) NOT NULL DEFAULT ''")
     all_ok &= _add_col("customer_logs", "phone",       "VARCHAR(30) NOT NULL DEFAULT ''")
+    all_ok &= _add_col("customer_logs", "user_agent",  "VARCHAR(300) DEFAULT ''")
+    all_ok &= _add_col("customer_logs", "ip_address",  "VARCHAR(60)  DEFAULT ''")
+    # reservations – device tracking columns
+    all_ok &= _add_col("reservations",  "user_agent",  "VARCHAR(300) DEFAULT ''")
+    all_ok &= _add_col("reservations",  "ip_address",  "VARCHAR(60)  DEFAULT ''")
 
     if all_ok:
         _schema_ok = True   # stop checking once every column is confirmed
@@ -13852,6 +13865,8 @@ DEV_HTML = r"""<!DOCTYPE html>
       <div class="nav-item" onclick="openTab('audit')" data-tab="audit"><i class="fas fa-scroll"></i> Audit Log</div>
       <div class="nav-section">Database</div>
       <div class="nav-item" onclick="openTab('db')" data-tab="db"><i class="fas fa-database"></i> DB Inspector</div>
+      <div class="nav-section">Customers</div>
+      <div class="nav-item" onclick="openTab('customers')" data-tab="customers"><i class="fas fa-mobile-alt"></i> Customer Devices</div>
       <div class="nav-section">Environment</div>
       <div class="nav-item" onclick="openTab('env')" data-tab="env"><i class="fas fa-server"></i> Environment</div>
       <div class="nav-section">Quick Links</div>
@@ -13977,6 +13992,26 @@ DEV_HTML = r"""<!DOCTYPE html>
           <div class="panel-body" id="env-panel">Loading&hellip;</div>
         </div>
       </div>
+      <div class="tab-panel" id="tab-customers">
+        <div class="section-header">
+          <div class="section-title">Customer Devices</div>
+          <div class="section-sub">Device and browser info for each order placed on the storefront</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-action" onclick="loadCustomers()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <select id="customers-limit" onchange="loadCustomers()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:0.8rem;font-family:inherit;">
+            <option value="20">Last 20 orders</option>
+            <option value="50" selected>Last 50 orders</option>
+            <option value="100">Last 100 orders</option>
+          </select>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span><i class="fas fa-mobile-alt"></i>Order Device Log</span></div>
+          <div class="panel-body" style="padding:0;">
+            <div id="customers-table"><div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div></div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </div>
@@ -14041,6 +14076,69 @@ let _toastTimer, grantLogLines=[];
 function updateClock(){const n=new Date();document.getElementById('topbar-clock').textContent=n.toLocaleTimeString('en-PH',{hour12:true,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 setInterval(updateClock,1000);updateClock();
 function toast(msg,type='ok'){const t=document.getElementById('toast');t.className='show '+type;t.innerHTML='<i class="fas '+(type==='ok'?'fa-check-circle':type==='err'?'fa-times-circle':'fa-exclamation-circle')+'"></i> '+msg;clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.className='',3200);}
+async function loadCustomers() {
+  const el = document.getElementById('customers-table');
+  if (!el) return;
+  const limit = document.getElementById('customers-limit')?.value || 50;
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
+  try {
+    const r = await devFetch('/api/dev/customers?limit=' + limit);
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--danger);padding:14px;text-align:center;">Failed to load customer data</div>'; return; }
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-mobile-alt" style="display:block;font-size:1.5rem;margin-bottom:8px;opacity:0.3;"></i>No orders yet.</div>'; return; }
+
+    const STATUS_COLOR = {
+      'Completed': '#00e5a0', 'Ready for Pick-up': '#5b7fff',
+      'Preparing Order': '#ff9500', 'Waiting Confirmation': '#c0c0c0',
+      'Cancelled': '#ff3b5c', 'Pending Staff Approval': '#ff9500'
+    };
+
+    el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">' +
+      '<thead><tr style="border-bottom:2px solid var(--border);">' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">#</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Customer</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Status</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Device / Browser</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">IP</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">Source</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">Total</th>' +
+      '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">Time</th>' +
+      '</tr></thead><tbody>' +
+      data.map((o, idx) => {
+        const statusColor = STATUS_COLOR[o.status] || '#888';
+        const deviceLabel = o.device || '—';
+        const isUnknown = !o.device || o.device === '—';
+
+        // Device icon
+        let icon = 'fa-desktop';
+        const d = (o.device || '').toLowerCase();
+        if (d.includes('iphone') || d.includes('android') || d.includes('mobile')) icon = 'fa-mobile-alt';
+        else if (d.includes('ipad') || d.includes('tablet')) icon = 'fa-tablet-alt';
+        else if (d.includes('mac') || d.includes('windows') || d.includes('linux')) icon = 'fa-laptop';
+        else if (d.includes('facebook') || d.includes('instagram')) icon = 'fa-comments';
+        else if (!o.ua) icon = 'fa-question-circle';
+
+        return `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;color:var(--muted);font-family:monospace;">${o.code}</td>
+          <td style="padding:8px 12px;font-weight:700;color:var(--bright);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(o.name)}</td>
+          <td style="padding:8px 12px;"><span style="background:${statusColor}22;color:${statusColor};padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:800;white-space:nowrap;">${escapeHTML(o.status)}</span></td>
+          <td style="padding:8px 12px;">
+            <span title="${escapeHTML(o.ua)}" style="display:flex;align-items:center;gap:6px;cursor:default;">
+              <i class="fas ${icon}" style="color:${isUnknown ? 'var(--muted)' : 'var(--accent)'};font-size:0.85rem;flex-shrink:0;"></i>
+              <span style="color:${isUnknown ? 'var(--muted)' : 'var(--text)'};max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(deviceLabel)}</span>
+            </span>
+          </td>
+          <td style="padding:8px 12px;font-family:monospace;font-size:0.75rem;color:var(--warn);">${escapeHTML(o.ip || '—')}</td>
+          <td style="padding:8px 12px;color:var(--muted);font-size:0.72rem;">${escapeHTML(o.source || '—')}</td>
+          <td style="padding:8px 12px;color:var(--accent);font-weight:800;">₱${(o.total||0).toFixed(2)}</td>
+          <td style="padding:8px 12px;color:var(--muted);font-size:0.72rem;white-space:nowrap;">${escapeHTML(o.created_at || '—')}</td>
+        </tr>`;
+      }).join('') + '</tbody></table></div>';
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);padding:14px;text-align:center;">Error: ' + escapeHTML(String(e)) + '</div>';
+  }
+}
+
 async function devLogin(){const key=document.getElementById('dev-key-input').value;const err=document.getElementById('login-err');const r=await fetch('/api/dev/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});if(r.ok){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';loadOverview();loadAudit(5);loadSession();}else{err.classList.add('show');document.getElementById('dev-key-input').value='';setTimeout(()=>err.classList.remove('show'),3000);}}
 document.getElementById('dev-key-input').addEventListener('keydown',e=>{if(e.key==='Enter')devLogin();});
 function devLogout(){fetch('/api/dev/logout',{method:'POST'}).then(()=>{document.getElementById('portal').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('dev-key-input').value='';});}
@@ -14307,6 +14405,95 @@ def dev_reinit_db():
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/customers', methods=['GET'])
+@_dev_auth_required
+def dev_customers():
+    """Returns recent orders with device info for the Dev Portal customer tracker."""
+    try:
+        limit = min(int(request.args.get('limit', 30)), 100)
+        orders = Reservation.query.order_by(Reservation.created_at.desc()).limit(limit).all()
+        result = []
+        for o in orders:
+            ua = (o.user_agent or '').strip()
+            device = parse_user_agent(ua)
+            result.append({
+                "id": o.id,
+                "code": o.reservation_code,
+                "name": o.patron_name or '—',
+                "source": o.order_source or 'Online',
+                "status": o.status or '',
+                "ip": o.ip_address or '—',
+                "ua": ua,
+                "device": device,
+                "total": o.total_investment or 0.0,
+                "created_at": o.created_at.strftime('%b %d %H:%M') if o.created_at else '—'
+            })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def parse_user_agent(ua):
+    """Convert raw UA string into a human-readable device label."""
+    if not ua:
+        return '—'
+    # OS detection
+    if 'iPhone' in ua:
+        os = 'iPhone'
+    elif 'iPad' in ua:
+        os = 'iPad'
+    elif 'Android' in ua:
+        # Try to extract device model e.g. "SM-G991B" or "Pixel 6"
+        import re
+        m = re.search(r'Android [0-9.]+; ([^)]+)', ua)
+        os = m.group(1).strip() if m else 'Android'
+    elif 'Windows NT' in ua:
+        ver_map = {'10.0':'10/11','6.3':'8.1','6.2':'8','6.1':'7','6.0':'Vista'}
+        m2 = re.search(r'Windows NT ([0-9.]+)', ua) if True else None
+        import re
+        m2 = re.search(r'Windows NT ([0-9.]+)', ua)
+        os = 'Windows ' + ver_map.get(m2.group(1) if m2 else '', m2.group(1) if m2 else '') if m2 else 'Windows'
+    elif 'Macintosh' in ua or 'Mac OS X' in ua:
+        os = 'Mac'
+    elif 'Linux' in ua:
+        os = 'Linux'
+    elif 'CrOS' in ua:
+        os = 'ChromeOS'
+    else:
+        os = ''
+    # Browser detection
+    import re
+    if 'SamsungBrowser' in ua:
+        browser = 'Samsung Browser'
+    elif 'EdgA' in ua or 'EdgiOS' in ua or 'Edg/' in ua:
+        browser = 'Edge'
+    elif 'OPR/' in ua or 'OPiOS' in ua:
+        browser = 'Opera'
+    elif 'YaBrowser' in ua:
+        browser = 'Yandex'
+    elif 'UCBrowser' in ua:
+        browser = 'UC Browser'
+    elif 'FBAN' in ua or 'FBAV' in ua:
+        browser = 'Facebook App'
+    elif 'Instagram' in ua:
+        browser = 'Instagram App'
+    elif 'CriOS' in ua:
+        browser = 'Chrome (iOS)'
+    elif 'FxiOS' in ua:
+        browser = 'Firefox (iOS)'
+    elif 'Chrome' in ua:
+        m3 = re.search(r'Chrome/([0-9]+)', ua)
+        browser = f"Chrome {m3.group(1)}" if m3 else 'Chrome'
+    elif 'Firefox' in ua:
+        browser = 'Firefox'
+    elif 'Safari' in ua:
+        browser = 'Safari'
+    else:
+        browser = ''
+    parts = [x for x in [browser, os] if x]
+    return ' · '.join(parts) if parts else ua[:50]
 
 
 @app.route('/api/dev/force_migrate', methods=['POST'])
