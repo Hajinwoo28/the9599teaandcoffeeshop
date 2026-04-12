@@ -969,36 +969,31 @@ def send_otp_sms(phone: str, code: str) -> tuple:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # EMAIL VERIFICATION — sends a secure link to the customer's Gmail
-# Configure via environment variables:
-#   GMAIL_SENDER       — your Gmail address (e.g. store@gmail.com)
-#   GMAIL_APP_PASSWORD — 16-char App Password from Google Account → Security
-#   APP_BASE_URL       — public URL of the app (e.g. https://yourapp.vercel.app)
-#                        Falls back to request.host_url at send-time if not set.
+# Configure via environment variables (pick ONE method):
+#
+#   METHOD 1 — Resend (recommended for Vercel / serverless):
+#     RESEND_API_KEY     — API key from https://resend.com (free tier: 100 emails/day)
+#     RESEND_FROM        — verified sender, e.g. "9599 Tea & Coffee <verify@yourdomain.com>"
+#                          If unset, falls back to "onboarding@resend.dev" (Resend sandbox)
+#
+#   METHOD 2 — Gmail SMTP (works on local / non-Vercel hosting):
+#     GMAIL_SENDER       — your Gmail address (e.g. store@gmail.com)
+#     GMAIL_APP_PASSWORD — 16-char App Password from Google Account → Security
+#
+#   APP_BASE_URL — public URL of the app (e.g. https://yourapp.vercel.app)
+#                  Falls back to request.host_url at send-time if not set.
 # ══════════════════════════════════════════════════════════════════════════════
 
 def send_verification_email(to_email, verify_url):
     """
-    Send an HTML email with a 'Verify Your Email' button.
+    Send an HTML verification email.
+    Tries Resend API first (works on Vercel), then Gmail SMTP, then dev-mode fallback.
     Returns (success: bool, error_message: str).
     """
-    import smtplib
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
-    sender       = os.environ.get('GMAIL_SENDER', '').strip()
-    app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
-
-    if not sender or not app_password:
-        # Dev fallback — print the link to the terminal
-        print(f"\n{'='*60}")
-        print(f"  [DEV EMAIL VERIFICATION] No Gmail credentials configured.")
-        print(f"  To: {to_email}")
-        print(f"  Link: {verify_url}")
-        print(f"  Set GMAIL_SENDER and GMAIL_APP_PASSWORD to send real emails.")
-        print(f"{'='*60}\n")
-        return True, ''
-
-    subject  = "✅ Verify Your Email — 9599 Tea & Coffee"
+    subject = "✅ Verify Your Email — 9599 Tea & Coffee"
     html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -1007,7 +1002,6 @@ def send_verification_email(to_email, verify_url):
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EFE6;padding:40px 0;">
     <tr><td align="center">
       <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
-        <!-- Header -->
         <tr>
           <td style="background:linear-gradient(135deg,#4a1e0c,#8B5E3C);padding:32px 40px;text-align:center;">
             <div style="font-size:2rem;margin-bottom:8px;">🧋</div>
@@ -1015,7 +1009,6 @@ def send_verification_email(to_email, verify_url):
             <div style="color:#D7CCC8;font-size:0.78rem;letter-spacing:3px;margin-top:4px;font-weight:700;">EMAIL VERIFICATION</div>
           </td>
         </tr>
-        <!-- Body -->
         <tr>
           <td style="padding:36px 40px 28px;">
             <p style="color:#3E2723;font-size:1rem;font-weight:700;margin:0 0 10px;">Hi there! 👋</p>
@@ -1024,7 +1017,6 @@ def send_verification_email(to_email, verify_url):
               and confirm your identity, please verify your email address by clicking the button below.
               This link is valid for <strong>15 minutes</strong>.
             </p>
-            <!-- CTA Button -->
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr><td align="center" style="padding:10px 0 28px;">
                 <a href="{verify_url}"
@@ -1036,7 +1028,7 @@ def send_verification_email(to_email, verify_url):
               </td></tr>
             </table>
             <p style="color:#8D6E63;font-size:0.78rem;line-height:1.6;margin:0 0 8px;">
-              If you didn't request this, you can safely ignore this email — no order will be placed.
+              If you didn't request this, you can safely ignore this email.
             </p>
             <p style="color:#8D6E63;font-size:0.75rem;line-height:1.5;margin:0;">
               Or copy this link into your browser:<br>
@@ -1044,7 +1036,6 @@ def send_verification_email(to_email, verify_url):
             </p>
           </td>
         </tr>
-        <!-- Footer -->
         <tr>
           <td style="background:#FBF7F2;border-top:1px solid #EFEBE4;padding:18px 40px;text-align:center;">
             <p style="color:#BCAAA4;font-size:0.72rem;margin:0;">
@@ -1058,21 +1049,63 @@ def send_verification_email(to_email, verify_url):
 </body>
 </html>"""
 
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From']    = f"9599 Tea & Coffee <{sender}>"
-        msg['To']      = to_email
-        msg.attach(MIMEText(html_body, 'html'))
+    # ── METHOD 1: Resend API (HTTP-based — works on Vercel/serverless) ────────
+    resend_key = os.environ.get('RESEND_API_KEY', '').strip()
+    if resend_key:
+        from_addr = os.environ.get(
+            'RESEND_FROM',
+            '9599 Tea & Coffee <onboarding@resend.dev>'
+        ).strip()
+        try:
+            resp = requests.post(
+                'https://api.resend.com/emails',
+                headers={
+                    'Authorization': f'Bearer {resend_key}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'from':    from_addr,
+                    'to':      [to_email],
+                    'subject': subject,
+                    'html':    html_body,
+                },
+                timeout=10,
+            )
+            if resp.status_code in (200, 201):
+                return True, ''
+            body = resp.text
+            return False, f"Resend error {resp.status_code}: {body}"
+        except Exception as e:
+            return False, f"Resend request failed: {e}"
 
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(sender, app_password)
-            smtp.sendmail(sender, to_email, msg.as_string())
-        return True, ''
-    except smtplib.SMTPAuthenticationError:
-        return False, "Email authentication failed. Check GMAIL_SENDER and GMAIL_APP_PASSWORD."
-    except Exception as e:
-        return False, f"Email send error: {str(e)}"
+    # ── METHOD 2: Gmail SMTP (works on local / non-Vercel hosting) ───────────
+    sender       = os.environ.get('GMAIL_SENDER', '').strip()
+    app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+    if sender and app_password:
+        import smtplib
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From']    = f"9599 Tea & Coffee <{sender}>"
+            msg['To']      = to_email
+            msg.attach(MIMEText(html_body, 'html'))
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+                smtp.login(sender, app_password)
+                smtp.sendmail(sender, to_email, msg.as_string())
+            return True, ''
+        except smtplib.SMTPAuthenticationError:
+            return False, "Gmail authentication failed. Check GMAIL_SENDER and GMAIL_APP_PASSWORD."
+        except Exception as e:
+            return False, f"Gmail SMTP error: {e}"
+
+    # ── METHOD 3: Dev fallback — log link to terminal (no email sent) ─────────
+    print(f"\n{'='*60}")
+    print(f"  [DEV] No email provider configured.")
+    print(f"  To: {to_email}")
+    print(f"  Verification link: {verify_url}")
+    print(f"  Add RESEND_API_KEY (Vercel) or GMAIL_SENDER + GMAIL_APP_PASSWORD.")
+    print(f"{'='*60}\n")
+    return True, ''
 
 
 def get_or_create_reputation(email):
@@ -11394,7 +11427,14 @@ def send_email_verification():
 
     ok, err = send_verification_email(email, verify_url)
     if not ok:
-        return jsonify({"error": f"Could not send email: {err}"}), 500
+        # Log the real error server-side for the developer
+        print(f"[EMAIL ERROR] send_verification_email failed for {email}: {err}")
+        return jsonify({
+            "error": "Could not send verification email. "
+                     "Please ask the store owner to configure RESEND_API_KEY "
+                     "in their Vercel environment variables.",
+            "detail": err
+        }), 500
 
     # Store pending email in session so we can validate the token later
     session['pending_verify_email'] = email.lower()
