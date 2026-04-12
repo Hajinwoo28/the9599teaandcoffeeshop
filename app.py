@@ -4323,59 +4323,58 @@ function playGrantedSound() {
         const note   = document.getElementById('gate-geo-note');
         note.style.display = 'none';
 
-        // Check for secure context — geolocation requires HTTPS or localhost
-        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
-        const isSecure    = window.isSecureContext || location.protocol === 'https:' || isLocalhost;
-
-        if (!isSecure) {
-            gateShowManualFallback('⚠️ Location requires HTTPS. Enter your address below instead.');
-            return;
-        }
-
         if (!navigator.geolocation) {
             gateShowManualFallback('⚠️ Your browser does not support geolocation. Enter your address below.');
             return;
         }
 
+        // Visual feedback immediately on click
         btn.disabled = true;
-        btn.style.opacity = '0.7';
+        btn.style.opacity = '0.85';
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location…';
-        status.style.color  = 'var(--text-light)';
-        status.innerText    = 'Requesting permission…';
+        status.style.color = '#1565C0';
+        status.innerText   = '📡 Waiting for GPS… allow location if prompted.';
 
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                document.getElementById('gate-lat').value = lat;
-                document.getElementById('gate-lng').value = lng;
-                status.style.color = '#2E7D32';
-                status.innerText   = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
-                btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
-                btn.style.opacity    = '1';
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Confirmed ✓';
-                // Reverse geocode
-                try {
-                    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers:{'Accept-Language':'en'} });
-                    const d = await r.json();
-                    const addr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                    _gateGeoAddr = addr;
-                    status.innerText = '📍 ' + addr;
-                } catch(_) {
-                    _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                }
-            },
-            (err) => {
-                const msgs = {
-                    1: '⚠️ Location permission denied.',
-                    2: '⚠️ Unable to determine location.',
-                    3: '⚠️ Location request timed out.'
-                };
-                const msg = msgs[err.code] || '⚠️ Could not get location.';
-                gateShowManualFallback(msg + ' Enter your address below instead.');
-            },
-            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
-        );
+        try {
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    document.getElementById('gate-lat').value = lat;
+                    document.getElementById('gate-lng').value = lng;
+                    status.style.color = '#2E7D32';
+                    status.innerText   = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
+                    btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
+                    btn.style.opacity    = '1';
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Confirmed ✓';
+                    // Reverse geocode
+                    try {
+                        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers:{'Accept-Language':'en'} });
+                        const d = await r.json();
+                        _gateGeoAddr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                        status.innerText = '📍 ' + _gateGeoAddr;
+                    } catch(_) {
+                        _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    }
+                },
+                (err) => {
+                    const msgs = {
+                        1: '⚠️ Permission denied. Please allow location in your browser settings.',
+                        2: '⚠️ Unable to get your position. Check GPS signal.',
+                        3: '⚠️ Location request timed out.'
+                    };
+                    const isHttpBlock = !window.isSecureContext && location.protocol !== 'https:' &&
+                                        !['localhost','127.0.0.1','::1'].includes(location.hostname);
+                    const msg = isHttpBlock
+                        ? '⚠️ GPS requires HTTPS. Use the address field below or access via localhost.'
+                        : (msgs[err.code] || '⚠️ Could not get location.');
+                    gateShowManualFallback(msg);
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+            );
+        } catch(e) {
+            gateShowManualFallback('⚠️ Geolocation unavailable. Enter your address below.');
+        }
     }
 
     async function handleManualSignIn() {
@@ -15360,9 +15359,22 @@ if __name__ == '__main__':
         import webbrowser
         from threading import Timer
 
+        # Try HTTPS so GPS/geolocation works on mobile devices.
+        # Requires: pip install pyOpenSSL
+        ssl_ctx = None
+        try:
+            import OpenSSL  # noqa
+            ssl_ctx = 'adhoc'
+        except ImportError:
+            print(" WARNING: pyOpenSSL not found — running over HTTP.")
+            print("          GPS only works on this machine (localhost).")
+            print("          Fix: pip install pyOpenSSL")
+
+        scheme = 'https' if ssl_ctx else 'http'
+        local_ip = get_local_ip()
+
         def open_browser():
-            url = 'http://127.0.0.1:5000/login'
-            # Try Chrome first; fall back to default browser
+            url = f'{scheme}://127.0.0.1:5000/login'
             opened = False
             for chrome_name in ('chrome', 'google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'):
                 try:
@@ -15373,7 +15385,6 @@ if __name__ == '__main__':
                 except Exception:
                     continue
             if not opened:
-                # Windows: try registry path directly
                 import subprocess, sys
                 if sys.platform == 'win32':
                     try:
@@ -15382,13 +15393,14 @@ if __name__ == '__main__':
                     except Exception:
                         pass
                 if not opened:
-                    webbrowser.open_new(url)  # final fallback
-
+                    webbrowser.open_new(url)
         print("==================================================")
         print(" STARTING SYSTEM (DESKTOP APP MODE)")
-        print(f" CUSTOMER POS LINK: http://{get_local_ip()}:5000/")
-        print(" ADMIN DASHBOARD:   http://127.0.0.1:5000/login")
+        print(f" CUSTOMER POS LINK: {scheme}://{local_ip}:5000/")
+        print(f" ADMIN DASHBOARD:   {scheme}://127.0.0.1:5000/login")
+        if ssl_ctx:
+            print(" GPS works! If browser warns, click Advanced > Proceed.")
         print("==================================================")
-        
+
         Timer(1.5, open_browser).start()
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True)
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True, ssl_context=ssl_ctx)
