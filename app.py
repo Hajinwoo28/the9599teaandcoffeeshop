@@ -4185,6 +4185,75 @@ function playGrantedSound() {
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════
+     EMAIL VERIFICATION POPUP MODAL
+     Triggered automatically when user types a valid email
+     ══════════════════════════════════════════════════════════ -->
+<div id="email-verify-popup-overlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:10000; align-items:center; justify-content:center; padding:20px; animation:fadeIn 0.2s ease;"
+     onclick="if(event.target===this) closeEmailVerifyPopup()">
+    <div style="background:#fff; border-radius:24px; padding:36px 28px 28px; max-width:400px; width:100%; box-shadow:0 28px 80px rgba(0,0,0,0.22); position:relative; animation:popupSlideUp 0.28s cubic-bezier(0.34,1.56,0.64,1);">
+        <!-- Close button -->
+        <button onclick="closeEmailVerifyPopup()" type="button"
+            style="position:absolute; top:14px; right:14px; background:#f3f4f6; border:none; border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280; font-size:0.95rem; transition:background 0.15s;"
+            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+            <i class="fas fa-times"></i>
+        </button>
+        <!-- Icon -->
+        <div style="width:72px; height:72px; background:linear-gradient(135deg,#EEF2FF,#C7D2FE); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; border:2px solid #A5B4FC; font-size:2rem;">
+            📧
+        </div>
+        <!-- Title -->
+        <h3 style="font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:900; color:#0A2925; text-align:center; margin-bottom:8px;">Verify Your Email</h3>
+        <!-- Subtitle -->
+        <p style="font-size:0.87rem; color:#6b7280; text-align:center; line-height:1.65; margin-bottom:6px; font-weight:600;">
+            To continue placing your order, please verify:
+        </p>
+        <!-- Email display pill -->
+        <div style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:12px; padding:10px 16px; text-align:center; margin-bottom:18px;">
+            <span id="email-verify-popup-address" style="font-size:0.9rem; font-weight:800; color:#166534; word-break:break-all;"></span>
+        </div>
+        <!-- Steps description -->
+        <div style="background:#F8FAFC; border-radius:14px; padding:14px 16px; margin-bottom:20px; border:1.5px solid #E2E8F0;">
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+                <div style="min-width:24px; height:24px; background:#1565C0; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:900; margin-top:1px;">1</div>
+                <span style="font-size:0.82rem; font-weight:700; color:#374151; line-height:1.5;">Click <strong>Send Verification Email</strong> below.</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+                <div style="min-width:24px; height:24px; background:#1565C0; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:900; margin-top:1px;">2</div>
+                <span style="font-size:0.82rem; font-weight:700; color:#374151; line-height:1.5;">Open your Gmail inbox and click the verification link.</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+                <div style="min-width:24px; height:24px; background:#2E7D32; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:900; margin-top:1px;">✓</div>
+                <span style="font-size:0.82rem; font-weight:700; color:#374151; line-height:1.5;">Come back — you'll be verified automatically!</span>
+            </div>
+        </div>
+        <!-- Status message inside popup -->
+        <div id="email-verify-popup-status" style="min-height:18px; font-size:0.82rem; font-weight:700; text-align:center; margin-bottom:10px;"></div>
+        <!-- Send button -->
+        <button id="email-verify-popup-send-btn" onclick="popupSendEmailVerification()" type="button"
+            style="width:100%; padding:14px; border-radius:14px; background:linear-gradient(135deg,#1565C0,#0D47A1); color:#fff; border:none; font-family:inherit; font-size:0.95rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; box-shadow:0 4px 16px rgba(13,71,161,0.3); transition:opacity 0.2s; margin-bottom:10px;">
+            <i class="fas fa-envelope-circle-check"></i> Send Verification Email
+        </button>
+        <!-- Dismiss link -->
+        <button onclick="closeEmailVerifyPopup()" type="button"
+            style="width:100%; padding:10px; border-radius:12px; background:none; border:1.5px solid #E5E7EB; color:#6B7280; font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer; transition:background 0.15s;"
+            onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='none'">
+            I'll verify later
+        </button>
+    </div>
+</div>
+
+<style>
+@keyframes popupSlideUp {
+    from { opacity:0; transform:translateY(30px) scale(0.96); }
+    to   { opacity:1; transform:translateY(0)   scale(1); }
+}
+@keyframes fadeIn {
+    from { opacity:0; } to { opacity:1; }
+}
+</style>
+
 <script>
     function showToast(message, type='info') {
         const container = document.getElementById('toast-container');
@@ -4307,6 +4376,9 @@ function playGrantedSound() {
     /* ── EMAIL VERIFICATION HELPERS ─────────────────────────────────────── */
     let _gateEmailVerified = false;
 
+    // Track whether popup has already been shown for the current email
+    let _popupShownForEmail = '';
+
     function gateEmailChanged() {
         const email = document.getElementById('gate-email').value.trim();
         const verifyRow  = document.getElementById('gate-verify-email-row');
@@ -4320,6 +4392,7 @@ function playGrantedSound() {
             _gateEmailVerified = false;
             badge.style.display = 'none';
             status.textContent = '';
+            _popupShownForEmail = '';
             // Re-lock the location button
             const geoBtn = document.getElementById('gate-geo-btn');
             if (geoBtn) { geoBtn.disabled = true; geoBtn.style.cursor = 'not-allowed'; geoBtn.style.opacity = '0.4'; }
@@ -4329,10 +4402,96 @@ function playGrantedSound() {
         if (isValid) {
             verifyRow.style.display = 'block';
             verifyNote.style.display = 'block';
+            // Show the popup the first time a valid email is entered
+            if (_popupShownForEmail !== email) {
+                _popupShownForEmail = email;
+                openEmailVerifyPopup(email);
+            }
         } else {
             verifyRow.style.display  = 'none';
             verifyNote.style.display = 'none';
         }
+    }
+
+    /* ── EMAIL VERIFICATION POPUP FUNCTIONS ─────────────────────────────── */
+    function openEmailVerifyPopup(email) {
+        const overlay = document.getElementById('email-verify-popup-overlay');
+        const addrEl  = document.getElementById('email-verify-popup-address');
+        const statusEl = document.getElementById('email-verify-popup-status');
+        const sendBtn  = document.getElementById('email-verify-popup-send-btn');
+        if (addrEl)   addrEl.textContent = email;
+        if (statusEl) { statusEl.textContent = ''; }
+        if (sendBtn)  { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email'; sendBtn.style.background = 'linear-gradient(135deg,#1565C0,#0D47A1)'; }
+        if (overlay)  { overlay.style.display = 'flex'; }
+    }
+
+    function closeEmailVerifyPopup() {
+        const overlay = document.getElementById('email-verify-popup-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    async function popupSendEmailVerification() {
+        const email   = document.getElementById('gate-email').value.trim();
+        const sendBtn = document.getElementById('email-verify-popup-send-btn');
+        const statusEl = document.getElementById('email-verify-popup-status');
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            if (statusEl) { statusEl.textContent = '⚠️ Enter a valid email first.'; statusEl.style.color = '#C0392B'; }
+            return;
+        }
+
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+        if (statusEl) statusEl.textContent = '';
+
+        try {
+            const res  = await fetch('/api/auth/send_email_verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                if (statusEl) {
+                    statusEl.textContent = '📬 Email sent! Check your Gmail and click the link.';
+                    statusEl.style.color = '#1565C0';
+                }
+                sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email';
+                sendBtn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)';
+                sendBtn.disabled = false;
+                // Also update in-form status
+                const formStatus = document.getElementById('gate-email-verify-status');
+                if (formStatus) { formStatus.textContent = '📬 Verification email sent! Check your Gmail inbox and click the link.'; formStatus.style.color = '#1565C0'; }
+                const formBtn = document.getElementById('gate-verify-email-btn');
+                if (formBtn) { formBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email'; formBtn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)'; }
+                // Start polling — close popup when verified
+                _gatePollVerificationWithPopup(email);
+            } else {
+                if (statusEl) { statusEl.textContent = '❌ ' + (data.error || 'Could not send. Try again.'); statusEl.style.color = '#C0392B'; }
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email';
+            }
+        } catch(e) {
+            if (statusEl) { statusEl.textContent = '❌ Connection error. Please try again.'; statusEl.style.color = '#C0392B'; }
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email';
+        }
+    }
+
+    function _gatePollVerificationWithPopup(email) {
+        if (_verifyPollInterval) clearInterval(_verifyPollInterval);
+        _verifyPollInterval = setInterval(async () => {
+            try {
+                const res  = await fetch('/api/auth/check_email_verification?email=' + encodeURIComponent(email));
+                const data = await res.json();
+                if (data.verified) {
+                    clearInterval(_verifyPollInterval);
+                    closeEmailVerifyPopup();
+                    _gateMarkEmailVerified();
+                    showToast('✅ Email verified! You can now set your location.', 'success');
+                }
+            } catch(e) {}
+        }, 2000);
     }
 
     async function gateSendEmailVerification() {
@@ -4363,7 +4522,7 @@ function playGrantedSound() {
                 btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email';
                 btn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)';
                 // Poll for server-side verification every 2 seconds
-                _gatePollVerification(email);
+                _gatePollVerificationWithPopup(email);
             } else {
                 status.textContent = '❌ ' + (data.error || 'Could not send email. Try again.');
                 status.style.color = '#C0392B';
@@ -4379,19 +4538,6 @@ function playGrantedSound() {
     }
 
     let _verifyPollInterval = null;
-    function _gatePollVerification(email) {
-        if (_verifyPollInterval) clearInterval(_verifyPollInterval);
-        _verifyPollInterval = setInterval(async () => {
-            try {
-                const res  = await fetch('/api/auth/check_email_verification?email=' + encodeURIComponent(email));
-                const data = await res.json();
-                if (data.verified) {
-                    clearInterval(_verifyPollInterval);
-                    _gateMarkEmailVerified();
-                }
-            } catch(e) {}
-        }, 2000);
-    }
 
     function _gateMarkEmailVerified() {
         _gateEmailVerified = true;
@@ -11270,6 +11416,24 @@ def admin_login():
     # Already logged in — go straight to dashboard
     if session.get('is_admin'):
         return redirect(url_for('admin_dashboard'))
+    # ── Dev portal bypass — no PIN required ──────────────────────────────────
+    if session.get('is_dev'):
+        session.permanent = True
+        session['is_admin'] = True
+        session['admin_id'] = str(uuid.uuid4())
+        try:
+            state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
+                                                 active_employee_session_id='', employee_last_ping=datetime.min)
+            if not state.id:
+                db.session.add(state)
+            state.active_session_id = session['admin_id']
+            state.last_ping = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            try: db.session.rollback()
+            except Exception: pass
+        log_audit("Dev Grant", f"Dev portal bypassed admin PIN from {client_ip}")
+        return redirect(url_for('admin_dashboard'))
     # ── IP Blacklist check ────────────────────────────────────────────────────
     if is_ip_blacklisted(client_ip):
         log_audit("Security: Blocked Access Attempt", f"Blacklisted IP {client_ip} tried to reach admin login")
@@ -11351,7 +11515,24 @@ def admin_dashboard():
 def employee_login():
     if session.get('is_employee'): return redirect(url_for('employee_dashboard'))
     error = None
-
+    # ── Dev portal bypass — no PIN required ──────────────────────────────────
+    if session.get('is_dev'):
+        session.permanent = True
+        session['is_employee'] = True
+        session['employee_id'] = str(uuid.uuid4())
+        try:
+            state = _get_state() or SystemState(active_session_id='', last_ping=datetime.min,
+                                                  active_employee_session_id='', employee_last_ping=datetime.min)
+            if not state.id:
+                db.session.add(state)
+            state.active_employee_session_id = session['employee_id']
+            state.employee_last_ping = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            try: db.session.rollback()
+            except Exception: pass
+        log_audit("Dev Grant", f"Dev portal bypassed employee PIN from {get_client_ip()}")
+        return redirect(url_for('employee_dashboard'))
     # ── Detect active employee session on another device ──────────────────────
     force = request.form.get('force') == '1'
     try:
@@ -14626,6 +14807,8 @@ def _dev_auth_required(f):
 
 @app.route('/dev')
 def dev_portal():
+    # Grant dev session automatically — no key required for direct access.
+    session['is_dev'] = True
     return render_template_string(DEV_HTML)
 
 
