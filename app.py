@@ -4294,17 +4294,31 @@ function playGrantedSound() {
         status.style.color = '#1565C0';
         status.innerText   = '📡 Locating… please allow location access if prompted.';
 
+        // Helper: always re-fetch the button from the DOM inside async callbacks.
+        // Using the closure variable `btn` can silently fail (and leave the button
+        // permanently disabled) if the element was re-rendered between the time
+        // getCurrentPosition was called and when the callback fires.
+        const _resetGeoBtn = (label) => {
+            const b = document.getElementById('gate-geo-btn');
+            if (!b) return;
+            b.disabled     = false;
+            b.style.opacity = '1';
+            b.innerHTML    = label || '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
+        };
+
         const onSuccess = async (pos) => {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
-            document.getElementById('gate-lat').value = lat;
-            document.getElementById('gate-lng').value = lng;
-            btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
-            btn.style.opacity    = '1';
-            btn.disabled  = false;
-            btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Captured ✓';
-            status.style.color = '#2E7D32';
-            status.innerText   = '📍 Resolving address…';
+            const latEl = document.getElementById('gate-lat');
+            const lngEl = document.getElementById('gate-lng');
+            const st    = document.getElementById('gate-geo-status');
+            const ai    = document.getElementById('gate-manual-addr');
+            if (latEl) latEl.value = lat;
+            if (lngEl) lngEl.value = lng;
+            _resetGeoBtn('<i class="fas fa-check-circle"></i> Location Captured ✓');
+            const b = document.getElementById('gate-geo-btn');
+            if (b) b.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
+            if (st) { st.style.color = '#2E7D32'; st.innerText = '📍 Resolving address…'; }
             try {
                 const r = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
@@ -4315,35 +4329,31 @@ function playGrantedSound() {
             } catch(_) {
                 _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
             }
-            if (addrInput) {
-                addrInput.value = _gateGeoAddr;
-                addrInput.style.display = 'block';
-            }
-            status.innerText = '📍 ' + _gateGeoAddr;
+            if (ai) { ai.value = _gateGeoAddr; ai.style.display = 'block'; }
+            if (st) st.innerText = '📍 ' + _gateGeoAddr;
         };
 
         const onError = (err) => {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
-            status.style.color = '#C0392B';
-            const msgs = {
-                1: '⚠️ Location permission denied. Please allow location access in your browser settings and try again.',
-                2: '⚠️ Could not detect location. Check that GPS/Location is enabled on your device.',
-                3: '⚠️ Location request timed out. Please try again.'
-            };
-            status.innerText = msgs[err.code] || '⚠️ Could not get location. Please try again.';
+            _resetGeoBtn();
+            const st = document.getElementById('gate-geo-status');
+            if (st) {
+                st.style.color = '#C0392B';
+                const msgs = {
+                    1: '⚠️ Location permission denied. Please allow location access in your browser settings and try again.',
+                    2: '⚠️ Could not detect location. Check that GPS/Location is enabled on your device.',
+                    3: '⚠️ Location request timed out. Please try again.'
+                };
+                st.innerText = msgs[err.code] || '⚠️ Could not get location. Please try again.';
+            }
         };
 
         try {
             navigator.geolocation.getCurrentPosition(onSuccess, onError,
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
         } catch(e) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
-            status.style.color = '#C0392B';
-            status.innerText   = '⚠️ Location unavailable. Please ensure location services are enabled.';
+            _resetGeoBtn();
+            const st = document.getElementById('gate-geo-status');
+            if (st) { st.style.color = '#C0392B'; st.innerText = '⚠️ Location unavailable. Please ensure location services are enabled.'; }
         }
     }
 
