@@ -4126,18 +4126,12 @@ function playGrantedSound() {
                     <!-- Verified badge (hidden until verified) -->
                     <span id="gate-email-verified-badge" style="display:none; background:#E8F5E9; color:#2E7D32; border:1.5px solid #A5D6A7; border-radius:8px; padding:6px 10px; font-size:0.72rem; font-weight:900; white-space:nowrap; flex-shrink:0;"><i class="fas fa-check-circle"></i> Verified</span>
                 </div>
-                <!-- Verify button (shown after typing email) -->
-                <div id="gate-verify-email-row" style="display:none; margin-top:9px;">
-                    <button id="gate-verify-email-btn" type="button" onclick="gateSendEmailVerification()"
-                        style="width:100%; padding:11px 14px; border-radius:11px; background:linear-gradient(135deg,#1565C0,#0D47A1); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity 0.2s; box-shadow:0 3px 12px rgba(13,71,161,0.3);">
-                        <i class="fas fa-envelope-circle-check"></i> Verify Your Email
-                    </button>
+                <!-- Verify button row — hidden; verification is handled via popup -->
+                <div id="gate-verify-email-row" style="display:none;">
                     <div id="gate-email-verify-status" style="margin-top:7px; font-size:0.8rem; font-weight:700; min-height:16px; text-align:center;"></div>
                 </div>
-                <!-- Instruction shown while waiting for click -->
-                <div id="gate-email-verify-note" style="display:none; margin-top:7px; background:#E3F2FD; border:1.5px solid #90CAF9; border-radius:10px; padding:9px 12px; font-size:0.78rem; font-weight:700; color:#1565C0; line-height:1.5;">
-                    <i class="fas fa-info-circle"></i> A verification link will be sent to your Gmail. Click it to unlock the order button.
-                </div>
+                <!-- Instruction note — hidden; handled via popup -->
+                <div id="gate-email-verify-note" style="display:none;"></div>
             </div>
             <div style="text-align:left; margin-bottom:16px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number *</label>
@@ -4164,7 +4158,7 @@ function playGrantedSound() {
             <button id="gate-btn" onclick="handleManualSignIn()" disabled
                 style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:not-allowed; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; opacity:0.45;"
                 id="gate-btn">
-                <i class="fas fa-lock" id="gate-btn-icon"></i> <span id="gate-btn-text">Verify Email to Continue</span>
+                <i class="fas fa-lock" id="gate-btn-icon"></i> <span id="gate-btn-text">Proceed to Order</span>
             </button>
             <div id="gate-error" style="display:none; margin-top:12px; background:#FFF0F0; color:#C0392B; padding:10px 14px; border-radius:10px; font-size:0.82rem; font-weight:700; border:1.5px solid #F5C6C6;">
                 <i class="fas fa-exclamation-circle"></i> <span id="gate-error-msg"></span>
@@ -4379,19 +4373,19 @@ function playGrantedSound() {
     // Track whether popup has already been shown for the current email
     let _popupShownForEmail = '';
 
+    let _emailPopupTimer = null;
+
     function gateEmailChanged() {
-        const email = document.getElementById('gate-email').value.trim();
-        const verifyRow  = document.getElementById('gate-verify-email-row');
-        const verifyNote = document.getElementById('gate-email-verify-note');
-        const badge      = document.getElementById('gate-email-verified-badge');
-        const status     = document.getElementById('gate-email-verify-status');
+        const email  = document.getElementById('gate-email').value.trim();
+        const badge  = document.getElementById('gate-email-verified-badge');
+        const status = document.getElementById('gate-email-verify-status');
         const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
         // If the email changed, reset verified state
         if (_gateEmailVerified) {
             _gateEmailVerified = false;
             badge.style.display = 'none';
-            status.textContent = '';
+            if (status) status.textContent = '';
             _popupShownForEmail = '';
             // Re-lock the location button
             const geoBtn = document.getElementById('gate-geo-btn');
@@ -4399,17 +4393,15 @@ function playGrantedSound() {
             _gateUpdateContinueBtn();
         }
 
-        if (isValid) {
-            verifyRow.style.display = 'block';
-            verifyNote.style.display = 'block';
-            // Show the popup the first time a valid email is entered
-            if (_popupShownForEmail !== email) {
-                _popupShownForEmail = email;
-                openEmailVerifyPopup(email);
-            }
-        } else {
-            verifyRow.style.display  = 'none';
-            verifyNote.style.display = 'none';
+        // Debounce: open popup 600ms after user stops typing a valid email
+        clearTimeout(_emailPopupTimer);
+        if (isValid && _popupShownForEmail !== email) {
+            _emailPopupTimer = setTimeout(() => {
+                if (_popupShownForEmail !== email) {
+                    _popupShownForEmail = email;
+                    openEmailVerifyPopup(email);
+                }
+            }, 600);
         }
     }
 
@@ -4570,14 +4562,13 @@ function playGrantedSound() {
             btn.style.opacity = '1';
             btn.style.cursor  = 'pointer';
             if (icon)    { icon.className = 'fas fa-mug-hot'; }
-            if (txtSpan) { txtSpan.textContent = 'Continue to Order'; }
         } else {
             btn.disabled      = true;
             btn.style.opacity = '0.45';
             btn.style.cursor  = 'not-allowed';
             if (icon)    { icon.className = 'fas fa-lock'; }
-            if (txtSpan) { txtSpan.textContent = 'Verify Email to Continue'; }
         }
+        if (txtSpan) { txtSpan.textContent = 'Proceed to Order'; }
     }
 
     /* ── CUSTOMER SITE ANNOUNCEMENTS ─────────────────────────────────────── */
