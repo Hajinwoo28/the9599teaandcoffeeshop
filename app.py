@@ -7362,7 +7362,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* Decorative radial glows */
 .admin-nav-drawer::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 160px 120px at 20% 15%,rgba(196,168,130,0.07) 0%,transparent 70%),radial-gradient(ellipse 200px 150px at 85% 80%,rgba(122,79,46,0.1) 0%,transparent 70%);}
 /* Thin tan left-edge stripe */
-.admin-nav-drawer::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent 0%,rgba(196,168,130,0.25) 20%,rgba(196,168,130,0.4) 50%,rgba(196,168,130,0.25) 80%,transparent 100%);}
+
 .admin-nav-drawer.open{transform:translateX(0);}
 
 /* ── DESKTOP PERMANENT SIDEBAR LAYOUT ── */
