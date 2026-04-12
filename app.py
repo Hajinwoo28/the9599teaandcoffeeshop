@@ -7456,7 +7456,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
 
 /* Admin pill in header */
-.admin-drawer-role-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:5px;padding:2px 6px;margin:-6px 10px 8px;width:fit-content;}
+.admin-drawer-role-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:5px;padding:2px 6px;width:fit-content;}
 .admin-drawer-role-dot{width:4px;height:4px;border-radius:50%;background:#4CAF50;box-shadow:0 0 5px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
 @keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 4px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 8px rgba(76,175,80,0.9);}}
 .admin-drawer-role-info{flex:1;min-width:0;}
@@ -7886,7 +7886,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="brand">9599 Tea &amp; Coffee</div>
       <div class="brand-sub">Parne Na!</div>
     </div>
-    <div class="admin-pill" style="margin-left:6px;"><i class="fas fa-shield-alt"></i> Admin</div>
+    <div class="admin-drawer-role-pill" style="margin-left:8px;margin-bottom:0;">
+      <div class="admin-drawer-role-dot"></div>
+      <div class="admin-drawer-role-info">
+        <div class="admin-drawer-role-title">Administrator</div>
+        <div class="admin-drawer-role-sub">Full access granted</div>
+      </div>
+    </div>
   </div>
   <div class="topbar-right">
     <div id="clock" class="clock-chip">00:00 PM</div>
@@ -7917,16 +7923,6 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <div class="admin-drawer-header" style="justify-content:flex-end;">
     <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
   </div>
-
-  <div class="admin-drawer-role-pill">
-    <div class="admin-drawer-role-dot"></div>
-    <div class="admin-drawer-role-info">
-      <div class="admin-drawer-role-title">Administrator</div>
-      <div class="admin-drawer-role-sub">Full access granted</div>
-    </div>
-  </div>
-
-  
 
   <div class="admin-drawer-nav">
     <button class="admin-nav-item active" id="nb-dashboard" onclick="goScreen('dashboard',this);closeAdminMenu()">
