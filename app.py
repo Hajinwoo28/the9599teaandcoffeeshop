@@ -3978,7 +3978,7 @@ STOREFRONT_HTML = """
         .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600; color: var(--text-dark); }
         .notif-item .notif-time { font-size: 0.7rem; color: var(--text-light); margin-top: 2px; }
         .notif-empty { padding: 20px 16px; text-align: center; color: var(--text-light); font-size: 0.82rem; font-weight: 600; }
-        .gate-wrapper { display: flex; height: 100vh; width: 100vw; justify-content: center; align-items: center; background: var(--bg-base); padding: 20px; flex-direction: column; }
+        .gate-wrapper { display: flex; position: fixed; inset: 0; z-index: 9999; justify-content: center; align-items: center; background: var(--bg-base); padding: 20px; flex-direction: column; overflow-y: auto; }
 
         /* ── Location Banner ── */
         .location-banner { background: linear-gradient(90deg, #6F4E37, #A67B5B); color: #fff; padding: 6px 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: opacity 0.2s; }
