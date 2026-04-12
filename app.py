@@ -7456,7 +7456,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
 
 /* Admin pill in header */
-.admin-drawer-role-pill{display:flex;align-items:center;gap:5px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:6px;padding:3px 8px;margin:0 10px 8px;}
+.admin-drawer-role-pill{display:flex;align-items:center;gap:5px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:6px;padding:3px 8px;margin:-6px 10px 8px;}
 .admin-drawer-role-dot{width:5px;height:5px;border-radius:50%;background:#4CAF50;box-shadow:0 0 6px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
 @keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 4px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 8px rgba(76,175,80,0.9);}}
 .admin-drawer-role-info{flex:1;min-width:0;}
