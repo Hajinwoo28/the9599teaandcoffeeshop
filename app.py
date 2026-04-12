@@ -7456,12 +7456,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
 
 /* Admin pill in header */
-.admin-drawer-role-pill{display:flex;align-items:center;gap:5px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:6px;padding:3px 8px;margin:-6px 10px 8px;}
-.admin-drawer-role-dot{width:5px;height:5px;border-radius:50%;background:#4CAF50;box-shadow:0 0 6px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
+.admin-drawer-role-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:5px;padding:2px 6px;margin:-6px 10px 8px;width:fit-content;}
+.admin-drawer-role-dot{width:4px;height:4px;border-radius:50%;background:#4CAF50;box-shadow:0 0 5px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
 @keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 4px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 8px rgba(76,175,80,0.9);}}
 .admin-drawer-role-info{flex:1;min-width:0;}
-.admin-drawer-role-title{font-size:0.48rem;font-weight:900;color:var(--tan);letter-spacing:1.2px;text-transform:uppercase;}
-.admin-drawer-role-sub{font-size:0.52rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:0px;}
+.admin-drawer-role-title{font-size:0.43rem;font-weight:900;color:var(--tan);letter-spacing:1px;text-transform:uppercase;}
+.admin-drawer-role-sub{font-size:0.46rem;font-weight:700;color:rgba(255,255,255,0.45);margin-top:0px;}
 
 .admin-drawer-section-label{font-size:0.62rem;font-weight:900;color:rgba(196,168,130,0.3);letter-spacing:2.5px;text-transform:uppercase;padding:12px 16px 6px;display:flex;align-items:center;gap:8px;}
 .admin-drawer-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06);}
@@ -8647,14 +8647,8 @@ ens-wrap">
       </div>
 
       <!-- Analytics Charts -->
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-size:0.74rem;font-weight:800;color:var(--muted);">Showing:</span>
-        <span id="an-active-label" style="font-size:0.74rem;font-weight:900;color:var(--brown);background:rgba(123,79,46,0.1);padding:3px 10px;border-radius:20px;">Last 7 Days</span>
-      </div>
-      <div class="section card" style="padding:14px;">
-        <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Revenue Trend (₱)</div>
-        <canvas id="an-revenue-chart" height="160"></canvas>
-      </div>
+
+
       <div class="section card" style="padding:14px;">
           <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hourly Orders (Today)</div>
           <canvas id="an-hourly-chart" height="200"></canvas>
