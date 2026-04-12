@@ -4144,14 +4144,13 @@ function playGrantedSound() {
             <div style="text-align:left; margin-bottom:20px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:7px;">Your Location <span style="color:#C0392B;">*</span></label>
                 <!-- Always-visible address input — GPS button fills it automatically -->
-                <input id="gate-manual-addr" type="text" placeholder="Tap GPS button, or type your address here"
-                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.92rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s; box-sizing:border-box; margin-bottom:8px;"
-                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'"
-                    oninput="gateManualAddrInput()">
                 <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button"
-                    style="width:100%; padding:11px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.25); opacity:1;">
+                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.25); opacity:1;">
                     <i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)
                 </button>
+                <!-- Read-only address display shown after GPS capture -->
+                <input id="gate-manual-addr" type="text" readonly
+                    style="display:none; width:100%; padding:11px 14px; border:2px solid #4CAF50; border-radius:12px; font-size:0.85rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#F0FFF4; outline:none; box-sizing:border-box; margin-top:8px;">
                 <input type="hidden" id="gate-lat" value="">
                 <input type="hidden" id="gate-lng" value="">
                 <div id="gate-geo-status" style="margin-top:7px; font-size:0.8rem; font-weight:700; color:var(--text-light); min-height:16px;"></div>
@@ -4276,21 +4275,6 @@ function playGrantedSound() {
     // ── Gate geolocation ─────────────────────────────────────────────────────
     let _gateGeoAddr = '';
 
-    function gateManualAddrInput() {
-        const input = document.getElementById('gate-manual-addr');
-        const val   = input ? input.value.trim() : '';
-        const note  = document.getElementById('gate-geo-note');
-        if (val.length >= 5) {
-            _gateGeoAddr = val;
-            document.getElementById('gate-lat').value = '14.0000';
-            document.getElementById('gate-lng').value = '121.0000';
-            if (note) note.style.display = 'none';
-        } else {
-            document.getElementById('gate-lat').value = '';
-            document.getElementById('gate-lng').value = '';
-        }
-    }
-
     function gateUseMyLocation() {
         const btn       = document.getElementById('gate-geo-btn');
         const status    = document.getElementById('gate-geo-status');
@@ -4335,7 +4319,7 @@ function playGrantedSound() {
                     }
                     if (addrInput) {
                         addrInput.value = _gateGeoAddr;
-                        addrInput.style.borderColor = '#4CAF50';
+                        addrInput.style.display = 'block';
                     }
                     status.innerText = '📍 ' + _gateGeoAddr;
                 },
