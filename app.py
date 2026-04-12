@@ -12445,6 +12445,33 @@ def update_order_status(order_id):
                 pass
         except Exception:
             pass  # Never block status update due to log failure
+
+        # ── Deduct ingredients based on each item's recipe ──
+        try:
+            deduction_log = []
+            for infusion in order.infusions:
+                # Match by name (case-insensitive strip)
+                menu_item = MenuItem.query.filter(
+                    db.func.lower(MenuItem.name) == infusion.foundation.strip().lower()
+                ).first()
+                if not menu_item:
+                    continue
+                recipes = RecipeItem.query.filter_by(menu_item_id=menu_item.id).all()
+                for recipe in recipes:
+                    ingredient = Ingredient.query.get(recipe.ingredient_id)
+                    if ingredient:
+                        before = ingredient.stock
+                        ingredient.stock = max(0.0, ingredient.stock - recipe.quantity_required)
+                        deduction_log.append(
+                            f"{ingredient.name}: {before} → {ingredient.stock} {ingredient.unit}"
+                        )
+            if deduction_log:
+                log_audit(
+                    "Ingredient Deduction",
+                    f"Order {order.reservation_code} completed — {'; '.join(deduction_log)}"
+                )
+        except Exception as deduct_err:
+            pass  # Never block status update due to deduction failure
     db.session.commit()
     push_event('order_status', {'id': order_id, 'status': new_status})
     return jsonify({"status": "success"})
