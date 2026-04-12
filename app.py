@@ -4153,6 +4153,17 @@ function playGrantedSound() {
                 <div id="gate-geo-note" style="margin-top:6px; font-size:0.75rem; color:#C0392B; font-weight:700; display:none;">
                     <i class="fas fa-exclamation-circle"></i> Location is required to continue.
                 </div>
+                <!-- Manual address fallback (shown when geolocation is unavailable) -->
+                <div id="gate-manual-addr-wrap" style="display:none; margin-top:10px;">
+                    <div style="font-size:0.74rem; font-weight:800; color:#1565C0; margin-bottom:6px; display:flex; align-items:center; gap:5px;">
+                        <i class="fas fa-pencil-alt"></i> Enter your address manually instead:
+                    </div>
+                    <input id="gate-manual-addr" type="text" placeholder="e.g. 123 Rizal St, San Pablo, Laguna"
+                        style="width:100%; padding:12px 14px; border:2px solid #90CAF9; border-radius:11px; font-size:0.9rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#EFF6FF; outline:none; transition:border-color 0.2s; box-sizing:border-box;"
+                        onfocus="this.style.borderColor='#1565C0'" onblur="this.style.borderColor='#90CAF9'"
+                        oninput="gateManualAddrInput()">
+                    <div id="gate-manual-addr-status" style="margin-top:5px; font-size:0.75rem; font-weight:700; min-height:14px;"></div>
+                </div>
             </div>
 
             <button id="gate-btn" onclick="handleManualSignIn()"
@@ -4270,6 +4281,41 @@ function playGrantedSound() {
 
     // ── Gate geolocation ─────────────────────────────────────────────────────
     let _gateGeoAddr = '';   // stores reverse-geocoded address from sign-in location button
+    let _gateManualMode = false;  // true when using manual address entry
+
+    function gateShowManualFallback(reason) {
+        const wrap   = document.getElementById('gate-manual-addr-wrap');
+        const status = document.getElementById('gate-geo-status');
+        const btn    = document.getElementById('gate-geo-btn');
+        if (wrap) wrap.style.display = 'block';
+        if (status) {
+            status.style.color = '#C0392B';
+            status.innerText   = reason;
+        }
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.45';
+            btn.style.cursor  = 'not-allowed';
+        }
+        _gateManualMode = true;
+    }
+
+    function gateManualAddrInput() {
+        const input  = document.getElementById('gate-manual-addr');
+        const mStat  = document.getElementById('gate-manual-addr-status');
+        const val    = (input ? input.value.trim() : '');
+        if (val.length >= 5) {
+            _gateGeoAddr = val;
+            // Use fake coords so backend location check passes; real address stored in _gateGeoAddr
+            document.getElementById('gate-lat').value = '14.0000';
+            document.getElementById('gate-lng').value = '121.0000';
+            if (mStat) { mStat.style.color = '#2E7D32'; mStat.textContent = '✅ Address saved.'; }
+        } else {
+            document.getElementById('gate-lat').value = '';
+            document.getElementById('gate-lng').value = '';
+            if (mStat) { mStat.style.color = '#C0392B'; mStat.textContent = val.length ? 'Please enter a more complete address.' : ''; }
+        }
+    }
 
     function gateUseMyLocation() {
         const btn    = document.getElementById('gate-geo-btn');
@@ -4277,12 +4323,22 @@ function playGrantedSound() {
         const note   = document.getElementById('gate-geo-note');
         note.style.display = 'none';
 
-        if (!navigator.geolocation) {
-            status.style.color = '#C0392B';
-            status.innerText   = '⚠️ Geolocation is not supported by your browser.';
+        // Check for secure context — geolocation requires HTTPS or localhost
+        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+        const isSecure    = window.isSecureContext || location.protocol === 'https:' || isLocalhost;
+
+        if (!isSecure) {
+            gateShowManualFallback('⚠️ Location requires HTTPS. Enter your address below instead.');
             return;
         }
+
+        if (!navigator.geolocation) {
+            gateShowManualFallback('⚠️ Your browser does not support geolocation. Enter your address below.');
+            return;
+        }
+
         btn.disabled = true;
+        btn.style.opacity = '0.7';
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location…';
         status.style.color  = 'var(--text-light)';
         status.innerText    = 'Requesting permission…';
@@ -4296,8 +4352,9 @@ function playGrantedSound() {
                 status.style.color = '#2E7D32';
                 status.innerText   = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
                 btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
+                btn.style.opacity    = '1';
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Confirmed ✓';
-                // Reverse geocode and store address for order history
+                // Reverse geocode
                 try {
                     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers:{'Accept-Language':'en'} });
                     const d = await r.json();
@@ -4309,11 +4366,13 @@ function playGrantedSound() {
                 }
             },
             (err) => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
-                status.style.color = '#C0392B';
-                const msgs = {1:'Permission denied. Please allow location access in your browser.', 2:'Unable to determine your location.', 3:'Location request timed out.'};
-                status.innerText = '⚠️ ' + (msgs[err.code] || 'Could not get location.');
+                const msgs = {
+                    1: '⚠️ Location permission denied.',
+                    2: '⚠️ Unable to determine location.',
+                    3: '⚠️ Location request timed out.'
+                };
+                const msg = msgs[err.code] || '⚠️ Could not get location.';
+                gateShowManualFallback(msg + ' Enter your address below instead.');
             },
             { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
         );
@@ -11277,7 +11336,7 @@ def manual_auth():
     if not email or '@' not in email:
         return jsonify({"error": "A valid email address is required."}), 400
     if not lat or not lng:
-        return jsonify({"error": "Location is required. Please use 'Use My Current Location'."}), 400
+        return jsonify({"error": "Location is required. Please use the location button or enter your address manually."}), 400
     # Require email verification before granting access
     verified_email = session.get('email_verified_for', '').strip().lower()
     if verified_email != email.lower():
