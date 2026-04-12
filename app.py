@@ -4149,8 +4149,8 @@ function playGrantedSound() {
             <!-- Location (required) -->
             <div style="text-align:left; margin-bottom:20px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:7px;">Your Location <span style="color:#C0392B;">*</span></label>
-                <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button"
-                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.93rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; transition:opacity 0.2s; box-shadow:0 3px 12px rgba(13,74,61,0.3);">
+                <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button" disabled
+                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.93rem; font-weight:800; cursor:not-allowed; display:flex; align-items:center; justify-content:center; gap:9px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.3); opacity:0.4;">
                     <i class="fas fa-map-marker-alt"></i> Use My Current Location
                 </button>
                 <input type="hidden" id="gate-lat" value="">
@@ -4320,6 +4320,9 @@ function playGrantedSound() {
             _gateEmailVerified = false;
             badge.style.display = 'none';
             status.textContent = '';
+            // Re-lock the location button
+            const geoBtn = document.getElementById('gate-geo-btn');
+            if (geoBtn) { geoBtn.disabled = true; geoBtn.style.cursor = 'not-allowed'; geoBtn.style.opacity = '0.4'; }
             _gateUpdateContinueBtn();
         }
 
@@ -4396,12 +4399,18 @@ function playGrantedSound() {
         const status = document.getElementById('gate-email-verify-status');
         const note   = document.getElementById('gate-email-verify-note');
         const row    = document.getElementById('gate-verify-email-row');
+        const geoBtn = document.getElementById('gate-geo-btn');
         if (badge)  { badge.style.display = 'inline-flex'; }
-        if (status) { status.textContent = '✅ Email verified! You may now proceed.'; status.style.color = '#2E7D32'; }
+        if (status) { status.textContent = '✅ Email verified! You may now set your location.'; status.style.color = '#2E7D32'; }
         if (note)   { note.style.display = 'none'; }
         if (row)    {
             const vBtn = document.getElementById('gate-verify-email-btn');
             if (vBtn) vBtn.style.display = 'none';
+        }
+        if (geoBtn) {
+            geoBtn.disabled = false;
+            geoBtn.style.cursor = 'pointer';
+            geoBtn.style.opacity = '1';
         }
         _gateUpdateContinueBtn();
     }
