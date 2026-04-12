@@ -1050,6 +1050,7 @@ def send_verification_email(to_email, verify_url):
 </html>"""
 
     # ── METHOD 1: Resend API (HTTP-based — works on Vercel/serverless) ────────
+    # Cascades to Method 2 / Method 3 on failure instead of aborting.
     resend_key = os.environ.get('RESEND_API_KEY', '').strip()
     if resend_key:
         from_addr = os.environ.get(
@@ -1073,12 +1074,17 @@ def send_verification_email(to_email, verify_url):
             )
             if resp.status_code in (200, 201):
                 return True, ''
-            body = resp.text
-            return False, f"Resend error {resp.status_code}: {body}"
+            # Log and cascade — common when using sandbox sender
+            # (onboarding@resend.dev can only deliver to the account owner's email).
+            # Fix: set RESEND_FROM to a verified domain address in Vercel env vars.
+            resend_err = f"Resend error {resp.status_code}: {resp.text}"
+            print(f"[EMAIL] Resend failed, trying next method. {resend_err}")
         except Exception as e:
-            return False, f"Resend request failed: {e}"
+            resend_err = f"Resend request failed: {e}"
+            print(f"[EMAIL] Resend exception, trying next method. {resend_err}")
 
     # ── METHOD 2: Gmail SMTP (works on local / non-Vercel hosting) ───────────
+    # Cascades to Method 3 on failure instead of aborting.
     sender       = os.environ.get('GMAIL_SENDER', '').strip()
     app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
     if sender and app_password:
@@ -1094,16 +1100,21 @@ def send_verification_email(to_email, verify_url):
                 smtp.sendmail(sender, to_email, msg.as_string())
             return True, ''
         except smtplib.SMTPAuthenticationError:
-            return False, "Gmail authentication failed. Check GMAIL_SENDER and GMAIL_APP_PASSWORD."
+            print("[EMAIL] Gmail auth failed, falling back to dev mode. "
+                  "Check GMAIL_SENDER and GMAIL_APP_PASSWORD.")
         except Exception as e:
-            return False, f"Gmail SMTP error: {e}"
+            print(f"[EMAIL] Gmail SMTP error, falling back to dev mode: {e}")
 
     # ── METHOD 3: Dev fallback — log link to terminal (no email sent) ─────────
+    # Always succeeds so a misconfigured email provider never causes a 500.
+    # The customer must open the link manually (share it via the store owner).
+    # To send real emails: set RESEND_API_KEY + RESEND_FROM in Vercel env vars,
+    # or set GMAIL_SENDER + GMAIL_APP_PASSWORD.
     print(f"\n{'='*60}")
-    print(f"  [DEV] No email provider configured.")
+    print(f"  [DEV FALLBACK] No working email provider — link logged here.")
     print(f"  To: {to_email}")
     print(f"  Verification link: {verify_url}")
-    print(f"  Add RESEND_API_KEY (Vercel) or GMAIL_SENDER + GMAIL_APP_PASSWORD.")
+    print(f"  Configure RESEND_API_KEY (Vercel) or GMAIL_SENDER + GMAIL_APP_PASSWORD.")
     print(f"{'='*60}\n")
     return True, ''
 
