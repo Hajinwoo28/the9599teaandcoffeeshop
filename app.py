@@ -4148,13 +4148,13 @@ function playGrantedSound() {
                     style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.25); opacity:1;">
                     <i class="fas fa-map-marker-alt"></i> Use My Current Location
                 </button>
-                <!-- Address field: auto-filled by GPS/IP, or typed manually as fallback -->
+                <!-- Address: auto-filled by GPS/IP, or typed manually as fallback -->
                 <input id="gate-manual-addr" type="text"
                     style="display:none; width:100%; padding:11px 14px; border:2px solid #4CAF50; border-radius:12px; font-size:0.85rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#F0FFF4; outline:none; box-sizing:border-box; margin-top:8px;"
                     placeholder="Or type your address here…"
                     oninput="gateOnAddrInput()"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();gateConfirmAddress();}">
-                <!-- Confirm button shown only when user types manually -->
+                <!-- Shown only when user needs to type manually -->
                 <button id="gate-addr-confirm-btn" type="button" onclick="gateConfirmAddress()"
                     style="display:none; width:100%; margin-top:7px; padding:10px 14px; border-radius:10px; background:linear-gradient(135deg,#1565C0,#0D47A1); color:#fff; border:none; font-family:inherit; font-size:0.83rem; font-weight:800; cursor:pointer; gap:7px; align-items:center; justify-content:center;">
                     <i class="fas fa-search-location"></i> Confirm This Address
@@ -4282,83 +4282,51 @@ function playGrantedSound() {
 
     // ── Gate geolocation ─────────────────────────────────────────────────────
     let _gateGeoAddr = '';
-    let _gateCoordsCaptured = false; // true once we have valid lat/lng
 
-    // ── Shared helpers ───────────────────────────────────────────────────────
     function _gateSetBtn(label, bg, disabled) {
         const b = document.getElementById('gate-geo-btn');
         if (!b) return;
-        b.disabled     = !!disabled;
+        b.disabled = !!disabled;
         b.style.opacity = disabled ? '0.8' : '1';
         b.style.background = bg || 'linear-gradient(135deg,#1a6b5a,#0d4a3d)';
-        b.innerHTML    = label;
+        b.innerHTML = label;
     }
-
     function _gateSetStatus(msg, color) {
         const s = document.getElementById('gate-geo-status');
         if (!s) return;
         s.style.color = color || 'var(--text-light)';
-        s.innerText   = msg || '';
+        s.innerText = msg || '';
     }
-
     function _gateSetCoords(lat, lng) {
         const latEl = document.getElementById('gate-lat');
         const lngEl = document.getElementById('gate-lng');
         if (latEl) latEl.value = lat;
         if (lngEl) lngEl.value = lng;
-        _gateCoordsCaptured = true;
     }
-
     function _gateShowAddr(addr, exact) {
         _gateGeoAddr = addr;
         const ai = document.getElementById('gate-manual-addr');
-        if (ai) {
-            ai.value = addr;
-            ai.style.display      = 'block';
-            ai.style.border       = '2px solid #4CAF50';
-            ai.style.background   = '#F0FFF4';
-            ai.removeAttribute('readonly'); // always allow editing after capture
-        }
+        if (ai) { ai.value = addr; ai.style.display = 'block'; ai.style.border = '2px solid #4CAF50'; ai.style.background = '#F0FFF4'; ai.removeAttribute('readonly'); }
         _gateSetStatus((exact ? '📍 ' : '📍 Approx: ') + addr, '#2E7D32');
-        _gateSetBtn(
-            '<i class="fas fa-check-circle"></i> Location Captured ✓',
-            'linear-gradient(135deg,#2E7D32,#1B5E20)',
-            false
-        );
-        // Hide the manual confirm button — coords are already resolved
+        _gateSetBtn('<i class="fas fa-check-circle"></i> Location Captured ✓', 'linear-gradient(135deg,#2E7D32,#1B5E20)', false);
         const cb = document.getElementById('gate-addr-confirm-btn');
         if (cb) cb.style.display = 'none';
     }
-
     function _gateShowManualInput(msg) {
         _gateSetStatus(msg || '⚠️ Auto-detect failed. Type your address below and press Confirm.', '#C0392B');
         _gateSetBtn('<i class="fas fa-map-marker-alt"></i> Try GPS Again', 'linear-gradient(135deg,#1a6b5a,#0d4a3d)', false);
         const ai = document.getElementById('gate-manual-addr');
-        if (ai) {
-            ai.style.display    = 'block';
-            ai.style.border     = '2px solid #E57373';
-            ai.style.background = '#fff';
-            ai.placeholder      = 'Type your full address, then press Confirm…';
-            ai.removeAttribute('readonly');
-            ai.focus();
-        }
+        if (ai) { ai.style.display = 'block'; ai.style.border = '2px solid #E57373'; ai.style.background = '#fff'; ai.placeholder = 'Type your full address, then press Confirm…'; ai.removeAttribute('readonly'); ai.focus(); }
         const cb = document.getElementById('gate-addr-confirm-btn');
         if (cb) { cb.style.display = 'flex'; cb.disabled = false; cb.innerHTML = '<i class="fas fa-search-location"></i> Confirm This Address'; }
     }
-
     async function _gateReverseGeocode(lat, lng) {
         try {
-            const r = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-                { headers: { 'Accept-Language': 'en' } }
-            );
+            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers: { 'Accept-Language': 'en' } });
             const d = await r.json();
             return d.display_name || `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
-        } catch(_) {
-            return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
-        }
+        } catch(_) { return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`; }
     }
-
     async function _gateIpFallback() {
         _gateSetStatus('📡 GPS unavailable — trying approximate location via IP…', '#FF8F00');
         try {
@@ -4368,93 +4336,58 @@ function playGrantedSound() {
                 _gateSetCoords(data.lat, data.lon);
                 const addr = await _gateReverseGeocode(data.lat, data.lon);
                 _gateShowAddr(addr, false);
-            } else {
-                throw new Error('ip-api returned no data');
-            }
+            } else { throw new Error('no data'); }
         } catch(e) {
             _gateShowManualInput('⚠️ Could not detect location automatically. Please type your address below.');
         }
     }
-
     function gateUseMyLocation() {
         try {
             const noteEl = document.getElementById('gate-geo-note');
             if (noteEl) noteEl.style.display = 'none';
-
             _gateSetBtn('<i class="fas fa-spinner fa-spin"></i> Getting location…', 'linear-gradient(135deg,#1a6b5a,#0d4a3d)', true);
             _gateSetStatus('📡 Locating… please allow location access if prompted.', '#1565C0');
-
-            if (!navigator.geolocation) {
-                // Secure context not available (HTTP) — go straight to IP fallback
-                _gateIpFallback();
-                return;
-            }
-
+            if (!navigator.geolocation) { _gateIpFallback(); return; }
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     try {
-                        const lat = pos.coords.latitude;
-                        const lng = pos.coords.longitude;
-                        _gateSetCoords(lat, lng);
-                        const addr = await _gateReverseGeocode(lat, lng);
+                        _gateSetCoords(pos.coords.latitude, pos.coords.longitude);
+                        const addr = await _gateReverseGeocode(pos.coords.latitude, pos.coords.longitude);
                         _gateShowAddr(addr, true);
-                    } catch(e) {
-                        await _gateIpFallback();
-                    }
+                    } catch(e) { await _gateIpFallback(); }
                 },
-                async (_err) => {
-                    // Permission denied, unavailable, or timeout — try IP
-                    await _gateIpFallback();
-                },
+                async (_err) => { await _gateIpFallback(); },
                 { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
             );
-        } catch(e) {
-            // Absolute safety net — should never reach here
-            _gateIpFallback();
-        }
+        } catch(e) { _gateIpFallback(); }
     }
-
-    // Called when user types in the address field manually
     function gateOnAddrInput() {
-        // Clear captured coords so they're not stale
         const latEl = document.getElementById('gate-lat');
         const lngEl = document.getElementById('gate-lng');
         if (latEl) latEl.value = '';
         if (lngEl) lngEl.value = '';
-        _gateCoordsCaptured = false;
         const cb = document.getElementById('gate-addr-confirm-btn');
         if (cb) { cb.style.display = 'flex'; cb.disabled = false; cb.innerHTML = '<i class="fas fa-search-location"></i> Confirm This Address'; }
         const ai = document.getElementById('gate-manual-addr');
         if (ai) { ai.style.border = '2px solid #E57373'; ai.style.background = '#fff'; }
         _gateSetStatus('Type your address then press Confirm.', '#FF8F00');
     }
-
-    // Forward-geocode a typed address and fill in lat/lng
     async function gateConfirmAddress() {
         const ai = document.getElementById('gate-manual-addr');
         const cb = document.getElementById('gate-addr-confirm-btn');
         if (!ai) return;
         const query = (ai.value || '').trim();
         if (!query) { _gateSetStatus('⚠️ Please enter an address first.', '#C0392B'); return; }
-
         if (cb) { cb.disabled = true; cb.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Looking up…'; }
         _gateSetStatus('📡 Looking up address…', '#1565C0');
-
         try {
-            const res  = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
-                { headers: { 'Accept-Language': 'en' } }
-            );
+            const res  = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, { headers: { 'Accept-Language': 'en' } });
             const data = await res.json();
             if (data && data.length > 0) {
-                const lat = parseFloat(data[0].lat);
-                const lng = parseFloat(data[0].lon);
-                _gateSetCoords(lat, lng);
+                _gateSetCoords(parseFloat(data[0].lat), parseFloat(data[0].lon));
                 const fullAddr = data[0].display_name || query;
-                _gateGeoAddr  = fullAddr;
-                ai.value           = fullAddr;
-                ai.style.border    = '2px solid #4CAF50';
-                ai.style.background = '#F0FFF4';
+                _gateGeoAddr = fullAddr;
+                ai.value = fullAddr; ai.style.border = '2px solid #4CAF50'; ai.style.background = '#F0FFF4';
                 _gateSetStatus('📍 ' + fullAddr, '#2E7D32');
                 _gateSetBtn('<i class="fas fa-check-circle"></i> Location Confirmed ✓', 'linear-gradient(135deg,#2E7D32,#1B5E20)', false);
                 if (cb) cb.style.display = 'none';
@@ -4741,6 +4674,8 @@ function playGrantedSound() {
             if (form) form.insertBefore(container, form.firstChild);
         } catch(e) {}
     })();
+
+    async function handleGoogleLogin(response) {
         try {
             const res = await fetch('/api/auth/google', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ token: response.credential }) });
             if (res.ok) location.reload();
