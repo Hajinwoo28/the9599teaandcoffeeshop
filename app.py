@@ -4121,7 +4121,7 @@ function playGrantedSound() {
                 <div style="display:flex; gap:8px; align-items:center;">
                     <input id="gate-email" type="email" placeholder="e.g. juan@gmail.com" autocomplete="email"
                         style="flex:1; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
-                        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'"
+                        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'; gateEmailChanged();"
                         oninput="gateEmailChanged()">
                     <!-- Verified badge (hidden until verified) -->
                     <span id="gate-email-verified-badge" style="display:none; background:#E8F5E9; color:#2E7D32; border:1.5px solid #A5D6A7; border-radius:8px; padding:6px 10px; font-size:0.72rem; font-weight:900; white-space:nowrap; flex-shrink:0;"><i class="fas fa-check-circle"></i> Verified</span>
@@ -4361,64 +4361,69 @@ function playGrantedSound() {
     }
 
     // Allow pressing Enter in any field to submit
-    ['gate-name','gate-email','gate-phone'].forEach(id => {
-        document.getElementById(id).addEventListener('keydown', e => {
-            if (e.key === 'Enter') handleManualSignIn();
+    document.addEventListener('DOMContentLoaded', function() {
+        ['gate-name','gate-email','gate-phone'].forEach(id => {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') handleManualSignIn();
+            });
         });
     });
 
     /* ── EMAIL VERIFICATION HELPERS ─────────────────────────────────────── */
     let _gateEmailVerified = false;
-
-    // Track whether popup has already been shown for the current email
     let _popupShownForEmail = '';
-
     let _emailPopupTimer = null;
 
     function gateEmailChanged() {
-        const email  = document.getElementById('gate-email').value.trim();
-        const badge  = document.getElementById('gate-email-verified-badge');
-        const status = document.getElementById('gate-email-verify-status');
+        const emailEl = document.getElementById('gate-email');
+        if (!emailEl) return;
+        const email   = emailEl.value.trim();
+        const badge   = document.getElementById('gate-email-verified-badge');
         const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-        // If the email changed, reset verified state
-        if (_gateEmailVerified) {
+        if (_gateEmailVerified && !isValid) {
             _gateEmailVerified = false;
-            badge.style.display = 'none';
-            if (status) status.textContent = '';
+            if (badge) badge.style.display = 'none';
             _popupShownForEmail = '';
-            // Re-lock the location button
             const geoBtn = document.getElementById('gate-geo-btn');
             if (geoBtn) { geoBtn.disabled = true; geoBtn.style.cursor = 'not-allowed'; geoBtn.style.opacity = '0.4'; }
             _gateUpdateContinueBtn();
         }
 
-        // Debounce: open popup 600ms after user stops typing a valid email
         clearTimeout(_emailPopupTimer);
         if (isValid && _popupShownForEmail !== email) {
-            _emailPopupTimer = setTimeout(() => {
+            _emailPopupTimer = setTimeout(function() {
                 if (_popupShownForEmail !== email) {
                     _popupShownForEmail = email;
-                    openEmailVerifyPopup(email);
+                    showEmailVerifyPopup(email);
                 }
-            }, 600);
+            }, 700);
         }
     }
 
-    /* ── EMAIL VERIFICATION POPUP FUNCTIONS ─────────────────────────────── */
-    function openEmailVerifyPopup(email) {
-        const overlay = document.getElementById('email-verify-popup-overlay');
-        const addrEl  = document.getElementById('email-verify-popup-address');
-        const statusEl = document.getElementById('email-verify-popup-status');
-        const sendBtn  = document.getElementById('email-verify-popup-send-btn');
+    /* ── EMAIL VERIFY POPUP ──────────────────────────────────────────────── */
+    function showEmailVerifyPopup(email) {
+        var overlay = document.getElementById('email-verify-popup-overlay');
+        if (!overlay) { console.warn('Popup overlay not found'); return; }
+        var addrEl  = document.getElementById('email-verify-popup-address');
+        var statusEl = document.getElementById('email-verify-popup-status');
+        var sendBtn  = document.getElementById('email-verify-popup-send-btn');
         if (addrEl)   addrEl.textContent = email;
-        if (statusEl) { statusEl.textContent = ''; }
-        if (sendBtn)  { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email'; sendBtn.style.background = 'linear-gradient(135deg,#1565C0,#0D47A1)'; }
-        if (overlay)  { overlay.style.display = 'flex'; }
+        if (statusEl) statusEl.textContent = '';
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email';
+            sendBtn.style.background = 'linear-gradient(135deg,#1565C0,#0D47A1)';
+        }
+        overlay.style.display = 'flex';
     }
 
+    // Keep old name as alias so any existing calls still work
+    function openEmailVerifyPopup(email) { showEmailVerifyPopup(email); }
+
     function closeEmailVerifyPopup() {
-        const overlay = document.getElementById('email-verify-popup-overlay');
+        var overlay = document.getElementById('email-verify-popup-overlay');
         if (overlay) overlay.style.display = 'none';
     }
 
