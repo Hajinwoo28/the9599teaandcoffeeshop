@@ -4146,7 +4146,7 @@ function playGrantedSound() {
                 <!-- Always-visible address input — GPS button fills it automatically -->
                 <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button"
                     style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.88rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.25); opacity:1;">
-                    <i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)
+                    <i class="fas fa-map-marker-alt"></i> Use My Current Location
                 </button>
                 <!-- Read-only address display shown after GPS capture -->
                 <input id="gate-manual-addr" type="text" readonly
@@ -4284,65 +4284,66 @@ function playGrantedSound() {
 
         if (!navigator.geolocation) {
             status.style.color = '#C0392B';
-            status.innerText   = '⚠️ GPS not supported. Type your address in the field above.';
+            status.innerText   = '⚠️ Location not supported by this browser. Please use Chrome or Safari.';
             return;
         }
 
         btn.disabled = true;
         btn.style.opacity = '0.8';
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting GPS location…';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location…';
         status.style.color = '#1565C0';
-        status.innerText   = '📡 Locating… allow location access if prompted.';
+        status.innerText   = '📡 Locating… please allow location access if prompted.';
+
+        const onSuccess = async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            document.getElementById('gate-lat').value = lat;
+            document.getElementById('gate-lng').value = lng;
+            btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
+            btn.style.opacity    = '1';
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Location Captured ✓';
+            status.style.color = '#2E7D32';
+            status.innerText   = '📍 Resolving address…';
+            try {
+                const r = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+                    { headers: { 'Accept-Language': 'en' } }
+                );
+                const d = await r.json();
+                _gateGeoAddr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            } catch(_) {
+                _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+            if (addrInput) {
+                addrInput.value = _gateGeoAddr;
+                addrInput.style.display = 'block';
+            }
+            status.innerText = '📍 ' + _gateGeoAddr;
+        };
+
+        const onError = (err) => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
+            status.style.color = '#C0392B';
+            const msgs = {
+                1: '⚠️ Location permission denied. Please allow location access in your browser settings and try again.',
+                2: '⚠️ Could not detect location. Check that GPS/Location is enabled on your device.',
+                3: '⚠️ Location request timed out. Please try again.'
+            };
+            status.innerText = msgs[err.code] || '⚠️ Could not get location. Please try again.';
+        };
 
         try {
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    document.getElementById('gate-lat').value = lat;
-                    document.getElementById('gate-lng').value = lng;
-                    btn.style.background = 'linear-gradient(135deg,#2E7D32,#1B5E20)';
-                    btn.style.opacity    = '1';
-                    btn.disabled  = false;
-                    btn.innerHTML = '<i class="fas fa-check-circle"></i> GPS Location Captured ✓';
-                    status.style.color = '#2E7D32';
-                    status.innerText   = '📍 Getting address…';
-                    try {
-                        const r = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-                            { headers: { 'Accept-Language': 'en' } }
-                        );
-                        const d = await r.json();
-                        _gateGeoAddr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                    } catch(_) {
-                        _gateGeoAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                    }
-                    if (addrInput) {
-                        addrInput.value = _gateGeoAddr;
-                        addrInput.style.display = 'block';
-                    }
-                    status.innerText = '📍 ' + _gateGeoAddr;
-                },
-                (err) => {
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                    btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)';
-                    status.style.color = '#E65100';
-                    const msgs = {
-                        1: '⚠️ Permission denied. Type your address in the field above.',
-                        2: '⚠️ GPS signal lost. Type your address in the field above.',
-                        3: '⚠️ GPS timed out. Type your address in the field above.'
-                    };
-                    status.innerText = msgs[err.code] || '⚠️ GPS failed. Type your address above.';
-                },
-                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
-            );
+            navigator.geolocation.getCurrentPosition(onSuccess, onError,
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
         } catch(e) {
             btn.disabled = false;
             btn.style.opacity = '1';
-            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location (Auto-fill)';
+            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Use My Current Location';
             status.style.color = '#C0392B';
-            status.innerText   = '⚠️ GPS unavailable. Type your address in the field above.';
+            status.innerText   = '⚠️ Location unavailable. Please ensure location services are enabled.';
         }
     }
 
