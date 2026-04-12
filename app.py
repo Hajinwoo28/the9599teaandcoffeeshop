@@ -8573,12 +8573,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 ens-wrap">
 
   <!-- ANALYTICS SCREEN -->
-  <div id="s-analytics" class="screen" style="display:none;">
+  <div id="s-analytics" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
       <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
       <p>Sales trends, reports, top items &amp; hourly performance</p>
     </div>
-    <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+    <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;">
 
       <!-- Date Range Picker -->
       <div class="section card" style="padding:12px 14px;">
@@ -8655,12 +8655,12 @@ ens-wrap">
   </div>
 
   <!-- PROMO CODES SCREEN -->
-  <div id="s-promos" class="screen" style="display:none;">
+  <div id="s-promos" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
       <h2><i class="fas fa-tags"></i> Promo Codes</h2>
       <p>Manage discount codes and special offers</p>
     </div>
-    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+    <div style="padding:14px;overflow-y:auto;flex:1;">
       <div class="section card" style="padding:14px;margin-bottom:12px;">
         <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:12px;">Create New Promo Code</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -8682,12 +8682,12 @@ ens-wrap">
   </div>
 
   <!-- ANNOUNCEMENTS SCREEN -->
-  <div id="s-announce" class="screen" style="display:none;">
+  <div id="s-announce" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
       <h2><i class="fas fa-bullhorn"></i> Staff Announcements</h2>
       <p>Post bulletins &amp; notices to the employee station</p>
     </div>
-    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+    <div style="padding:14px;overflow-y:auto;flex:1;">
       <div class="section card" style="padding:14px;margin-bottom:12px;">
         <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:12px;">Post New Announcement</div>
         <input id="ann-title" class="inp" placeholder="Title (e.g. Reminder: Inventory Check)">
@@ -8707,23 +8707,23 @@ ens-wrap">
   </div>
 
   <!-- WASTE LOG SCREEN (ADMIN VIEW) -->
-  <div id="s-waste" class="screen" style="display:none;">
+  <div id="s-waste" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
       <h2><i class="fas fa-trash-alt"></i> Waste Log</h2>
       <p>Track ingredient waste reported by staff</p>
     </div>
-    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);">
+    <div style="padding:14px;overflow-y:auto;flex:1;">
       <div id="waste-list"><div style="text-align:center;color:var(--muted);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
     </div>
   </div>
 
   <!-- SECURITY SCREEN -->
-  <div id="s-security" class="screen" style="display:none;">
+  <div id="s-security" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
       <h2><i class="fas fa-user-shield"></i> Security Center</h2>
       <p>IP blacklist, brute-force detection &amp; threat monitoring</p>
     </div>
-    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:12px;">
+    <div style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px;">
 
       <!-- Your IP -->
       <div class="section card" style="padding:14px;">
@@ -8768,12 +8768,12 @@ ens-wrap">
   </div>
 
   <!-- FRAUD CONTROL SCREEN -->
-  <div id="s-fraud" class="screen" style="display:none;">
+  <div id="s-fraud" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
       <h2><i class="fas fa-exclamation-triangle"></i> Fraud Control</h2>
       <p>Order limits, blocklist, customer reputation &amp; staff controls</p>
     </div>
-    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:12px;">
+    <div style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px;">
 
       <!-- ── Flagged / Pending-Approval Orders ── -->
       <div class="section card" style="padding:14px;">
@@ -8854,7 +8854,7 @@ ens-wrap">
       <h2><i class="fas fa-star" style="color:#f1c40f;"></i> Customer Ratings</h2>
       <p>Star ratings and feedback submitted after completed online orders</p>
     </div>
-    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:14px;">
+    <div style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
 
       <!-- Summary Cards -->
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;">
