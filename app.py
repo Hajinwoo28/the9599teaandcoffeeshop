@@ -4143,8 +4143,8 @@ function playGrantedSound() {
             <!-- Location (required) -->
             <div style="text-align:left; margin-bottom:20px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:7px;">Your Location <span style="color:#C0392B;">*</span></label>
-                <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button" disabled
-                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.93rem; font-weight:800; cursor:not-allowed; display:flex; align-items:center; justify-content:center; gap:9px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.3); opacity:0.4;">
+                <button id="gate-geo-btn" onclick="gateUseMyLocation()" type="button"
+                    style="width:100%; padding:13px 14px; border-radius:12px; background:linear-gradient(135deg,#1a6b5a,#0d4a3d); color:#fff; border:none; font-family:inherit; font-size:0.93rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; transition:all 0.3s; box-shadow:0 3px 12px rgba(13,74,61,0.3); opacity:1;">
                     <i class="fas fa-map-marker-alt"></i> Use My Current Location
                 </button>
                 <input type="hidden" id="gate-lat" value="">
@@ -4155,10 +4155,10 @@ function playGrantedSound() {
                 </div>
             </div>
 
-            <button id="gate-btn" onclick="handleManualSignIn()" disabled
-                style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:not-allowed; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; opacity:0.45;"
+            <button id="gate-btn" onclick="handleManualSignIn()"
+                style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; opacity:1;"
                 id="gate-btn">
-                <i class="fas fa-lock" id="gate-btn-icon"></i> <span id="gate-btn-text">Proceed to Order</span>
+                <i class="fas fa-mug-hot" id="gate-btn-icon"></i> <span id="gate-btn-text">Proceed to Order</span>
             </button>
             <div id="gate-error" style="display:none; margin-top:12px; background:#FFF0F0; color:#C0392B; padding:10px 14px; border-radius:10px; font-size:0.82rem; font-weight:700; border:1.5px solid #F5C6C6;">
                 <i class="fas fa-exclamation-circle"></i> <span id="gate-error-msg"></span>
@@ -4201,7 +4201,7 @@ function playGrantedSound() {
         <h3 style="font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:900; color:#0A2925; text-align:center; margin-bottom:8px;">Verify Your Email</h3>
         <!-- Subtitle -->
         <p style="font-size:0.87rem; color:#6b7280; text-align:center; line-height:1.65; margin-bottom:6px; font-weight:600;">
-            To continue placing your order, please verify:
+            Almost there! Verify your email to complete your order:
         </p>
         <!-- Email display pill -->
         <div style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:12px; padding:10px 16px; text-align:center; margin-bottom:18px;">
@@ -4331,10 +4331,18 @@ function playGrantedSound() {
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             showGateError('Please enter a valid email address.'); return;
         }
+        if (!phone) { showGateError('Please enter your phone number.'); return; }
         if (!lat || !lng) {
             document.getElementById('gate-geo-note').style.display = 'block';
             document.getElementById('gate-geo-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
             showGateError('Please use your current location before continuing.'); return;
+        }
+
+        // If email not yet verified, show the verification popup first
+        if (!_gateEmailVerified) {
+            _proceedAfterVerify = true;
+            showEmailVerifyPopup(email);
+            return;
         }
 
         const btn = document.getElementById('gate-btn');
@@ -4351,12 +4359,12 @@ function playGrantedSound() {
                 const d = await res.json();
                 showGateError(d.error || 'Something went wrong. Please try again.');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-mug-hot"></i> Continue to Order';
+                btn.innerHTML = '<i class="fas fa-mug-hot"></i> Proceed to Order';
             }
         } catch (e) {
             showGateError('Connection error. Please check your internet and try again.');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-mug-hot"></i> Continue to Order';
+            btn.innerHTML = '<i class="fas fa-mug-hot"></i> Proceed to Order';
         }
     }
 
@@ -4374,6 +4382,7 @@ function playGrantedSound() {
     let _gateEmailVerified = false;
     let _popupShownForEmail = '';
     let _emailPopupTimer = null;
+    let _proceedAfterVerify = false;
 
     function gateEmailChanged() {
         const emailEl = document.getElementById('gate-email');
@@ -4386,19 +4395,7 @@ function playGrantedSound() {
             _gateEmailVerified = false;
             if (badge) badge.style.display = 'none';
             _popupShownForEmail = '';
-            const geoBtn = document.getElementById('gate-geo-btn');
-            if (geoBtn) { geoBtn.disabled = true; geoBtn.style.cursor = 'not-allowed'; geoBtn.style.opacity = '0.4'; }
             _gateUpdateContinueBtn();
-        }
-
-        clearTimeout(_emailPopupTimer);
-        if (isValid && _popupShownForEmail !== email) {
-            _emailPopupTimer = setTimeout(function() {
-                if (_popupShownForEmail !== email) {
-                    _popupShownForEmail = email;
-                    showEmailVerifyPopup(email);
-                }
-            }, 700);
         }
     }
 
@@ -4542,37 +4539,29 @@ function playGrantedSound() {
         const status = document.getElementById('gate-email-verify-status');
         const note   = document.getElementById('gate-email-verify-note');
         const row    = document.getElementById('gate-verify-email-row');
-        const geoBtn = document.getElementById('gate-geo-btn');
         if (badge)  { badge.style.display = 'inline-flex'; }
-        if (status) { status.textContent = '✅ Email verified! You may now set your location.'; status.style.color = '#2E7D32'; }
+        if (status) { status.textContent = '✅ Email verified!'; status.style.color = '#2E7D32'; }
         if (note)   { note.style.display = 'none'; }
         if (row)    {
             const vBtn = document.getElementById('gate-verify-email-btn');
             if (vBtn) vBtn.style.display = 'none';
         }
-        if (geoBtn) {
-            geoBtn.disabled = false;
-            geoBtn.style.cursor = 'pointer';
-            geoBtn.style.opacity = '1';
-        }
         _gateUpdateContinueBtn();
+        // If user clicked "Proceed to Order" and was redirected here, continue automatically
+        if (_proceedAfterVerify) {
+            _proceedAfterVerify = false;
+            setTimeout(handleManualSignIn, 300);
+        }
     }
 
     function _gateUpdateContinueBtn() {
         const btn     = document.getElementById('gate-btn');
         const icon    = document.getElementById('gate-btn-icon');
         const txtSpan = document.getElementById('gate-btn-text');
-        if (_gateEmailVerified) {
-            btn.disabled      = false;
-            btn.style.opacity = '1';
-            btn.style.cursor  = 'pointer';
-            if (icon)    { icon.className = 'fas fa-mug-hot'; }
-        } else {
-            btn.disabled      = true;
-            btn.style.opacity = '0.45';
-            btn.style.cursor  = 'not-allowed';
-            if (icon)    { icon.className = 'fas fa-lock'; }
-        }
+        btn.disabled      = false;
+        btn.style.opacity = '1';
+        btn.style.cursor  = 'pointer';
+        if (icon)    { icon.className = 'fas fa-mug-hot'; }
         if (txtSpan) { txtSpan.textContent = 'Proceed to Order'; }
     }
 
