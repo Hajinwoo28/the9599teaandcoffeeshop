@@ -523,6 +523,18 @@ class CustomerReputation(db.Model):
     notes = db.Column(db.String(500), nullable=True, default='')
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
+class OrderRating(db.Model):
+    """One-time rating + feedback submitted by the customer after their first completed order."""
+    __tablename__ = 'order_ratings'
+    id = db.Column(db.Integer, primary_key=True)
+    reservation_id = db.Column(db.Integer, db.ForeignKey('reservations.id'), nullable=False, unique=True)
+    order_code = db.Column(db.String(20), nullable=False)
+    customer_email = db.Column(db.String(120), nullable=False)
+    stars = db.Column(db.Integer, nullable=False)          # 1–5
+    feedback = db.Column(db.Text, nullable=True, default='')
+    created_at = db.Column(db.DateTime, default=get_ph_time)
+
+
 class OrderMeta(db.Model):
     """Extended metadata for behavioural controls on each order."""
     __tablename__ = 'order_meta'
@@ -2381,6 +2393,33 @@ function playEmpBeep(){
       <button onclick="closeCancelReasonModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;">Keep Order</button>
       <button id="cancel-confirm-btn" onclick="confirmCancelOrder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--red);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-times-circle"></i> Confirm Cancel</button>
       <button id="cancel-notify-btn" onclick="notifyCustomerAboutItems()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--teal-dark);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;display:none;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-bell"></i> Notify Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLAG ORDER MODAL -->
+<div class="success-overlay" id="flag-modal" style="display:none;" onclick="if(event.target===this)closeFlagModal()">
+  <div class="success-card" style="max-width:420px;padding:26px 22px;">
+    <div style="font-size:2rem;margin-bottom:6px;">🚩</div>
+    <div style="font-size:0.85rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Flag This Order</div>
+    <div style="font-size:0.78rem;color:var(--muted);font-weight:600;margin-bottom:16px;line-height:1.5;">Select the reason. The system will automatically apply the matching restriction to the customer.</div>
+
+    <div style="width:100%;text-align:left;margin-bottom:10px;">
+      <label style="font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Flag Reason</label>
+      <select id="flag-reason-select" onchange="onFlagReasonChange()"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.86rem;font-weight:700;color:var(--text);background:var(--bg);outline:none;cursor:pointer;">
+        <option value="watchlist">👁 Watchlist — Known Risk Customer</option>
+        <option value="suspicious_pattern">🔍 Suspicious Pattern — Unusual Behavior</option>
+        <option value="large_order">📦 Large Order — Requires Staff Approval</option>
+        <option value="prepayment_required">💰 Prepayment Required — No-Show Risk</option>
+      </select>
+    </div>
+
+    <div id="flag-reason-desc" style="width:100%;background:rgba(255,59,92,0.06);border:1px solid rgba(255,59,92,0.15);border-radius:8px;padding:10px 12px;font-size:0.75rem;color:var(--muted);font-weight:600;line-height:1.5;margin-bottom:16px;min-height:44px;transition:all 0.2s;"></div>
+
+    <div style="display:flex;gap:10px;width:100%;">
+      <button onclick="closeFlagModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;">Cancel</button>
+      <button id="flag-confirm-btn" onclick="confirmFlagOrder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--red);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fas fa-flag"></i> Flag Order</button>
     </div>
   </div>
 </div>
@@ -6194,6 +6233,101 @@ function playGrantedSound() {
         if(window._lastReceipt) openReceiptWindow(window._lastReceipt);
     }
 
+    // ── Rating Modal ───────────────────────────────────────────────────────────
+    let _ratingStars = 0;
+    let _ratingOrderCode = null;
+    const RATING_LABELS = ['', '😞 Poor', '😕 Fair', '😊 Good', '😃 Great', '🤩 Excellent!'];
+    const RATING_COLORS = ['', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1a9e82'];
+
+    function setRating(val) {
+        _ratingStars = val;
+        document.querySelectorAll('#rating-stars .star-btn').forEach(btn => {
+            const v = parseInt(btn.dataset.val);
+            btn.textContent = v <= val ? '★' : '☆';
+            btn.classList.toggle('lit', v <= val);
+        });
+        const lbl = document.getElementById('rating-label');
+        if(lbl){ lbl.textContent = RATING_LABELS[val]; lbl.style.color = RATING_COLORS[val]; }
+    }
+
+    function closeRatingModal() {
+        document.getElementById('rating-modal').style.display = 'none';
+    }
+
+    async function showRatingModal(code) {
+        // 1-attempt guard: check server
+        try {
+            const res = await fetch('/api/rating/check?code=' + encodeURIComponent(code));
+            const d = await res.json();
+            if(!d.eligible) return;  // already rated or not completed
+        } catch(e) { return; }
+
+        _ratingOrderCode = code;
+        _ratingStars = 0;
+
+        // Reset UI
+        document.querySelectorAll('#rating-stars .star-btn').forEach(b => {
+            b.textContent = '☆'; b.classList.remove('lit');
+        });
+        const lbl = document.getElementById('rating-label');
+        if(lbl){ lbl.textContent = ''; }
+        const fb = document.getElementById('rating-feedback');
+        if(fb){ fb.value = ''; }
+        const cc = document.getElementById('rating-char-count');
+        if(cc){ cc.textContent = '0'; }
+        const btn = document.getElementById('rating-submit-btn');
+        if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback'; }
+
+        document.getElementById('rating-modal').style.display = 'flex';
+
+        // Char counter
+        if(fb) fb.oninput = () => {
+            if(cc) cc.textContent = fb.value.length;
+        };
+    }
+
+    async function submitRating() {
+        if(!_ratingOrderCode) return;
+        if(!_ratingStars) {
+            // Shake stars row to hint user
+            const sr = document.getElementById('rating-stars');
+            sr.style.animation = 'none';
+            sr.offsetHeight; // reflow
+            sr.style.animation = 'ratingSlideIn 0.3s ease';
+            showToast('Please select a star rating first.', 'error');
+            return;
+        }
+        const btn = document.getElementById('rating-submit-btn');
+        if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…'; }
+
+        const fb = document.getElementById('rating-feedback');
+        try {
+            const r = await fetch('/api/rating/submit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    code: _ratingOrderCode,
+                    stars: _ratingStars,
+                    feedback: fb ? fb.value.trim() : ''
+                })
+            });
+            const d = await r.json();
+            if(r.ok && d.status === 'success') {
+                closeRatingModal();
+                showToast('🎉 Thank you for your feedback!', 'success');
+                // Mark locally so we don't prompt again this session
+                try { localStorage.setItem('rated_' + _ratingOrderCode, '1'); } catch(e){}
+            } else {
+                showToast(d.error || 'Could not submit rating.', 'error');
+                if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback'; }
+            }
+        } catch(e) {
+            showToast('Network error — please try again.', 'error');
+            if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback'; }
+        }
+    }
+    // ── End Rating Modal ────────────────────────────────────────────────────────
+
     async function pollCustomerOrderStatus() {
         let orders = JSON.parse(localStorage.getItem('myOrders')) || [];
         if(orders.length === 0) return;
@@ -6226,6 +6360,17 @@ function playGrantedSound() {
                             addNotifMessage(msg);
                             showCancellationBanner(srv.code, reason || 'No reason provided');
                         }
+                    } else if(srv.status === 'Completed') {
+                        const msg = `🏁 Order #${srv.code} has been completed! Thank you!`;
+                        showToast(msg, 'success');
+                        addNotifMessage(msg);
+                        // Show rating modal once, only if not yet rated this session
+                        try {
+                            const alreadyRated = localStorage.getItem('rated_' + srv.code);
+                            if(!alreadyRated) {
+                                setTimeout(() => showRatingModal(srv.code), 1800);
+                            }
+                        } catch(e){}
                     } else {
                         const msg = `Order #${srv.code} is now: ${srv.status}`;
                         showToast(msg, 'success');
@@ -6395,6 +6540,57 @@ function playGrantedSound() {
             </button>
         </div>
     </div>
+</div>
+
+<!-- ── RATING MODAL ── shown once after first completed order ── -->
+<div id="rating-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9700; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:24px; max-width:440px; width:100%; padding:32px 28px; box-shadow:0 24px 60px rgba(0,0,0,0.18); animation:ratingSlideIn 0.35s cubic-bezier(.34,1.56,.64,1); position:relative;">
+    <style>
+      @keyframes ratingSlideIn{from{opacity:0;transform:translateY(28px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+      .star-btn{background:none;border:none;font-size:2.2rem;cursor:pointer;transition:transform 0.15s;padding:2px 4px;line-height:1;}
+      .star-btn:hover,.star-btn.lit{transform:scale(1.2);}
+      .star-btn.lit{filter:drop-shadow(0 0 6px rgba(255,186,0,0.6));}
+    </style>
+    <button onclick="closeRatingModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.2rem;color:#bbb;cursor:pointer;line-height:1;">✕</button>
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:6px;">
+      <div style="font-size:2.6rem;margin-bottom:8px;">🎉</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:#1a3c34;margin-bottom:4px;">Your order is complete!</div>
+      <div style="font-size:0.82rem;color:#888;font-weight:600;">Tell us how we did — your feedback helps us improve.</div>
+    </div>
+
+    <div style="height:1px;background:#f0f0f0;margin:18px 0;"></div>
+
+    <!-- Star picker -->
+    <div style="text-align:center;margin-bottom:6px;">
+      <div style="font-size:0.7rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Your Rating</div>
+      <div id="rating-stars" style="display:flex;justify-content:center;gap:4px;">
+        <button class="star-btn" data-val="1" onclick="setRating(1)">☆</button>
+        <button class="star-btn" data-val="2" onclick="setRating(2)">☆</button>
+        <button class="star-btn" data-val="3" onclick="setRating(3)">☆</button>
+        <button class="star-btn" data-val="4" onclick="setRating(4)">☆</button>
+        <button class="star-btn" data-val="5" onclick="setRating(5)">☆</button>
+      </div>
+      <div id="rating-label" style="margin-top:8px;font-size:0.82rem;font-weight:700;color:#888;min-height:20px;transition:color 0.2s;"></div>
+    </div>
+
+    <!-- Feedback textarea -->
+    <div style="margin:16px 0 20px;">
+      <label style="font-size:0.7rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Feedback <span style="color:#ccc;font-weight:600;">(optional)</span></label>
+      <textarea id="rating-feedback" placeholder="What did you love? Any suggestions?" maxlength="500"
+        style="width:100%;padding:12px 14px;border:1.5px solid #e8e8e8;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.88rem;color:#333;resize:none;outline:none;transition:border-color 0.2s;line-height:1.5;box-sizing:border-box;height:90px;"
+        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='#e8e8e8'"></textarea>
+      <div style="text-align:right;font-size:0.68rem;color:#bbb;margin-top:3px;"><span id="rating-char-count">0</span>/500</div>
+    </div>
+
+    <!-- Submit -->
+    <button id="rating-submit-btn" onclick="submitRating()"
+      style="width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#0d7a6a,#1a9e82);color:#fff;font-family:'DM Sans',sans-serif;font-weight:900;font-size:0.96rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(13,122,106,0.3);transition:opacity 0.2s;">
+      <i class="fas fa-paper-plane"></i> Submit Feedback
+    </button>
+    <button onclick="closeRatingModal()" style="width:100%;padding:10px;border-radius:12px;border:none;background:none;color:#bbb;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;margin-top:8px;">Maybe later</button>
+  </div>
 </div>
 
 <!-- ── Replacement Mode Banner (shown while customer picks a replacement) ── -->
@@ -7824,6 +8020,16 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </button>
 
+    <button class="admin-nav-item" id="nb-ratings" onclick="goScreen('ratings',this);closeAdminMenu()">
+      <div class="admin-nav-icon" style="background:rgba(255,186,0,0.1);color:#f1c40f;">
+        <i class="fas fa-star"></i>
+      </div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Customer Ratings</span>
+        <span class="admin-nav-desc">Feedback &amp; satisfaction scores</span>
+      </div>
+    </button>
+
     <button class="admin-nav-item" id="nb-fraud" onclick="goScreen('fraud',this);closeAdminMenu()">
       <div class="admin-nav-icon" style="position:relative;">
         <i class="fas fa-exclamation-triangle"></i>
@@ -8650,6 +8856,49 @@ ens-wrap">
     </div>
   </div>
 
+  <!-- ══ RATINGS SCREEN ══ -->
+  <div id="s-ratings" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+    <div class="page-header">
+      <h2><i class="fas fa-star" style="color:#f1c40f;"></i> Customer Ratings</h2>
+      <p>Star ratings and feedback submitted after completed online orders</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;max-height:calc(100vh - 130px);display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Summary Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;">
+        <div class="section card" style="padding:14px;text-align:center;">
+          <div style="font-size:2rem;font-weight:900;color:#f1c40f;" id="rat-avg">—</div>
+          <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Avg Rating</div>
+          <div id="rat-stars-display" style="font-size:1rem;margin-top:4px;color:#f1c40f;letter-spacing:2px;">—</div>
+        </div>
+        <div class="section card" style="padding:14px;text-align:center;">
+          <div style="font-size:2rem;font-weight:900;color:var(--teal-dark);" id="rat-total">—</div>
+          <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Total Reviews</div>
+        </div>
+        <div class="section card" style="padding:14px;text-align:center;">
+          <div style="font-size:2rem;font-weight:900;color:var(--green);" id="rat-positive">—</div>
+          <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">4-5 ★ Reviews</div>
+        </div>
+      </div>
+
+      <!-- Distribution bar -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.78rem;font-weight:900;color:var(--text);margin-bottom:12px;">⭐ Rating Distribution</div>
+        <div id="rat-dist" style="display:flex;flex-direction:column;gap:7px;"></div>
+      </div>
+
+      <!-- Recent feedback table -->
+      <div class="section card" style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:0.78rem;font-weight:900;color:var(--text);">💬 Recent Feedback</div>
+          <button class="btn-secondary" onclick="loadRatings()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="rat-table"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+
+    </div>
+  </div>
+
 </div><!-- /screens-ext -->
 
 <!-- ══ MODALS ══ -->
@@ -8795,7 +9044,7 @@ function openAllSettingsDrops(){
 
 /* ══ SCREEN NAV ══ */
 /* ── Unified screen router (core + extended screens) ── */
-var _extScreens = ['analytics','promos','announce','waste','security','fraud'];
+var _extScreens = ['analytics','promos','announce','waste','security','fraud','ratings'];
 function goScreen(name, btn){
   /* 1 — Hide every screen in BOTH containers */
   document.querySelectorAll('.screen').forEach(function(s){
@@ -8823,6 +9072,7 @@ function goScreen(name, btn){
     if(name === 'waste')     loadWaste();
     if(name === 'security'){ loadMyIP(); loadBlacklist(); loadAttempts(); }
     if(name === 'fraud'){ loadFraudOrders(); loadFraudBlocklist(); loadReputations(); }
+    if(name === 'ratings') loadRatings();
   } else {
     /* ── Core screen ── */
     var scr = document.getElementById('s-' + name);
@@ -8841,6 +9091,71 @@ function goScreen(name, btn){
 }
 /* Make goScreen available globally immediately */
 window.goScreen = goScreen;
+
+async function loadRatings() {
+  try {
+    const r = await apiFetch('/api/rating/summary');
+    if(!r || !r.ok) { return; }
+    const d = await r.json();
+
+    // Summary cards
+    const avg = d.average || 0;
+    document.getElementById('rat-avg').textContent = avg ? avg.toFixed(1) : '—';
+    document.getElementById('rat-total').textContent = d.total || 0;
+    const pos = (d.distribution?.['4'] || 0) + (d.distribution?.['5'] || 0);
+    document.getElementById('rat-positive').textContent = pos;
+
+    // Star display
+    const filled = Math.round(avg);
+    document.getElementById('rat-stars-display').textContent = avg
+      ? '★'.repeat(filled) + '☆'.repeat(5 - filled) : '—';
+
+    // Distribution bars
+    const distEl = document.getElementById('rat-dist');
+    const labels = ['','😞 1 Star','😕 2 Stars','😊 3 Stars','😃 4 Stars','🤩 5 Stars'];
+    const colors = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
+    let distHtml = '';
+    [5,4,3,2,1].forEach(i => {
+      const cnt = d.distribution?.[String(i)] || 0;
+      const pct = d.total ? Math.round((cnt/d.total)*100) : 0;
+      distHtml += `<div style="display:flex;align-items:center;gap:10px;font-size:0.76rem;">
+        <span style="width:62px;color:var(--muted);font-weight:700;flex-shrink:0;">${labels[i]}</span>
+        <div style="flex:1;height:10px;background:rgba(0,0,0,0.06);border-radius:20px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${colors[i]};border-radius:20px;transition:width 0.6s ease;"></div>
+        </div>
+        <span style="width:28px;text-align:right;font-weight:800;color:var(--text);">${cnt}</span>
+      </div>`;
+    });
+    distEl.innerHTML = distHtml || '<div style="color:var(--muted);font-size:0.8rem;">No ratings yet.</div>';
+
+    // Recent table
+    const tbl = document.getElementById('rat-table');
+    if(!d.recent || !d.recent.length) {
+      tbl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.82rem;">No feedback submitted yet.</div>';
+      return;
+    }
+    const STAR_COLOR = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
+    tbl.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">'
+      + '<thead><tr style="border-bottom:2px solid var(--border-color);">'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Order</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Rating</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Feedback</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">Date</th>'
+      + '</tr></thead><tbody>'
+      + d.recent.map(row => {
+          const stars = '★'.repeat(row.stars) + '☆'.repeat(5-row.stars);
+          return `<tr style="border-bottom:1px solid var(--border-color);">
+            <td style="padding:9px 10px;font-family:monospace;font-weight:800;color:var(--teal-dark);">#${escapeHTML(row.code)}</td>
+            <td style="padding:9px 10px;font-size:1rem;color:${STAR_COLOR[row.stars]};white-space:nowrap;letter-spacing:1px;">${stars}</td>
+            <td style="padding:9px 10px;color:var(--text);font-size:0.8rem;max-width:320px;">${row.feedback ? escapeHTML(row.feedback) : '<span style="color:var(--muted);font-style:italic;">No comment</span>'}</td>
+            <td style="padding:9px 10px;color:var(--muted);font-size:0.72rem;white-space:nowrap;">${escapeHTML(row.date)}</td>
+          </tr>`;
+        }).join('')
+      + '</tbody></table></div>';
+  } catch(e) {
+    console.error('loadRatings error:', e);
+  }
+}
 
 function toggleAdminMenu(){
   const dd=document.getElementById('admin-nav-dropdown');
@@ -9938,12 +10253,56 @@ async function markPrepayCollected(orderId){
   else showToast('Error','error');
 }
 
-async function flagOrderByStaff(orderId){
-  const reason=prompt('Reason for flagging this order (optional):');
-  if(reason===null)return; // cancelled
-  const r=await apiFetch(`/api/fraud/flag_order/${orderId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason||'Flagged by staff'})});
-  if(r&&r.ok){showToast('Order flagged & customer added to watchlist','success');fetchLiveOrders();}
-  else showToast('Error flagging order','error');
+let _flagTargetOrderId = null;
+
+function flagOrderByStaff(orderId){
+  _flagTargetOrderId = orderId;
+  // Reset modal state
+  const sel = document.getElementById('flag-reason-select');
+  if(sel) sel.value = 'watchlist';
+  onFlagReasonChange();
+  document.getElementById('flag-modal').style.display = 'flex';
+  onFlagReasonChange(); // populate description immediately on open
+}
+
+function closeFlagModal(){
+  document.getElementById('flag-modal').style.display = 'none';
+  _flagTargetOrderId = null;
+}
+
+function onFlagReasonChange(){
+  const val = document.getElementById('flag-reason-select').value;
+  const desc = {
+    'watchlist':            '👁 Marks the customer as a known risk. Future orders from this email/phone will be auto-flagged.',
+    'suspicious_pattern':   '🔍 Flags this order for review due to unusual ordering behavior (e.g. repeated orders, pattern abuse).',
+    'large_order':          '📦 Requires staff approval before this order can be prepared. Suitable for bulk or unusually large orders.',
+    'prepayment_required':  '💰 Customer must pay a holding fee before the order is processed. Applied to no-show-risk customers.'
+  };
+  const el = document.getElementById('flag-reason-desc');
+  if(el) el.textContent = desc[val] || '';
+}
+
+async function confirmFlagOrder(){
+  if(!_flagTargetOrderId) return;
+  const reason = document.getElementById('flag-reason-select').value;
+  const btn = document.getElementById('flag-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying…';
+  const r = await apiFetch(`/api/fraud/flag_order/${_flagTargetOrderId}`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({reason})
+  });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-flag"></i> Flag Order';
+  if(r && r.ok){
+    const d = await r.json();
+    closeFlagModal();
+    showToast(d.toast || 'Order flagged successfully', 'success');
+    fetchLiveOrders();
+  } else {
+    showToast('Error flagging order', 'error');
+  }
 }
 
 async function loadFraudBlocklist(){
@@ -11633,29 +11992,67 @@ def staff_confirm_order(order_id):
 
 @app.route('/api/fraud/flag_order/<int:order_id>', methods=['POST'])
 def flag_order(order_id):
-    """Staff manually flags a suspicious order, adding the customer to watchlist."""
+    """Staff manually flags a suspicious order and auto-applies the matching restriction."""
     if not session.get('is_admin') and not session.get('is_employee'):
         return jsonify({"error": "Unauthorized"}), 403
     order = Reservation.query.get_or_404(order_id)
     data  = request.json or {}
-    reason = (data.get('reason') or 'Flagged by staff').strip()
-    meta  = OrderMeta.query.filter_by(reservation_id=order_id).first()
+    reason = (data.get('reason') or 'watchlist').strip()
+
+    VALID_REASONS = ('watchlist', 'suspicious_pattern', 'large_order', 'prepayment_required')
+    if reason not in VALID_REASONS:
+        reason = 'watchlist'
+
+    meta = OrderMeta.query.filter_by(reservation_id=order_id).first()
     if not meta:
         meta = OrderMeta(reservation_id=order_id)
         db.session.add(meta)
-    meta.is_flagged   = True
-    meta.flag_reason  = reason
-    # Add to watchlist
+
+    meta.is_flagged  = True
+    meta.flag_reason = reason
+
+    toast_msg = 'Order flagged.'
+
+    # ── Auto-apply system behavior based on reason ───────────────────────────
     try:
         rep = get_or_create_reputation(order.patron_email)
         if rep:
-            rep.is_watchlist = True
             rep.display_name = order.patron_name
-    except Exception:
-        pass
+
+        if reason == 'watchlist':
+            # Mark customer as known risk — future orders auto-flagged
+            if rep:
+                rep.is_watchlist = True
+            toast_msg = 'Order flagged & customer added to watchlist.'
+
+        elif reason == 'suspicious_pattern':
+            # Flag only — no additional restriction, but mark watchlist too
+            if rep:
+                rep.is_watchlist = True
+            toast_msg = 'Order flagged for suspicious pattern. Customer watchlisted.'
+
+        elif reason == 'large_order':
+            # Require explicit staff confirmation before preparing
+            meta.requires_staff_confirmation = True
+            meta.staff_confirmed = False
+            toast_msg = 'Order flagged. Staff approval now required before preparing.'
+
+        elif reason == 'prepayment_required':
+            # Customer must pay holding fee — calculate 20% of order total as deposit
+            meta.prepayment_required = True
+            meta.prepayment_collected = False
+            deposit = round(order.total_investment * 0.20, 2)
+            meta.prepayment_amount = deposit
+            if rep:
+                rep.requires_prepayment = True   # persists for future orders too
+            toast_msg = f'Order flagged. Prepayment of ₱{deposit:.2f} (20%) required from customer.'
+
+    except Exception as e:
+        print(f"flag_order side-effect error: {e}")
+
     db.session.commit()
-    log_audit("Order Flagged by Staff", f"Order {order.reservation_code} — {reason}")
-    return jsonify({"status": "success"})
+    log_audit("Order Flagged by Staff", f"Order {order.reservation_code} — reason: {reason}")
+    return jsonify({"status": "success", "toast": toast_msg})
 
 @app.route('/api/fraud/prepayment_collected/<int:order_id>', methods=['POST'])
 def mark_prepayment_collected(order_id):
@@ -12981,6 +13378,23 @@ def _ensure_schema():
     all_ok &= _add_col("reservations",  "user_agent",  "VARCHAR(300) DEFAULT ''")
     all_ok &= _add_col("reservations",  "ip_address",  "VARCHAR(60)  DEFAULT ''")
 
+    # order_ratings table
+    try:
+        db.session.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS order_ratings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reservation_id INTEGER NOT NULL UNIQUE REFERENCES reservations(id),
+                order_code VARCHAR(20) NOT NULL,
+                customer_email VARCHAR(120) NOT NULL,
+                stars INTEGER NOT NULL,
+                feedback TEXT DEFAULT '',
+                created_at DATETIME
+            )
+        """))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     if all_ok:
         _schema_ok = True   # stop checking once every column is confirmed
 
@@ -13811,10 +14225,10 @@ DEV_HTML = r"""<!DOCTYPE html>
   .modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
   .modal-warning{background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.2);border-radius:7px;padding:12px 14px;font-size:.74rem;color:var(--warn);margin-bottom:16px;display:flex;gap:10px;}
   .modal-warning i{flex-shrink:0;margin-top:2px;}
-  .env-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(30,34,53,.6);font-size:.74rem;}
+  .env-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(30,34,53,.6);font-size:.72rem;gap:12px;min-width:0;}
   .env-row:last-child{border-bottom:none;}
-  .env-key{color:var(--muted);}
-  .env-val{color:var(--bright);font-weight:500;}
+  .env-key{color:var(--muted);flex-shrink:0;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;min-width:130px;}
+  .env-val{color:var(--bright);font-weight:500;font-family:'JetBrains Mono',monospace;font-size:.70rem;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55vw;cursor:default;}
   .grant-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
   .grant-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .2s;text-align:center;}
   .grant-card:hover{border-color:var(--accent);background:rgba(0,229,160,.04);}
@@ -13987,8 +14401,8 @@ DEV_HTML = r"""<!DOCTYPE html>
           <div class="section-title">Environment</div>
           <div class="section-sub">Runtime configuration and deployment info</div>
         </div>
-        <div class="panel">
-          <div class="panel-head"><span><i class="fas fa-server"></i>Config Variables</span></div>
+        <div class="panel" style="max-width:680px;">
+          <div class="panel-head"><span><i class="fas fa-server"></i>Config Variables</span><span style="font-size:.62rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">Hover a value to see full content</span></div>
           <div class="panel-body" id="env-panel">Loading&hellip;</div>
         </div>
       </div>
@@ -14155,7 +14569,7 @@ async function submitBan(){const ip=document.getElementById('ban-ip-input').valu
 function confirmClearAttempts(){showConfirm('Clear Failed Attempts','This will delete ALL failed login attempt records. Brute-force counters will reset.',async()=>{const r=await devFetch('/api/dev/attempts',{method:'DELETE'});if(r?.ok){toast('Failed attempts cleared.');loadAttempts();loadOverview();}else toast('Error.','err');});}
 async function loadDbStats(){const r=await devFetch('/api/dev/db_stats');if(!r)return;const d=await r.json();document.getElementById('db-tbody').innerHTML=d.map(t=>'<tr><td style="color:var(--accent2);">'+t.table+'</td><td style="color:var(--bright);font-weight:700;">'+t.count+'</td><td><span class="badge '+(t.count>0?'badge-green':'badge-gray')+'">'+(t.count>0?'OK':'Empty')+'</span></td></tr>').join('');}
 function confirmReinit(){showConfirm('Re-initialize Database','This will run db.create_all() and re-seed default data. Existing rows will NOT be deleted.',async()=>{const r=await devFetch('/api/dev/reinit_db',{method:'POST'});if(r?.ok){toast('Database re-initialized.');loadDbStats();loadOverview();}else toast('Error during re-init.','err');});}
-async function loadEnv(){const r=await devFetch('/api/dev/env');if(!r)return;const d=await r.json();document.getElementById('env-panel').innerHTML=d.map(e=>'<div class="env-row"><span class="env-key">'+e.key+'</span><span class="env-val '+(e.set?'accent':'')+'">'+e.value+'</span></div>').join('');}
+async function loadEnv(){const r=await devFetch('/api/dev/env');if(!r)return;const d=await r.json();document.getElementById('env-panel').innerHTML=d.map(e=>'<div class="env-row"><span class="env-key">'+escapeHTML(e.key)+'</span><span class="env-val '+(e.set?'accent':'')+'" title="'+escapeHTML(e.value)+'">'+escapeHTML(e.value)+'</span></div>').join('');}
 function openGrantModal(role){document.getElementById('grant-role').value=role;document.getElementById('grant-modal-title').textContent=role==='admin'?'Grant Admin Access':'Grant Employee Access';openModal('grant-modal');}
 async function confirmGrant(){const role=document.getElementById('grant-role').value;const r=await devFetch('/api/dev/grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});if(r?.ok){const d=await r.json();closeModal('grant-modal');const line='['+new Date().toLocaleTimeString()+'] Granted '+role+' session \u2192 redirecting\u2026';grantLogLines.unshift(line);document.getElementById('grant-log').innerHTML=grantLogLines.map(l=>'<div class="log-line ok"><span class="log-msg">'+l+'</span></div>').join('');toast(role+' access granted!');setTimeout(()=>window.open(d.redirect,'_blank'),400);}else toast('Grant failed.','err');}
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -14403,6 +14817,97 @@ def dev_reinit_db():
         _initialize_db()
         log_audit("Dev: DB Re-initialized", "Dev portal triggered db.create_all() + seed")
         return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/rating/check', methods=['GET'])
+def rating_check():
+    """Check if the customer has already submitted a rating for a given order code."""
+    code = request.args.get('code', '').strip()
+    if not code:
+        return jsonify({"eligible": False, "reason": "no_code"})
+    try:
+        order = Reservation.query.filter_by(reservation_code=code).first()
+        if not order:
+            return jsonify({"eligible": False, "reason": "not_found"})
+        if order.status != 'Completed':
+            return jsonify({"eligible": False, "reason": "not_completed"})
+        existing = OrderRating.query.filter_by(reservation_id=order.id).first()
+        if existing:
+            return jsonify({"eligible": False, "reason": "already_rated"})
+        # Check if this is their first-ever completed order (by email)
+        prev_completed = Reservation.query.filter(
+            Reservation.patron_email == order.patron_email,
+            Reservation.status == 'Completed',
+            Reservation.id != order.id
+        ).first()
+        return jsonify({
+            "eligible": True,
+            "order_id": order.id,
+            "is_first_order": prev_completed is None
+        })
+    except Exception as e:
+        return jsonify({"eligible": False, "reason": str(e)})
+
+
+@app.route('/api/rating/submit', methods=['POST'])
+def rating_submit():
+    """Accept a one-time rating + feedback from the customer."""
+    data = request.get_json(silent=True) or {}
+    code  = (data.get('code') or '').strip()
+    stars = int(data.get('stars', 0))
+    feedback = (data.get('feedback') or '').strip()[:1000]
+
+    if not code or not (1 <= stars <= 5):
+        return jsonify({"error": "Invalid data"}), 400
+
+    try:
+        order = Reservation.query.filter_by(reservation_code=code).first()
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+        if order.status != 'Completed':
+            return jsonify({"error": "Order not completed yet"}), 400
+        if OrderRating.query.filter_by(reservation_id=order.id).first():
+            return jsonify({"error": "Already rated"}), 409
+
+        rating = OrderRating(
+            reservation_id=order.id,
+            order_code=code,
+            customer_email=order.patron_email,
+            stars=stars,
+            feedback=feedback
+        )
+        db.session.add(rating)
+        db.session.commit()
+        log_audit("Customer Rating", f"Order {code} rated {stars}★" + (f" — {feedback[:60]}" if feedback else ""))
+        return jsonify({"status": "success"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/rating/summary', methods=['GET'])
+def rating_summary():
+    """Return all ratings for the admin dashboard."""
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        ratings = OrderRating.query.order_by(OrderRating.created_at.desc()).limit(100).all()
+        total = len(ratings)
+        avg = round(sum(r.stars for r in ratings) / total, 2) if total else 0
+        dist = {str(i): sum(1 for r in ratings if r.stars == i) for i in range(1, 6)}
+        return jsonify({
+            "average": avg,
+            "total": total,
+            "distribution": dist,
+            "recent": [{
+                "code": r.order_code,
+                "stars": r.stars,
+                "feedback": r.feedback or '',
+                "date": r.created_at.strftime('%b %d, %Y') if r.created_at else ''
+            } for r in ratings[:20]]
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
