@@ -1182,7 +1182,7 @@ def send_verification_email(to_email, verify_url):
     # ── METHOD 2: Gmail SMTP (works on local / non-Vercel hosting) ───────────
     # Cascades to Method 3 on failure instead of aborting.
     sender       = os.environ.get('GMAIL_SENDER', '').strip()
-    app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+    app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip().replace(' ', '')
     if sender and app_password:
         import smtplib
         try:
@@ -14444,6 +14444,8 @@ def _ensure_schema():
     # reservations – device tracking columns
     all_ok &= _add_col("reservations",  "user_agent",  "VARCHAR(300) DEFAULT ''")
     all_ok &= _add_col("reservations",  "ip_address",  "VARCHAR(60)  DEFAULT ''")
+    # audit_logs – ip tracking (added later; must exist before any audit query runs)
+    all_ok &= _add_col("audit_logs",    "ip_address",  "VARCHAR(60)  DEFAULT ''")
 
     # order_ratings table
     try:
