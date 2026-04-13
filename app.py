@@ -569,6 +569,17 @@ class QuickChecklist(db.Model):
     display_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
+class ChecklistCompletion(db.Model):
+    """Records each time staff submit a completed (or partial) checklist."""
+    __tablename__ = 'checklist_completions'
+    id            = db.Column(db.Integer, primary_key=True)
+    checklist_type = db.Column(db.String(20), nullable=False)   # opening | closing | cleaning
+    items_done    = db.Column(db.Integer, nullable=False, default=0)
+    items_total   = db.Column(db.Integer, nullable=False, default=0)
+    completed_by  = db.Column(db.String(100), nullable=True, default='Staff')
+    notes         = db.Column(db.String(300), nullable=True, default='')
+    submitted_at  = db.Column(db.DateTime, default=get_ph_time)
+
 # ── ORDER BEHAVIORAL LIMIT MODELS ──────────────────────────────────────────
 
 class CustomerBlocklist(db.Model):
@@ -3708,7 +3719,7 @@ async function openChecklist(type) {
       <p id="cl-sub">Complete all tasks before proceeding.</p>
       <div id="cl-items" style="text-align:left;margin-bottom:16px;"></div>
       <div id="cl-progress" style="background:var(--border);height:8px;border-radius:4px;margin-bottom:14px;overflow:hidden;"><div id="cl-prog-bar" style="background:var(--teal);height:100%;border-radius:4px;transition:width 0.4s;width:0%;"></div></div>
-      <button class="emp-modal-btn confirm" style="width:100%;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);" onclick="document.getElementById('emp-checklist-modal').classList.remove('open')">Done</button>
+      <button class="emp-modal-btn confirm" style="width:100%;padding:12px;border-radius:11px;border:none;font-family:'Nunito',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;box-shadow:0 4px 14px rgba(13,122,106,0.3);" onclick="submitChecklist()" id="cl-submit-btn">Submit &amp; Done</button>
     </div>`;
     modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('open'); });
     document.body.appendChild(modal);
@@ -3741,6 +3752,36 @@ function updateClProgress(type) {
   const pct = total > 0 ? Math.round((done/total)*100) : 0;
   const bar = document.getElementById('cl-prog-bar');
   if (bar) bar.style.width = pct + '%';
+}
+
+async function submitChecklist() {
+  const btn = document.getElementById('cl-submit-btn');
+  const titleEl = document.getElementById('cl-title');
+  const type = titleEl ? (titleEl.textContent.toLowerCase().includes('opening') ? 'opening'
+                         : titleEl.textContent.toLowerCase().includes('closing') ? 'closing'
+                         : 'cleaning') : 'opening';
+  const checkboxes = document.querySelectorAll('[id^="cl-item-"]');
+  let done = 0;
+  checkboxes.forEach(cb => { if (cb.checked) done++; });
+  const total = checkboxes.length;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await fetch('/api/checklist/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, items_done: done, items_total: total, completed_by: 'Staff' })
+    });
+    if (r.ok) {
+      if (typeof showToast === 'function')
+        showToast(`✅ ${type.charAt(0).toUpperCase()+type.slice(1)} checklist submitted (${done}/${total} tasks)`);
+    } else {
+      if (typeof showToast === 'function') showToast('Could not save checklist.', 'error');
+    }
+  } catch(e) {
+    if (typeof showToast === 'function') showToast('Network error saving checklist.', 'error');
+  }
+  document.getElementById('emp-checklist-modal').classList.remove('open');
+  if (btn) { btn.disabled = false; btn.textContent = 'Submit & Done'; }
 }
 
 /* ── Add employee buttons to drawer (if drawer exists) ── */
@@ -8459,7 +8500,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
     </button>
 
-    <button class="admin-nav-item" id="nb-checklist" onclick="goScreen('checklist',this);loadAdminChecklist();closeAdminMenu()">
+    <button class="admin-nav-item" id="nb-checklist" onclick="goScreen('checklist',this);closeAdminMenu()">
       <div class="admin-nav-icon" style="background:rgba(13,122,106,0.1);color:#0D7A6A;position:relative;">
         <i class="fas fa-clipboard-check"></i>
         <span id="checklist-nav-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.52rem;font-weight:900;align-items:center;justify-content:center;border:2px solid var(--brown-dark);"></span>
@@ -9322,6 +9363,76 @@ ens-wrap">
     </div>
   </div>
 
+  <!-- DAILY CHECKLIST MONITOR SCREEN -->
+  <div id="s-checklist" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+    <div class="page-header">
+      <h2><i class="fas fa-clipboard-check" style="color:#0D7A6A;"></i> Daily Checklist</h2>
+      <p>Monitor opening &amp; closing task completion by staff</p>
+    </div>
+    <div style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Today's Status Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+        <div class="section card" style="padding:14px;text-align:center;" id="cl-card-opening">
+          <div style="font-size:1.8rem;margin-bottom:6px;" id="cl-icon-opening">⏳</div>
+          <div style="font-size:0.65rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Opening</div>
+          <div style="font-size:0.82rem;font-weight:800;color:var(--text);margin-top:4px;" id="cl-status-opening">Not submitted</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;" id="cl-time-opening">—</div>
+        </div>
+        <div class="section card" style="padding:14px;text-align:center;" id="cl-card-closing">
+          <div style="font-size:1.8rem;margin-bottom:6px;" id="cl-icon-closing">⏳</div>
+          <div style="font-size:0.65rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Closing</div>
+          <div style="font-size:0.82rem;font-weight:800;color:var(--text);margin-top:4px;" id="cl-status-closing">Not submitted</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;" id="cl-time-closing">—</div>
+        </div>
+        <div class="section card" style="padding:14px;text-align:center;" id="cl-card-cleaning">
+          <div style="font-size:1.8rem;margin-bottom:6px;" id="cl-icon-cleaning">⏳</div>
+          <div style="font-size:0.65rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Cleaning</div>
+          <div style="font-size:0.82rem;font-weight:800;color:var(--text);margin-top:4px;" id="cl-status-cleaning">Not submitted</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;" id="cl-time-cleaning">—</div>
+        </div>
+      </div>
+
+      <!-- Submission History -->
+      <div class="section card" style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:0.82rem;font-weight:900;color:var(--text);">📋 Submission History</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="cl-history-type" class="inp" style="margin:0;padding:6px 10px;font-size:0.78rem;width:auto;">
+              <option value="">All types</option>
+              <option value="opening">Opening</option>
+              <option value="closing">Closing</option>
+              <option value="cleaning">Cleaning</option>
+            </select>
+            <button class="btn-secondary" onclick="loadAdminChecklist()" style="padding:7px 12px;font-size:0.78rem;"><i class="fas fa-sync-alt"></i> Refresh</button>
+          </div>
+        </div>
+        <div id="cl-history-list"><div style="text-align:center;color:var(--muted);padding:20px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+      </div>
+
+      <!-- Task Manager -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:12px;">⚙️ Manage Checklist Tasks</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
+          <select id="cl-new-type" class="inp" style="margin:0;padding:7px 10px;font-size:0.78rem;width:auto;">
+            <option value="opening">Opening</option>
+            <option value="closing">Closing</option>
+            <option value="cleaning">Cleaning</option>
+          </select>
+          <input id="cl-new-task" class="inp" style="margin:0;flex:1;min-width:180px;" placeholder="Task description…" maxlength="150">
+          <button class="btn-primary" onclick="addChecklistTask()" style="padding:9px 16px;font-size:0.78rem;margin:0;"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button class="btn-secondary" id="cl-tab-opening"  onclick="loadTaskList('opening')"  style="font-size:0.75rem;padding:6px 14px;">🌅 Opening</button>
+          <button class="btn-secondary" id="cl-tab-closing"  onclick="loadTaskList('closing')"  style="font-size:0.75rem;padding:6px 14px;">🌙 Closing</button>
+          <button class="btn-secondary" id="cl-tab-cleaning" onclick="loadTaskList('cleaning')" style="font-size:0.75rem;padding:6px 14px;">🧹 Cleaning</button>
+        </div>
+        <div id="cl-task-list"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;">Select a type above to view tasks.</div></div>
+      </div>
+
+    </div>
+  </div>
+
 </div><!-- /screens-ext -->
 
 <!-- ══ MODALS ══ -->
@@ -9467,7 +9578,7 @@ function openAllSettingsDrops(){
 
 /* ══ SCREEN NAV ══ */
 /* ── Unified screen router (core + extended screens) ── */
-var _extScreens = ['analytics','promos','announce','waste','security','fraud','ratings'];
+var _extScreens = ['analytics','promos','announce','waste','security','fraud','ratings','checklist'];
 function goScreen(name, btn){
   /* 1 — Hide every screen in BOTH containers */
   document.querySelectorAll('.screen').forEach(function(s){
@@ -9496,6 +9607,7 @@ function goScreen(name, btn){
     if(name === 'security'){ loadMyIP(); loadBlacklist(); loadAttempts(); }
     if(name === 'fraud'){ loadFraudOrders(); loadFraudBlocklist(); loadReputations(); }
     if(name === 'ratings') loadRatings();
+    if(name === 'checklist') loadAdminChecklist();
   } else {
     /* ── Core screen ── */
     var scr = document.getElementById('s-' + name);
@@ -9578,6 +9690,142 @@ async function loadRatings() {
   } catch(e) {
     console.error('loadRatings error:', e);
   }
+}
+
+/* ══ DAILY CHECKLIST ADMIN ══ */
+let _clCurrentTaskType = 'opening';
+
+async function loadAdminChecklist() {
+  // Load today's summary cards
+  try {
+    const r = await apiFetch('/api/admin/checklist/today');
+    if (!r || !r.ok) return;
+    const d = await r.json();
+    ['opening','closing','cleaning'].forEach(type => {
+      const entry = d[type];
+      const icon  = document.getElementById('cl-icon-' + type);
+      const stat  = document.getElementById('cl-status-' + type);
+      const time  = document.getElementById('cl-time-' + type);
+      if (!entry) {
+        if(icon) icon.textContent = '❌';
+        if(stat) { stat.textContent = 'Not submitted'; stat.style.color = 'var(--red)'; }
+        if(time) time.textContent = '—';
+      } else {
+        const pct = entry.items_total > 0 ? Math.round((entry.items_done / entry.items_total) * 100) : 0;
+        if(icon) icon.textContent = pct === 100 ? '✅' : '⚠️';
+        if(stat) {
+          stat.textContent = `${entry.items_done}/${entry.items_total} tasks (${pct}%)`;
+          stat.style.color = pct === 100 ? '#0D7A6A' : 'var(--orange)';
+        }
+        if(time) time.textContent = entry.submitted_at || '—';
+      }
+    });
+  } catch(e) { console.error('checklist today error', e); }
+
+  // Load submission history
+  const listEl = document.getElementById('cl-history-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:16px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try {
+    const typeFilter = (document.getElementById('cl-history-type') || {}).value || '';
+    const url = '/api/admin/checklist/history' + (typeFilter ? '?type=' + typeFilter : '');
+    const r = await apiFetch(url);
+    if (!r || !r.ok) { listEl.innerHTML = '<div style="color:var(--red);padding:12px;font-size:0.82rem;">Failed to load history.</div>'; return; }
+    const rows = await r.json();
+    if (!rows.length) {
+      listEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.82rem;">No submissions yet.</div>';
+      return;
+    }
+    const typeEmoji = { opening:'🌅', closing:'🌙', cleaning:'🧹' };
+    listEl.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">'
+      + '<thead><tr style="border-bottom:2px solid var(--cream-dark);">'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Type</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Progress</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Submitted By</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Notes</th>'
+      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">Date &amp; Time</th>'
+      + '</tr></thead><tbody>'
+      + rows.map(row => {
+          const pct = row.items_total > 0 ? Math.round((row.items_done / row.items_total) * 100) : 0;
+          const barColor = pct === 100 ? '#0D7A6A' : pct >= 50 ? 'var(--orange)' : 'var(--red)';
+          return `<tr style="border-bottom:1px solid var(--cream-dark);">
+            <td style="padding:9px 10px;font-weight:800;">${typeEmoji[row.checklist_type]||'📋'} ${escapeHTML(row.checklist_type.charAt(0).toUpperCase()+row.checklist_type.slice(1))}</td>
+            <td style="padding:9px 10px;min-width:120px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;height:8px;background:var(--cream-dark);border-radius:10px;overflow:hidden;min-width:60px;">
+                  <div style="width:${pct}%;height:100%;background:${barColor};border-radius:10px;transition:width .4s;"></div>
+                </div>
+                <span style="font-size:0.72rem;font-weight:800;color:${barColor};white-space:nowrap;">${row.items_done}/${row.items_total}</span>
+              </div>
+            </td>
+            <td style="padding:9px 10px;color:var(--text);">${escapeHTML(row.completed_by||'Staff')}</td>
+            <td style="padding:9px 10px;color:var(--muted);font-size:0.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(row.notes||'')}">${row.notes ? escapeHTML(row.notes) : '<span style="font-style:italic;">—</span>'}</td>
+            <td style="padding:9px 10px;color:var(--muted);font-size:0.72rem;white-space:nowrap;">${escapeHTML(row.submitted_at||'—')}</td>
+          </tr>`;
+        }).join('')
+      + '</tbody></table></div>';
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--red);padding:12px;font-size:0.82rem;">Error loading history.</div>';
+    console.error('checklist history error', e);
+  }
+
+  // Auto-load the task list for the current tab
+  loadTaskList(_clCurrentTaskType);
+}
+
+async function loadTaskList(type) {
+  _clCurrentTaskType = type || 'opening';
+  // Highlight active tab button
+  ['opening','closing','cleaning'].forEach(t => {
+    const btn = document.getElementById('cl-tab-' + t);
+    if(btn) btn.style.background = t === _clCurrentTaskType ? 'var(--brown-dark)' : '';
+    if(btn) btn.style.color = t === _clCurrentTaskType ? 'var(--cream)' : '';
+  });
+  const el = document.getElementById('cl-task-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:10px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
+  try {
+    const r = await apiFetch('/api/checklist?type=' + _clCurrentTaskType);
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:10px;font-size:0.82rem;">Failed to load.</div>'; return; }
+    const items = await r.json();
+    if (!items.length) {
+      el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;">No tasks yet. Add one above.</div>';
+      return;
+    }
+    el.innerHTML = items.map(item => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid var(--cream-dark);gap:10px;">
+        <span style="font-size:0.82rem;font-weight:700;color:var(--text);flex:1;">${escapeHTML(item.task)}</span>
+        <button onclick="deleteChecklistTask(${item.id})"
+          style="background:none;border:1.5px solid var(--red);color:var(--red);border-radius:7px;
+                 padding:3px 10px;font-size:0.72rem;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;">
+          <i class="fas fa-trash-alt"></i> Remove
+        </button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:10px;">Error.</div>'; }
+}
+
+async function addChecklistTask() {
+  const taskInput = document.getElementById('cl-new-task');
+  const typeInput = document.getElementById('cl-new-type');
+  const task = (taskInput ? taskInput.value : '').trim();
+  const type = typeInput ? typeInput.value : 'opening';
+  if (!task) { showToast('Enter a task description.', 'warn'); return; }
+  try {
+    const r = await apiFetch('/api/admin/checklist', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({task, type}) });
+    if (r && r.ok) {
+      if(taskInput) taskInput.value = '';
+      showToast('Task added ✅');
+      loadTaskList(type);
+    } else { showToast('Failed to add task.', 'error'); }
+  } catch(e) { showToast('Network error.', 'error'); }
+}
+
+async function deleteChecklistTask(id) {
+  try {
+    const r = await apiFetch('/api/admin/checklist/' + id, { method:'DELETE' });
+    if (r && r.ok) { showToast('Task removed.'); loadTaskList(_clCurrentTaskType); }
+    else { showToast('Failed to remove task.', 'error'); }
+  } catch(e) { showToast('Network error.', 'error'); }
 }
 
 function toggleAdminMenu(){
@@ -10373,6 +10621,18 @@ function connectSSE() {
     try {
       const d = JSON.parse(e.data);
       showSystemErrorBanner(d);
+    } catch(_) {}
+  });
+
+  // Staff submitted a checklist — refresh the monitor if it's open
+  _sseSource.addEventListener('checklist_submitted', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      const typeNames = { opening:'Opening 🌅', closing:'Closing 🌙', cleaning:'Cleaning 🧹' };
+      addNotif('Checklist', `${typeNames[d.type]||d.type} submitted — ${d.done}/${d.total} tasks`, null);
+      // Live-refresh the checklist screen if currently visible
+      const scr = document.getElementById('s-checklist');
+      if (scr && scr.style.display !== 'none') loadAdminChecklist();
     } catch(_) {}
   });
 
@@ -13503,12 +13763,32 @@ def get_customer_logs():
 @app.route('/api/audit_logs', methods=['GET'])
 def get_audit_logs():
     if not session.get('is_admin'): return jsonify([]), 403
-    return jsonify([{
-        "action": l.action,
-        "details": l.details,
-        "ip": l.ip_address or '',
-        "time": l.created_at.strftime('%Y-%m-%d %I:%M %p')
-    } for l in AuditLog.query.order_by(AuditLog.created_at.desc()).limit(500).all()])
+    try:
+        logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(500).all()
+        result = []
+        for l in logs:
+            try:
+                ip = l.ip_address or ''
+            except Exception:
+                ip = ''
+            result.append({
+                "action": l.action,
+                "details": l.details,
+                "ip": ip,
+                "time": l.created_at.strftime('%Y-%m-%d %I:%M %p') if l.created_at else '—'
+            })
+        return jsonify(result)
+    except Exception as e:
+        db.session.rollback()
+        # Fallback: return without ip if column doesn't exist yet
+        try:
+            logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(500).all()
+            return jsonify([{
+                "action": l.action, "details": l.details, "ip": "",
+                "time": l.created_at.strftime('%Y-%m-%d %I:%M %p') if l.created_at else '—'
+            } for l in logs])
+        except Exception:
+            return jsonify([])
 
 # ==========================================
 # 10. SYSTEM INITIALIZATION & SEED DATA
@@ -13880,6 +14160,89 @@ def checklist_delete(cid):
     db.session.delete(c)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@app.route('/api/admin/checklist/today', methods=['GET'])
+def checklist_today():
+    """Return today's most recent submission for each checklist type."""
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    ph_today = get_ph_time().date()
+    result = {}
+    for ctype in ('opening', 'closing', 'cleaning'):
+        entry = (ChecklistCompletion.query
+                 .filter(
+                     ChecklistCompletion.checklist_type == ctype,
+                     db.func.date(ChecklistCompletion.submitted_at) == ph_today
+                 )
+                 .order_by(ChecklistCompletion.id.desc())
+                 .first())
+        if entry:
+            result[ctype] = {
+                'items_done':  entry.items_done,
+                'items_total': entry.items_total,
+                'completed_by': entry.completed_by or 'Staff',
+                'notes': entry.notes or '',
+                'submitted_at': entry.submitted_at.strftime('%I:%M %p') if entry.submitted_at else '—',
+            }
+        else:
+            result[ctype] = None
+    return jsonify(result)
+
+
+@app.route('/api/admin/checklist/history', methods=['GET'])
+def checklist_history():
+    """Return recent checklist submissions, optionally filtered by type."""
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    ctype = request.args.get('type', '').strip()
+    limit = min(int(request.args.get('limit', 60)), 200)
+    q = ChecklistCompletion.query
+    if ctype:
+        q = q.filter_by(checklist_type=ctype)
+    rows = q.order_by(ChecklistCompletion.id.desc()).limit(limit).all()
+    return jsonify([{
+        'id':            r.id,
+        'checklist_type': r.checklist_type,
+        'items_done':    r.items_done,
+        'items_total':   r.items_total,
+        'completed_by':  r.completed_by or 'Staff',
+        'notes':         r.notes or '',
+        'submitted_at':  r.submitted_at.strftime('%b %d, %Y  %I:%M %p') if r.submitted_at else '—',
+    } for r in rows])
+
+
+@app.route('/api/checklist/submit', methods=['POST'])
+def checklist_submit():
+    """Employee submits a completed (or partial) checklist."""
+    if not session.get('is_employee') and not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data       = request.get_json(silent=True) or {}
+    ctype      = data.get('type', 'opening')
+    items_done = int(data.get('items_done', 0))
+    items_total= int(data.get('items_total', 0))
+    notes      = (data.get('notes') or '').strip()[:300]
+    completed_by = (data.get('completed_by') or 'Staff').strip()[:100]
+    entry = ChecklistCompletion(
+        checklist_type=ctype,
+        items_done=items_done,
+        items_total=items_total,
+        completed_by=completed_by,
+        notes=notes,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    log_audit('Checklist Submitted',
+              f'[{ctype}] {items_done}/{items_total} tasks by {completed_by}')
+    # Notify admin panel via SSE so the monitor updates live
+    push_event('checklist_submitted', {
+        'type': ctype,
+        'done': items_done,
+        'total': items_total,
+        'by': completed_by,
+    })
+    return jsonify({"ok": True})
+
 
 # ── ADMIN ANALYTICS: SALES TRENDS ─────────────────────────────
 
@@ -15507,10 +15870,19 @@ def dev_audit():
     limit = min(int(request.args.get('limit', 50)), 200)
     try:
         logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(limit).all()
-        return jsonify([{"ts": l.created_at.strftime('%H:%M:%S') if l.created_at else '—',
-                         "action": l.action or '',
-                         "details": l.details or '',
-                         "ip": l.ip_address or ''} for l in logs])
+        result = []
+        for l in logs:
+            try:
+                ip = l.ip_address or ''
+            except Exception:
+                ip = ''
+            result.append({
+                "ts": l.created_at.strftime('%H:%M:%S') if l.created_at else '—',
+                "action": l.action or '',
+                "details": l.details or '',
+                "ip": ip
+            })
+        return jsonify(result)
     except Exception as e:
         return jsonify([{"ts": "error", "action": str(e), "details": "", "ip": ""}])
 
@@ -15855,6 +16227,8 @@ def dev_force_migrate():
 
     # audit_logs ip_address column (new — tracks device IP per event)
     run_alter("audit_logs", "ip_address", "VARCHAR(60) DEFAULT ''")
+
+    # checklist_completions table is created by db.create_all() below
 
     # Also run create_all for any missing tables
     try:
