@@ -250,6 +250,57 @@ def log_audit(action, details=""):
         db.session.rollback()
         print(f"Audit Log Failed: {str(e)}")
 
+# ── Customer-facing error logger ─────────────────────────────────────────────
+
+def log_system_error(route, exc, context_request=None):
+    """
+    Persist a customer-facing error and push real-time SSE notifications to
+    the admin panel, employee station, and developer portal.
+    """
+    error_type = type(exc).__name__ if exc else 'UnknownError'
+    error_msg  = str(exc)[:2000] if exc else ''
+    ip  = ''
+    ua  = ''
+    try:
+        if context_request:
+            forwarded = context_request.headers.get('X-Forwarded-For', '')
+            ip = forwarded.split(',')[0].strip() if forwarded else (context_request.remote_addr or '')
+            ua = context_request.headers.get('User-Agent', '')[:300]
+    except Exception:
+        pass
+
+    # Persist to DB
+    try:
+        err_log = SystemErrorLog(
+            route=route, error_type=error_type,
+            error_msg=error_msg, ip_address=ip, user_agent=ua
+        )
+        db.session.add(err_log)
+        db.session.commit()
+        err_id = err_log.id
+    except Exception:
+        try: db.session.rollback()
+        except Exception: pass
+        err_id = 0
+
+    payload = {
+        'id':         err_id,
+        'route':      route,
+        'error_type': error_type,
+        'error_msg':  error_msg[:300],
+        'ip':         ip,
+        'time':       get_ph_time().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+
+    # Notify all three portals via SSE
+    push_event('system_error', payload)           # → admin panel
+    push_employee_event('system_error', payload)  # → employee station
+    push_dev_event('system_error', payload)       # → developer portal
+
+    # Also write to audit log for record-keeping
+    log_audit('System Error', f"{error_type} on {route}: {error_msg[:120]}'")
+    print(f"[SYSTEM ERROR] {route} → {error_type}: {error_msg[:200]}")
+
 # ==========================================
 # SSE — REAL-TIME PUSH TO ADMIN PANEL
 # ==========================================
@@ -262,6 +313,20 @@ _customer_sse_lock = threading.Lock()
 
 _emp_sse_subscribers = []   # one per connected employee browser tab
 _emp_sse_lock = threading.Lock()
+
+_dev_sse_subscribers = []   # one per connected developer portal tab
+_dev_sse_lock = threading.Lock()
+
+def push_dev_event(event_type, data=None):
+    """Broadcast an SSE event to every connected developer portal tab."""
+    msg = f"event: {event_type}\ndata: {json.dumps(data or {})}\n\n"
+    with _dev_sse_lock:
+        dead = []
+        for q in _dev_sse_subscribers:
+            try: q.put_nowait(msg)
+            except Exception: dead.append(q)
+        for q in dead:
+            _dev_sse_subscribers.remove(q)
 
 def push_customer_event(event_type, data=None):
     """Broadcast an SSE event to every connected customer browser tab."""
@@ -573,6 +638,18 @@ class PhoneOTP(db.Model):
     def is_expired(self):
         """OTP expires after 5 minutes."""
         return (get_ph_time() - self.created_at).total_seconds() > 300
+
+class SystemErrorLog(db.Model):
+    """Persists customer-facing errors so devs/admin/employees are always informed."""
+    __tablename__ = 'system_error_logs'
+    id          = db.Column(db.Integer, primary_key=True)
+    route       = db.Column(db.String(200), nullable=False)
+    error_type  = db.Column(db.String(120), nullable=True, default='')
+    error_msg   = db.Column(db.Text, nullable=True, default='')
+    ip_address  = db.Column(db.String(60), nullable=True, default='')
+    user_agent  = db.Column(db.String(300), nullable=True, default='')
+    is_resolved = db.Column(db.Boolean, default=False)
+    created_at  = db.Column(db.DateTime, default=get_ph_time)
 
 # ── Security helpers ────────────────────────────────────────────────────────
 
@@ -3405,6 +3482,15 @@ fetchStockAlerts(); // pre-load badge count on startup
     _empSrc.addEventListener('stock_update',()=>{
       fetchStockAlerts();
       if(typeof showToast==='function') showToast('📦 Stock levels updated by admin','info');
+    });
+    // System error from customer → show alert toast on employee station
+    _empSrc.addEventListener('system_error',(e)=>{
+      try{
+        const d=JSON.parse(e.data);
+        const msg='⚠️ System Error: Customer hit an error on '+(d.route||'the store')
+                  +'. Our team is notified.';
+        if(typeof showToast==='function') showToast(msg,'error');
+      }catch(_){}
     });
     _empSrc.onerror=()=>{ try{_empSrc.close();}catch(e){} _empSrc=null; if(!_empRetry)_empRetry=setTimeout(connect,5000); };
   }
@@ -6384,12 +6470,18 @@ function playGrantedSound() {
                 if (data.status === 'otp_required') {
                     openPickupModal();
                     otpSetStatus('⚠️ ' + (data.message || 'Please verify your phone first.'), 'red');
+                } else if (data.status === 'error' || data.redirect_home) {
+                    // System error — redirect to the friendly error page which auto-returns to storefront
+                    window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
                 } else {
                     showToast("Error: " + data.message, "error");
                 }
                 btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             }
-        } catch(e) { showToast("Connection Error", "error"); btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false; }
+        } catch(e) {
+            // Network / unexpected JS error — also redirect to error page
+            window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
+        }
     }
 
 
@@ -6733,6 +6825,10 @@ function playGrantedSound() {
             _cSource.addEventListener('ping', () => {});
             ['order_status','order_new','order_updated','announcement','menu_update'].forEach(ev => {
                 _cSource.addEventListener(ev, () => { location.reload(); });
+            });
+            // System error pushed by server → redirect customer to friendly error page
+            _cSource.addEventListener('system_error', () => {
+                window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
             });
             _cSource.onerror = () => {
                 try { _cSource.close(); } catch(e) {}
@@ -10203,6 +10299,13 @@ function connectSSE() {
     fetchOrders();
   });
 
+  // System error reported by a customer — show a banner and refresh error log
+  _sseSource.addEventListener('system_error', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      showSystemErrorBanner(d);
+    } catch(_) {}
+  });
 
   _sseSource.onerror = () => {
     try { _sseSource.close(); } catch(e){}
@@ -10213,6 +10316,44 @@ function connectSSE() {
 }
 
 connectSSE();
+
+// ── System Error Banner (admin) ──────────────────────────────────────────────
+function showSystemErrorBanner(d) {
+  let banner = document.getElementById('sys-err-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'sys-err-banner';
+    banner.style.cssText = [
+      'position:fixed','top:0','left:0','right:0','z-index:99999',
+      'background:#B71C1C','color:#fff','font-family:DM Sans,sans-serif',
+      'font-size:0.88rem','font-weight:700','padding:10px 20px',
+      'display:flex','align-items:center','gap:12px','box-shadow:0 4px 16px rgba(0,0,0,0.3)',
+      'animation:slideDown .35s ease'
+    ].join(';');
+    document.body.appendChild(banner);
+    // add animation keyframe once
+    if (!document.getElementById('sys-err-kf')) {
+      const s = document.createElement('style');
+      s.id = 'sys-err-kf';
+      s.textContent = '@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}';
+      document.head.appendChild(s);
+    }
+  }
+  const time = d.time || new Date().toLocaleTimeString();
+  banner.innerHTML = `
+    <span style="font-size:1.2rem;">⚠️</span>
+    <span style="flex:1">
+      <b>SYSTEM ERROR</b> — Customer encountered an error on
+      <code style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:4px;">${d.route||'/'}</code>
+      &nbsp;·&nbsp; <i>${d.error_type||'Error'}</i>
+      &nbsp;·&nbsp; ${time}
+    </span>
+    <button onclick="this.parentElement.remove()"
+      style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:6px;
+             padding:4px 12px;cursor:pointer;font-weight:700;">✕</button>`;
+  // Auto-dismiss after 12 s
+  setTimeout(() => { if (banner.parentElement) banner.remove(); }, 12000);
+}
 
 // Safety-net fallback: re-fetch every 30 s in case SSE misses anything
 setInterval(fetchOrders, 30000);
@@ -11370,6 +11511,146 @@ def storefront():
         google_client_id=GOOGLE_CLIENT_ID
     )
 
+# ── Customer-facing error page ────────────────────────────────────────────────
+
+_CUSTOMER_ERROR_HTML = """<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<title>We'll be right back | 9599 Tea & Coffee</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;
+     justify-content:center;min-height:100vh;padding:20px;}
+.card{background:#fff;border-radius:20px;padding:50px 40px;max-width:460px;width:100%;
+      text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.08);border:1px solid #EFEBE4;}
+.logo-wrap{margin-bottom:20px;}
+.logo-wrap img{width:90px;height:90px;border-radius:50%;object-fit:cover;
+               border:3px solid #D7CCC8;box-shadow:0 4px 16px rgba(111,78,55,0.15);}
+.icon{font-size:3rem;margin-bottom:12px;}
+h2{font-family:'Playfair Display',serif;font-size:1.75rem;color:#3E2723;margin-bottom:12px;}
+p{color:#8D6E63;font-size:0.96rem;line-height:1.65;margin-bottom:8px;}
+.badge{display:inline-block;background:#FFF3E0;color:#E65100;font-weight:700;
+       font-size:0.85rem;padding:8px 20px;border-radius:50px;margin:18px 0 6px;
+       border:1px solid #FFCC80;letter-spacing:.3px;}
+.counter{font-size:0.82rem;color:#BCAAA4;margin-top:14px;}
+.progress{width:100%;height:5px;background:#EFEBE4;border-radius:4px;margin-top:12px;overflow:hidden;}
+.progress-bar{height:5px;background:#6F4E37;border-radius:4px;width:100%;
+              animation:shrink %(delay)ss linear forwards;}
+@keyframes shrink{from{width:100%}to{width:0%%}}
+</style>
+<script>
+var delay = %(delay)s;
+var target = "%(target)s";
+var t = delay;
+function tick(){
+    var el = document.getElementById('cnt');
+    if(el) el.textContent = t + 's';
+    if(t <= 0){ window.location.replace(target); return; }
+    t--; setTimeout(tick, 1000);
+}
+window.onload = tick;
+</script>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <img src="/static/images/9599.jpg" alt="9599 Tea & Coffee"
+         onerror="this.style.display='none'">
+  </div>
+  <div class="icon">⚙️</div>
+  <h2>Something went wrong</h2>
+  <p>We're sorry — a hiccup occurred on our end.</p>
+  <div class="badge">⏳ Wait for our response.<br>We'll fix this as soon as possible.</div>
+  <p>You'll be redirected back to the store automatically.</p>
+  <div class="progress"><div class="progress-bar"></div></div>
+  <div class="counter">Redirecting in <span id="cnt">%(delay)ss</span>…</div>
+</div>
+</body></html>"""
+
+
+def _customer_error_page(redirect_target, delay=7):
+    """Return a customer-friendly error page that auto-redirects after `delay` seconds."""
+    html = _CUSTOMER_ERROR_HTML % {'delay': delay, 'target': redirect_target}
+    return html, 200
+
+
+@app.route('/customer-error')
+def customer_error_page():
+    target = request.args.get('next', '/')
+    return _customer_error_page(target)
+
+
+# ── CUSTOMER-ROUTE DEFINITIONS for the error guard ───────────────────────────
+
+_CUSTOMER_ROUTES = {
+    '/', '/reserve',
+    '/api/auth/google', '/api/auth/manual',
+    '/api/auth/send_email_verification', '/verify-email',
+    '/api/auth/check_email_verification',
+    '/api/public/announcements',
+    '/api/store/status', '/api/menu',
+    '/api/otp/send', '/api/otp/verify',
+    '/api/permission_request', '/api/permission_status',
+    '/api/customer/status', '/api/customer/update_order', '/api/customer/order_detail',
+    '/api/item_query',
+    '/customer-error',
+}
+
+
+def _is_customer_route(path):
+    """True if the request path belongs to the customer-facing surface."""
+    for r in _CUSTOMER_ROUTES:
+        if path == r or path.startswith(r + '/'):
+            return True
+    return False
+
+
+# ── Global error handlers ─────────────────────────────────────────────────────
+
+@app.errorhandler(500)
+def handle_500(exc):
+    path = request.path
+    try:
+        log_system_error(path, exc, context_request=request)
+    except Exception:
+        pass
+    if _is_customer_route(path):
+        token = request.args.get('token', '')
+        back = f'/?token={token}' if token else '/'
+        return _customer_error_page(back)
+    return jsonify({"error": "Internal server error", "message": str(exc)}), 500
+
+
+@app.errorhandler(Exception)
+def handle_exception(exc):
+    # Let Flask handle HTTP exceptions (404, 403, etc.) normally
+    from werkzeug.exceptions import HTTPException
+    if isinstance(exc, HTTPException):
+        # Only intercept 5xx on customer routes; let 4xx pass through
+        if exc.code and exc.code >= 500 and _is_customer_route(request.path):
+            try:
+                log_system_error(request.path, exc, context_request=request)
+            except Exception:
+                pass
+            token = request.args.get('token', '')
+            back = f'/?token={token}' if token else '/'
+            return _customer_error_page(back)
+        return exc
+    # Non-HTTP unexpected exception
+    try:
+        log_system_error(request.path, exc, context_request=request)
+    except Exception:
+        pass
+    if _is_customer_route(request.path):
+        token = request.args.get('token', '')
+        back = f'/?token={token}' if token else '/'
+        return _customer_error_page(back)
+    return jsonify({"error": "Unexpected error", "message": str(exc)}), 500
+
+
 @app.route('/api/auth/google', methods=['POST'])
 def google_auth():
     data = request.json
@@ -12131,7 +12412,17 @@ def reserve_blend():
         return jsonify(resp), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        try:
+            log_system_error('/reserve', e, context_request=request)
+        except Exception:
+            pass
+        return jsonify({
+            "status": "error",
+            "message": "A system error occurred while placing your order. "
+                       "Our team has been notified and will fix this as soon as possible. "
+                       "Please try again shortly or contact the store directly.",
+            "redirect_home": True
+        }), 500
 
 @app.route('/api/permission_request', methods=['POST'])
 def permission_request():
@@ -14609,6 +14900,12 @@ DEV_HTML = r"""<!DOCTYPE html>
       <div class="nav-item" onclick="openTab('db')" data-tab="db"><i class="fas fa-database"></i> DB Inspector</div>
       <div class="nav-section">Customers</div>
       <div class="nav-item" onclick="openTab('customers')" data-tab="customers"><i class="fas fa-mobile-alt"></i> Customer Devices</div>
+      <div class="nav-section">Monitoring</div>
+      <div class="nav-item" onclick="openTab('syserrors');loadSystemErrors();" data-tab="syserrors">
+        <i class="fas fa-exclamation-triangle" style="color:#EF5350;"></i> System Errors
+        <span id="sys-err-badge" style="display:none;background:#EF5350;color:#fff;border-radius:50px;
+              font-size:.65rem;font-weight:800;padding:1px 6px;margin-left:4px;vertical-align:middle;"></span>
+      </div>
       <div class="nav-section">Environment</div>
       <div class="nav-item" onclick="openTab('env')" data-tab="env"><i class="fas fa-server"></i> Environment</div>
       <div class="nav-section">Quick Links</div>
@@ -14754,6 +15051,33 @@ DEV_HTML = r"""<!DOCTYPE html>
           </div>
         </div>
       </div>
+
+      <!-- ── System Errors Tab ───────────────────────────────────────── -->
+      <div class="tab-panel" id="tab-syserrors">
+        <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div class="section-title" style="display:flex;align-items:center;gap:10px;">
+              <i class="fas fa-exclamation-triangle" style="color:#EF5350;"></i> System Errors
+            </div>
+            <div class="section-sub">Customer-facing errors captured automatically. Unresolved errors are highlighted.</div>
+          </div>
+          <button class="btn-action" onclick="loadSystemErrors()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span><i class="fas fa-bug" style="color:#EF5350;"></i> Error Log</span>
+            <span style="font-size:.7rem;color:var(--muted);">Auto-updates via live stream · Click Resolve when fixed</span>
+          </div>
+          <div class="panel-body" style="padding:0;max-height:600px;overflow-y:auto;">
+            <div id="sys-errors-list">
+              <div style="text-align:center;padding:24px;color:var(--muted);font-size:0.82rem;">
+                <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -14907,7 +15231,65 @@ let _confirmCallback=null;
 function showConfirm(title,msg,cb){document.getElementById('confirm-title').textContent=title;document.getElementById('confirm-msg').textContent=msg;_confirmCallback=cb;openModal('confirm-modal');}
 document.getElementById('confirm-ok-btn').addEventListener('click',()=>{closeModal('confirm-modal');if(_confirmCallback){_confirmCallback();_confirmCallback=null;}});
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
-(async()=>{const r=await fetch('/api/dev/check');if(r.ok){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';loadOverview();loadAudit(5);loadSession();}})();
+(async()=>{const r=await fetch('/api/dev/check');if(r.ok){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';loadOverview();loadAudit(5);loadSession();connectDevSSE();}})();
+
+// ── Dev Portal SSE — real-time system error feed ─────────────────────────────
+let _devSrc=null,_devSseRetry=null;
+function connectDevSSE(){
+  if(_devSrc){try{_devSrc.close();}catch(e){}}
+  _devSrc=new EventSource('/api/dev/stream');
+  _devSrc.addEventListener('connected',()=>{if(_devSseRetry){clearTimeout(_devSseRetry);_devSseRetry=null;}});
+  _devSrc.addEventListener('system_error',(e)=>{
+    try{
+      const d=JSON.parse(e.data);
+      toast('\u26a0\ufe0f Customer error on '+d.route+': '+d.error_type,'err');
+      // Refresh errors panel if visible
+      const el=document.getElementById('sys-errors-list');
+      if(el) loadSystemErrors();
+      // Flash badge
+      const badge=document.getElementById('sys-err-badge');
+      if(badge){badge.style.display='inline';badge.textContent=(parseInt(badge.textContent||'0')+1);}
+    }catch(_){}
+  });
+  _devSrc.onerror=()=>{try{_devSrc.close();}catch(e){}  _devSrc=null;
+    if(!_devSseRetry)_devSseRetry=setTimeout(connectDevSSE,5000);};
+}
+
+// ── System Errors panel ───────────────────────────────────────────────────────
+async function loadSystemErrors(){
+  const el=document.getElementById('sys-errors-list');
+  if(!el)return;
+  el.innerHTML='<div style="color:var(--muted);padding:10px 0;">Loading...</div>';
+  const r=await devFetch('/api/dev/system_errors?limit=50');
+  if(!r){el.innerHTML='<div style="color:var(--danger);">Failed to load.</div>';return;}
+  const d=await r.json();
+  const badge=document.getElementById('sys-err-badge');
+  const unresolved=d.filter(e=>!e.is_resolved).length;
+  if(badge){badge.textContent=unresolved||'';badge.style.display=unresolved?'inline':'none';}
+  if(!d.length){el.innerHTML='<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--accent2);"></i>&nbsp;No errors logged.</div>';return;}
+  el.innerHTML=d.map(e=>`
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;">
+      <span style="margin-top:2px;font-size:1rem;">${e.is_resolved?'✅':'🔴'}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.78rem;font-weight:700;color:var(--bright);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <code style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px;">${escapeHTML(e.route)}</code>
+          <span style="color:var(--danger);">${escapeHTML(e.error_type)}</span>
+          <span style="color:var(--muted);font-weight:400;">${e.created_at}</span>
+        </div>
+        <div style="font-size:.73rem;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+             title="${escapeHTML(e.error_msg)}">${escapeHTML(e.error_msg.substring(0,140))}</div>
+      </div>
+      ${!e.is_resolved?`<button onclick="resolveError(${e.id},this)"
+        style="flex-shrink:0;background:var(--accent2);color:#fff;border:none;border-radius:6px;
+               padding:4px 10px;font-size:.68rem;cursor:pointer;font-family:inherit;">Resolve</button>`:''}
+    </div>`).join('');
+}
+async function resolveError(id,btn){
+  btn.disabled=true;btn.textContent='…';
+  const r=await devFetch('/api/dev/system_errors/'+id+'/resolve',{method:'POST'});
+  if(r?.ok){toast('Error #'+id+' marked resolved.');loadSystemErrors();}
+  else{toast('Failed.','err');btn.disabled=false;btn.textContent='Resolve';}
+}
 </script>
 </body>
 </html>
@@ -15421,6 +15803,119 @@ def dev_env():
     result.append({"key": "DB_ENGINE", "value": app.config['SQLALCHEMY_DATABASE_URI'].split(':')[0], "set": True})
     result.append({"key": "ON_CLOUD", "value": str(_ON_CLOUD), "set": _ON_CLOUD})
     return jsonify(result)
+
+
+# ── System Error Log endpoints (Dev + Admin) ──────────────────────────────────
+
+@app.route('/api/dev/system_errors', methods=['GET'])
+@_dev_auth_required
+def dev_system_errors():
+    """Return the most recent customer-facing system errors for the developer portal."""
+    try:
+        limit  = int(request.args.get('limit', 50))
+        errors = SystemErrorLog.query.order_by(SystemErrorLog.id.desc()).limit(limit).all()
+        return jsonify([{
+            "id":          e.id,
+            "route":       e.route,
+            "error_type":  e.error_type,
+            "error_msg":   e.error_msg,
+            "ip_address":  e.ip_address,
+            "user_agent":  e.user_agent,
+            "is_resolved": e.is_resolved,
+            "created_at":  e.created_at.strftime('%Y-%m-%d %H:%M:%S') if e.created_at else '',
+        } for e in errors])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dev/system_errors/<int:err_id>/resolve', methods=['POST'])
+@_dev_auth_required
+def dev_resolve_system_error(err_id):
+    """Mark a system error as resolved."""
+    try:
+        err = SystemErrorLog.query.get_or_404(err_id)
+        err.is_resolved = True
+        db.session.commit()
+        log_audit('Dev: Error Resolved', f'System error #{err_id} marked resolved')
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/admin/system_errors', methods=['GET'])
+def admin_system_errors():
+    """Admin panel endpoint — returns recent customer-facing errors."""
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        limit  = int(request.args.get('limit', 30))
+        errors = SystemErrorLog.query.order_by(SystemErrorLog.id.desc()).limit(limit).all()
+        return jsonify([{
+            "id":          e.id,
+            "route":       e.route,
+            "error_type":  e.error_type,
+            "error_msg":   e.error_msg,
+            "is_resolved": e.is_resolved,
+            "created_at":  e.created_at.strftime('%Y-%m-%d %H:%M:%S') if e.created_at else '',
+        } for e in errors])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/employee/system_errors', methods=['GET'])
+def employee_system_errors():
+    """Employee station endpoint — lightweight view of active system errors."""
+    if not session.get('is_employee'):
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        errors = SystemErrorLog.query.filter_by(is_resolved=False)\
+                               .order_by(SystemErrorLog.id.desc()).limit(10).all()
+        return jsonify([{
+            "id":         e.id,
+            "route":      e.route,
+            "error_type": e.error_type,
+            "created_at": e.created_at.strftime('%H:%M:%S') if e.created_at else '',
+        } for e in errors])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Developer SSE stream ──────────────────────────────────────────────────────
+
+@app.route('/api/dev/stream')
+def dev_stream():
+    """Server-sent events stream for the developer portal (system errors, etc.)."""
+    if not session.get('is_dev'):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    q = queue.Queue(maxsize=50)
+    with _dev_sse_lock:
+        _dev_sse_subscribers.append(q)
+
+    def generate():
+        try:
+            yield f"event: connected\ndata: {json.dumps({'status': 'ok'})}\n\n"
+            while True:
+                try:
+                    msg = q.get(timeout=25)
+                    yield msg
+                except queue.Empty:
+                    yield ": keep-alive\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            with _dev_sse_lock:
+                if q in _dev_sse_subscribers:
+                    _dev_sse_subscribers.remove(q)
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+
+# ── force_migrate: also cover the new system_error_logs table ─────────────────
+
+_ORIGINAL_FORCE_MIGRATE = None   # patched at startup via with_appcontext
 
 
 # ==========================================
