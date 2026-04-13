@@ -241,9 +241,16 @@ def get_store_status():
         "day": day_names[dow],
     }
 
-def log_audit(action, details=""):
+def log_audit(action, details="", ip=None):
     try:
-        new_log = AuditLog(action=action, details=details)
+        # Auto-capture the request IP when called within a request context
+        if ip is None:
+            try:
+                forwarded = request.headers.get('X-Forwarded-For', '')
+                ip = forwarded.split(',')[0].strip() if forwarded else (request.remote_addr or '')
+            except RuntimeError:
+                ip = ''
+        new_log = AuditLog(action=action, details=details, ip_address=(ip or ''))
         db.session.add(new_log)
         db.session.commit()
     except Exception as e:
@@ -434,6 +441,7 @@ class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     action = db.Column(db.String(100), nullable=False)
     details = db.Column(db.String(255), nullable=True)
+    ip_address = db.Column(db.String(60), nullable=True, default='')
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
 class CustomerLog(db.Model):
@@ -6823,9 +6831,58 @@ function playGrantedSound() {
                 if (_cRetry) { clearTimeout(_cRetry); _cRetry = null; }
             });
             _cSource.addEventListener('ping', () => {});
-            ['order_status','order_new','order_updated','announcement','menu_update'].forEach(ev => {
+
+            // ── Admin-change events: show a toast then soft-reload ──────────
+            const _adminChangeMessages = {
+                menu_update:     '🧋 Menu updated by the store.',
+                schedule_update: '🕐 Store hours updated by the store.',
+                promo_update:    '🎉 Promotions updated by the store.',
+                announcement:    '📢 New announcement from the store.',
+                order_status:    null,   // handled silently below
+                order_new:       null,
+                order_updated:   null,
+            };
+
+            function _customerRefresh(msg) {
+                // Show a brief, non-intrusive banner then reload the page
+                const existing = document.getElementById('_store-update-banner');
+                if (existing) existing.remove();
+                const banner = document.createElement('div');
+                banner.id = '_store-update-banner';
+                banner.style.cssText = [
+                    'position:fixed','top:0','left:0','right:0','z-index:99999',
+                    'background:#3E2723','color:#F5EFE6','font-family:DM Sans,sans-serif',
+                    'font-size:0.84rem','font-weight:700','padding:10px 18px',
+                    'text-align:center','box-shadow:0 4px 16px rgba(0,0,0,0.25)',
+                    'animation:_sbSlide .3s ease'
+                ].join(';');
+                // Inject keyframe once
+                if (!document.getElementById('_sb-kf')) {
+                    const s = document.createElement('style');
+                    s.id = '_sb-kf';
+                    s.textContent = '@keyframes _sbSlide{from{transform:translateY(-100%)}to{transform:translateY(0)}}';
+                    document.head.appendChild(s);
+                }
+                banner.textContent = (msg || '🔄 Store updated.') + ' Refreshing…';
+                document.body.appendChild(banner);
+                setTimeout(() => location.reload(), 2200);
+            }
+
+            ['menu_update', 'schedule_update', 'promo_update'].forEach(ev => {
+                _cSource.addEventListener(ev, (e) => {
+                    const msg = _adminChangeMessages[ev] || '🔄 Store updated.';
+                    _customerRefresh(msg);
+                });
+            });
+
+            _cSource.addEventListener('announcement', () => {
+                _customerRefresh('📢 New announcement from the store.');
+            });
+
+            ['order_status', 'order_new', 'order_updated'].forEach(ev => {
                 _cSource.addEventListener(ev, () => { location.reload(); });
             });
+
             // System error pushed by server → redirect customer to friendly error page
             _cSource.addEventListener('system_error', () => {
                 window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
@@ -8399,6 +8456,17 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="admin-nav-text">
         <span class="admin-nav-label">Fraud Control</span>
         <span class="admin-nav-desc">Limits, blocklist &amp; reputation</span>
+      </div>
+    </button>
+
+    <button class="admin-nav-item" id="nb-checklist" onclick="goScreen('checklist',this);loadAdminChecklist();closeAdminMenu()">
+      <div class="admin-nav-icon" style="background:rgba(13,122,106,0.1);color:#0D7A6A;position:relative;">
+        <i class="fas fa-clipboard-check"></i>
+        <span id="checklist-nav-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;min-width:16px;height:16px;padding:0 3px;font-size:0.52rem;font-weight:900;align-items:center;justify-content:center;border:2px solid var(--brown-dark);"></span>
+      </div>
+      <div class="admin-nav-text">
+        <span class="admin-nav-label">Daily Checklist</span>
+        <span class="admin-nav-desc">Opening &amp; closing monitor</span>
       </div>
     </button>
 
@@ -10149,10 +10217,11 @@ function renderAuditPage(logs){
   } else {
     list.innerHTML=slice.map(l=>{
       const ic=getAuditIcon(l.action);
+      const ipBadge=l.ip?`<span style="font-family:monospace;font-size:0.68rem;color:var(--brown);background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;padding:1px 7px;margin-left:6px;white-space:nowrap;">${escapeHTML(l.ip)}</span>`:'';
       return`<div class="audit-entry">
         <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
         <div class="audit-body">
-          <div class="audit-action">${escapeHTML(l.action)}</div>
+          <div class="audit-action">${escapeHTML(l.action)}${ipBadge}</div>
           ${l.details?`<div class="audit-details">${escapeHTML(l.details)}</div>`:''}
         </div>
         <div class="audit-time">${escapeHTML(l.time)}</div>
@@ -12086,6 +12155,7 @@ def handle_schedule():
                 ))
         db.session.commit()
         log_audit("Schedule Updated", "Store schedule updated by admin")
+        push_customer_event('schedule_update', {'reason': 'hours_changed'})
         return jsonify({"status": "success"})
 
 @app.route('/api/closed_days', methods=['GET', 'POST', 'DELETE'])
@@ -12102,6 +12172,7 @@ def handle_closed_days():
             db.session.add(ClosedDay(date_str=date_str))
             db.session.commit()
             log_audit("Closed Day Added", f"Shop closed on {date_str}")
+            push_customer_event('schedule_update', {'reason': 'day_closed', 'date': date_str})
         return jsonify({"status": "success"})
     elif request.method == 'DELETE':
         date_str = request.json.get('date', '')
@@ -12110,6 +12181,7 @@ def handle_closed_days():
             db.session.delete(existing)
             db.session.commit()
             log_audit("Closed Day Removed", f"Shop reopened on {date_str}")
+            push_customer_event('schedule_update', {'reason': 'day_reopened', 'date': date_str})
         return jsonify({"status": "success"})
 
 @app.route('/api/store/status')
@@ -12139,6 +12211,7 @@ def handle_menu():
         new_item = MenuItem(name=data['name'].strip(), price=float(data['price']), letter=data['letter'][:2].upper(), category=data['category'], is_out_of_stock=bool(data.get('is_out_of_stock', False)))
         db.session.add(new_item)
         db.session.commit()
+        push_customer_event('menu_update', {'reason': 'item_added', 'name': data['name'].strip()})
         return jsonify({"status": "success"})
 
 @app.route('/api/menu/<int:item_id>', methods=['PUT', 'DELETE'])
@@ -12153,10 +12226,13 @@ def handle_menu_item(item_id):
         item.category = data['category']
         item.is_out_of_stock = bool(data.get('is_out_of_stock', False))
         db.session.commit()
+        push_customer_event('menu_update', {'reason': 'item_edited', 'name': item.name, 'out_of_stock': item.is_out_of_stock})
         return jsonify({"status": "success"})
     elif request.method == 'DELETE':
+        name = item.name
         db.session.delete(item)
         db.session.commit()
+        push_customer_event('menu_update', {'reason': 'item_deleted', 'name': name})
         return jsonify({"status": "success"})
 
 @app.route('/api/inventory', methods=['GET', 'PUT'])
@@ -12171,6 +12247,7 @@ def handle_inventory():
             if ing: ing.stock = float(item_data['stock'])
         db.session.commit()
         push_employee_event('stock_update', {})
+        push_customer_event('menu_update', {'reason': 'stock_updated'})
         return jsonify({"status": "success"})
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12277,7 +12354,7 @@ def otp_verify():
         db.session.rollback()
 
     session['otp_verified_phone'] = phone
-    log_audit("Phone OTP Verified", f"Phone {phone} verified successfully")
+    log_audit("Phone OTP Verified", f"Phone {phone} verified successfully — IP: {get_client_ip()}", ip=get_client_ip())
     return jsonify({"status": "verified", "message": "Phone number verified! You may now place your order."})
 
 
@@ -13426,7 +13503,12 @@ def get_customer_logs():
 @app.route('/api/audit_logs', methods=['GET'])
 def get_audit_logs():
     if not session.get('is_admin'): return jsonify([]), 403
-    return jsonify([{"action": l.action, "details": l.details, "time": l.created_at.strftime('%Y-%m-%d %I:%M %p')} for l in AuditLog.query.order_by(AuditLog.created_at.desc()).limit(500).all()])
+    return jsonify([{
+        "action": l.action,
+        "details": l.details,
+        "ip": l.ip_address or '',
+        "time": l.created_at.strftime('%Y-%m-%d %I:%M %p')
+    } for l in AuditLog.query.order_by(AuditLog.created_at.desc()).limit(500).all()])
 
 # ==========================================
 # 10. SYSTEM INITIALIZATION & SEED DATA
@@ -13550,6 +13632,7 @@ def promos_create():
     db.session.add(p)
     db.session.commit()
     log_audit("Promo Created", f"Code '{code}' — {data.get('discount_type')} {data.get('discount_value')}")
+    push_customer_event('promo_update', {'reason': 'created', 'code': code})
     return jsonify({"ok": True, "id": p.id})
 
 @app.route('/api/admin/promos/<int:pid>', methods=['PATCH'])
@@ -13570,6 +13653,7 @@ def promos_update(pid):
         p.min_order = float(data['min_order'])
     db.session.commit()
     log_audit("Promo Updated", f"Code '{p.code}' updated")
+    push_customer_event('promo_update', {'reason': 'updated', 'code': p.code})
     return jsonify({"ok": True})
 
 @app.route('/api/admin/promos/<int:pid>', methods=['DELETE'])
@@ -13583,6 +13667,7 @@ def promos_delete(pid):
     db.session.delete(p)
     db.session.commit()
     log_audit("Promo Deleted", f"Code '{code}' deleted")
+    push_customer_event('promo_update', {'reason': 'deleted', 'code': code})
     return jsonify({"ok": True})
 
 @app.route('/api/promo/validate', methods=['POST'])
@@ -15212,7 +15297,7 @@ function openTab(name){document.querySelectorAll('.tab-panel').forEach(p=>p.clas
 async function devFetch(url,opts={}){const r=await fetch(url,opts);if(r.status===401){toast('Session expired.','err');return null;}return r;}
 async function loadOverview(){const r=await devFetch('/api/dev/stats');if(!r)return;const d=await r.json();document.getElementById('stat-orders').textContent=d.orders??'—';document.getElementById('stat-revenue').textContent=d.revenue!=null?'₱'+d.revenue.toFixed(2):'—';document.getElementById('stat-banned').textContent=d.banned??'—';document.getElementById('stat-fails').textContent=d.failed_24h??'—';document.getElementById('stat-menu').textContent=d.menu_items??'—';document.getElementById('stat-ings').textContent=d.ingredients??'—';const p=document.getElementById('db-pulse');if(d.db_ok)p.classList.remove('off');else p.classList.add('off');}
 async function loadSession(){const r=await devFetch('/api/dev/sessions');if(!r)return;const d=await r.json();document.getElementById('session-panel').innerHTML='<div class="env-row"><span class="env-key">Admin Session</span><span class="'+(d.admin_active?'accent':'danger')+'">'+(d.admin_active?'&#9679; Active':'&#9675; Inactive')+'</span></div><div class="env-row"><span class="env-key">Admin Last Ping</span><span class="env-val">'+(d.admin_last_ping||'—')+'</span></div><div class="env-row"><span class="env-key">Employee Session</span><span class="'+(d.emp_active?'accent':'danger')+'">'+(d.emp_active?'&#9679; Active':'&#9675; Inactive')+'</span></div><div class="env-row"><span class="env-key">Employee Last Ping</span><span class="env-val">'+(d.emp_last_ping||'—')+'</span></div><div class="env-row"><span class="env-key">Your IP</span><span class="env-val">'+(d.client_ip||'—')+'</span></div>';}
-async function loadAudit(limit){limit=limit||50;const r=await devFetch('/api/dev/audit?limit='+limit);if(!r)return;const logs=await r.json();['overview-log','full-audit-log'].forEach(id=>{const el=document.getElementById(id);if(!el)return;if(!logs.length){el.innerHTML='<div class="empty-state"><i class="fas fa-terminal"></i>No events yet.</div>';return;}el.innerHTML=logs.map(l=>{const cls=l.action.includes('Login')?'ok':l.action.includes('Security')||l.action.includes('Ban')?'err':l.action.includes('Warn')?'warn':'';return'<div class="log-line '+cls+'"><span class="log-ts">'+l.ts+'</span><span class="log-msg">['+l.action+'] '+(l.details||'')+'</span></div>';}).join('');el.scrollTop=el.scrollHeight;});}
+async function loadAudit(limit){limit=limit||50;const r=await devFetch('/api/dev/audit?limit='+limit);if(!r)return;const logs=await r.json();['overview-log','full-audit-log'].forEach(id=>{const el=document.getElementById(id);if(!el)return;if(!logs.length){el.innerHTML='<div class="empty-state"><i class="fas fa-terminal"></i>No events yet.</div>';return;}el.innerHTML=logs.map(l=>{const cls=l.action.includes('Login')?'ok':l.action.includes('Security')||l.action.includes('Ban')?'err':l.action.includes('Warn')?'warn':'';const ipTag=l.ip?'<span style="display:inline-block;background:rgba(255,255,255,0.07);color:#64FFDA;font-family:monospace;font-size:0.68rem;padding:1px 6px;border-radius:4px;margin-left:6px;border:1px solid rgba(100,255,218,0.2);">'+escapeHTML(l.ip)+'</span>':'';return'<div class="log-line '+cls+'"><span class="log-ts">'+l.ts+'</span><span class="log-msg">['+l.action+'] '+(l.details||'')+ipTag+'</span></div>';}).join('');el.scrollTop=el.scrollHeight;});}
 async function loadBlacklist(){const r=await devFetch('/api/dev/blacklist');if(!r)return;const d=await r.json();document.getElementById('ban-count').textContent=d.length;const tbody=document.getElementById('ban-tbody');if(!d.length){tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><i class="fas fa-shield-alt"></i>No IPs blacklisted.</div></td></tr>';return;}tbody.innerHTML=d.map(b=>'<tr><td><span style="color:var(--bright);">'+b.ip+'</span></td><td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;">'+(b.reason||'—')+'</td><td><span class="badge '+(b.manual?'badge-warn':'badge-red')+'">'+(b.manual?'Manual':'Auto')+'</span></td><td><button class="btn-action danger-btn" style="padding:4px 10px;font-size:.68rem;" onclick="unbanIP('+b.id+',\''+b.ip+'\')"><i class="fas fa-unlock"></i> Unban</button></td></tr>').join('');}
 async function loadAttempts(){const r=await devFetch('/api/dev/attempts');if(!r)return;const d=await r.json();document.getElementById('attempt-count').textContent=d.length;const tbody=document.getElementById('attempt-tbody');if(!d.length){tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><i class="fas fa-check-circle"></i>No failed attempts in 24h.</div></td></tr>';return;}tbody.innerHTML=d.slice(0,50).map(a=>'<tr><td><span style="color:var(--bright);">'+a.ip+'</span></td><td><span class="badge badge-warn">'+a.type+'</span></td><td style="color:var(--muted);">'+a.ts+'</td><td><button class="btn-action warn-btn" style="padding:4px 10px;font-size:.68rem;" onclick="quickBan(\''+a.ip+'\')"><i class="fas fa-ban"></i> Ban</button></td></tr>').join('');}
 async function unbanIP(id,ip){const r=await devFetch('/api/dev/blacklist/'+id,{method:'DELETE'});if(r?.ok){toast(ip+' has been unbanned.');loadBlacklist();loadOverview();}else toast('Failed to unban.','err');}
@@ -15423,9 +15508,11 @@ def dev_audit():
     try:
         logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(limit).all()
         return jsonify([{"ts": l.created_at.strftime('%H:%M:%S') if l.created_at else '—',
-                         "action": l.action or '', "details": l.details or ''} for l in logs])
+                         "action": l.action or '',
+                         "details": l.details or '',
+                         "ip": l.ip_address or ''} for l in logs])
     except Exception as e:
-        return jsonify([{"ts": "error", "action": str(e), "details": ""}])
+        return jsonify([{"ts": "error", "action": str(e), "details": "", "ip": ""}])
 
 
 @app.route('/api/dev/blacklist', methods=['GET'])
@@ -15765,6 +15852,9 @@ def dev_force_migrate():
     run_alter("customer_logs", "items", "TEXT NOT NULL DEFAULT ''")
     run_alter("customer_logs", "pickup_time", "VARCHAR(50) NOT NULL DEFAULT ''")
     run_alter("customer_logs", "phone", "VARCHAR(30) NOT NULL DEFAULT ''")
+
+    # audit_logs ip_address column (new — tracks device IP per event)
+    run_alter("audit_logs", "ip_address", "VARCHAR(60) DEFAULT ''")
 
     # Also run create_all for any missing tables
     try:
