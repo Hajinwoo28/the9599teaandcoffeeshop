@@ -4739,18 +4739,31 @@ function playGrantedSound() {
 
     function _gatePollVerificationWithPopup(email) {
         if (_verifyPollInterval) clearInterval(_verifyPollInterval);
-        _verifyPollInterval = setInterval(async () => {
+
+        async function _checkVerified() {
+            // Skip if tab is hidden — browser suspends fetch causing ERR_NETWORK_IO_SUSPENDED
+            if (document.hidden) return;
             try {
                 const res  = await fetch('/api/auth/check_email_verification?email=' + encodeURIComponent(email));
                 const data = await res.json();
                 if (data.verified) {
                     clearInterval(_verifyPollInterval);
+                    document.removeEventListener('visibilitychange', _onVisibilityChange);
                     closeEmailVerifyPopup();
                     _gateMarkEmailVerified();
                     showToast('✅ Email verified! You can now set your location.', 'success');
                 }
             } catch(e) {}
-        }, 2000);
+        }
+
+        // When user returns to this tab (after clicking link in email), check immediately
+        function _onVisibilityChange() {
+            if (!document.hidden) _checkVerified();
+        }
+        document.removeEventListener('visibilitychange', _onVisibilityChange);
+        document.addEventListener('visibilitychange', _onVisibilityChange);
+
+        _verifyPollInterval = setInterval(_checkVerified, 2000);
     }
 
     async function gateSendEmailVerification() {
