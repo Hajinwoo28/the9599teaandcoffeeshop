@@ -26,6 +26,17 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+# ── Load .env file (for local development) ────────────────────────────────────
+# Create a .env file in the same folder as app.py with:
+#   GMAIL_SENDER=yourgmail@gmail.com
+#   GMAIL_APP_PASSWORD=abcdefghijklmnop
+# On Render/Vercel/Railway, set these as environment variables in the dashboard.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed — env vars must be set manually (fine for production)
+
 # Pandas is required to import legacy Excel/CSV notebooks
 try:
     import pandas as pd
@@ -40,6 +51,50 @@ app.wsgi_app = ProxyFix(
     x_proto=1, 
     x_host=1
 )
+
+# ── Email config startup diagnostic ───────────────────────────────────────────
+# Printed once when the app starts so you can confirm credentials are loaded.
+def _check_email_config():
+    resend_key    = os.environ.get('RESEND_API_KEY', '').strip()
+    resend_from   = os.environ.get('RESEND_FROM', '').strip()
+    gmail_sender  = os.environ.get('GMAIL_SENDER', '').strip()
+    gmail_pw      = os.environ.get('GMAIL_APP_PASSWORD', '').strip().replace(' ', '')
+
+    print("\n" + "="*55)
+    print("  EMAIL VERIFICATION CONFIG CHECK")
+    print("="*55)
+    if resend_key:
+        print(f"  [OK] METHOD 1 - Resend API key found")
+        if resend_from:
+            print(f"       FROM: {resend_from}")
+        else:
+            print(f"  [!!] RESEND_FROM not set - using sandbox sender.")
+            print(f"       Emails will only reach the Resend account owner.")
+            print(f"       Fix: set RESEND_FROM=YourApp <verify@yourdomain.com>")
+    else:
+        print("  [--] METHOD 1 - Resend API key NOT set (skipped)")
+
+    if gmail_sender and gmail_pw:
+        print(f"  [OK] METHOD 2 - Gmail SMTP ready ({gmail_sender})")
+    elif gmail_sender or gmail_pw:
+        print("  [!!] METHOD 2 - Gmail SMTP INCOMPLETE:")
+        if not gmail_sender:  print("       Missing: GMAIL_SENDER")
+        if not gmail_pw:      print("       Missing: GMAIL_APP_PASSWORD")
+    else:
+        print("  [--] METHOD 2 - Gmail SMTP NOT set (skipped)")
+
+    if not resend_key and not (gmail_sender and gmail_pw):
+        print()
+        print("  [ERROR] NO EMAIL PROVIDER CONFIGURED!")
+        print("  Verification links will only appear in terminal logs.")
+        print()
+        print("  QUICK FIX - create a .env file next to app.py with:")
+        print("    GMAIL_SENDER=yourgmail@gmail.com")
+        print("    GMAIL_APP_PASSWORD=abcdefghijklmnop")
+        print("  (Use a Gmail App Password, NOT your regular login password)")
+    print("="*55 + "\n")
+
+_check_email_config()
 
 # ==========================================
 # 1. ADVANCED SECURITY CONFIGURATION
