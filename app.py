@@ -3849,8 +3849,13 @@ STOREFRONT_HTML = """
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
+<<<<<<< HEAD
     <link rel="stylesheet" href="/static/leaflet/leaflet.min.css">
     <script src="/static/leaflet/leaflet.min.js"></script>
+=======
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous"></script>
+>>>>>>> dafb02578e8886774ce84efe7e1cfe4640d81606
     
     <style>
         :root {
@@ -16441,4 +16446,8 @@ if __name__ == '__main__':
         print("==================================================")
 
         Timer(1.5, open_browser).start()
+<<<<<<< HEAD
         app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True, ssl_context=ssl_ctx)
+=======
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True, ssl_context=ssl_ctx)
+>>>>>>> dafb02578e8886774ce84efe7e1cfe4640d81606
