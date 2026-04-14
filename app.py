@@ -16446,7 +16446,4 @@ if __name__ == '__main__':
         print("==================================================")
 
         Timer(1.5, open_browser).start()
-
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True, ssl_context=ssl_ctx)
-
         app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=True, ssl_context=ssl_ctx)
