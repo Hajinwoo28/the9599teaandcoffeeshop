@@ -1,0 +1,47 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "xprotocol",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 33060,
+            "driver": "MySQL",
+            "name": "Queue Managemaent System",
+            "database": "queue_management",
+            "username": "root",
+            "connectionTimeout": 30,
+            "password": "12345"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "database": "phoenix_erp_final",
+            "username": "root",
+            "name": "Accounting System",
+            "password": "12345",
+            "connectionTimeout": 30
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "database": "milktea_system",
+            "username": "postgres",
+            "name": "9599 Tea & Coffee Shop"
+        }
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system"
+}

@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>9599 Tea & Coffee</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --pink: #E91E8C;
+    --pink-dark: #C2177A;
+    --pink-light: #FCE4F3;
+    --purple: #6B2FA0;
+    --purple-dark: #4A1F72;
+    --purple-light: #EDE0F7;
+    --yellow: #F9C23C;
+    --green: #27AE60;
+    --red: #E74C3C;
+    --bg: #F4F0FB;
+    --card: #FFFFFF;
+    --text: #1A1A2E;
+    --muted: #7B7B9E;
+    --border: rgba(107,47,160,0.12);
+    --shadow: 0 4px 20px rgba(107,47,160,0.13);
+    --radius: 18px;
+    --nav-h: 68px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; }
+  body {
+    font-family:'Nunito',sans-serif;
+    background:#1A1A2E;
+    display:flex; justify-content:center; align-items:center;
+  }
+
+  /* ── Device Shell ── */
+  .device {
+    width:390px; height:844px;
+    background:var(--bg);
+    border-radius:44px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5);
+    display:flex; flex-direction:column;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    background:var(--purple);
+    color:#fff;
+    height:44px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px;
+    font-size:13px; font-weight:700;
+    flex-shrink:0;
+  }
+  .status-bar .notch {
+    width:120px; height:28px;
+    background:#0d0d1e;
+    border-radius:0 0 20px 20px;
+    position:absolute; left:50%; transform:translateX(-50%);
+    top:0;
+  }
+
+  /* ── Screens ── */
+  .screens { flex:1; overflow:hidden; position:relative; }
+  .screen {
+    position:absolute; inset:0;
+    overflow-y:auto; overflow-x:hidden;
+    background:var(--bg);
+    display:none;
+    padding-bottom:calc(var(--nav-h) + 8px);
+  }
+  .screen.active { display:block; }
+  .screen::-webkit-scrollbar { display:none; }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    height:var(--nav-h);
+    background:#fff;
+    border-top:1px solid var(--border);
+    display:flex;
+    flex-shrink:0;
+    position:relative;
+    z-index:100;
+  }
+  .nav-btn {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:4px; cursor:pointer;
+    color:var(--muted);
+    font-size:10px; font-weight:700;
+    letter-spacing:0.3px;
+    border:none; background:transparent;
+    transition:color 0.2s;
+  }
+  .nav-btn i { font-size:20px; transition:transform 0.2s; }
+  .nav-btn.active { color:var(--purple); }
+  .nav-btn.active i { transform:scale(1.15); }
+  .nav-center-btn {
+    width:56px; height:56px;
+    background:linear-gradient(135deg, var(--pink), var(--purple));
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:26px;
+    position:absolute; top:-22px; left:50%; transform:translateX(-50%);
+    box-shadow:0 4px 16px rgba(233,30,140,0.45);
+    cursor:pointer;
+    border:4px solid #fff;
+  }
+  .nav-spacer { flex:1; }
+
+  /* ── Header ── */
+  .page-header {
+    background:linear-gradient(135deg, var(--purple), var(--pink-dark));
+    color:#fff; padding:20px 20px 28px;
+  }
+  .page-header h1 { font-family:'Baloo 2',cursive; font-size:24px; font-weight:800; }
+  .page-header p { font-size:13px; opacity:0.8; margin-top:2px; }
+
+  /* ── Cards ── */
+  .card {
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+    margin:0 16px 14px;
+  }
+  .card-title { font-size:13px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+
+  /* ── Badges ── */
+  .badge {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:4px 10px; border-radius:20px;
+    font-size:11px; font-weight:800;
+  }
+  .badge-pink { background:var(--pink-light); color:var(--pink-dark); }
+  .badge-purple { background:var(--purple-light); color:var(--purple-dark); }
+  .badge-green { background:#D5F5E3; color:#1E8449; }
+  .badge-yellow { background:#FEF9E7; color:#B7770D; }
+
+  /* ─────────────────── HOME ─────────────────── */
+  #screen-home .hero {
+    background:linear-gradient(135deg, var(--purple-dark) 0%, var(--pink-dark) 100%);
+    padding:20px 20px 36px;
+    position:relative; overflow:hidden;
+  }
+  #screen-home .hero::after {
+    content:'';
+    position:absolute; bottom:-24px; left:0; right:0;
+    height:48px; background:var(--bg);
+    border-radius:32px 32px 0 0;
+  }
+  .hero-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .hero-logo { display:flex; align-items:center; gap:10px; }
+  .hero-logo .logo-circle {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,0.2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:#fff;
+  }
+  .hero-logo span { font-family:'Baloo 2',cursive; font-size:17px; font-weight:800; color:#fff; }
+  .hero-balance {
+    background:rgba(255,255,255,0.15);
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:12px; padding:12px 16px;
+    color:#fff;
+  }
+  .hero-balance .label { font-size:11px; opacity:0.75; font-weight:700; margin-bottom:3px; }
+  .hero-balance .amount { font-family:'Baloo 2',cursive; font-size:26px; font-weight:800; }
+  .hero-balance .sub { font-size:11px; opacity:0.7; margin-top:2px; }
+  .hero-actions { display:flex; gap:8px; margin-top:12px; }
+  .hero-action-btn {
+    flex:1; background:rgba(255,255,255,0.18);
+    border:1px solid rgba(255,255,255,0.3);
+    border-radius:10px; padding:8px 4px;
+    color:#fff; font-size:11px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    cursor:pointer; font-family:'Nunito',sans-serif;
+  }
+  .hero-action-btn i { font-size:13px; }
+
+  .quick-grid {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:10px; padding:0 16px; margin-top:-4px;
+  }
+  .quick-item {
+    background:var(--card); border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:12px 6px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer;
+  }
+  .quick-item .qi-icon {
+    width:40px; height:40px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+  }
+  .quick-item span { font-size:10px; font-weight:800; color:var(--text); text-align:center; line-height:1.2; }
+
+  .stats-row { display:flex; gap:10px; padding:0 16px; margin-bottom:14px; }
+  .stat-card {
+    flex:1; background:var(--card); border-radius:14px;
+    box-shadow:var(--shadow); padding:14px;
+  }
+  .stat-card .s-label { font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; }
+  .stat-card .s-val { font-family:'Baloo 2',cursive; font-size:22px; font-weight:800; color:var(--text); }
+  .stat-card .s-sub { font-size:10px; color:var(--green); font-weight:700; margin-top:2px; }
+
+  .section-title {
+    font-size:14px; font-weight:900; color:var(--text);
+    padding:0 16px; margin-bottom:10px;
+  }
+
+  .order-list { padding:0 16px; display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .order-row {
+    background:var(--card); border-radius:14px;
+    box-shadow:var(--shadow); padding:12px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .order-row .or-left { display:flex; align-items:center; gap:10px; }
+  .order-row .or-icon {
+    width:38px; height:38px; border-radius:10px;
+    background:var(--pink-light);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .order-row .or-name { font-size:13px; font-weight:800; color:var(--text); }
+  .order-row .or-time { font-size:11px; color:var(--muted); margin-top:1px; }
+  .order-row .or-amount { font-family:'Baloo 2',cursive; font-size:16px; font-weight:800; color:var(--purple); }
+
+  /* ─────────────────── POS / STORE ─────────────────── */
+  #screen-pos .pos-header {
+    background:linear-gradient(135deg, var(--pink-dark), var(--pink));
+    padding:16px 16px 20px;
+  }
+  #screen-pos .pos-header h2 { font-family:'Baloo 2',cursive; font-size:20px; font-weight:800; color:#fff; }
+  .cats {
+    display:flex; gap:8px; overflow-x:auto;
+    padding:12px 16px 4px; scrollbar-width:none;
+  }
+  .cats::-webkit-scrollbar { display:none; }
+  .cat-pill {
+    flex-shrink:0; padding:7px 14px;
+    border-radius:20px; font-size:12px; font-weight:800;
+    cursor:pointer; border:none;
+    background:var(--card); color:var(--muted);
+    box-shadow:0 2px 8px rgba(0,0,0,0.07);
+    font-family:'Nunito',sans-serif;
+    transition:all 0.2s;
+  }
+  .cat-pill.active { background:var(--purple); color:#fff; }
+
+  .menu-grid {
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:12px; padding:12px 16px;
+  }
+  .menu-card {
+    background:var(--card); border-radius:16px;
+    box-shadow:var(--shadow); overflow:hidden; cursor:pointer;
+    transition:transform 0.15s;
+    position:relative;
+  }
+  .menu-card:active { transform:scale(0.97); }
+  .menu-card .mc-img {
+    height:90px;
+    background:linear-gradient(135deg, var(--purple-light), var(--pink-light));
+    display:flex; align-items:center; justify-content:center; font-size:36px;
+  }
+  .menu-card .mc-body { padding:10px; }
+  .menu-card .mc-name { font-size:12px; font-weight:800; color:var(--text); line-height:1.3; margin-bottom:4px; }
+  .menu-card .mc-price { font-family:'Baloo 2',cursive; font-size:16px; font-weight:800; color:var(--pink); }
+  .menu-card .mc-add {
+    position:absolute; bottom:10px; right:10px;
+    width:26px; height:26px; border-radius:8px;
+    background:var(--purple); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; border:none; cursor:pointer;
+  }
+  .menu-card.oos .mc-img { filter:grayscale(0.5); }
+  .menu-card.oos::after {
+    content:'Out of Stock';
+    position:absolute; top:8px; left:8px;
+    background:var(--red); color:#fff;
+    font-size:9px; font-weight:900; padding:3px 7px; border-radius:6px;
+    letter-spacing:0.5px;
+  }
+
+  /* Cart Drawer */
+  .cart-drawer {
+    position:absolute; bottom:0; left:0; right:0;
+    background:#fff;
+    border-radius:24px 24px 0 0;
+    box-shadow:0 -8px 40px rgba(107,47,160,0.2);
+    transform:translateY(calc(100% - 68px));
+    transition:transform 0.3s ease;
+    z-index:50; max-height:75%;
+    display:flex; flex-direction:column;
+  }
+  .cart-drawer.open { transform:translateY(0); }
+  .cart-handle {
+    padding:12px 20px 0;
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer;
+  }
+  .cart-handle .handle-bar {
+    width:40px; height:4px; background:var(--border);
+    border-radius:4px; margin:0 auto 12px;
+    position:absolute; left:50%; transform:translateX(-50%); top:8px;
+  }
+  .cart-handle .cart-title { font-size:15px; font-weight:900; color:var(--text); }
+  .cart-handle .cart-badge {
+    background:var(--pink); color:#fff;
+    width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:900;
+  }
+  .cart-scroll { overflow-y:auto; flex:1; padding:0 16px; }
+  .cart-scroll::-webkit-scrollbar { display:none; }
+  .cart-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--border);
+    gap:10px;
+  }
+  .cart-item .ci-name { font-size:13px; font-weight:800; color:var(--text); flex:1; }
+  .cart-item .ci-detail { font-size:10px; color:var(--muted); margin-top:1px; }
+  .ci-qty {
+    display:flex; align-items:center; gap:8px;
+    background:var(--bg); border-radius:10px; padding:4px 8px;
+  }
+  .ci-qty button {
+    width:22px; height:22px; border-radius:7px;
+    border:none; cursor:pointer; font-size:14px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Nunito',sans-serif;
+  }
+  .ci-qty .ci-minus { background:var(--pink-light); color:var(--pink-dark); }
+  .ci-qty .ci-plus { background:var(--purple-light); color:var(--purple-dark); }
+  .ci-qty .ci-num { font-size:13px; font-weight:900; color:var(--text); min-width:16px; text-align:center; }
+  .ci-price { font-family:'Baloo 2',cursive; font-size:15px; font-weight:800; color:var(--purple); min-width:48px; text-align:right; }
+
+  .cart-footer { padding:16px; border-top:1px solid var(--border); }
+  .total-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .total-label { font-size:13px; font-weight:700; color:var(--muted); }
+  .total-amount { font-family:'Baloo 2',cursive; font-size:24px; font-weight:800; color:var(--text); }
+  .checkout-btn {
+    width:100%; padding:16px;
+    background:linear-gradient(135deg, var(--pink), var(--purple));
+    color:#fff; border:none; border-radius:14px;
+    font-family:'Nunito',sans-serif; font-size:15px; font-weight:900;
+    cursor:pointer; letter-spacing:0.5px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .checkout-btn:active { opacity:0.9; }
+
+  /* ─────────────────── INVENTORY ─────────────────── */
+  #screen-inv .inv-header {
+    background:linear-gradient(135deg, var(--purple-dark), var(--purple));
+    padding:16px 16px 20px;
+  }
+  #screen-inv .inv-header h2 { font-family:'Baloo 2',cursive; font-size:20px; font-weight:800; color:#fff; }
+  #screen-inv .inv-header p { font-size:12px; color:rgba(255,255,255,0.75); margin-top:2px; }
+  .inv-search {
+    margin:14px 16px 4px;
+    background:var(--card); border-radius:12px;
+    box-shadow:var(--shadow);
+    display:flex; align-items:center; gap:8px; padding:10px 14px;
+  }
+  .inv-search i { color:var(--muted); font-size:14px; }
+  .inv-search input {
+    border:none; background:transparent; flex:1;
+    font-family:'Nunito',sans-serif; font-size:13px; color:var(--text);
+    outline:none;
+  }
+  .inv-list { padding:0 16px; display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .inv-row {
+    background:var(--card); border-radius:14px;
+    box-shadow:var(--shadow); padding:12px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .inv-row .ir-left { display:flex; align-items:center; gap:10px; }
+  .inv-row .ir-icon {
+    width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; font-size:18px;
+    background:var(--purple-light);
+  }
+  .inv-row .ir-name { font-size:13px; font-weight:800; color:var(--text); }
+  .inv-row .ir-unit { font-size:11px; color:var(--muted); margin-top:1px; }
+  .inv-row .ir-stock { font-family:'Baloo 2',cursive; font-size:18px; font-weight:800; }
+  .inv-row .ir-stock.ok { color:var(--green); }
+  .inv-row .ir-stock.low { color:var(--yellow); }
+  .inv-row .ir-stock.out { color:var(--red); }
+
+  /* ─────────────────── REPORTS ─────────────────── */
+  #screen-reports .rep-header {
+    background:linear-gradient(135deg, #1A1A2E, var(--purple-dark));
+    padding:16px 16px 20px;
+  }
+  #screen-reports .rep-header h2 { font-family:'Baloo 2',cursive; font-size:20px; font-weight:800; color:#fff; }
+  .rep-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px; margin-bottom:14px; }
+  .rep-card {
+    background:var(--card); border-radius:14px;
+    box-shadow:var(--shadow); padding:14px;
+  }
+  .rep-card .rc-label { font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px; }
+  .rep-card .rc-val { font-family:'Baloo 2',cursive; font-size:22px; font-weight:800; color:var(--text); }
+  .rep-card .rc-change { font-size:11px; font-weight:700; margin-top:3px; }
+  .rep-card .rc-change.up { color:var(--green); }
+  .rep-card .rc-change.down { color:var(--red); }
+  .bar-chart { padding:0 16px; margin-bottom:14px; }
+  .bar-chart-inner { background:var(--card); border-radius:16px; box-shadow:var(--shadow); padding:16px; }
+  .bar-chart-title { font-size:13px; font-weight:900; color:var(--text); margin-bottom:14px; }
+  .bars { display:flex; align-items:flex-end; gap:6px; height:80px; }
+  .bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+  .bar-fill { width:100%; border-radius:6px 6px 0 0; min-height:4px; transition:height 0.5s; }
+  .bar-label { font-size:9px; font-weight:800; color:var(--muted); }
+  .top-items { padding:0 16px; }
+  .top-item-row {
+    background:var(--card); border-radius:12px; box-shadow:var(--shadow);
+    padding:12px 14px; margin-bottom:8px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .ti-rank {
+    width:26px; height:26px; border-radius:8px;
+    background:linear-gradient(135deg, var(--pink), var(--purple));
+    color:#fff; font-size:12px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ti-name { flex:1; font-size:13px; font-weight:800; color:var(--text); }
+  .ti-sold { font-size:12px; font-weight:700; color:var(--muted); }
+  .ti-rev { font-family:'Baloo 2',cursive; font-size:15px; font-weight:800; color:var(--purple); }
+
+  /* ─────────────────── ACCOUNT ─────────────────── */
+  #screen-acct .acct-hero {
+    background:linear-gradient(135deg, var(--purple-dark), var(--pink-dark));
+    padding:24px 20px 32px;
+    text-align:center;
+  }
+  .acct-avatar {
+    width:72px; height:72px; border-radius:50%;
+    background:rgba(255,255,255,0.2);
+    border:3px solid rgba(255,255,255,0.5);
+    display:flex; align-items:center; justify-content:center;
+    font-size:30px; margin:0 auto 10px;
+  }
+  .acct-name { font-family:'Baloo 2',cursive; font-size:22px; font-weight:800; color:#fff; }
+  .acct-role { font-size:12px; color:rgba(255,255,255,0.75); margin-top:2px; }
+  .acct-menu { padding:0 16px; margin-top:8px; display:flex; flex-direction:column; gap:8px; }
+  .acct-row {
+    background:var(--card); border-radius:14px; box-shadow:var(--shadow);
+    padding:14px 16px;
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .acct-row .ar-icon {
+    width:38px; height:38px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .acct-row .ar-text { flex:1; }
+  .acct-row .ar-label { font-size:13px; font-weight:800; color:var(--text); }
+  .acct-row .ar-sub { font-size:11px; color:var(--muted); margin-top:1px; }
+  .acct-row .ar-chevron { color:var(--muted); font-size:14px; }
+
+  /* ─────────────────── MODALS ─────────────────── */
+  .modal-overlay {
+    position:absolute; inset:0;
+    background:rgba(26,26,46,0.6);
+    display:none; align-items:flex-end; justify-content:center;
+    z-index:200;
+  }
+  .modal-overlay.show { display:flex; }
+  .modal-sheet {
+    background:#fff; width:100%;
+    border-radius:24px 24px 0 0;
+    padding:20px; max-height:90%;
+    overflow-y:auto;
+    animation:slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform:translateY(40px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .modal-handle { width:40px; height:4px; background:var(--border); border-radius:4px; margin:0 auto 16px; }
+  .modal-title { font-family:'Baloo 2',cursive; font-size:20px; font-weight:800; color:var(--text); margin-bottom:16px; }
+  .option-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .option-btn {
+    padding:10px; border-radius:12px;
+    border:2px solid var(--border);
+    background:#fff; cursor:pointer; font-family:'Nunito',sans-serif;
+    font-size:12px; font-weight:800; color:var(--text);
+    transition:all 0.15s;
+  }
+  .option-btn.selected { border-color:var(--purple); background:var(--purple-light); color:var(--purple-dark); }
+  .modal-section { font-size:11px; font-weight:900; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:12px 0 8px; }
+  .addon-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--border);
+  }
+  .addon-row .ad-name { font-size:13px; font-weight:700; color:var(--text); }
+  .addon-row .ad-price { font-size:12px; font-weight:700; color:var(--muted); }
+  .addon-check {
+    width:22px; height:22px; border-radius:7px;
+    border:2px solid var(--border); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    background:#fff; transition:all 0.15s;
+  }
+  .addon-check.checked { background:var(--purple); border-color:var(--purple); color:#fff; }
+  .modal-actions { display:flex; gap:10px; margin-top:16px; }
+  .btn-cancel {
+    flex:1; padding:14px; border-radius:12px;
+    border:2px solid var(--border); background:#fff;
+    font-family:'Nunito',sans-serif; font-size:14px; font-weight:800; color:var(--muted); cursor:pointer;
+  }
+  .btn-confirm {
+    flex:2; padding:14px; border-radius:12px;
+    background:linear-gradient(135deg, var(--pink), var(--purple));
+    border:none; color:#fff;
+    font-family:'Nunito',sans-serif; font-size:14px; font-weight:900; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+
+  /* Success toast */
+  .toast {
+    position:absolute; top:60px; left:50%; transform:translateX(-50%) translateY(-80px);
+    background:var(--green); color:#fff;
+    padding:10px 20px; border-radius:20px;
+    font-size:13px; font-weight:800;
+    z-index:300; transition:transform 0.3s ease; white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* Receipt Modal */
+  .receipt-modal .modal-sheet { max-height:85%; }
+  .receipt-body { font-family:'Courier New',monospace; font-size:13px; color:var(--text); }
+  .receipt-shop { text-align:center; margin-bottom:8px; }
+  .receipt-shop .rs-logo {
+    width:52px; height:52px; border-radius:50%;
+    background:linear-gradient(135deg, var(--purple-light), var(--pink-light));
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; margin:0 auto 6px;
+  }
+  .receipt-shop .rs-name { font-family:'Baloo 2',cursive; font-size:18px; font-weight:800; color:var(--text); }
+  .receipt-shop .rs-sub { font-size:11px; color:var(--muted); }
+  .receipt-divider { border-top:1px dashed var(--border); margin:10px 0; }
+  .receipt-row { display:flex; justify-content:space-between; padding:4px 0; font-size:12px; }
+  .receipt-total-row { display:flex; justify-content:space-between; padding:8px 0; font-size:15px; font-weight:900; }
+  .receipt-code {
+    text-align:center; margin:12px 0;
+    font-family:'Baloo 2',cursive; font-size:28px; font-weight:800;
+    color:var(--purple); letter-spacing:4px;
+    border:2px dashed var(--purple-light); border-radius:12px; padding:12px;
+    background:var(--purple-light);
+  }
+
+  /* Adjust POS screen bottom for cart drawer */
+  #screen-pos { padding-bottom:0; }
+  .pos-inner { padding-bottom:80px; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="notch"></div>
+    <span id="clock">9:41</span>
+    <span style="display:flex;align-items:center;gap:6px;position:relative;z-index:1;">
+      <i class="fas fa-wifi" style="font-size:12px;"></i>
+      <i class="fas fa-battery-three-quarters" style="font-size:12px;"></i>
+    </span>
+  </div>
+
+  <!-- Screens -->
+  <div class="screens">
+
+    <!-- ══════════ HOME ══════════ -->
+    <div class="screen active" id="screen-home">
+      <div class="hero">
+        <div class="hero-top">
+          <div class="hero-logo">
+            <div class="logo-circle"><i class="fas fa-coffee"></i></div>
+            <span>9599 Tea & Coffee</span>
+          </div>
+          <div style="position:relative;z-index:1;">
+            <i class="fas fa-bell" style="color:#fff;font-size:18px;cursor:pointer;" onclick="showToast('No new notifications')"></i>
+          </div>
+        </div>
+        <div class="hero-balance" style="position:relative;z-index:1;">
+          <div class="label">Today's Revenue</div>
+          <div class="amount" id="home-revenue">₱1,247.00</div>
+          <div class="sub" id="home-orders-count">14 orders today</div>
+        </div>
+        <div class="hero-actions" style="position:relative;z-index:1;">
+          <div class="hero-action-btn" onclick="goTo('pos')"><i class="fas fa-cash-register"></i> New Order</div>
+          <div class="hero-action-btn" onclick="goTo('inv')"><i class="fas fa-box"></i> Inventory</div>
+          <div class="hero-action-btn" onclick="goTo('reports')"><i class="fas fa-chart-bar"></i> Reports</div>
+        </div>
+      </div>
+
+      <div class="quick-grid" style="margin-top:16px;">
+        <div class="quick-item" onclick="goTo('pos')">
+          <div class="qi-icon" style="background:#FCE4F3;"><span style="font-size:18px;">🧋</span></div>
+          <span>POS</span>
+        </div>
+        <div class="quick-item" onclick="goTo('inv')">
+          <div class="qi-icon" style="background:#EDE0F7;"><span style="font-size:18px;">📦</span></div>
+          <span>Inventory</span>
+        </div>
+        <div class="quick-item" onclick="goTo('reports')">
+          <div class="qi-icon" style="background:#D5F5E3;"><span style="font-size:18px;">📊</span></div>
+          <span>Reports</span>
+        </div>
+        <div class="quick-item" onclick="goTo('acct')">
+          <div class="qi-icon" style="background:#FEF9E7;"><span style="font-size:18px;">⚙️</span></div>
+          <span>Settings</span>
+        </div>
+      </div>
+
+      <div class="stats-row" style="margin-top:14px;">
+        <div class="stat-card">
+          <div class="s-label">Orders</div>
+          <div class="s-val" id="home-stat-orders">14</div>
+          <div class="s-sub">↑ 3 vs yesterday</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">Avg. Ticket</div>
+          <div class="s-val">₱89</div>
+          <div class="s-sub" style="color:var(--green);">↑ ₱6 vs yesterday</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">Items Sold</div>
+          <div class="s-val" id="home-stat-items">38</div>
+          <div class="s-sub">today</div>
+        </div>
+      </div>
+
+      <div class="section-title">Recent Orders</div>
+      <div class="order-list" id="recent-orders"></div>
+    </div>
+
+    <!-- ══════════ POS ══════════ -->
+    <div class="screen" id="screen-pos">
+      <div class="pos-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <h2>Order Here 🧋</h2>
+          <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;display:flex;gap:8px;">
+            <span id="ot-dinein" onclick="setOT('Dine-In')" style="font-size:11px;font-weight:800;color:#fff;cursor:pointer;opacity:1;">Dine-In</span>
+            <span style="color:rgba(255,255,255,0.5);">|</span>
+            <span id="ot-takeout" onclick="setOT('Take-Out')" style="font-size:11px;font-weight:800;color:#fff;cursor:pointer;opacity:0.6;">Take-Out</span>
+          </div>
+        </div>
+      </div>
+      <div class="pos-inner">
+        <div class="cats" id="pos-cats"></div>
+        <div class="menu-grid" id="pos-menu"></div>
+      </div>
+      <!-- Cart Drawer -->
+      <div class="cart-drawer" id="cart-drawer">
+        <div class="cart-handle" onclick="toggleCart()">
+          <div class="handle-bar"></div>
+          <div class="cart-title">Your Order</div>
+          <div class="cart-badge" id="cart-badge">0</div>
+        </div>
+        <div class="cart-scroll" id="cart-scroll"></div>
+        <div class="cart-footer">
+          <div class="total-row">
+            <span class="total-label">Grand Total</span>
+            <span class="total-amount" id="cart-total">₱0.00</span>
+          </div>
+          <button class="checkout-btn" id="checkout-btn" onclick="openCheckout()">
+            <i class="fas fa-shopping-bag"></i> Place Order
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ INVENTORY ══════════ -->
+    <div class="screen" id="screen-inv">
+      <div class="inv-header">
+        <h2>Inventory 📦</h2>
+        <p>Tap stock to update</p>
+      </div>
+      <div class="inv-search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search ingredients…" oninput="filterInv(this.value)" id="inv-search">
+      </div>
+      <div class="inv-list" id="inv-list"></div>
+    </div>
+
+    <!-- ══════════ REPORTS ══════════ -->
+    <div class="screen" id="screen-reports">
+      <div class="rep-header">
+        <h2>Reports 📊</h2>
+      </div>
+      <div style="padding:14px 0 4px;">
+        <div class="rep-grid">
+          <div class="rep-card">
+            <div class="rc-label">Today</div>
+            <div class="rc-val" id="rep-today">₱1,247</div>
+            <div class="rc-change up">↑ 12% vs yesterday</div>
+          </div>
+          <div class="rep-card">
+            <div class="rc-label">This Week</div>
+            <div class="rc-val" id="rep-week">₱7,830</div>
+            <div class="rc-change up">↑ 8% vs last week</div>
+          </div>
+          <div class="rep-card">
+            <div class="rc-label">This Month</div>
+            <div class="rc-val" id="rep-month">₱28,420</div>
+            <div class="rc-change down">↓ 3% vs last month</div>
+          </div>
+          <div class="rep-card">
+            <div class="rc-label">Orders Today</div>
+            <div class="rc-val" id="rep-orders">14</div>
+            <div class="rc-change up">↑ 3 vs yesterday</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-chart">
+        <div class="bar-chart-inner">
+          <div class="bar-chart-title">Sales This Week (₱)</div>
+          <div class="bars" id="week-bars"></div>
+        </div>
+      </div>
+
+      <div class="section-title" style="padding-top:4px;">Top Selling Items</div>
+      <div class="top-items" id="top-items"></div>
+    </div>
+
+    <!-- ══════════ ACCOUNT ══════════ -->
+    <div class="screen" id="screen-acct">
+      <div class="acct-hero">
+        <div class="acct-avatar"><i class="fas fa-user" style="color:#fff;font-size:28px;"></i></div>
+        <div class="acct-name">Admin</div>
+        <div class="acct-role">9599 Tea & Coffee · Store Owner</div>
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:14px;">
+          <span class="badge badge-pink">🔑 Admin</span>
+          <span class="badge badge-green">✓ Verified</span>
+        </div>
+      </div>
+      <div class="acct-menu">
+        <div class="acct-row">
+          <div class="ar-icon" style="background:var(--pink-light);color:var(--pink-dark);"><i class="fas fa-store"></i></div>
+          <div class="ar-text"><div class="ar-label">Store Info</div><div class="ar-sub">9599 Tea & Coffee · Cavite</div></div>
+          <i class="fas fa-chevron-right ar-chevron"></i>
+        </div>
+        <div class="acct-row">
+          <div class="ar-icon" style="background:var(--purple-light);color:var(--purple-dark);"><i class="fas fa-receipt"></i></div>
+          <div class="ar-text"><div class="ar-label">BIR / Tax Info</div><div class="ar-sub">TIN: 000-000-000-000</div></div>
+          <i class="fas fa-chevron-right ar-chevron"></i>
+        </div>
+        <div class="acct-row">
+          <div class="ar-icon" style="background:#D5F5E3;color:#1E8449;"><i class="fas fa-users"></i></div>
+          <div class="ar-text"><div class="ar-label">Staff Access</div><div class="ar-sub">Manage cashier PINs</div></div>
+          <i class="fas fa-chevron-right ar-chevron"></i>
+        </div>
+        <div class="acct-row">
+          <div class="ar-icon" style="background:#FEF9E7;color:#B7770D;"><i class="fas fa-print"></i></div>
+          <div class="ar-text"><div class="ar-label">Printer Settings</div><div class="ar-sub">Bluetooth / network</div></div>
+          <i class="fas fa-chevron-right ar-chevron"></i>
+        </div>
+        <div class="acct-row">
+          <div class="ar-icon" style="background:#FCE4F3;color:var(--pink-dark);"><i class="fas fa-bell"></i></div>
+          <div class="ar-text"><div class="ar-label">Notifications</div><div class="ar-sub">Order alerts, low stock</div></div>
+          <i class="fas fa-chevron-right ar-chevron"></i>
+        </div>
+        <div class="acct-row" onclick="showToast('Logged out successfully')">
+          <div class="ar-icon" style="background:#FDECEA;color:var(--red);"><i class="fas fa-sign-out-alt"></i></div>
+          <div class="ar-text"><div class="ar-label" style="color:var(--red);">Logout</div><div class="ar-sub">End admin session</div></div>
+          <i class="fas fa-chevron-right ar-chevron"></i>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="goTo('home')">
+      <i class="fas fa-home"></i><span>Home</span>
+    </button>
+    <button class="nav-btn" id="nav-inv" onclick="goTo('inv')">
+      <i class="fas fa-box"></i><span>Inventory</span>
+    </button>
+    <div class="nav-spacer"></div>
+    <div class="nav-center-btn" onclick="goTo('pos')"><i class="fas fa-plus"></i></div>
+    <div class="nav-spacer"></div>
+    <button class="nav-btn" id="nav-reports" onclick="goTo('reports')">
+      <i class="fas fa-chart-bar"></i><span>Reports</span>
+    </button>
+    <button class="nav-btn" id="nav-acct" onclick="goTo('acct')">
+      <i class="fas fa-user"></i><span>Account</span>
+    </button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toast-msg"></span></div>
+
+  <!-- Customize Modal -->
+  <div class="modal-overlay" id="customize-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="cm-title">Customize</div>
+      <div class="modal-section">Choose Size</div>
+      <div class="option-grid">
+        <div class="option-btn selected" id="sz-16" onclick="selectSz('16 oz',0)">16 oz · ₱49</div>
+        <div class="option-btn" id="sz-22" onclick="selectSz('22 oz',10)">22 oz · ₱59</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <div class="modal-section">Sugar Level</div>
+          <div style="display:flex;flex-direction:column;gap:6px;" id="sugar-opts">
+            <div class="option-btn selected" onclick="selectOpt(this,'sugar')">100% (Normal)</div>
+            <div class="option-btn" onclick="selectOpt(this,'sugar')">75% (Less)</div>
+            <div class="option-btn" onclick="selectOpt(this,'sugar')">50% (Half)</div>
+            <div class="option-btn" onclick="selectOpt(this,'sugar')">0% (No Sugar)</div>
+          </div>
+        </div>
+        <div>
+          <div class="modal-section">Ice Level</div>
+          <div style="display:flex;flex-direction:column;gap:6px;" id="ice-opts">
+            <div class="option-btn selected" onclick="selectOpt(this,'ice')">Normal Ice</div>
+            <div class="option-btn" onclick="selectOpt(this,'ice')">Less Ice</div>
+            <div class="option-btn" onclick="selectOpt(this,'ice')">No Ice</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-section">Add-ons</div>
+      <div id="addon-list"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('customize-modal')">Cancel</button>
+        <button class="btn-confirm" onclick="confirmAdd()"><i class="fas fa-cart-plus"></i> Add to Cart</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
+  <div class="modal-overlay" id="checkout-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Order Details</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+        <input type="text" id="co-name" placeholder="Customer name *" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--text);outline:none;">
+        <input type="tel" id="co-phone" placeholder="Phone number" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--text);outline:none;">
+      </div>
+      <div class="modal-section">Payment Method</div>
+      <div class="option-grid" style="margin-bottom:14px;">
+        <div class="option-btn selected" id="pm-cash" onclick="selectPM('Cash')">💵 Cash</div>
+        <div class="option-btn" id="pm-gcash" onclick="selectPM('GCash')">📱 GCash</div>
+        <div class="option-btn" id="pm-maya" onclick="selectPM('Maya')">💜 Maya</div>
+        <div class="option-btn" id="pm-qr" onclick="selectPM('QR Ph')">📷 QR Ph</div>
+      </div>
+      <div id="cash-section">
+        <div class="modal-section">Cash Tendered</div>
+        <input type="number" id="co-cash" placeholder="e.g. 200" oninput="calcChange()" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--text);outline:none;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;background:var(--purple-light);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:800;">
+          <span style="color:var(--muted);">Change</span>
+          <span id="change-display" style="color:var(--purple-dark);">₱0.00</span>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn-cancel" onclick="closeModal('checkout-modal')">Cancel</button>
+        <button class="btn-confirm" onclick="placeOrder()"><i class="fas fa-check"></i> Confirm Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt Modal -->
+  <div class="modal-overlay receipt-modal" id="receipt-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="receipt-body">
+        <div class="receipt-shop">
+          <div class="rs-logo">☕</div>
+          <div class="rs-name">9599 Tea & Coffee</div>
+          <div class="rs-sub">📍 Brgy. Poblacion, San Antonio, Quezon</div>
+          <div class="rs-sub" style="margin-top:2px;">BIR TIN: 000-000-000-000</div>
+        </div>
+        <div class="receipt-divider"></div>
+        <div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;">OFFICIAL RECEIPT</div>
+        <div id="receipt-meta" style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center;"></div>
+        <div class="receipt-code" id="receipt-code">AB12CD</div>
+        <div class="receipt-divider"></div>
+        <div id="receipt-rows"></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-total-row">
+          <span>TOTAL</span><span id="receipt-total-val" style="color:var(--purple);"></span>
+        </div>
+        <div id="receipt-payment-info" style="font-size:12px;color:var(--muted);margin-top:4px;text-align:right;"></div>
+        <div class="receipt-divider"></div>
+        <div style="text-align:center;font-size:11px;color:var(--muted);padding:6px 0;">
+          Thank you for your order!<br>
+          <span style="font-family:'Baloo 2',cursive;font-weight:800;color:var(--pink);font-size:13px;">9599 Tea & Coffee</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('receipt-modal');location.reload()">Done</button>
+        <button class="btn-confirm" onclick="showToast('Receipt sent to printer!')">
+          <i class="fas fa-print"></i> Print
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Edit Modal -->
+  <div class="modal-overlay" id="stock-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="stock-modal-title">Update Stock</div>
+      <div class="modal-section">Current Stock</div>
+      <input type="number" id="stock-input" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;color:var(--text);outline:none;text-align:center;margin-bottom:8px;">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('stock-modal')">Cancel</button>
+        <button class="btn-confirm" onclick="saveStock()"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /device -->
+
+<script>
+// ══════════ DATA ══════════
+const MENU = [
+  {name:'Taro Milktea', price:49, cat:'Milktea', emoji:'🧋'},
+  {name:'Okinawa Milktea', price:49, cat:'Milktea', emoji:'🧋'},
+  {name:'Wintermelon Milktea', price:49, cat:'Milktea', emoji:'🧋'},
+  {name:'Matcha Milktea', price:49, cat:'Milktea', emoji:'🍵'},
+  {name:'Dark Belgian Choco', price:49, cat:'Milktea', emoji:'🍫'},
+  {name:'Biscoff Milktea', price:49, cat:'Milktea', emoji:'🍪'},
+  {name:'Mocha', price:49, cat:'Coffee', emoji:'☕'},
+  {name:'Caramel Macchiato', price:49, cat:'Coffee', emoji:'☕'},
+  {name:'Iced Americano', price:49, cat:'Coffee', emoji:'🧊'},
+  {name:'French Vanilla', price:49, cat:'Coffee', emoji:'☕'},
+  {name:'Hazelnut', price:49, cat:'Coffee', emoji:'☕'},
+  {name:'Ube Milk', price:59, cat:'Milk Series', emoji:'🥛'},
+  {name:'Mango Milk', price:59, cat:'Milk Series', emoji:'🥭'},
+  {name:'Strawberry Milk', price:59, cat:'Milk Series', emoji:'🍓'},
+  {name:'Blueberry Milk', price:59, cat:'Milk Series', emoji:'🫐'},
+  {name:'Matcha Latte', price:59, cat:'Matcha', emoji:'🍵'},
+  {name:'Matcha Caramel', price:59, cat:'Matcha', emoji:'🍵'},
+  {name:'Matcha Strawberry', price:59, cat:'Matcha', emoji:'🍵'},
+  {name:'Lychee Mogu Soda', price:59, cat:'Soda', emoji:'🍹'},
+  {name:'Apple Soda', price:59, cat:'Soda', emoji:'🍏'},
+  {name:'Strawberry Soda', price:59, cat:'Soda', emoji:'🍓'},
+  {name:'Cookies Frappe', price:79, cat:'Frappe', emoji:'🥤'},
+  {name:'Mocha Frappe', price:79, cat:'Frappe', emoji:'🥤'},
+  {name:'Matcha Frappe', price:79, cat:'Frappe', emoji:'🥤'},
+  {name:'Mango Frappe', price:79, cat:'Frappe', emoji:'🥤'},
+  {name:'French Fries (Plain)', price:39, cat:'Snacks', emoji:'🍟'},
+  {name:'French Fries (Cheese)', price:39, cat:'Snacks', emoji:'🍟'},
+  {name:'Hash Brown', price:29, cat:'Snacks', emoji:'🥔'},
+  {name:'Onion Rings', price:59, cat:'Snacks', emoji:'🧅'},
+  {name:'Potato Mojos', price:59, cat:'Snacks', emoji:'🥔'},
+];
+const SNACK_CATS = ['Snacks'];
+const DRINK_CATS = ['Milktea','Coffee','Milk Series','Matcha','Soda','Frappe'];
+const CATS = ['All',...DRINK_CATS,...SNACK_CATS];
+const ADDONS = [
+  {name:'Nata', price:10},
+  {name:'Pearl', price:10},
+  {name:'Coffee Jelly', price:10},
+  {name:'Cloud Foam', price:15},
+];
+const INGREDIENTS = [
+  {name:'Assam Black Tea', unit:'ml', stock:8500, icon:'🍵'},
+  {name:'Fresh Milk', unit:'ml', stock:6000, icon:'🥛'},
+  {name:'Tapioca Pearls', unit:'g', stock:2200, icon:'⚫'},
+  {name:'Matcha Powder', unit:'g', stock:800, icon:'🍵'},
+  {name:'Brown Sugar Syrup', unit:'ml', stock:3000, icon:'🍯'},
+  {name:'Wintermelon Syrup', unit:'ml', stock:1800, icon:'🍶'},
+  {name:'Strawberry Syrup', unit:'ml', stock:1500, icon:'🍓'},
+  {name:'Plastic Cups & Lids', unit:'pcs', stock:320, icon:'🥤'},
+  {name:'French Fries', unit:'g', stock:4500, icon:'🍟'},
+  {name:'Hash Brown (pcs)', unit:'pcs', stock:45, icon:'🥔'},
+  {name:'Espresso Shot', unit:'ml', stock:1800, icon:'☕'},
+  {name:'Frappe Base', unit:'g', stock:1200, icon:'🥤'},
+  {name:'Soda Water', unit:'ml', stock:7000, icon:'💧'},
+  {name:'Mango Puree', unit:'g', stock:1600, icon:'🥭'},
+  {name:'Cooking Oil', unit:'ml', stock:8000, icon:'🫙'},
+];
+const RECENT_ORDERS = [
+  {name:'Maria S.', items:'Taro Milktea x2', amount:98, time:'Just now', emoji:'🧋'},
+  {name:'Juan D.', items:'Mocha Frappe, Hash Brown', amount:108, time:'5 mins ago', emoji:'☕'},
+  {name:'Ana R.', items:'Matcha Latte x3', amount:177, time:'12 mins ago', emoji:'🍵'},
+  {name:'Carlo M.', items:'Strawberry Soda, Fries', amount:98, time:'18 mins ago', emoji:'🍹'},
+  {name:'Liza T.', items:'Okinawa Milktea x2, Rings', amount:157, time:'25 mins ago', emoji:'🧋'},
+];
+const TOP_ITEMS = [
+  {name:'Taro Milktea', sold:42, rev:2058},
+  {name:'Matcha Latte', sold:35, rev:2065},
+  {name:'Okinawa Milktea', sold:31, rev:1519},
+  {name:'Mocha Frappe', sold:28, rev:2212},
+  {name:'Strawberry Milk', sold:24, rev:1416},
+];
+const WEEK_SALES = [980,1240,890,1560,1247,0,0];
+const WEEK_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+let cart = [];
+let orderType = 'Dine-In';
+let activeCategory = 'All';
+let pendingItem = null;
+let pendingSize = {label:'16 oz', extra:0};
+let pendingSugar = '100% (Normal)';
+let pendingIce = 'Normal Ice';
+let pendingAddons = [];
+let paymentMethod = 'Cash';
+let editStockIdx = -1;
+let inventoryData = JSON.parse(JSON.stringify(INGREDIENTS));
+let todayRevenue = 1247;
+let todayOrders = 14;
+
+// Clock
+function updateClock() {
+  const d = new Date();
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('clock').textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// ══════════ NAVIGATION ══════════
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  const nb = document.getElementById('nav-' + id);
+  if(nb) nb.classList.add('active');
+}
+
+// ══════════ TOAST ══════════
+let toastTimer;
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.style.background = color || 'var(--green)';
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════ HOME ══════════
+function renderHome() {
+  const ol = document.getElementById('recent-orders');
+  ol.innerHTML = RECENT_ORDERS.map(o => `
+    <div class="order-row">
+      <div class="or-left">
+        <div class="or-icon">${o.emoji}</div>
+        <div>
+          <div class="or-name">${o.name}</div>
+          <div class="or-time">${o.items} · ${o.time}</div>
+        </div>
+      </div>
+      <div class="or-amount">₱${o.amount}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════ POS ══════════
+function renderPOS() {
+  // Categories
+  const catsEl = document.getElementById('pos-cats');
+  catsEl.innerHTML = CATS.map(c => `
+    <button class="cat-pill ${c===activeCategory?'active':''}" onclick="filterCat('${c}')">${c}</button>
+  `).join('');
+  // Menu
+  const menuEl = document.getElementById('pos-menu');
+  const items = activeCategory === 'All' ? MENU : MENU.filter(i => i.cat === activeCategory);
+  menuEl.innerHTML = items.map(item => `
+    <div class="menu-card" onclick="openCustomize('${item.name}')">
+      <div class="mc-img">${item.emoji}</div>
+      <div class="mc-body">
+        <div class="mc-name">${item.name}</div>
+        <div class="mc-price">₱${item.price}</div>
+      </div>
+      <div class="mc-add">+</div>
+    </div>
+  `).join('');
+}
+
+function filterCat(cat) {
+  activeCategory = cat;
+  renderPOS();
+}
+
+function setOT(type) {
+  orderType = type;
+  document.getElementById('ot-dinein').style.opacity = type === 'Dine-In' ? '1' : '0.6';
+  document.getElementById('ot-takeout').style.opacity = type === 'Take-Out' ? '1' : '0.6';
+}
+
+// ══════════ CUSTOMIZE MODAL ══════════
+function openCustomize(name) {
+  pendingItem = MENU.find(i => i.name === name);
+  if(!pendingItem) return;
+  pendingSize = {label:'16 oz', extra:0};
+  pendingSugar = '100% (Normal)';
+  pendingIce = 'Normal Ice';
+  pendingAddons = [];
+  document.getElementById('cm-title').textContent = pendingItem.emoji + ' ' + pendingItem.name;
+  // reset size
+  document.getElementById('sz-16').classList.add('selected');
+  document.getElementById('sz-22').classList.remove('selected');
+  // reset sugar
+  document.querySelectorAll('#sugar-opts .option-btn').forEach((b,i) => b.classList.toggle('selected', i===0));
+  // reset ice
+  document.querySelectorAll('#ice-opts .option-btn').forEach((b,i) => b.classList.toggle('selected', i===0));
+  // addons
+  const isSnack = SNACK_CATS.includes(pendingItem.cat);
+  const adEl = document.getElementById('addon-list');
+  if(isSnack) { adEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No add-ons for snacks.</div>'; }
+  else {
+    adEl.innerHTML = ADDONS.map((a,i) => `
+      <div class="addon-row">
+        <div><div class="ad-name">${a.name}</div><div class="ad-price">+₱${a.price}</div></div>
+        <div class="addon-check" id="addon-${i}" onclick="toggleAddon(${i})"></div>
+      </div>
+    `).join('');
+  }
+  // hide size for snacks
+  document.querySelector('.option-grid').style.display = isSnack ? 'none' : 'grid';
+  document.getElementById('customize-modal').classList.add('show');
+}
+
+function selectSz(label, extra) {
+  pendingSize = {label, extra};
+  document.getElementById('sz-16').classList.toggle('selected', label==='16 oz');
+  document.getElementById('sz-22').classList.toggle('selected', label==='22 oz');
+}
+
+function selectOpt(el, group) {
+  const parent = document.getElementById(group === 'sugar' ? 'sugar-opts' : 'ice-opts');
+  parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  if(group === 'sugar') pendingSugar = el.textContent;
+  else pendingIce = el.textContent;
+}
+
+function toggleAddon(i) {
+  const el = document.getElementById('addon-' + i);
+  const idx = pendingAddons.indexOf(i);
+  if(idx === -1) { pendingAddons.push(i); el.classList.add('checked'); el.innerHTML='✓'; }
+  else { pendingAddons.splice(idx,1); el.classList.remove('checked'); el.innerHTML=''; }
+}
+
+function confirmAdd() {
+  if(!pendingItem) return;
+  const isSnack = SNACK_CATS.includes(pendingItem.cat);
+  const base = isSnack ? pendingItem.price : (pendingItem.price + pendingSize.extra);
+  const addonTotal = pendingAddons.reduce((s,i) => s + ADDONS[i].price, 0);
+  const total = base + addonTotal;
+  const detail = isSnack ? '' : `${pendingSize.label} · ${pendingSugar} · ${pendingIce}${pendingAddons.length ? ' · '+pendingAddons.map(i=>ADDONS[i].name).join(', ') : ''}`;
+  cart.push({name: pendingItem.name, price: total, detail, qty: 1, emoji: pendingItem.emoji});
+  closeModal('customize-modal');
+  updateCart();
+  showToast(pendingItem.name + ' added to cart!');
+}
+
+// ══════════ CART ══════════
+let cartOpen = false;
+function toggleCart() {
+  cartOpen = !cartOpen;
+  document.getElementById('cart-drawer').classList.toggle('open', cartOpen);
+}
+
+function updateCart() {
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  const count = cart.reduce((s,i) => s + i.qty, 0);
+  document.getElementById('cart-badge').textContent = count;
+  document.getElementById('cart-total').textContent = '₱' + total.toFixed(2);
+  document.getElementById('checkout-btn').disabled = count === 0;
+  // render cart items
+  const scroll = document.getElementById('cart-scroll');
+  if(cart.length === 0) {
+    scroll.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;font-weight:700;">Your cart is empty</div>';
+  } else {
+    scroll.innerHTML = cart.map((item,i) => `
+      <div class="cart-item">
+        <div>
+          <div class="ci-name">${item.emoji} ${item.name}</div>
+          ${item.detail ? '<div class="ci-detail">'+item.detail+'</div>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="ci-qty">
+            <button class="ci-minus" onclick="changeQty(${i},-1)">−</button>
+            <span class="ci-num">${item.qty}</span>
+            <button class="ci-plus" onclick="changeQty(${i},1)">+</button>
+          </div>
+          <div class="ci-price">₱${(item.price*item.qty).toFixed(2)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  // auto open drawer if items added
+  if(count > 0 && !cartOpen) {
+    document.getElementById('cart-drawer').classList.add('open');
+    cartOpen = true;
+  }
+}
+
+function changeQty(i, delta) {
+  cart[i].qty += delta;
+  if(cart[i].qty <= 0) cart.splice(i,1);
+  updateCart();
+}
+
+// ══════════ CHECKOUT ══════════
+function openCheckout() {
+  if(cart.length === 0) { showToast('Cart is empty!', 'var(--red)'); return; }
+  document.getElementById('co-name').value = '';
+  document.getElementById('co-phone').value = '';
+  document.getElementById('co-cash').value = '';
+  document.getElementById('change-display').textContent = '₱0.00';
+  selectPM('Cash');
+  document.getElementById('checkout-modal').classList.add('show');
+}
+
+function selectPM(pm) {
+  paymentMethod = pm;
+  ['Cash','GCash','Maya','QR Ph'].forEach(p => {
+    const el = document.getElementById('pm-' + p.replace(' ','').toLowerCase());
+    if(el) el.classList.toggle('selected', p === pm);
+  });
+  document.getElementById('pm-qr').classList.toggle('selected', pm === 'QR Ph');
+  document.getElementById('cash-section').style.display = pm === 'Cash' ? 'block' : 'none';
+}
+
+function calcChange() {
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  const cash = parseFloat(document.getElementById('co-cash').value) || 0;
+  const change = cash - total;
+  document.getElementById('change-display').textContent = '₱' + Math.max(0, change).toFixed(2);
+  document.getElementById('change-display').style.color = change < 0 ? 'var(--red)' : 'var(--purple-dark)';
+}
+
+function placeOrder() {
+  const name = document.getElementById('co-name').value.trim();
+  if(!name) { showToast('Please enter customer name', 'var(--red)'); return; }
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  const code = Math.random().toString(36).substr(2,6).toUpperCase();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-PH', {day:'numeric',month:'short',year:'numeric'});
+  const timeStr = now.toLocaleTimeString('en-PH', {hour:'numeric',minute:'2-digit',hour12:true});
+  // Update stats
+  todayRevenue += total;
+  todayOrders += 1;
+  document.getElementById('home-revenue').textContent = '₱' + todayRevenue.toLocaleString('en-PH', {minimumFractionDigits:2});
+  document.getElementById('home-orders-count').textContent = todayOrders + ' orders today';
+  document.getElementById('home-stat-orders').textContent = todayOrders;
+  document.getElementById('rep-today').textContent = '₱' + todayRevenue.toLocaleString();
+  document.getElementById('rep-orders').textContent = todayOrders;
+  // Receipt
+  document.getElementById('receipt-code').textContent = code;
+  document.getElementById('receipt-meta').textContent = dateStr + ' · ' + timeStr + ' · ' + orderType;
+  document.getElementById('receipt-rows').innerHTML = cart.map(i => `
+    <div class="receipt-row">
+      <span>${i.emoji} ${i.name} x${i.qty}</span>
+      <span>₱${(i.price*i.qty).toFixed(2)}</span>
+    </div>
+  `).join('');
+  document.getElementById('receipt-total-val').textContent = '₱' + total.toFixed(2);
+  let payInfo = paymentMethod;
+  if(paymentMethod === 'Cash') {
+    const cash = parseFloat(document.getElementById('co-cash').value) || 0;
+    const change = cash - total;
+    payInfo = `Cash: ₱${cash.toFixed(2)} · Change: ₱${Math.max(0,change).toFixed(2)}`;
+  }
+  document.getElementById('receipt-payment-info').textContent = payInfo;
+  RECENT_ORDERS.unshift({name, items: cart.map(i => i.name + (i.qty>1?' x'+i.qty:'')).join(', '), amount: total, time: 'Just now', emoji: cart[0]?.emoji || '🧋'});
+  if(RECENT_ORDERS.length > 6) RECENT_ORDERS.pop();
+  renderHome();
+  cart = [];
+  updateCart();
+  cartOpen = false;
+  document.getElementById('cart-drawer').classList.remove('open');
+  closeModal('checkout-modal');
+  document.getElementById('receipt-modal').classList.add('show');
+}
+
+// ══════════ INVENTORY ══════════
+function renderInv(filter='') {
+  const list = document.getElementById('inv-list');
+  const data = filter ? inventoryData.filter(i => i.name.toLowerCase().includes(filter.toLowerCase())) : inventoryData;
+  list.innerHTML = data.map((ing,i) => {
+    const pct = ing.stock / (INGREDIENTS[i]?.stock || 1);
+    const cls = ing.stock <= 0 ? 'out' : (pct < 0.3 ? 'low' : 'ok');
+    return `
+    <div class="inv-row" onclick="openStockEdit(${i})">
+      <div class="ir-left">
+        <div class="ir-icon">${ing.icon}</div>
+        <div>
+          <div class="ir-name">${ing.name}</div>
+          <div class="ir-unit">${ing.unit}</div>
+        </div>
+      </div>
+      <div>
+        <div class="ir-stock ${cls}">${ing.stock.toLocaleString()}</div>
+        ${cls === 'low' ? '<div style="font-size:9px;font-weight:800;color:var(--yellow);text-align:right;">LOW</div>' : ''}
+        ${cls === 'out' ? '<div style="font-size:9px;font-weight:800;color:var(--red);text-align:right;">OUT</div>' : ''}
+      </div>
+    </div>
+  `}).join('');
+}
+
+function filterInv(v) { renderInv(v); }
+
+function openStockEdit(i) {
+  editStockIdx = i;
+  document.getElementById('stock-modal-title').textContent = 'Update: ' + inventoryData[i].name;
+  document.getElementById('stock-input').value = inventoryData[i].stock;
+  document.getElementById('stock-modal').classList.add('show');
+}
+
+function saveStock() {
+  const val = parseFloat(document.getElementById('stock-input').value);
+  if(isNaN(val) || val < 0) { showToast('Invalid value', 'var(--red)'); return; }
+  inventoryData[editStockIdx].stock = val;
+  closeModal('stock-modal');
+  renderInv(document.getElementById('inv-search').value);
+  showToast('Stock updated!');
+}
+
+// ══════════ REPORTS ══════════
+function renderReports() {
+  const maxSales = Math.max(...WEEK_SALES);
+  document.getElementById('week-bars').innerHTML = WEEK_SALES.map((v,i) => {
+    const h = maxSales > 0 ? Math.round((v/maxSales)*70) : 0;
+    const colors = ['#E91E8C','#6B2FA0','#E91E8C','#6B2FA0','#E91E8C','#ccc','#ccc'];
+    return `
+      <div class="bar-wrap">
+        <div class="bar-fill" style="height:${h}px;background:${colors[i]};"></div>
+        <div class="bar-label">${WEEK_DAYS[i]}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('top-items').innerHTML = TOP_ITEMS.map((t,i) => `
+    <div class="top-item-row">
+      <div class="ti-rank">${i+1}</div>
+      <div class="ti-name">${t.name}</div>
+      <div class="ti-sold">${t.sold} sold</div>
+      <div class="ti-rev">₱${t.rev.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════ MODAL ══════════
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('show'); });
+});
+
+// ══════════ INIT ══════════
+renderHome();
+renderPOS();
+renderInv();
+renderReports();
+updateCart();
+</script>
+</body>
+</html>

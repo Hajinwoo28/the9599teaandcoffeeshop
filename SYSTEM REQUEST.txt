@@ -1,0 +1,36 @@
+SYSTEM REQUEST
+Project Name: 9599 Tea & Coffee POS & Order Management System
+Project Sponsor: Shop Owner / Management
+Date: March 22, 2026
+1. Business Need
+Currently, the 9599 Tea & Coffee shop relies heavily on manual processes. Walk-in orders and daily expenses (petty cash) are recorded using a physical notebook. There is no automated way to track real-time inventory deductions, making it difficult to know when raw ingredients are running low or when a menu item should be marked as "Sold Out." Furthermore, calculating daily profit requires manual reconciliation of notebook entries, which is time-consuming and prone to human error.
+The business needs a unified digital system that acts as a Kitchen Display System (KDS), a Walk-In POS ("Notebook Killer"), an automated inventory tracker, and a customer-facing QR ordering platform to modernize operations, reduce waiting times, and accurately track financial health.
+2. Business Requirements
+The system must provide the following core functionalities:
+Customer-Facing Features (Digital Storefront):
+Secure Access: Customers can scan a QR code to access a time-limited ordering link that automatically expires at store closing time.
+Frictionless Authentication: Customers can log in using Google Social Sign-In (OAuth 2.0), entirely bypassing costly SMS OTP fees while maintaining security.
+Dynamic Menu: A digital menu that automatically hides or flags items as "Low Stock" or "Sold Out" based on real-time ingredient levels.
+Smart Pricing & Modifiers: Customers can select cup sizes (16 oz for ₱49 or 22 oz for ₱59) and select add-ons (Nata, Pearl, Coffee Jelly for +₱10 each).
+Live Order Tracking: Customers receive live UI updates when their order changes from "Preparing" to "Completed."
+Admin & Staff Features (Dashboard/POS):
+Live Kitchen Display System (KDS): A real-time dashboard for staff to view incoming orders, track requested add-ons/sizes, and manage order fulfillment statuses.
+Manual POS ("Notebook Killer"): A rapid point-of-sale interface for staff to punch in walk-in orders quickly without requiring the customer to scan a QR code.
+Automated Recipe-Based Inventory: Every order placed automatically deducts the exact mililiters, grams, and pieces of raw ingredients (e.g., cups, milk, frappe base, coffee jelly) from the database.
+Expense & Petty Cash Ledger: A digital log for staff to record out-of-pocket expenses (e.g., buying emergency ice or milk).
+Daily Close-Out Reconciliation: An automated financial calculator that takes Total System Sales, adds Manual Notebook Sales (if any), subtracts Logged Expenses, and outputs the exact Expected Cash in Drawer (Actual Profit).
+Legacy Data Migration: A bulk import tool that reads old .csv Excel notebook records and integrates them into the digital database for historical tracking.
+Disaster Recovery: One-click JSON backup and restore capabilities for the entire database.
+3. Business Value
+Tangible Benefits:
+Eliminates SMS Costs: Using Google Login saves the business ₱0.50 - ₱1.00 per customer login compared to traditional SMS OTPs.
+Prevents Lost Sales: Automatic low-stock tracking alerts management to restock before an item actually runs out.
+Accurate Financial Tracking: Automated daily reconciliation eliminates manual math errors and prevents cash leakages.
+Intangible Benefits:
+Enhanced Customer Experience: Customers experience zero friction ordering via the mobile-friendly web app instead of queuing at the counter.
+Increased Staff Efficiency: Staff no longer need to manually write down complex orders with multiple add-ons and sizes. The KDS provides a clear, un-smudged ticket for the barista.
+Future-Proofing: The system seamlessly merges historical notebook data with new digital data, preserving the shop's sales history.
+4. Special Issues or Constraints
+Deployment Flexibility: The system must be capable of running in the Cloud (via Render) for online QR ordering, but must also have a built-in Desktop Application mode (pywebview) capable of running on a local LAN network if the shop's internet goes down.
+Mobile Responsiveness: The customer storefront must act and feel like a native mobile application (PWA layout) since 99% of customers will access it via their smartphones.
+Browser Security Restrictions: The system must actively detect if it is being opened inside the Facebook/Messenger in-app browser and warn users to open it in Chrome/Safari to ensure Google Login works securely.

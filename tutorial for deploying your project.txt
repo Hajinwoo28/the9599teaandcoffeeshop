@@ -1,0 +1,75 @@
+Phase 1: Prepare Your Project Files
+You need exactly three files in your project folder. Make sure they are all in the exact same folder on your computer.
+1. app.py
+This is your main Python code containing the entire system.
+2. requirements.txt
+Create a new text file named exactly requirements.txt.
+Paste the following lines into it. (Note: Do NOT include pywebview here, as Render is a cloud server and cannot open Windows desktop apps. It will only use gunicorn for the web).
+code
+Text
+Flask==3.0.2
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
+3. .gitignore
+Create a text file named .gitignore. This stops unnecessary computer files from uploading to the cloud. Paste this inside:
+code
+Text
+__pycache__/
+*.pyc
+instance/
+.env
+Phase 2: Upload to GitHub
+Render pulls your code directly from a GitHub repository to build your app.
+Go toGitHub.com and log in (or create a free account).
+Click the "+" icon in the top right corner and select New repository.
+Name the repository (e.g., 9599-tea-system) and leave it as Public or Private (either works). Click Create repository.
+Click "uploading an existing file" near the top of the Quick Setup screen.
+Drag and drop your three files (app.py, requirements.txt, .gitignore) into the browser.
+Click Commit changes to save them to GitHub.
+Phase 3: Create the PostgreSQL Database on Render
+Your local database won't work on the internet, so we need to create a free cloud database.
+Go toRender.com and log in using your GitHub account.
+Click the "New +" button at the top right and select PostgreSQL.
+Fill in the details:
+Name: milktea-db
+Region: Select the closest one to you (e.g., Singapore or US West).
+Instance Type: Free
+Click Create Database.
+It will take about 1–2 minutes to create. Once it says "Available", scroll down to the Connections section and look for the Internal Database URL.
+Click the Copy button next to the Internal Database URL (it will look something like postgres://user:password@host/db). Keep this copied for the next phase.
+Phase 4: Create the Web Service (The App)
+Now we launch the actual Python code and connect it to the database.
+Go back to the main Render Dashboard.
+Click "New +" and select Web Service.
+Connect your GitHub account, find the 9599-tea-system repository you made, and click Connect.
+Fill in the web service settings:
+Name: 9599-system (This becomes your actual website link: https://9599-system.onrender.com)
+Region: Same region as your database.
+Branch: main
+Runtime: Python 3
+Build Command: pip install -r requirements.txt
+Start Command: gunicorn app:app (This tells the cloud to run your app.py file)
+Instance Type: Free
+5. Add Environment Variables (CRITICAL STEP):
+Scroll down and click the Advanced button, then click Add Environment Variable. You need to add 3 variables:
+Variable 1:
+Key: DATABASE_URL
+Value: (Paste the Internal Database URL you copied in Phase 3)
+Variable 2:
+Key: SECRET_KEY
+Value: Type-Any-Random-Long-Password-Here-For-Security
+Variable 3:
+Key: ADMIN_PIN
+Value: 12345 (Or whatever you want your Admin Login PIN to be)
+Click Create Web Service at the bottom of the page.
+Phase 5: Wait for Deployment
+Render will now install Python, install your requirements.txt, and start your server.
+You will see a black terminal window scrolling with text. This usually takes about 2 to 5 minutes.
+Wait until you see a green log that says: Your service is live 🎉
+You're Done!
+At the top-left of your Render screen, you will see a link like: https://9599-system.onrender.com.
+To log in as the Admin, go to: https://9599-system.onrender.com/admin
+Enter your PIN.
+Go to the Settings tab, enter your opening/closing hours, and click Validate & Generate Link.
+The system will give you the secure customer link. Turn that link into a QR code for your customers to scan!
