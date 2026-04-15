@@ -931,13 +931,13 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     #    Best choice for Vercel: set SMS_GATEWAY_URL=https://api.sms-gate.app
     #    and enable Cloud Server in the Android app.
     #
-    #    FIX for RESULT_ERROR_GENERIC_FAILURE:
-    #    Some PH SIM cards (Globe, Smart, DITO) reject E.164 (+639xxxxxxxxx)
-    #    for outgoing SMS and need local format (09xxxxxxxxx) instead.
-    #    By default this code tries E.164 first, then auto-retries with local
-    #    format if the gateway accepts the request but Android still fails.
-    #    To skip E.164 entirely and always use local format, set:
-    #      SMS_GATEWAY_LOCAL_FORMAT=1
+    #    Phone number format rules:
+    #    • Cloud relay (api.sms-gate.app) → ALWAYS uses E.164 (+639xxxxxxxxx).
+    #      The cloud API validates and rejects local format (400 "invalid phone number").
+    #    • Self-hosted (local IP)          → uses local format (09xxxxxxxxx) by
+    #      default because some PH SIMs reject E.164 outgoing SMS and return
+    #      RESULT_ERROR_GENERIC_FAILURE. Override with SMS_GATEWAY_LOCAL_FORMAT=0
+    #      if your self-hosted setup prefers E.164.
     # ══════════════════════════════════════════════════════════════════════════
     gw_url  = os.environ.get('SMS_GATEWAY_URL', '').rstrip('/')
     gw_user = os.environ.get('SMS_GATEWAY_USER', '')
@@ -947,19 +947,26 @@ def send_otp_sms(phone: str, code: str) -> tuple:
         try:
             credentials = base64.b64encode(f"{gw_user}:{gw_pass}".encode()).decode()
 
-            # Decide phone number format.
-            # SMS_GATEWAY_LOCAL_FORMAT=1 → always use 09xxxxxxxxx (fixes
-            # RESULT_ERROR_GENERIC_FAILURE on PH SIMs that reject E.164).
-            # Default: use E.164 (+639xxxxxxxxx).
-            use_local = os.environ.get('SMS_GATEWAY_LOCAL_FORMAT', '').strip() in ('1', 'true', 'yes')
-            phone_number = _to_local_ph_number(international) if use_local else international
-
             # Cloud relay (api.sms-gate.app) uses a different endpoint path
+            # and REQUIRES E.164 format — it rejects local format with HTTP 400.
+            # Self-hosted gateways work better with local format on PH SIMs.
             is_cloud = 'sms-gate.app' in gw_url
             endpoint = (
                 f"{gw_url}/3rdparty/v1/message" if is_cloud
                 else f"{gw_url}/message"
             )
+
+            # Format selection:
+            #   Cloud relay  → always E.164 (required by the API)
+            #   Self-hosted  → local format by default (avoids RESULT_ERROR_GENERIC_FAILURE)
+            #                  set SMS_GATEWAY_LOCAL_FORMAT=0 to force E.164 on self-hosted
+            local_format_env = os.environ.get('SMS_GATEWAY_LOCAL_FORMAT', '').strip()
+            if is_cloud:
+                phone_number = international                       # E.164 required
+            elif local_format_env in ('0', 'false', 'no'):
+                phone_number = international                       # operator override
+            else:
+                phone_number = _to_local_ph_number(international) # local default for self-hosted
 
             def _gw_post(number):
                 payload = {"message": message, "phoneNumbers": [number]}
@@ -978,15 +985,6 @@ def send_otp_sms(phone: str, code: str) -> tuple:
                 )
 
             resp = _gw_post(phone_number)
-
-            # Auto-retry with the opposite format if the first attempt failed.
-            # This handles SIMs that silently return HTTP 200 but then produce
-            # RESULT_ERROR_GENERIC_FAILURE in the Android SMS manager.
-            if resp.status_code not in (200, 201, 202) and not use_local:
-                alt_number = _to_local_ph_number(international)
-                if alt_number != phone_number:
-                    print(f"  [SMS GW] E.164 failed ({resp.status_code}), retrying with local format {alt_number}")
-                    resp = _gw_post(alt_number)
 
             if resp.status_code in (200, 201, 202):
                 return True, ''
