@@ -870,6 +870,21 @@ def _normalize_ph_number(raw: str) -> str:
     return '+' + n                      # pass-through for other formats
 
 
+def _to_local_ph_number(e164: str) -> str:
+    """
+    Convert an E.164 Philippine number back to local format (09xxxxxxxxx).
+    +639xxxxxxxxx → 09xxxxxxxxx
+    Used as a fallback for Android SMS Gateway when the SIM rejects E.164 format,
+    which causes RESULT_ERROR_GENERIC_FAILURE on some PH carriers.
+    """
+    n = re.sub(r'\D', '', e164)         # strip +, spaces, etc.
+    if n.startswith('63') and len(n) == 12:
+        return '0' + n[2:]              # 639xxxxxxxxx → 09xxxxxxxxx
+    if n.startswith('9') and len(n) == 10:
+        return '0' + n                  # 9xxxxxxxxx → 09xxxxxxxxx
+    return e164                         # already local or unknown — pass through
+
+
 def send_otp_sms(phone: str, code: str) -> tuple:
     """
     Send a 6-digit OTP via SMS.
@@ -915,6 +930,14 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     # A. SMS GATEWAY FOR ANDROID — FREE (self-hosted, uses your SIM plan)
     #    Best choice for Vercel: set SMS_GATEWAY_URL=https://api.sms-gate.app
     #    and enable Cloud Server in the Android app.
+    #
+    #    FIX for RESULT_ERROR_GENERIC_FAILURE:
+    #    Some PH SIM cards (Globe, Smart, DITO) reject E.164 (+639xxxxxxxxx)
+    #    for outgoing SMS and need local format (09xxxxxxxxx) instead.
+    #    By default this code tries E.164 first, then auto-retries with local
+    #    format if the gateway accepts the request but Android still fails.
+    #    To skip E.164 entirely and always use local format, set:
+    #      SMS_GATEWAY_LOCAL_FORMAT=1
     # ══════════════════════════════════════════════════════════════════════════
     gw_url  = os.environ.get('SMS_GATEWAY_URL', '').rstrip('/')
     gw_user = os.environ.get('SMS_GATEWAY_USER', '')
@@ -923,14 +946,13 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     if gw_url and gw_user and gw_pass:
         try:
             credentials = base64.b64encode(f"{gw_user}:{gw_pass}".encode()).decode()
-            payload = {
-                "message":      message,
-                "phoneNumbers": [international],
-            }
-            # Optional: choose a specific SIM on dual-SIM devices
-            sim_slot = os.environ.get('SMS_GATEWAY_SIM', '').strip()
-            if sim_slot:
-                payload["simNumber"] = 1 if sim_slot.lower() == 'sim1' else 2
+
+            # Decide phone number format.
+            # SMS_GATEWAY_LOCAL_FORMAT=1 → always use 09xxxxxxxxx (fixes
+            # RESULT_ERROR_GENERIC_FAILURE on PH SIMs that reject E.164).
+            # Default: use E.164 (+639xxxxxxxxx).
+            use_local = os.environ.get('SMS_GATEWAY_LOCAL_FORMAT', '').strip() in ('1', 'true', 'yes')
+            phone_number = _to_local_ph_number(international) if use_local else international
 
             # Cloud relay (api.sms-gate.app) uses a different endpoint path
             is_cloud = 'sms-gate.app' in gw_url
@@ -939,15 +961,33 @@ def send_otp_sms(phone: str, code: str) -> tuple:
                 else f"{gw_url}/message"
             )
 
-            resp = requests.post(
-                endpoint,
-                json=payload,
-                headers={
-                    "Authorization": f"Basic {credentials}",
-                    "Content-Type":  "application/json",
-                },
-                timeout=15
-            )
+            def _gw_post(number):
+                payload = {"message": message, "phoneNumbers": [number]}
+                # Optional: choose a specific SIM on dual-SIM devices
+                sim_slot = os.environ.get('SMS_GATEWAY_SIM', '').strip()
+                if sim_slot:
+                    payload["simNumber"] = 1 if sim_slot.lower() == 'sim1' else 2
+                return requests.post(
+                    endpoint,
+                    json=payload,
+                    headers={
+                        "Authorization": f"Basic {credentials}",
+                        "Content-Type":  "application/json",
+                    },
+                    timeout=15,
+                )
+
+            resp = _gw_post(phone_number)
+
+            # Auto-retry with the opposite format if the first attempt failed.
+            # This handles SIMs that silently return HTTP 200 but then produce
+            # RESULT_ERROR_GENERIC_FAILURE in the Android SMS manager.
+            if resp.status_code not in (200, 201, 202) and not use_local:
+                alt_number = _to_local_ph_number(international)
+                if alt_number != phone_number:
+                    print(f"  [SMS GW] E.164 failed ({resp.status_code}), retrying with local format {alt_number}")
+                    resp = _gw_post(alt_number)
+
             if resp.status_code in (200, 201, 202):
                 return True, ''
             return False, f"SMS Gateway error ({resp.status_code}): {resp.text[:300]}"
@@ -6551,7 +6591,7 @@ function playGrantedSound() {
             <div style="flex:1;">
                 <div style="font-weight:800;font-size:1rem;margin-bottom:3px;">Order #${escapeHTML(code)} has been cancelled</div>
                 <div style="font-size:0.88rem;opacity:0.9;font-weight:600;">Reason: ${escapeHTML(reason)}</div>
-                <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. For assistance, call/text us at <b>0999 458 7112</b>.</div>
+                <div style="font-size:0.78rem;opacity:0.75;margin-top:4px;">We apologize for the inconvenience. For assistance, call/text us at <b>0985 779 4783</b>.</div>
             </div>
             <button onclick="document.getElementById('cancel-banner').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;flex-shrink:0;">✕ Close</button>`;
         document.body.prepend(banner);
@@ -15931,9 +15971,10 @@ def dev_env():
         ("ADMIN_PIN", os.environ.get('ADMIN_PIN')),
         ("DEV_KEY", os.environ.get('DEV_KEY')),
         ("GOOGLE_CLIENT_ID", os.environ.get('GOOGLE_CLIENT_ID')),
-        ("SMS_GATEWAY_URL",  os.environ.get('SMS_GATEWAY_URL')),
-        ("SMS_GATEWAY_USER", os.environ.get('SMS_GATEWAY_USER')),
-        ("SMS_GATEWAY_PASS", os.environ.get('SMS_GATEWAY_PASS')),
+        ("SMS_GATEWAY_URL",         os.environ.get('SMS_GATEWAY_URL')),
+        ("SMS_GATEWAY_USER",        os.environ.get('SMS_GATEWAY_USER')),
+        ("SMS_GATEWAY_PASS",        os.environ.get('SMS_GATEWAY_PASS')),
+        ("SMS_GATEWAY_LOCAL_FORMAT",os.environ.get('SMS_GATEWAY_LOCAL_FORMAT')),
         ("VERCEL", os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV')),
         ("RENDER", os.environ.get('RENDER')),
         ("DYNO", os.environ.get('DYNO')),
