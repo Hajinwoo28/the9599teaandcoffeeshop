@@ -4711,7 +4711,7 @@ function playGrantedSound() {
         <div class="loc-info-row">
             <i class="fas fa-phone-alt"></i>
             <div>
-                <b>Customer Concerns:</b> <a href="tel:09994587112" style="color:var(--teal-dark);font-weight:800;text-decoration:none;">0999 458 7112</a><br>
+                <b>Customer Concerns:</b> <a href="tel:09857794783" style="color:var(--teal-dark);font-weight:800;text-decoration:none;">0985 779 4783</a><br>
                 <span style="font-size:0.82rem; color:#A1887F;">For feedback, questions, or concerns about your order.</span>
             </div>
         </div>
@@ -5033,7 +5033,7 @@ function playGrantedSound() {
                 <span>TOTAL</span><span id="receipt-total"></span>
             </div>
             <div style="text-align:center; margin-top:10px; font-size:0.72rem; color:var(--text-light);">Thank you for your order! 🧋</div>
-            <div style="text-align:center; margin-top:6px; font-size:0.72rem; color:var(--text-light);">Questions? Call/text <a href="tel:09994587112" style="color:var(--teal-dark);font-weight:800;text-decoration:none;">0999 458 7112</a></div>
+            <div style="text-align:center; margin-top:6px; font-size:0.72rem; color:var(--text-light);">Questions? Call/text <a href="tel:09857794783" style="color:var(--teal-dark);font-weight:800;text-decoration:none;">0985 779 4783</a></div>
         </div>
 
         <div style="display:flex; gap:10px; flex-direction:column;">
@@ -15931,6 +15931,9 @@ def dev_env():
         ("ADMIN_PIN", os.environ.get('ADMIN_PIN')),
         ("DEV_KEY", os.environ.get('DEV_KEY')),
         ("GOOGLE_CLIENT_ID", os.environ.get('GOOGLE_CLIENT_ID')),
+        ("SMS_GATEWAY_URL",  os.environ.get('SMS_GATEWAY_URL')),
+        ("SMS_GATEWAY_USER", os.environ.get('SMS_GATEWAY_USER')),
+        ("SMS_GATEWAY_PASS", os.environ.get('SMS_GATEWAY_PASS')),
         ("VERCEL", os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV')),
         ("RENDER", os.environ.get('RENDER')),
         ("DYNO", os.environ.get('DYNO')),
