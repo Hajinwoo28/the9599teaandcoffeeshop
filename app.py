@@ -52,55 +52,40 @@ app.wsgi_app = ProxyFix(
     x_host=1
 )
 
-# ── Email config startup diagnostic ───────────────────────────────────────────
-# Printed once when the app starts so you can confirm credentials are loaded.
-def _check_email_config():
-    resend_key    = os.environ.get('RESEND_API_KEY', '').strip()
-    resend_from   = os.environ.get('RESEND_FROM', '').strip()
-    gmail_sender  = os.environ.get('GMAIL_SENDER', '').strip()
-    gmail_pw      = os.environ.get('GMAIL_APP_PASSWORD', '').strip().replace(' ', '')
-
+# ── hCaptcha config diagnostic ─────────────────────────────────────────────
+# Set HCAPTCHA_SECRET_KEY in your .env or environment variables.
+# Get a free key at: https://www.hcaptcha.com
+# Leave blank to run in dev mode (hCaptcha checks are skipped locally).
+def _check_captcha_config():
+    secret = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
     print("\n" + "="*55)
-    print("  EMAIL VERIFICATION CONFIG CHECK")
+    print("  HCAPTCHA CONFIG CHECK")
     print("="*55)
-    if resend_key:
-        print(f"  [OK] METHOD 1 - Resend API key found")
-        if resend_from:
-            print(f"       FROM: {resend_from}")
-        else:
-            print(f"  [!!] RESEND_FROM not set - using sandbox sender.")
-            print(f"       Emails will only reach the Resend account owner.")
-            print(f"       Fix: set RESEND_FROM=YourApp <verify@yourdomain.com>")
+    if secret:
+        print("  [OK] HCAPTCHA_SECRET_KEY found — bot protection active.")
     else:
-        print("  [--] METHOD 1 - Resend API key NOT set (skipped)")
-
-    if gmail_sender and gmail_pw:
-        print(f"  [OK] METHOD 2 - Gmail SMTP ready ({gmail_sender})")
-    elif gmail_sender or gmail_pw:
-        print("  [!!] METHOD 2 - Gmail SMTP INCOMPLETE:")
-        if not gmail_sender:  print("       Missing: GMAIL_SENDER")
-        if not gmail_pw:      print("       Missing: GMAIL_APP_PASSWORD")
-    else:
-        print("  [--] METHOD 2 - Gmail SMTP NOT set (skipped)")
-
-    if not resend_key and not (gmail_sender and gmail_pw):
-        print()
-        print("  [ERROR] NO EMAIL PROVIDER CONFIGURED!")
-        print("  Verification links will only appear in terminal logs.")
-        print()
-        print("  QUICK FIX - create a .env file next to app.py with:")
-        print("    GMAIL_SENDER=yourgmail@gmail.com")
-        print("    GMAIL_APP_PASSWORD=abcdefghijklmnop")
-        print("  (Use a Gmail App Password, NOT your regular login password)")
+        print("  [--] HCAPTCHA_SECRET_KEY NOT set.")
+        print("       Bot protection will be SKIPPED in dev mode.")
+        print("       Fix: set HCAPTCHA_SECRET_KEY=<your_secret> in .env")
     print("="*55 + "\n")
 
-_check_email_config()
+_check_captcha_config()
 
 # ==========================================
 # 1. ADVANCED SECURITY CONFIGURATION
 # ==========================================
 
 app.secret_key = os.environ.get('SECRET_KEY', '9599isthesecretkey')
+
+# hCaptcha — bot protection for the order form.
+# Free key from https://www.hcaptcha.com  — set HCAPTCHA_SECRET_KEY in your env.
+# Also set HCAPTCHA_SITE_KEY (the public key shown in the widget).
+HCAPTCHA_SECRET_KEY  = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
+HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '10000000-ffff-ffff-ffff-000000000001').strip()  # default = hCaptcha test key
+HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
+# Minimum seconds a real human takes to fill in the order gate form.
+# Submissions faster than this are rejected as bots.
+BOT_MIN_FORM_SECONDS = 3
 
 # Developer portal secret — set DEV_SECRET in env for production.
 DEV_SECRET = os.environ.get('DEV_SECRET', 'dev-9599-local').strip()
@@ -655,6 +640,7 @@ class CustomerReputation(db.Model):
     display_name = db.Column(db.String(120), nullable=True, default='')
     total_orders = db.Column(db.Integer, default=0)
     noshow_count = db.Column(db.Integer, default=0)       # unclaimed / cancelled after Ready
+    cancel_count = db.Column(db.Integer, default=0)       # any cancellation by staff or customer
     completed_count = db.Column(db.Integer, default=0)
     is_watchlist = db.Column(db.Boolean, default=False)
     requires_prepayment = db.Column(db.Boolean, default=False)
@@ -734,8 +720,9 @@ FAILED_WINDOW_MIN   = 30  # rolling window in minutes
 ORDER_COOLDOWN_MINUTES   = 30   # minimum gap between orders from the same email
 SUSPICIOUS_NAME_COUNT    = 5    # same name in 1 hour triggers a manual-review flag
 LARGE_ORDER_THRESHOLD    = 500.0  # ₱ — orders at/above this require staff confirmation
-LARGE_ORDER_PREPAY_PCT   = 0.20   # 20 % holding fee for large orders (refunded on pickup)
+LARGE_ORDER_PREPAY_PCT   = 0.50   # 50 % deposit for high-value orders (collected before prep)
 NOSHOW_BLOCK_THRESHOLD   = 2    # after this many no-shows → require prepayment
+CANCEL_FLAG_THRESHOLD    = 3    # after this many cancellations → flag next order for manual review
 
 def get_client_ip():
     """Extract real client IP, respecting X-Forwarded-For from trusted proxies."""
@@ -824,6 +811,9 @@ def check_order_limits(email, phone, name, total):
                 flags.append('watchlist')
             if rep.requires_prepayment:
                 flags.append('prepayment_required')
+            # High cancellation rate → flag for manual review
+            if (rep.cancel_count or 0) >= CANCEL_FLAG_THRESHOLD:
+                flags.append('high_cancel_rate')
 
     # 3 — Cooldown: no repeat order from same email within ORDER_COOLDOWN_MINUTES
     if norm_email:
@@ -1135,139 +1125,32 @@ def send_otp_sms(phone: str, code: str) -> tuple:
 #                  Falls back to request.host_url at send-time if not set.
 # ══════════════════════════════════════════════════════════════════════════════
 
-def send_verification_email(to_email, verify_url):
+def verify_hcaptcha(token: str) -> tuple:
     """
-    Send an HTML verification email.
-    Tries Resend API first (works on Vercel), then Gmail SMTP, then dev-mode fallback.
-    Returns (success: bool, error_message: str).
+    Verify an hCaptcha token server-side.
+    Returns (ok: bool, error_msg: str).
+    If HCAPTCHA_SECRET_KEY is not configured, always passes (dev mode).
     """
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-
-    subject = "✅ Verify Your Email — 9599 Tea & Coffee"
-    html_body = f"""
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F5EFE6;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EFE6;padding:40px 0;">
-    <tr><td align="center">
-      <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
-        <tr>
-          <td style="background:linear-gradient(135deg,#4a1e0c,#8B5E3C);padding:32px 40px;text-align:center;">
-            <div style="font-size:2rem;margin-bottom:8px;">🧋</div>
-            <div style="color:#F5EFE6;font-size:1.4rem;font-weight:900;letter-spacing:1px;">9599 Tea &amp; Coffee</div>
-            <div style="color:#D7CCC8;font-size:0.78rem;letter-spacing:3px;margin-top:4px;font-weight:700;">EMAIL VERIFICATION</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:36px 40px 28px;">
-            <p style="color:#3E2723;font-size:1rem;font-weight:700;margin:0 0 10px;">Hi there! 👋</p>
-            <p style="color:#5D4037;font-size:0.93rem;line-height:1.7;margin:0 0 24px;">
-              Thank you for choosing <strong>9599 Tea &amp; Coffee</strong>. To keep your order secure
-              and confirm your identity, please verify your email address by clicking the button below.
-              This link is valid for <strong>15 minutes</strong>.
-            </p>
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td align="center" style="padding:10px 0 28px;">
-                <a href="{verify_url}"
-                   style="display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#ffffff;
-                          text-decoration:none;font-weight:900;font-size:1rem;letter-spacing:0.5px;
-                          padding:16px 44px;border-radius:14px;box-shadow:0 4px 16px rgba(92,51,23,0.35);">
-                  ✅ Verify Your Email
-                </a>
-              </td></tr>
-            </table>
-            <p style="color:#8D6E63;font-size:0.78rem;line-height:1.6;margin:0 0 8px;">
-              If you didn't request this, you can safely ignore this email.
-            </p>
-            <p style="color:#8D6E63;font-size:0.75rem;line-height:1.5;margin:0;">
-              Or copy this link into your browser:<br>
-              <a href="{verify_url}" style="color:#8B5E3C;word-break:break-all;font-size:0.72rem;">{verify_url}</a>
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="background:#FBF7F2;border-top:1px solid #EFEBE4;padding:18px 40px;text-align:center;">
-            <p style="color:#BCAAA4;font-size:0.72rem;margin:0;">
-              © 9599 Tea &amp; Coffee &nbsp;·&nbsp; San Antonio, Quezon &nbsp;·&nbsp; This is an automated message.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-    # ── METHOD 1: Resend API (HTTP-based — works on Vercel/serverless) ────────
-    # Cascades to Method 2 / Method 3 on failure instead of aborting.
-    resend_key = os.environ.get('RESEND_API_KEY', '').strip()
-    if resend_key:
-        from_addr = os.environ.get(
-            'RESEND_FROM',
-            '9599 Tea & Coffee <onboarding@resend.dev>'
-        ).strip()
-        try:
-            resp = requests.post(
-                'https://api.resend.com/emails',
-                headers={
-                    'Authorization': f'Bearer {resend_key}',
-                    'Content-Type': 'application/json',
-                },
-                json={
-                    'from':    from_addr,
-                    'to':      [to_email],
-                    'subject': subject,
-                    'html':    html_body,
-                },
-                timeout=10,
-            )
-            if resp.status_code in (200, 201):
-                return True, ''
-            # Log and cascade — common when using sandbox sender
-            # (onboarding@resend.dev can only deliver to the account owner's email).
-            # Fix: set RESEND_FROM to a verified domain address in Vercel env vars.
-            resend_err = f"Resend error {resp.status_code}: {resp.text}"
-            print(f"[EMAIL] Resend failed, trying next method. {resend_err}")
-        except Exception as e:
-            resend_err = f"Resend request failed: {e}"
-            print(f"[EMAIL] Resend exception, trying next method. {resend_err}")
-
-    # ── METHOD 2: Gmail SMTP (works on local / non-Vercel hosting) ───────────
-    # Cascades to Method 3 on failure instead of aborting.
-    sender       = os.environ.get('GMAIL_SENDER', '').strip()
-    app_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip().replace(' ', '')
-    if sender and app_password:
-        import smtplib
-        try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From']    = f"9599 Tea & Coffee <{sender}>"
-            msg['To']      = to_email
-            msg.attach(MIMEText(html_body, 'html'))
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-                smtp.login(sender, app_password)
-                smtp.sendmail(sender, to_email, msg.as_string())
+    if not HCAPTCHA_SECRET_KEY:
+        # Dev mode — skip verification so local development works without a key.
+        return True, ''
+    if not token:
+        return False, 'CAPTCHA token missing. Please refresh and try again.'
+    try:
+        resp = requests.post(
+            HCAPTCHA_VERIFY_URL,
+            data={'secret': HCAPTCHA_SECRET_KEY, 'response': token},
+            timeout=8,
+        )
+        data = resp.json()
+        if data.get('success'):
             return True, ''
-        except smtplib.SMTPAuthenticationError:
-            print("[EMAIL] Gmail auth failed, falling back to dev mode. "
-                  "Check GMAIL_SENDER and GMAIL_APP_PASSWORD.")
-        except Exception as e:
-            print(f"[EMAIL] Gmail SMTP error, falling back to dev mode: {e}")
-
-    # ── METHOD 3: Dev fallback — log link to terminal (no email sent) ─────────
-    # Always succeeds so a misconfigured email provider never causes a 500.
-    # The customer must open the link manually (share it via the store owner).
-    # To send real emails: set RESEND_API_KEY + RESEND_FROM in Vercel env vars,
-    # or set GMAIL_SENDER + GMAIL_APP_PASSWORD.
-    print(f"\n{'='*60}")
-    print(f"  [DEV FALLBACK] No working email provider — link logged here.")
-    print(f"  To: {to_email}")
-    print(f"  Verification link: {verify_url}")
-    print(f"  Configure RESEND_API_KEY (Vercel) or GMAIL_SENDER + GMAIL_APP_PASSWORD.")
-    print(f"{'='*60}\n")
-    return True, ''
+        codes = data.get('error-codes', [])
+        return False, f"CAPTCHA verification failed ({', '.join(codes)}). Please refresh and try again."
+    except Exception as e:
+        print(f"[hCaptcha] Verification request failed: {e}")
+        # Fail open on network error so real customers are never permanently blocked.
+        return True, ''
 
 
 def get_or_create_reputation(email):
@@ -1291,15 +1174,17 @@ def build_order_meta(reservation_id, flags, total, email):
     rep = get_or_create_reputation(email) if email else None
     prepay_req   = ('prepayment_required' in flags) or (rep.requires_prepayment if rep else False)
     needs_confirm = total >= LARGE_ORDER_THRESHOLD
+    # 50 % deposit for large / high-value orders
     prepay_amount = round(total * LARGE_ORDER_PREPAY_PCT, 2) if needs_confirm else 0.0
-    is_flagged   = bool({'suspicious_pattern', 'watchlist'} & set(flags))
-    flag_reason  = '; '.join(f for f in flags if f in ('suspicious_pattern', 'watchlist', 'large_order'))
+    is_flagged   = bool({'suspicious_pattern', 'watchlist', 'high_cancel_rate'} & set(flags))
+    flag_reason  = '; '.join(f for f in flags if f in (
+        'suspicious_pattern', 'watchlist', 'large_order', 'high_cancel_rate'))
 
     meta = OrderMeta(
         reservation_id=reservation_id,
         is_flagged=is_flagged,
         flag_reason=flag_reason,
-        requires_staff_confirmation=needs_confirm,
+        requires_staff_confirmation=needs_confirm or ('high_cancel_rate' in flags),
         staff_confirmed=False,
         prepayment_required=prepay_req,
         prepayment_amount=prepay_amount,
@@ -4349,23 +4234,12 @@ function playGrantedSound() {
                     style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
                     onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
             </div>
-            <!-- ── EMAIL + VERIFICATION STEP ─────────────────────────────── -->
+            <!-- ── EMAIL ─────────────────────────────────────────────────── -->
             <div style="text-align:left; margin-bottom:12px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Email Address <span style="color:#C0392B;">*</span></label>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <input id="gate-email" type="email" placeholder="e.g. juan@gmail.com" autocomplete="email"
-                        style="flex:1; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
-                        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'; gateEmailChanged();"
-                        oninput="gateEmailChanged()">
-                    <!-- Verified badge (hidden until verified) -->
-                    <span id="gate-email-verified-badge" style="display:none; background:#E8F5E9; color:#2E7D32; border:1.5px solid #A5D6A7; border-radius:8px; padding:6px 10px; font-size:0.72rem; font-weight:900; white-space:nowrap; flex-shrink:0;"><i class="fas fa-check-circle"></i> Verified</span>
-                </div>
-                <!-- Verify button row — hidden; verification is handled via popup -->
-                <div id="gate-verify-email-row" style="display:none;">
-                    <div id="gate-email-verify-status" style="margin-top:7px; font-size:0.8rem; font-weight:700; min-height:16px; text-align:center;"></div>
-                </div>
-                <!-- Instruction note — hidden; handled via popup -->
-                <div id="gate-email-verify-note" style="display:none;"></div>
+                <input id="gate-email" type="email" placeholder="e.g. juan@gmail.com" autocomplete="email"
+                    style="width:100%; padding:13px 14px; border:2px solid var(--border-color); border-radius:12px; font-size:0.95rem; font-family:inherit; font-weight:600; color:var(--text-dark); background:#fff; outline:none; transition:border-color 0.2s;"
+                    onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-color)'">
             </div>
             <div style="text-align:left; margin-bottom:16px;">
                 <label style="font-size:0.7rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:5px;">Phone Number *</label>
@@ -4401,6 +4275,14 @@ function playGrantedSound() {
                 </div>
             </div>
 
+            <!-- ── hCaptcha (invisible bot protection) ──────────────────── -->
+            <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+            <div class="h-captcha" id="gate-hcaptcha"
+                 data-sitekey="{{ hcaptcha_site_key }}"
+                 data-size="invisible"
+                 data-callback="onHCaptchaVerified"
+                 style="display:none;"></div>
+
             <button id="gate-btn" onclick="handleManualSignIn()"
                 style="width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; border:none; font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer; letter-spacing:0.3px; box-shadow:0 4px 16px rgba(92,51,23,0.3); transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; opacity:1;"
                 id="gate-btn">
@@ -4425,78 +4307,11 @@ function playGrantedSound() {
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     EMAIL VERIFICATION POPUP MODAL
-     Triggered automatically when user types a valid email
-     ══════════════════════════════════════════════════════════ -->
-<div id="email-verify-popup-overlay"
-     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:10000; align-items:center; justify-content:center; padding:20px; animation:fadeIn 0.2s ease;"
-     onclick="if(event.target===this) closeEmailVerifyPopup()">
-    <div style="background:#fff; border-radius:24px; padding:36px 28px 28px; max-width:400px; width:100%; box-shadow:0 28px 80px rgba(0,0,0,0.22); position:relative; animation:popupSlideUp 0.28s cubic-bezier(0.34,1.56,0.64,1);">
-        <!-- Close button -->
-        <button onclick="closeEmailVerifyPopup()" type="button"
-            style="position:absolute; top:14px; right:14px; background:#f3f4f6; border:none; border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280; font-size:0.95rem; transition:background 0.15s;"
-            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-            <i class="fas fa-times"></i>
-        </button>
-        <!-- Icon -->
-        <div style="width:72px; height:72px; background:linear-gradient(135deg,#EEF2FF,#C7D2FE); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; border:2px solid #A5B4FC; font-size:2rem;">
-            📧
-        </div>
-        <!-- Title -->
-        <h3 style="font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:900; color:#0A2925; text-align:center; margin-bottom:8px;">Verify Your Email</h3>
-        <!-- Subtitle -->
-        <p style="font-size:0.87rem; color:#6b7280; text-align:center; line-height:1.65; margin-bottom:6px; font-weight:600;">
-            Almost there! Verify your email to complete your order:
-        </p>
-        <!-- Email display pill -->
-        <div style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:12px; padding:10px 16px; text-align:center; margin-bottom:18px;">
-            <span id="email-verify-popup-address" style="font-size:0.9rem; font-weight:800; color:#166534; word-break:break-all;"></span>
-        </div>
-        <!-- Steps description -->
-        <div style="background:#F8FAFC; border-radius:14px; padding:14px 16px; margin-bottom:20px; border:1.5px solid #E2E8F0;">
-            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
-                <div style="min-width:24px; height:24px; background:#1565C0; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:900; margin-top:1px;">1</div>
-                <span style="font-size:0.82rem; font-weight:700; color:#374151; line-height:1.5;">Click <strong>Send Verification Email</strong> below.</span>
-            </div>
-            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
-                <div style="min-width:24px; height:24px; background:#1565C0; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:900; margin-top:1px;">2</div>
-                <span style="font-size:0.82rem; font-weight:700; color:#374151; line-height:1.5;">Open your Gmail inbox and click the verification link.</span>
-            </div>
-            <div style="display:flex; align-items:flex-start; gap:10px;">
-                <div style="min-width:24px; height:24px; background:#2E7D32; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.72rem; font-weight:900; margin-top:1px;">✓</div>
-                <span style="font-size:0.82rem; font-weight:700; color:#374151; line-height:1.5;">Come back — you'll be verified automatically!</span>
-            </div>
-        </div>
-        <!-- Status message inside popup -->
-        <div id="email-verify-popup-status" style="min-height:18px; font-size:0.82rem; font-weight:700; text-align:center; margin-bottom:10px;"></div>
-        <!-- Send button -->
-        <button id="email-verify-popup-send-btn" onclick="popupSendEmailVerification()" type="button"
-            style="width:100%; padding:14px; border-radius:14px; background:linear-gradient(135deg,#1565C0,#0D47A1); color:#fff; border:none; font-family:inherit; font-size:0.95rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; box-shadow:0 4px 16px rgba(13,71,161,0.3); transition:opacity 0.2s; margin-bottom:10px;">
-            <i class="fas fa-envelope-circle-check"></i> Send Verification Email
-        </button>
-        <!-- Dismiss link -->
-        <button onclick="closeEmailVerifyPopup()" type="button"
-            style="width:100%; padding:10px; border-radius:12px; background:none; border:1.5px solid #E5E7EB; color:#6B7280; font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer; transition:background 0.15s;"
-            onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='none'">
-            I'll verify later
-        </button>
-    </div>
-</div>
-
-<style>
-@keyframes popupSlideUp {
-    from { opacity:0; transform:translateY(30px) scale(0.96); }
-    to   { opacity:1; transform:translateY(0)   scale(1); }
-}
-@keyframes fadeIn {
-    from { opacity:0; } to { opacity:1; }
-}
-</style>
 
 <script>
     function showToast(message, type='info') {
         const container = document.getElementById('toast-container');
+
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         let icon = type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
@@ -4653,21 +4468,43 @@ function playGrantedSound() {
             showGateError('Please tap the GPS button or type your address to continue.'); return;
         }
 
-        // If email not yet verified, show the verification popup first
-        if (!_gateEmailVerified) {
-            _proceedAfterVerify = true;
-            showEmailVerifyPopup(email);
-            return;
-        }
-
+        // Trigger invisible hCaptcha — callback onHCaptchaVerified will continue the flow
         const btn = document.getElementById('gate-btn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait…';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+        try {
+            if (window.hcaptcha) {
+                hcaptcha.execute();   // triggers invisible challenge → calls onHCaptchaVerified
+            } else {
+                // hCaptcha script not loaded (e.g. offline dev) — proceed without token
+                await _doManualSignIn('');
+            }
+        } catch(e) {
+            await _doManualSignIn('');
+        }
+    }
+
+    /* hCaptcha invisible callback — called after challenge is solved */
+    async function onHCaptchaVerified(token) {
+        await _doManualSignIn(token);
+    }
+
+    async function _doManualSignIn(captchaToken) {
+        const name  = document.getElementById('gate-name').value.trim();
+        const email = document.getElementById('gate-email').value.trim();
+        const phone = document.getElementById('gate-phone').value.trim();
+        const lat   = document.getElementById('gate-lat').value.trim();
+        const lng   = document.getElementById('gate-lng').value.trim();
+        const btn   = document.getElementById('gate-btn');
         try {
             const res = await fetch('/api/auth/manual', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, email, phone, lat, lng, address: _gateGeoAddr || (lat && lng ? `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}` : '') })
+                body: JSON.stringify({
+                    name, email, phone, lat, lng,
+                    address: _gateGeoAddr || (lat && lng ? `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}` : ''),
+                    'h-captcha-response': captchaToken
+                })
             });
             if (res.ok) { location.reload(); }
             else {
@@ -4675,11 +4512,14 @@ function playGrantedSound() {
                 showGateError(d.error || 'Something went wrong. Please try again.');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-mug-hot"></i> Proceed to Order';
+                // Reset hCaptcha so user can try again
+                if (window.hcaptcha) { try { hcaptcha.reset(); } catch(e){} }
             }
         } catch (e) {
             showGateError('Connection error. Please check your internet and try again.');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-mug-hot"></i> Proceed to Order';
+            if (window.hcaptcha) { try { hcaptcha.reset(); } catch(e){} }
         }
     }
 
@@ -4692,206 +4532,6 @@ function playGrantedSound() {
             });
         });
     });
-
-    /* ── EMAIL VERIFICATION HELPERS ─────────────────────────────────────── */
-    let _gateEmailVerified = false;
-    let _popupShownForEmail = '';
-    let _emailPopupTimer = null;
-    let _proceedAfterVerify = false;
-
-    function gateEmailChanged() {
-        const emailEl = document.getElementById('gate-email');
-        if (!emailEl) return;
-        const email   = emailEl.value.trim();
-        const badge   = document.getElementById('gate-email-verified-badge');
-        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-        if (_gateEmailVerified && !isValid) {
-            _gateEmailVerified = false;
-            if (badge) badge.style.display = 'none';
-            _popupShownForEmail = '';
-            _gateUpdateContinueBtn();
-        }
-    }
-
-    /* ── EMAIL VERIFY POPUP ──────────────────────────────────────────────── */
-    function showEmailVerifyPopup(email) {
-        var overlay = document.getElementById('email-verify-popup-overlay');
-        if (!overlay) { console.warn('Popup overlay not found'); return; }
-        var addrEl  = document.getElementById('email-verify-popup-address');
-        var statusEl = document.getElementById('email-verify-popup-status');
-        var sendBtn  = document.getElementById('email-verify-popup-send-btn');
-        if (addrEl)   addrEl.textContent = email;
-        if (statusEl) statusEl.textContent = '';
-        if (sendBtn) {
-            sendBtn.disabled = false;
-            sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email';
-            sendBtn.style.background = 'linear-gradient(135deg,#1565C0,#0D47A1)';
-        }
-        overlay.style.display = 'flex';
-    }
-
-    // Keep old name as alias so any existing calls still work
-    function openEmailVerifyPopup(email) { showEmailVerifyPopup(email); }
-
-    function closeEmailVerifyPopup() {
-        var overlay = document.getElementById('email-verify-popup-overlay');
-        if (overlay) overlay.style.display = 'none';
-    }
-
-    async function popupSendEmailVerification() {
-        const email   = document.getElementById('gate-email').value.trim();
-        const sendBtn = document.getElementById('email-verify-popup-send-btn');
-        const statusEl = document.getElementById('email-verify-popup-status');
-
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            if (statusEl) { statusEl.textContent = '⚠️ Enter a valid email first.'; statusEl.style.color = '#C0392B'; }
-            return;
-        }
-
-        sendBtn.disabled = true;
-        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
-        if (statusEl) statusEl.textContent = '';
-
-        try {
-            const res  = await fetch('/api/auth/send_email_verification', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                if (statusEl) {
-                    statusEl.textContent = '📬 Email sent! Check your Gmail and click the link.';
-                    statusEl.style.color = '#1565C0';
-                }
-                sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email';
-                sendBtn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)';
-                sendBtn.disabled = false;
-                // Also update in-form status
-                const formStatus = document.getElementById('gate-email-verify-status');
-                if (formStatus) { formStatus.textContent = '📬 Verification email sent! Check your Gmail inbox and click the link.'; formStatus.style.color = '#1565C0'; }
-                const formBtn = document.getElementById('gate-verify-email-btn');
-                if (formBtn) { formBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email'; formBtn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)'; }
-                // Start polling — close popup when verified
-                _gatePollVerificationWithPopup(email);
-            } else {
-                if (statusEl) { statusEl.textContent = '❌ ' + (data.error || 'Could not send. Try again.'); statusEl.style.color = '#C0392B'; }
-                sendBtn.disabled = false;
-                sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email';
-            }
-        } catch(e) {
-            if (statusEl) { statusEl.textContent = '❌ Connection error. Please try again.'; statusEl.style.color = '#C0392B'; }
-            sendBtn.disabled = false;
-            sendBtn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Send Verification Email';
-        }
-    }
-
-    function _gatePollVerificationWithPopup(email) {
-        if (_verifyPollInterval) clearInterval(_verifyPollInterval);
-
-        async function _checkVerified() {
-            // Skip if tab is hidden — browser suspends fetch causing ERR_NETWORK_IO_SUSPENDED
-            if (document.hidden) return;
-            try {
-                const res  = await fetch('/api/auth/check_email_verification?email=' + encodeURIComponent(email));
-                const data = await res.json();
-                if (data.verified) {
-                    clearInterval(_verifyPollInterval);
-                    document.removeEventListener('visibilitychange', _onVisibilityChange);
-                    closeEmailVerifyPopup();
-                    _gateMarkEmailVerified();
-                    showToast('✅ Email verified! You can now set your location.', 'success');
-                }
-            } catch(e) {}
-        }
-
-        // When user returns to this tab (after clicking link in email), check immediately
-        function _onVisibilityChange() {
-            if (!document.hidden) _checkVerified();
-        }
-        document.removeEventListener('visibilitychange', _onVisibilityChange);
-        document.addEventListener('visibilitychange', _onVisibilityChange);
-
-        _verifyPollInterval = setInterval(_checkVerified, 2000);
-    }
-
-    async function gateSendEmailVerification() {
-        const email  = document.getElementById('gate-email').value.trim();
-        const btn    = document.getElementById('gate-verify-email-btn');
-        const status = document.getElementById('gate-email-verify-status');
-
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            status.textContent = '⚠️ Enter a valid email first.';
-            status.style.color = '#C0392B';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
-        status.textContent = '';
-
-        try {
-            const res = await fetch('/api/auth/send_email_verification', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                status.textContent = '📬 Verification email sent! Check your Gmail inbox and click the link.';
-                status.style.color = '#1565C0';
-                btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Resend Email';
-                btn.style.background = 'linear-gradient(135deg,#1B5E20,#2E7D32)';
-                // Poll for server-side verification every 2 seconds
-                _gatePollVerificationWithPopup(email);
-            } else {
-                status.textContent = '❌ ' + (data.error || 'Could not send email. Try again.');
-                status.style.color = '#C0392B';
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Verify Your Email';
-            }
-        } catch(e) {
-            status.textContent = '❌ Connection error. Please try again.';
-            status.style.color = '#C0392B';
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-envelope-circle-check"></i> Verify Your Email';
-        }
-    }
-
-    let _verifyPollInterval = null;
-
-    function _gateMarkEmailVerified() {
-        _gateEmailVerified = true;
-        const badge  = document.getElementById('gate-email-verified-badge');
-        const status = document.getElementById('gate-email-verify-status');
-        const note   = document.getElementById('gate-email-verify-note');
-        const row    = document.getElementById('gate-verify-email-row');
-        if (badge)  { badge.style.display = 'inline-flex'; }
-        if (status) { status.textContent = '✅ Email verified!'; status.style.color = '#2E7D32'; }
-        if (note)   { note.style.display = 'none'; }
-        if (row)    {
-            const vBtn = document.getElementById('gate-verify-email-btn');
-            if (vBtn) vBtn.style.display = 'none';
-        }
-        _gateUpdateContinueBtn();
-        // If user clicked "Proceed to Order" and was redirected here, continue automatically
-        if (_proceedAfterVerify) {
-            _proceedAfterVerify = false;
-            setTimeout(handleManualSignIn, 300);
-        }
-    }
-
-    function _gateUpdateContinueBtn() {
-        const btn     = document.getElementById('gate-btn');
-        const icon    = document.getElementById('gate-btn-icon');
-        const txtSpan = document.getElementById('gate-btn-text');
-        btn.disabled      = false;
-        btn.style.opacity = '1';
-        btn.style.cursor  = 'pointer';
-        if (icon)    { icon.className = 'fas fa-mug-hot'; }
-        if (txtSpan) { txtSpan.textContent = 'Proceed to Order'; }
-    }
 
     /* ── CUSTOMER SITE ANNOUNCEMENTS ─────────────────────────────────────── */
     (async function loadGateAnnouncements() {
@@ -11158,6 +10798,7 @@ async function loadReputations(){
         <th style="padding:8px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Email</th>
         <th style="padding:8px 10px;text-align:center;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Orders</th>
         <th style="padding:8px 10px;text-align:center;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">No-Shows</th>
+        <th style="padding:8px 10px;text-align:center;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Cancels</th>
         <th style="padding:8px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Flags</th>
         <th style="padding:8px 10px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;">Actions</th>
       </tr></thead><tbody>
@@ -11166,11 +10807,14 @@ async function loadReputations(){
         if(rep.is_blocked)badges.push('<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">🚫 Blocked</span>');
         if(rep.is_watchlist)badges.push('<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">👁 Watchlist</span>');
         if(rep.requires_prepayment)badges.push('<span style="background:rgba(123,79,46,0.12);color:var(--brown);padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">💰 Prepay Required</span>');
+        if((rep.cancel_count||0)>=3)badges.push('<span style="background:rgba(156,39,176,0.12);color:#7B1FA2;padding:2px 7px;border-radius:8px;font-size:0.65rem;font-weight:900;">⚠️ High Cancels</span>');
         const noshowColor=rep.noshow_count>=2?'var(--red)':rep.noshow_count>=1?'var(--orange)':'var(--green)';
+        const cancelColor=(rep.cancel_count||0)>=3?'var(--red)':(rep.cancel_count||0)>=1?'var(--orange)':'var(--green)';
         return`<tr style="border-bottom:1px solid var(--cream-dark);">
           <td style="padding:8px 10px;"><div style="font-weight:800;font-size:0.8rem;">${escapeHTML(rep.name||rep.identifier)}</div><div style="font-size:0.7rem;color:var(--muted);">${escapeHTML(rep.identifier)}</div></td>
           <td style="padding:8px 10px;text-align:center;font-weight:800;">${rep.total_orders}</td>
           <td style="padding:8px 10px;text-align:center;font-weight:900;color:${noshowColor};">${rep.noshow_count}</td>
+          <td style="padding:8px 10px;text-align:center;font-weight:900;color:${cancelColor};" title="Cancellations total">${rep.cancel_count||0}</td>
           <td style="padding:8px 10px;">${badges.join(' ')||'<span style="color:var(--muted);font-size:0.75rem;">—</span>'}</td>
           <td style="padding:8px 10px;"><div style="display:flex;gap:5px;flex-wrap:wrap;">
             <button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.7rem;" onclick="toggleRepFlag(${rep.id},'is_watchlist',${!rep.is_watchlist})">${rep.is_watchlist?'Remove Watchlist':'Add Watchlist'}</button>
@@ -11900,12 +11544,15 @@ def storefront():
         ), 403
 
     # ── Store is open — serve the storefront ─────────────────────────────
+    # Stamp the time so we can detect bot-speed submissions server-side.
+    session['form_opened_at'] = datetime.utcnow().isoformat()
     return render_template_string(
         STOREFRONT_HTML,
         open_time=status["open_time"],
         close_time=status["cutoff_time"],   # cutoff = 1h before actual close
         actual_close_time=status["close_time"],
-        google_client_id=GOOGLE_CLIENT_ID
+        google_client_id=GOOGLE_CLIENT_ID,
+        hcaptcha_site_key=HCAPTCHA_SITE_KEY
     )
 
 # ── Customer-facing error page ────────────────────────────────────────────────
@@ -11985,8 +11632,6 @@ def customer_error_page():
 _CUSTOMER_ROUTES = {
     '/', '/reserve',
     '/api/auth/google', '/api/auth/manual',
-    '/api/auth/send_email_verification', '/verify-email',
-    '/api/auth/check_email_verification',
     '/api/public/announcements',
     '/api/store/status', '/api/menu',
     '/api/otp/send', '/api/otp/verify',
@@ -12069,7 +11714,7 @@ def google_auth():
 @app.route('/api/auth/manual', methods=['POST'])
 @limiter.limit("30 per minute")
 def manual_auth():
-    """Manual sign-in: name + email + optional phone + required location. No Google OAuth required."""
+    """Manual sign-in: name + email + optional phone + required location + hCaptcha token."""
     data = request.json or {}
     name  = (data.get('name') or '').strip()
     email = (data.get('email') or '').strip()
@@ -12077,16 +11722,32 @@ def manual_auth():
     lat   = (data.get('lat') or '').strip()
     lng   = (data.get('lng') or '').strip()
     address = (data.get('address') or '').strip()
+    captcha_token = (data.get('h-captcha-response') or '').strip()
+
     if not name:
         return jsonify({"error": "Full name is required."}), 400
     if not email or '@' not in email:
         return jsonify({"error": "A valid email address is required."}), 400
     if not lat or not lng:
         return jsonify({"error": "Location is required. Please use the location button or enter your address manually."}), 400
-    # Require email verification before granting access
-    verified_email = session.get('email_verified_for', '').strip().lower()
-    if verified_email != email.lower():
-        return jsonify({"error": "Please verify your email first. Click 'Verify Your Email' and check your inbox."}), 403
+
+    # ── Bot submission timing check ───────────────────────────────────────
+    opened_at_str = session.get('form_opened_at', '')
+    if opened_at_str:
+        try:
+            opened_at = datetime.fromisoformat(opened_at_str)
+            elapsed   = (datetime.utcnow() - opened_at).total_seconds()
+            if elapsed < BOT_MIN_FORM_SECONDS:
+                log_audit("Bot Speed Detected",
+                          f"Form submitted in {elapsed:.1f}s (min {BOT_MIN_FORM_SECONDS}s) from {get_client_ip()}")
+                return jsonify({"error": "Submission too fast. Please take a moment and try again."}), 429
+        except Exception:
+            pass  # Malformed timestamp — allow through
+
+    # ── hCaptcha verification ─────────────────────────────────────────────
+    captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
+    if not captcha_ok:
+        return jsonify({"error": captcha_err}), 400
 
     session['customer_verified'] = True
     session['customer_name']     = name
@@ -12096,101 +11757,6 @@ def manual_auth():
     session['customer_lng']      = lng
     session['customer_address']  = address
     return jsonify({"status": "success"})
-
-
-@app.route('/api/auth/send_email_verification', methods=['POST'])
-@limiter.limit("5 per minute")
-def send_email_verification():
-    """Send a verification link to the customer's Gmail before they can place orders."""
-    data  = request.json or {}
-    email = (data.get('email') or '').strip()
-    if not email or '@' not in email:
-        return jsonify({"error": "A valid email address is required."}), 400
-
-    # Generate a signed token valid for 15 minutes
-    token = token_serializer.dumps(email.lower(), salt='email-verify-2024')
-
-    # Build the verification URL
-    base_url = (os.environ.get('APP_BASE_URL') or request.host_url).rstrip('/')
-    verify_url = f"{base_url}/verify-email/{token}"
-
-    ok, err = send_verification_email(email, verify_url)
-    if not ok:
-        # Log the real error server-side for the developer
-        print(f"[EMAIL ERROR] send_verification_email failed for {email}: {err}")
-        return jsonify({
-            "error": "Could not send verification email. "
-                     "Please ask the store owner to configure RESEND_API_KEY "
-                     "in their Vercel environment variables.",
-            "detail": err
-        }), 500
-
-    # Store pending email in session so we can validate the token later
-    session['pending_verify_email'] = email.lower()
-    return jsonify({"status": "sent", "message": "Verification email sent! Check your Gmail inbox."})
-
-
-@app.route('/verify-email/<token>')
-def verify_email_token(token):
-    """Customer clicks the link in their email — marks email as verified in session."""
-    try:
-        email = token_serializer.loads(token, salt='email-verify-2024', max_age=900)  # 15 min
-    except SignatureExpired:
-        return """<!DOCTYPE html><html><head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>Link Expired | 9599 Tea & Coffee</title>
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;800&display=swap" rel="stylesheet">
-        <style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
-        .c{{background:#fff;border-radius:20px;padding:48px 36px;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,0.08);}}</style>
-        </head><body><div class="c">
-        <div style="font-size:3rem;margin-bottom:16px;">⏰</div>
-        <h2 style="color:#C0392B;margin-bottom:10px;font-size:1.35rem;">Link Expired</h2>
-        <p style="color:#666;font-size:0.9rem;line-height:1.6;margin-bottom:24px;">Your verification link has expired (valid 15 min). Please go back and request a new one.</p>
-        <a href="/" style="display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:800;font-size:0.92rem;">← Back to Order Page</a>
-        </div></body></html>""", 400
-    except BadSignature:
-        return """<!DOCTYPE html><html><head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>Invalid Link | 9599 Tea & Coffee</title>
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;800&display=swap" rel="stylesheet">
-        <style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
-        .c{{background:#fff;border-radius:20px;padding:48px 36px;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,0.08);}}</style>
-        </head><body><div class="c">
-        <div style="font-size:3rem;margin-bottom:16px;">❌</div>
-        <h2 style="color:#C0392B;margin-bottom:10px;font-size:1.35rem;">Invalid Link</h2>
-        <p style="color:#666;font-size:0.9rem;line-height:1.6;margin-bottom:24px;">This verification link is invalid or was already used. Please go back and request a new one.</p>
-        <a href="/" style="display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:800;font-size:0.92rem;">← Back to Order Page</a>
-        </div></body></html>""", 400
-
-    # Mark this email as verified in the session
-    session['email_verified_for'] = email
-    return """<!DOCTYPE html><html><head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Email Verified! | 9599 Tea & Coffee</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;800;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <style>
-    *{{box-sizing:border-box;margin:0;padding:0;}}
-    body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
-    .c{{background:#fff;border-radius:24px;padding:52px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.08);border:1.5px solid #EFEBE4;}}
-    .icon{{width:80px;height:80px;background:linear-gradient(135deg,#E8F5E9,#C8E6C9);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;font-size:2.4rem;border:2px solid #A5D6A7;}}
-    h2{{font-family:'Playfair Display',serif;color:#1B5E20;font-size:1.7rem;margin-bottom:10px;}}
-    p{{color:#5D4037;font-size:0.92rem;line-height:1.7;margin-bottom:28px;}}
-    a{{display:inline-block;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;text-decoration:none;padding:15px 36px;border-radius:14px;font-weight:900;font-size:0.97rem;box-shadow:0 4px 16px rgba(92,51,23,0.3);letter-spacing:0.3px;}}
-    </style>
-    </head><body><div class="c">
-    <div class="icon">✅</div>
-    <h2>Email Verified!</h2>
-    <p>Your email has been successfully verified. You can now go back to the order page and continue placing your order.</p>
-    <a href="/">🧋 Continue to Order</a>
-    </div></body></html>"""
-
-
-@app.route('/api/auth/check_email_verification')
-def check_email_verification():
-    """Polling endpoint: customer page checks if server-session marks email as verified."""
-    email = request.args.get('email', '').strip().lower()
-    verified = session.get('email_verified_for', '').strip().lower()
-    return jsonify({"verified": bool(email and verified == email)})
 
 
 @app.route('/api/public/announcements', methods=['GET'])
@@ -12801,6 +12367,9 @@ def reserve_blend():
         if 'large_order' in flags:
             log_audit("Large Order — Staff Approval Required",
                       f"Order {new_res.reservation_code}: ₱{total:.2f} — needs staff confirmation before prep")
+        if 'high_cancel_rate' in flags:
+            log_audit("High Cancellation Rate — Manual Review",
+                      f"Order {new_res.reservation_code}: {name} ({email}) has {CANCEL_FLAG_THRESHOLD}+ cancellations — flagged for review")
 
         resp = {
             "status": "success",
@@ -12811,8 +12380,13 @@ def reserve_blend():
             resp["prepayment_amount"] = meta.prepayment_amount
             resp["message"] = (
                 f"Your order has been received and is pending staff approval "
-                f"(large order ≥ ₱{LARGE_ORDER_THRESHOLD:.0f}). "
-                f"A holding fee of ₱{meta.prepayment_amount:.2f} may be collected on pickup."
+                f"(high-value order ≥ ₱{LARGE_ORDER_THRESHOLD:.0f}). "
+                f"A 50% deposit of ₱{meta.prepayment_amount:.2f} is required via GCash/Maya before your order is prepared."
+            )
+        if 'high_cancel_rate' in flags and 'large_order' not in flags:
+            resp["message"] = (
+                "Your order has been received but is pending manual review "
+                "due to previous order cancellations. Our staff will confirm it shortly."
             )
         return jsonify(resp), 201
     except Exception as e:
@@ -12933,6 +12507,7 @@ def fraud_reputations():
     return jsonify([{
         'id': r.id, 'identifier': r.identifier, 'name': r.display_name or '',
         'total_orders': r.total_orders, 'noshow_count': r.noshow_count,
+        'cancel_count': r.cancel_count or 0,
         'completed_count': r.completed_count, 'is_watchlist': r.is_watchlist,
         'requires_prepayment': r.requires_prepayment, 'is_blocked': r.is_blocked,
         'notes': r.notes or '',
@@ -13421,6 +12996,18 @@ def update_order_status(order_id):
                     rep.requires_prepayment = True
                 log_audit("No-Show Detected",
                           f"{order.patron_name} ({order.patron_email}): order {order.reservation_code} — no-show count now {rep.noshow_count}")
+        except Exception:
+            pass
+
+    # ── Cancellation tracking: any cancellation → increment cancel_count ────────
+    if new_status == 'Cancelled':
+        try:
+            rep = get_or_create_reputation(order.patron_email)
+            if rep:
+                rep.cancel_count = (rep.cancel_count or 0) + 1
+                rep.display_name = order.patron_name
+                log_audit("Cancellation Recorded",
+                          f"{order.patron_name} ({order.patron_email}): order {order.reservation_code} — cancel count now {rep.cancel_count}")
         except Exception:
             pass
 
@@ -14531,6 +14118,9 @@ def _ensure_schema():
         db.session.commit()
     except Exception:
         db.session.rollback()
+
+    # customer_reputations — cancel_count added in this release
+    all_ok &= _add_col("customer_reputations", "cancel_count", "INTEGER DEFAULT 0")
 
     if all_ok:
         _schema_ok = True   # stop checking once every column is confirmed
