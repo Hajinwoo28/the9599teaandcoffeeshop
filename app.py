@@ -852,16 +852,20 @@ def check_order_limits(email, phone, name, total):
 def _normalize_ph_number(raw: str) -> str:
     """
     Normalize a Philippine phone number to international E.164 format.
-    09xxxxxxxxx  → +639xxxxxxxxx
-    639xxxxxxxxx → +639xxxxxxxxx
-    Already +63  → unchanged
+    09xxxxxxxxx   → +639xxxxxxxxx   (11 digits starting with 0)
+    9xxxxxxxxx    → +639xxxxxxxxx   (10 digits starting with 9)
+    639xxxxxxxxx  → +639xxxxxxxxx   (12 digits starting with 63)
+    +639xxxxxxxxx → unchanged        (already E.164)
     """
-    n = re.sub(r'\D', '', raw)          # strip all non-digits
+    n = re.sub(r'\D', '', raw)          # strip all non-digits (spaces, dashes, parens)
     if n.startswith('0') and len(n) == 11:
-        return '+63' + n[1:]
-    if n.startswith('63') and len(n) == 12:
-        return '+' + n
-    if n.startswith('639') and len(n) == 12:
+        return '+63' + n[1:]            # 09xx → +639xx
+    if (n.startswith('63') or n.startswith('639')) and len(n) == 12:
+        return '+' + n                  # 639xx → +639xx
+    if n.startswith('9') and len(n) == 10:
+        return '+63' + n               # 9xx → +639xx (missing leading 0)
+    if len(n) == 11 and not n.startswith('0'):
+        # Some inputs arrive as 63xxxxxxxxx (11 digits) — treat as already international
         return '+' + n
     return '+' + n                      # pass-through for other formats
 
@@ -1105,7 +1109,19 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     print(f"  Configure one of the providers (A–F) in your .env")
     print(f"  or Vercel Environment Variables to send real SMS.")
     print(f"{'='*55}\n")
-    return True, ''     # always succeeds in dev so you can test without credits
+    # On a real cloud/production host return False so the UI shows a proper
+    # error instead of silently swallowing the failure (code never arrives).
+    # Locally, return True so devs can read the OTP from the terminal above.
+    if _ON_CLOUD:
+        return False, (
+            'No SMS provider is configured. Set one of: '
+            'SMS_GATEWAY_URL+SMS_GATEWAY_USER+SMS_GATEWAY_PASS (Android), '
+            'SEMAPHORE_API_KEY (Semaphore PH), PHILSMS_TOKEN (Phil-SMS), '
+            'ITEXMO_API_CODE+ITEXMO_API_PASSWORD (Itexmo), '
+            'VONAGE_API_KEY+VONAGE_API_SECRET (Vonage), or '
+            'TWILIO_ACCOUNT_SID+TWILIO_AUTH_TOKEN+TWILIO_PHONE_NUMBER (Twilio).'
+        )
+    return True, ''     # local dev only — read the OTP from the terminal above
 
 
 # ══════════════════════════════════════════════════════════════════════════════
