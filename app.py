@@ -987,6 +987,22 @@ def send_otp_sms(phone: str, code: str) -> tuple:
             resp = _gw_post(phone_number)
 
             if resp.status_code in (200, 201, 202):
+                # For the cloud relay, inspect the response body for per-number failures.
+                # sms-gate.app returns {"phoneNumbers":[{"state":"Failed",...}]} on delivery errors.
+                try:
+                    body = resp.json()
+                    numbers = body.get('phoneNumbers') or []
+                    if numbers:
+                        failed = [p for p in numbers if str(p.get('state', '')).lower() in ('failed', 'error')]
+                        if len(failed) == len(numbers):
+                            reason = failed[0].get('error') or failed[0].get('state', 'unknown error')
+                            return False, (
+                                f"SMS Gateway could not deliver the message ({reason}). "
+                                "Make sure the Android SMS Gateway app is running and "
+                                "Cloud Server is enabled in its settings."
+                            )
+                except Exception:
+                    pass  # If response body can't be parsed, treat as success
                 return True, ''
             return False, f"SMS Gateway error ({resp.status_code}): {resp.text[:300]}"
 
@@ -12301,6 +12317,9 @@ def otp_send():
     if not phone or not re.fullmatch(r'[\d\s\+\-\(\)]{7,20}', phone):
         return jsonify({"status": "error", "message": "Invalid phone number. Please enter a valid PH mobile number."}), 400
 
+    # Normalise to E.164 so DB storage and verification always use the same format
+    phone = _normalize_ph_number(phone)
+
     # Invalidate any previous unverified OTP for this number
     try:
         PhoneOTP.query.filter_by(phone=phone, verified=False).delete()
@@ -12329,7 +12348,9 @@ def otp_send():
 
     # Clear any previous session verification so the customer must re-verify
     session.pop('otp_verified_phone', None)
-    return jsonify({"status": "sent", "message": f"A 6-digit code was sent to {phone}. It expires in 5 minutes."})
+    # Show a redacted version of the E.164 number so the user can confirm it's correct
+    display_phone = phone  # already E.164 after normalisation above
+    return jsonify({"status": "sent", "message": f"A 6-digit code was sent to {display_phone}. It expires in 5 minutes."})
 
 
 @app.route('/api/otp/verify', methods=['POST'])
@@ -12345,6 +12366,9 @@ def otp_verify():
 
     if not phone or not code:
         return jsonify({"status": "error", "message": "Phone and code are both required."}), 400
+
+    # Normalise to E.164 to match how the OTP was stored during /api/otp/send
+    phone = _normalize_ph_number(phone)
 
     # Always fetch the most recent unverified OTP for this number
     otp = (PhoneOTP.query
