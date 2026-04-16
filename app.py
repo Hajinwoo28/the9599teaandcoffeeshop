@@ -4027,6 +4027,10 @@ STOREFRONT_HTML = """
         .cart-item-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%; }
         .cart-item-price { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--text-dark); font-size: 0.95rem; }
         .cart-item-del { margin-top: 7px; font-size: 0.75rem; color: var(--danger); cursor: pointer; font-weight: 700; }
+        .cart-item-actions-row { display: flex; align-items: center; gap: 10px; margin-top: 7px; justify-content: flex-end; }
+        .cart-item-edit-btn { font-size: 0.75rem; color: var(--teal); cursor: pointer; font-weight: 700; }
+        .cart-item-edit-btn:hover { color: var(--teal-dark); }
+        .cart-item-actions-row .cart-item-del { margin-top: 0; }
 
         .checkout-area { padding: 12px 18px 16px; border-top: 1px solid var(--border-color); background: var(--bg-base); flex-shrink: 0; }
         .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -5005,8 +5009,8 @@ function playGrantedSound() {
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="document.getElementById('size-modal').style.display='none'">Cancel</button>
-            <button class="btn-add" onclick="confirmAddToCart()">Add to Cart</button>
+            <button class="btn-cancel" onclick="document.getElementById('size-modal').style.display='none'; pendingEditIndex=null; document.getElementById('size-modal-confirm-btn').innerText='Add to Cart';">Cancel</button>
+            <button class="btn-add" id="size-modal-confirm-btn" onclick="confirmAddToCart()">Add to Cart</button>
         </div>
     </div>
 </div>
@@ -5029,7 +5033,7 @@ function playGrantedSound() {
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="document.getElementById('fries-modal').style.display='none'">Cancel</button>
+            <button class="btn-cancel" onclick="document.getElementById('fries-modal').style.display='none'; pendingEditIndex=null;">Cancel</button>
             <button class="btn-add" onclick="confirmFriesToCart()">Add to Cart</button>
         </div>
     </div>
@@ -5047,7 +5051,7 @@ function playGrantedSound() {
             <button class="qty-btn" onclick="changeModalQty('simple-qty',1)">+</button>
         </div>
         <div class="modal-actions" style="margin-top:0;">
-            <button class="btn-cancel" onclick="document.getElementById('simple-qty-modal').style.display='none'">Cancel</button>
+            <button class="btn-cancel" onclick="document.getElementById('simple-qty-modal').style.display='none'; pendingEditIndex=null;">Cancel</button>
             <button class="btn-add" onclick="confirmSimpleQty()">Add to Cart</button>
         </div>
     </div>
@@ -5169,6 +5173,7 @@ function playGrantedSound() {
     let pendingCat = '';
     let orderType = 'Dine-In';
     let updateModeCode = null;        // set when customer is in order-edit mode
+    let pendingEditIndex = null;      // set when editing an existing cart item
     let _capturedGeoAddress = document.getElementById('customer-address') ? document.getElementById('customer-address').value : '';  // pre-filled from sign-in location
 
     // ── Persist cart across viewport changes ──────────────────────────────
@@ -5537,7 +5542,14 @@ function playGrantedSound() {
             waterTemp: waterTemp,
             addons, price: pendingPrice + cost
         };
-        for(let i = 0; i < qty; i++) cart.push({...item});
+        if (pendingEditIndex !== null) {
+            cart[pendingEditIndex] = {...item};
+            pendingEditIndex = null;
+        } else {
+            for(let i = 0; i < qty; i++) cart.push({...item});
+        }
+        const confirmBtn = document.getElementById('size-modal-confirm-btn');
+        if (confirmBtn) confirmBtn.innerText = 'Add to Cart';
         document.getElementById('size-modal').style.display = 'none';
         document.getElementById('size-qty').innerText = '1';
         updateCartUI();
@@ -5554,7 +5566,12 @@ function playGrantedSound() {
         const qty = parseInt(document.getElementById('fries-qty').innerText) || 1;
         const flavor = document.querySelector('input[name="fries_flavor"]:checked').value;
         const displayName = `French Fries (${flavor})`;
-        for(let i = 0; i < qty; i++) cart.push({name: displayName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice});
+        if (pendingEditIndex !== null) {
+            cart[pendingEditIndex] = {name: displayName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice};
+            pendingEditIndex = null;
+        } else {
+            for(let i = 0; i < qty; i++) cart.push({name: displayName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice});
+        }
         document.getElementById('fries-modal').style.display = 'none';
         document.getElementById('fries-qty').innerText = '1';
         updateCartUI();
@@ -5563,8 +5580,13 @@ function playGrantedSound() {
 
     function confirmSimpleQty() {
         const qty = parseInt(document.getElementById('simple-qty').innerText) || 1;
-        for(let i = 0; i < qty; i++) {
-            cart.push({name: pendingItemName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice});
+        if (pendingEditIndex !== null) {
+            cart[pendingEditIndex] = {name: pendingItemName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice};
+            pendingEditIndex = null;
+        } else {
+            for(let i = 0; i < qty; i++) {
+                cart.push({name: pendingItemName, cat: pendingCat, size: 'Regular', sugar: 'N/A', ice: 'N/A', addons: [], price: pendingPrice});
+            }
         }
         document.getElementById('simple-qty-modal').style.display = 'none';
         document.getElementById('simple-qty').innerText = '1';
@@ -5572,6 +5594,56 @@ function playGrantedSound() {
     }
 
     function removeFromCart(i) { cart.splice(i,1); saveCartToSession(); updateCartUI(); }
+
+    function editCartItemCustomer(index) {
+        const item = cart[index];
+        if (!item) return;
+        pendingEditIndex = index;
+        pendingItemName = item.name;
+        pendingCat = item.cat;
+        pendingPrice = item.price - (item.addons ? item.addons.length * 10 : 0);
+
+        if (item.name === 'French Fries' || item.name.startsWith('French Fries (')) {
+            // Restore fries flavor from name
+            const flavorMatch = item.name.match(/\((.+)\)/);
+            const flavor = flavorMatch ? flavorMatch[1] : 'Sour Cream';
+            const radio = document.querySelector(`input[name="fries_flavor"][value="${flavor}"]`);
+            if (radio) radio.checked = true;
+            document.getElementById('fries-modal-title').innerText = 'French Fries — Choose Flavor';
+            document.getElementById('fries-qty').innerText = '1';
+            document.getElementById('fries-modal').style.display = 'flex';
+            return;
+        }
+
+        const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
+        if (SIZED_CATS.includes(item.cat)) {
+            const showSugar = item.cat === 'Coffee';
+            const allowedAddons = ['Matcha Series','Fruit Soda'].includes(item.cat) ? ['Nata'] : null;
+            openSizeModal(item.name, item.cat, pendingPrice, showSugar, true, allowedAddons);
+            // Restore saved options
+            selectSize(item.size || '16 oz');
+            if (showSugar) document.getElementById('sugar-level-select').value = item.sugar || '100% Sugar';
+            document.getElementById('ice-level-select').value = item.ice || 'Normal Ice';
+            if (item.waterTemp) {
+                document.getElementById('water-temp-select').value = item.waterTemp;
+                document.getElementById('water-temp-select').dispatchEvent(new Event('change'));
+            }
+            // Restore add-ons
+            document.querySelectorAll('.addon-checkbox').forEach(cb => {
+                cb.checked = item.addons && item.addons.includes(cb.value);
+            });
+            // Change button label to Update
+            const confirmBtn = document.getElementById('size-modal-confirm-btn');
+            if (confirmBtn) confirmBtn.innerText = 'Update Item';
+            return;
+        }
+
+        // Simple item — just open simple qty modal in edit mode
+        document.getElementById('simple-qty-name').innerText = item.name;
+        document.getElementById('simple-qty-price').innerText = '₱' + item.price + ' each';
+        document.getElementById('simple-qty').innerText = '1';
+        document.getElementById('simple-qty-modal').style.display = 'flex';
+    }
 
     function updateCartUI() {
         const list = document.getElementById('cart-items');
@@ -5611,7 +5683,10 @@ function playGrantedSound() {
                     </div>
                     <div class="cart-item-right">
                         <div class="cart-item-price">₱${c.price}</div>
-                        <div class="cart-item-del" onclick="removeFromCart(${i})"><i class="fas fa-trash-alt"></i> Remove</div>
+                        <div class="cart-item-actions-row">
+                            <div class="cart-item-edit-btn" onclick="editCartItemCustomer(${i})" title="Edit"><i class="fas fa-pen"></i></div>
+                            <div class="cart-item-del" onclick="removeFromCart(${i})"><i class="fas fa-trash-alt"></i></div>
+                        </div>
                     </div>
                 </div>`;
             });
