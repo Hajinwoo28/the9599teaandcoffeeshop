@@ -5009,7 +5009,7 @@ function playGrantedSound() {
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="document.getElementById('size-modal').style.display='none'; pendingEditIndex=null; document.getElementById('size-modal-confirm-btn').innerText='Add to Cart';">Cancel</button>
+            <button class="btn-cancel" onclick="document.getElementById('size-modal').style.display='none'; pendingEditIndex=null; document.getElementById('size-modal-confirm-btn').innerText='Add to Cart'; const _fab=document.getElementById('track-order-fab'); if(_fab)_fab.style.display='';">Cancel</button>
             <button class="btn-add" id="size-modal-confirm-btn" onclick="confirmAddToCart()">Add to Cart</button>
         </div>
     </div>
@@ -5033,7 +5033,7 @@ function playGrantedSound() {
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="document.getElementById('fries-modal').style.display='none'; pendingEditIndex=null;">Cancel</button>
+            <button class="btn-cancel" onclick="document.getElementById('fries-modal').style.display='none'; pendingEditIndex=null; const _fab=document.getElementById('track-order-fab'); if(_fab)_fab.style.display='';">Cancel</button>
             <button class="btn-add" onclick="confirmFriesToCart()">Add to Cart</button>
         </div>
     </div>
@@ -5051,7 +5051,7 @@ function playGrantedSound() {
             <button class="qty-btn" onclick="changeModalQty('simple-qty',1)">+</button>
         </div>
         <div class="modal-actions" style="margin-top:0;">
-            <button class="btn-cancel" onclick="document.getElementById('simple-qty-modal').style.display='none'; pendingEditIndex=null;">Cancel</button>
+            <button class="btn-cancel" onclick="document.getElementById('simple-qty-modal').style.display='none'; pendingEditIndex=null; const _fab=document.getElementById('track-order-fab'); if(_fab)_fab.style.display='';">Cancel</button>
             <button class="btn-add" onclick="confirmSimpleQty()">Add to Cart</button>
         </div>
     </div>
@@ -5550,6 +5550,8 @@ function playGrantedSound() {
         }
         const confirmBtn = document.getElementById('size-modal-confirm-btn');
         if (confirmBtn) confirmBtn.innerText = 'Add to Cart';
+        const _fab = document.getElementById('track-order-fab');
+        if (_fab) _fab.style.display = '';
         document.getElementById('size-modal').style.display = 'none';
         document.getElementById('size-qty').innerText = '1';
         updateCartUI();
@@ -5574,6 +5576,8 @@ function playGrantedSound() {
         }
         document.getElementById('fries-modal').style.display = 'none';
         document.getElementById('fries-qty').innerText = '1';
+        const _fabF = document.getElementById('track-order-fab');
+        if (_fabF) _fabF.style.display = '';
         updateCartUI();
     }
 
@@ -5590,6 +5594,8 @@ function playGrantedSound() {
         }
         document.getElementById('simple-qty-modal').style.display = 'none';
         document.getElementById('simple-qty').innerText = '1';
+        const _fabS = document.getElementById('track-order-fab');
+        if (_fabS) _fabS.style.display = '';
         updateCartUI();
     }
 
@@ -5602,6 +5608,11 @@ function playGrantedSound() {
         pendingItemName = item.name;
         pendingCat = item.cat;
         pendingPrice = item.price - (item.addons ? item.addons.length * 10 : 0);
+
+        // Close the order sheet and hide Track Order FAB so only the modal is visible
+        closeOrderSheet();
+        const fab = document.getElementById('track-order-fab');
+        if (fab) fab.style.display = 'none';
 
         if (item.name === 'French Fries' || item.name.startsWith('French Fries (')) {
             // Restore fries flavor from name
