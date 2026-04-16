@@ -11622,10 +11622,10 @@ _CUSTOMER_ERROR_HTML = """<!DOCTYPE html>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;
      justify-content:center;min-height:100vh;padding:20px;}
-.card{background:#fff;border-radius:20px;padding:50px 40px;max-width:460px;width:100%;
+.card{background:#fff;border-radius:20px;padding:50px 40px;max-width:460px;width:100%%;
       text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.08);border:1px solid #EFEBE4;}
 .logo-wrap{margin-bottom:20px;}
-.logo-wrap img{width:90px;height:90px;border-radius:50%;object-fit:cover;
+.logo-wrap img{width:90px;height:90px;border-radius:50%%;object-fit:cover;
                border:3px solid #D7CCC8;box-shadow:0 4px 16px rgba(111,78,55,0.15);}
 .icon{font-size:3rem;margin-bottom:12px;}
 h2{font-family:'Playfair Display',serif;font-size:1.75rem;color:#3E2723;margin-bottom:12px;}
@@ -11634,10 +11634,10 @@ p{color:#8D6E63;font-size:0.96rem;line-height:1.65;margin-bottom:8px;}
        font-size:0.85rem;padding:8px 20px;border-radius:50px;margin:18px 0 6px;
        border:1px solid #FFCC80;letter-spacing:.3px;}
 .counter{font-size:0.82rem;color:#BCAAA4;margin-top:14px;}
-.progress{width:100%;height:5px;background:#EFEBE4;border-radius:4px;margin-top:12px;overflow:hidden;}
-.progress-bar{height:5px;background:#6F4E37;border-radius:4px;width:100%;
+.progress{width:100%%;height:5px;background:#EFEBE4;border-radius:4px;margin-top:12px;overflow:hidden;}
+.progress-bar{height:5px;background:#6F4E37;border-radius:4px;width:100%%;
               animation:shrink %(delay)ss linear forwards;}
-@keyframes shrink{from{width:100%}to{width:0%%}}
+@keyframes shrink{from{width:100%%}to{width:0%%}}
 </style>
 <script>
 var delay = %(delay)s;
