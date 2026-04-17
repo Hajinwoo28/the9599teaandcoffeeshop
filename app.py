@@ -16039,6 +16039,8 @@ def dev_force_migrate():
     run_alter("reservations", "is_paid",
               "BOOLEAN NOT NULL DEFAULT 0",
               "BOOLEAN NOT NULL DEFAULT FALSE")
+    run_alter("reservations", "user_agent", "VARCHAR(300) DEFAULT ''")
+    run_alter("reservations", "ip_address", "VARCHAR(60) DEFAULT ''")
 
     # menu_items columns
     run_alter("menu_items", "is_out_of_stock",
