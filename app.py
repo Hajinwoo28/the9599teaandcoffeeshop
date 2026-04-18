@@ -130,6 +130,12 @@ def master_pin_matches(submitted_pin):
 
 token_serializer = URLSafeTimedSerializer(app.secret_key)
 
+# ── Dedicated serializer for the customer ordering link ───────────────────────
+# Uses its own key so customer links stay valid even if SECRET_KEY rotates.
+# Set LINK_SECRET in your environment/dashboard for production stability.
+LINK_SECRET = os.environ.get('LINK_SECRET', 'link-9599-store-permanent').strip()
+link_serializer = URLSafeTimedSerializer(LINK_SECRET)
+
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -11764,7 +11770,7 @@ def storefront():
         ), 403
 
     try:
-        token_serializer.loads(token, max_age=None)   # no expiry — permanent link
+        link_serializer.loads(token, max_age=None)   # no expiry — permanent link
     except BadSignature:
         return closed_page(
             "Invalid Link", "⚠️",
@@ -12264,8 +12270,9 @@ def generate_link():
     if not master_pin_matches(pin):
         err = "PIN must be exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN"
         return jsonify({"error": err}), 401
-    # Permanent token — no times embedded, schedule is enforced server-side
-    token = token_serializer.dumps({'store': '9599', 'v': 2})
+    # Permanent token — no times embedded, schedule is enforced server-side.
+    # Uses link_serializer (LINK_SECRET) so the URL stays valid across SECRET_KEY rotations.
+    token = link_serializer.dumps({'store': '9599', 'v': 2})
     return jsonify({"url": f"{request.host_url}?token={token}"})
 
 @app.route('/api/schedule', methods=['GET', 'POST'])
@@ -13440,7 +13447,7 @@ def api_orders():
                 'status': r.status or '',
                 'pickup_time': r.pickup_time or '',
                 'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
-                'over_limit': len(r.infusions) >= 2,
+                'over_limit': len(r.infusions) >= 3,
                 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total or 0.0} for i in r.infusions],
                 # ── fraud control metadata ──
                 'is_flagged':               meta.is_flagged if meta else False,
