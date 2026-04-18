@@ -132,7 +132,6 @@ token_serializer = URLSafeTimedSerializer(app.secret_key)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["1000 per day", "100 per hour"],
     storage_uri="memory://",
     swallow_errors=True   # Prevents crash on serverless (Vercel) where in-memory state is lost
 )
@@ -717,7 +716,6 @@ MAX_FAILED_ATTEMPTS = 5   # auto-ban after this many failures within 30 minutes
 FAILED_WINDOW_MIN   = 30  # rolling window in minutes
 
 # ── Order Behavioral Limit Configuration ────────────────────────────────────
-ORDER_COOLDOWN_MINUTES   = 30   # minimum gap between orders from the same email
 SUSPICIOUS_NAME_COUNT    = 5    # same name in 1 hour triggers a manual-review flag
 LARGE_ORDER_THRESHOLD    = 500.0  # ₱ — orders at/above this require staff confirmation
 LARGE_ORDER_PREPAY_PCT   = 0.50   # 50 % deposit for high-value orders (collected before prep)
@@ -815,19 +813,6 @@ def check_order_limits(email, phone, name, total):
             if (rep.cancel_count or 0) >= CANCEL_FLAG_THRESHOLD:
                 flags.append('high_cancel_rate')
 
-    # 3 — Cooldown: no repeat order from same email within ORDER_COOLDOWN_MINUTES
-    if norm_email:
-        cooldown_since = now - timedelta(minutes=ORDER_COOLDOWN_MINUTES)
-        recent = Reservation.query.filter(
-            Reservation.patron_email == norm_email,
-            Reservation.created_at >= cooldown_since,
-            Reservation.order_source == 'Online'
-        ).first()
-        if recent:
-            elapsed = int((now - recent.created_at).total_seconds() / 60)
-            wait = max(1, ORDER_COOLDOWN_MINUTES - elapsed)
-            return False, f"You placed an order recently. Please wait {wait} more minute(s) before ordering again.", []
-
     # 4 — Suspicious pattern: same name 5+ times in 1 hour → flag for review
     if norm_name:
         hour_ago = now - timedelta(hours=1)
@@ -887,36 +872,20 @@ def _to_local_ph_number(e164: str) -> str:
 
 def send_otp_sms(phone: str, code: str) -> tuple:
     """
-    Send a 6-digit OTP via SMS.
+    Send a 6-digit OTP via SMS using SMS Gateway for Android (FREE).
 
-    Provider priority (first one with credentials configured wins):
-    ─────────────────────────────────────────────────────────────
-    A. SMS Gateway for Android  — FREE (uses your SIM plan)
-       Vercel: use cloud relay  → SMS_GATEWAY_URL=https://api.sms-gate.app
-       Local:  use local IP     → SMS_GATEWAY_URL=http://192.168.x.x:8080
-       Also set: SMS_GATEWAY_USER, SMS_GATEWAY_PASS
-       Optional: SMS_GATEWAY_SIM=sim1|sim2  (dual-SIM phones)
-       Repo: https://github.com/capcom6/android-sms-gateway
+    Uses your phone's own SIM plan — no per-message cost.
+    Set these in your .env or Vercel environment variables:
+      SMS_GATEWAY_URL=https://api.sms-gate.app   (cloud relay)
+                   or http://192.168.x.x:8080    (local/self-hosted)
+      SMS_GATEWAY_USER=<your username>
+      SMS_GATEWAY_PASS=<your password>
 
-    B. Itexmo (PH local)        — ~₱0.25–0.50/SMS  itexmo.com
-       Set: ITEXMO_API_CODE, ITEXMO_API_PASSWORD
+    Optional:
+      SMS_GATEWAY_SIM=sim1|sim2          (dual-SIM selection)
+      SMS_GATEWAY_LOCAL_FORMAT=0         (force E.164 on self-hosted)
 
-    C. PHIL-SMS (PH local)      — ~₱0.50–0.80/SMS  phil-sms.com
-       Set: PHILSMS_TOKEN
-
-    D. Semaphore (PH local)     — ~₱0.50/SMS  semaphore.co
-       Set: SEMAPHORE_API_KEY
-       Optional: SEMAPHORE_SENDER_NAME (max 11 chars, default: 9599Tea)
-
-    E. Vonage / Nexmo (global)  — ~₱0.40–0.50/SMS  vonage.com
-       Set: VONAGE_API_KEY, VONAGE_API_SECRET, VONAGE_FROM
-
-    F. Twilio (global)          — ~₱0.45/SMS  twilio.com
-       Set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
-
-    G. Dev fallback             — prints OTP to terminal (no SMS sent)
-       Used automatically when none of the above are configured.
-    ─────────────────────────────────────────────────────────────
+    App: https://github.com/capcom6/android-sms-gateway
     Returns (success: bool, error_message: str).
     """
     import base64
@@ -927,17 +896,12 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # A. SMS GATEWAY FOR ANDROID — FREE (self-hosted, uses your SIM plan)
-    #    Best choice for Vercel: set SMS_GATEWAY_URL=https://api.sms-gate.app
-    #    and enable Cloud Server in the Android app.
+    # SMS GATEWAY FOR ANDROID — FREE (uses your SIM plan)
     #
-    #    Phone number format rules:
-    #    • Cloud relay (api.sms-gate.app) → ALWAYS uses E.164 (+639xxxxxxxxx).
-    #      The cloud API validates and rejects local format (400 "invalid phone number").
-    #    • Self-hosted (local IP)          → uses local format (09xxxxxxxxx) by
-    #      default because some PH SIMs reject E.164 outgoing SMS and return
-    #      RESULT_ERROR_GENERIC_FAILURE. Override with SMS_GATEWAY_LOCAL_FORMAT=0
-    #      if your self-hosted setup prefers E.164.
+    # Phone number format rules:
+    # • Cloud relay (api.sms-gate.app) → ALWAYS uses E.164 (+639xxxxxxxxx).
+    # • Self-hosted (local IP)          → uses local format (09xxxxxxxxx) by
+    #   default; override with SMS_GATEWAY_LOCAL_FORMAT=0 for E.164.
     # ══════════════════════════════════════════════════════════════════════════
     gw_url  = os.environ.get('SMS_GATEWAY_URL', '').rstrip('/')
     gw_user = os.environ.get('SMS_GATEWAY_USER', '')
@@ -947,30 +911,22 @@ def send_otp_sms(phone: str, code: str) -> tuple:
         try:
             credentials = base64.b64encode(f"{gw_user}:{gw_pass}".encode()).decode()
 
-            # Cloud relay (api.sms-gate.app) uses a different endpoint path
-            # and REQUIRES E.164 format — it rejects local format with HTTP 400.
-            # Self-hosted gateways work better with local format on PH SIMs.
             is_cloud = 'sms-gate.app' in gw_url
             endpoint = (
                 f"{gw_url}/3rdparty/v1/message" if is_cloud
                 else f"{gw_url}/message"
             )
 
-            # Format selection:
-            #   Cloud relay  → always E.164 (required by the API)
-            #   Self-hosted  → local format by default (avoids RESULT_ERROR_GENERIC_FAILURE)
-            #                  set SMS_GATEWAY_LOCAL_FORMAT=0 to force E.164 on self-hosted
             local_format_env = os.environ.get('SMS_GATEWAY_LOCAL_FORMAT', '').strip()
             if is_cloud:
-                phone_number = international                       # E.164 required
+                phone_number = international
             elif local_format_env in ('0', 'false', 'no'):
-                phone_number = international                       # operator override
+                phone_number = international
             else:
-                phone_number = _to_local_ph_number(international) # local default for self-hosted
+                phone_number = _to_local_ph_number(international)
 
             def _gw_post(number):
                 payload = {"message": message, "phoneNumbers": [number]}
-                # Optional: choose a specific SIM on dual-SIM devices
                 sim_slot = os.environ.get('SMS_GATEWAY_SIM', '').strip()
                 if sim_slot:
                     payload["simNumber"] = 1 if sim_slot.lower() == 'sim1' else 2
@@ -987,8 +943,6 @@ def send_otp_sms(phone: str, code: str) -> tuple:
             resp = _gw_post(phone_number)
 
             if resp.status_code in (200, 201, 202):
-                # For the cloud relay, inspect the response body for per-number failures.
-                # sms-gate.app returns {"phoneNumbers":[{"state":"Failed",...}]} on delivery errors.
                 try:
                     body = resp.json()
                     numbers = body.get('phoneNumbers') or []
@@ -1002,7 +956,7 @@ def send_otp_sms(phone: str, code: str) -> tuple:
                                 "Cloud Server is enabled in its settings."
                             )
                 except Exception:
-                    pass  # If response body can't be parsed, treat as success
+                    pass
                 return True, ''
             return False, f"SMS Gateway error ({resp.status_code}): {resp.text[:300]}"
 
@@ -1016,166 +970,23 @@ def send_otp_sms(phone: str, code: str) -> tuple:
             return False, f"SMS Gateway for Android error: {str(e)}"
 
     # ══════════════════════════════════════════════════════════════════════════
-    # B. ITEXMO — PH local, ~₱0.25–0.50/SMS
-    #    Register at itexmo.com → get API Code and API Password
-    #    Set: ITEXMO_API_CODE, ITEXMO_API_PASSWORD
-    # ══════════════════════════════════════════════════════════════════════════
-    itexmo_code = os.environ.get('ITEXMO_API_CODE', '')
-    itexmo_pass = os.environ.get('ITEXMO_API_PASSWORD', '')
-
-    if itexmo_code and itexmo_pass:
-        try:
-            resp = requests.post(
-                'https://www.itexmo.com/php_api/api.php',
-                data={
-                    '1': international,
-                    '2': message,
-                    '3': itexmo_code,
-                    'passwd': itexmo_pass,
-                },
-                timeout=10
-            )
-            # Itexmo returns "0" on success
-            if resp.text.strip() == '0':
-                return True, ''
-            return False, f"Itexmo error: {resp.text.strip()[:200]}"
-        except Exception as e:
-            return False, f"Itexmo error: {str(e)}"
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # C. PHIL-SMS — PH local, ~₱0.50–0.80/SMS
-    #    Register at phil-sms.com → get API Token
-    #    Set: PHILSMS_TOKEN
-    # ══════════════════════════════════════════════════════════════════════════
-    philsms_token = os.environ.get('PHILSMS_TOKEN', '')
-
-    if philsms_token:
-        try:
-            resp = requests.post(
-                'https://app.philsms.com/api/v3/sms/send',
-                json={
-                    'recipient': international,
-                    'sender_id': 'PhilSMS',
-                    'type':      'plain',
-                    'message':   message,
-                },
-                headers={
-                    'Authorization': f'Bearer {philsms_token}',
-                    'Content-Type':  'application/json',
-                    'Accept':        'application/json',
-                },
-                timeout=10
-            )
-            data = resp.json()
-            if data.get('status') == 'Success' or resp.status_code == 200:
-                return True, ''
-            return False, f"PHIL-SMS error: {data.get('message', resp.text)[:200]}"
-        except Exception as e:
-            return False, f"PHIL-SMS error: {str(e)}"
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # D. SEMAPHORE — PH local, ~₱0.50/SMS
-    #    Register at semaphore.co → get API Key
-    #    Set: SEMAPHORE_API_KEY
-    #    Optional: SEMAPHORE_SENDER_NAME (max 11 chars alphanumeric)
-    # ══════════════════════════════════════════════════════════════════════════
-    sem_key    = os.environ.get('SEMAPHORE_API_KEY', '')
-    sem_sender = os.environ.get('SEMAPHORE_SENDER_NAME', '9599Tea')
-
-    if sem_key:
-        try:
-            resp = requests.post(
-                'https://api.semaphore.co/api/v4/messages',
-                data={
-                    'apikey':     sem_key,
-                    'number':     international,
-                    'message':    message,
-                    'sendername': sem_sender,
-                },
-                timeout=10
-            )
-            if resp.status_code == 200:
-                return True, ''
-            return False, f"Semaphore error ({resp.status_code}): {resp.text[:200]}"
-        except Exception as e:
-            return False, f"Semaphore error: {str(e)}"
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # E. VONAGE (formerly Nexmo) — global, ~₱0.40–0.50/SMS
-    #    Register at vonage.com → Dashboard → API Settings
-    #    Set: VONAGE_API_KEY, VONAGE_API_SECRET
-    #    Optional: VONAGE_FROM (sender name/number, default: 9599Tea)
-    # ══════════════════════════════════════════════════════════════════════════
-    vonage_key    = os.environ.get('VONAGE_API_KEY', '')
-    vonage_secret = os.environ.get('VONAGE_API_SECRET', '')
-    vonage_from   = os.environ.get('VONAGE_FROM', '9599Tea')
-
-    if vonage_key and vonage_secret:
-        try:
-            resp = requests.post(
-                'https://rest.nexmo.com/sms/json',
-                data={
-                    'api_key':    vonage_key,
-                    'api_secret': vonage_secret,
-                    'to':         international,
-                    'from':       vonage_from,
-                    'text':       message,
-                },
-                timeout=10
-            )
-            result = resp.json()
-            status = result.get('messages', [{}])[0].get('status', '99')
-            if status == '0':
-                return True, ''
-            err_text = result.get('messages', [{}])[0].get('error-text', 'Unknown error')
-            return False, f"Vonage error: {err_text}"
-        except Exception as e:
-            return False, f"Vonage error: {str(e)}"
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # F. TWILIO — global, ~₱0.45/SMS
-    #    Register at twilio.com → get Account SID, Auth Token, Phone Number
-    #    Set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
-    #    Run: pip install twilio
-    # ══════════════════════════════════════════════════════════════════════════
-    twilio_sid   = os.environ.get('TWILIO_ACCOUNT_SID', '')
-    twilio_token = os.environ.get('TWILIO_AUTH_TOKEN', '')
-    twilio_from  = os.environ.get('TWILIO_PHONE_NUMBER', '')
-
-    if twilio_sid and twilio_token and twilio_from:
-        try:
-            from twilio.rest import Client
-            client = Client(twilio_sid, twilio_token)
-            client.messages.create(body=message, from_=twilio_from, to=international)
-            return True, ''
-        except Exception as e:
-            return False, f"Twilio error: {str(e)}"
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # G. DEV FALLBACK — no SMS provider configured
-    #    OTP is printed to the terminal so you can test locally without credits.
-    #    Set any provider above before going live on Vercel.
+    # DEV FALLBACK — SMS_GATEWAY_URL not configured
+    # OTP is printed to the terminal so you can test locally without the app.
     # ══════════════════════════════════════════════════════════════════════════
     print(f"\n{'='*55}")
-    print(f"  [DEV OTP]  No SMS provider configured.")
+    print(f"  [DEV OTP]  SMS Gateway not configured.")
     print(f"  Phone : {international}")
     print(f"  Code  : {code}")
-    print(f"  Configure one of the providers (A–F) in your .env")
-    print(f"  or Vercel Environment Variables to send real SMS.")
+    print(f"  Set SMS_GATEWAY_URL, SMS_GATEWAY_USER, SMS_GATEWAY_PASS in .env")
     print(f"{'='*55}\n")
-    # On a real cloud/production host return False so the UI shows a proper
-    # error instead of silently swallowing the failure (code never arrives).
-    # Locally, return True so devs can read the OTP from the terminal above.
     if _ON_CLOUD:
         return False, (
-            'No SMS provider is configured. Set one of: '
-            'SMS_GATEWAY_URL+SMS_GATEWAY_USER+SMS_GATEWAY_PASS (Android), '
-            'SEMAPHORE_API_KEY (Semaphore PH), PHILSMS_TOKEN (Phil-SMS), '
-            'ITEXMO_API_CODE+ITEXMO_API_PASSWORD (Itexmo), '
-            'VONAGE_API_KEY+VONAGE_API_SECRET (Vonage), or '
-            'TWILIO_ACCOUNT_SID+TWILIO_AUTH_TOKEN+TWILIO_PHONE_NUMBER (Twilio).'
+            'SMS Gateway for Android is not configured. '
+            'Set SMS_GATEWAY_URL, SMS_GATEWAY_USER, and SMS_GATEWAY_PASS '
+            'in your environment variables.'
         )
     return True, ''     # local dev only — read the OTP from the terminal above
+
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -4945,8 +4756,24 @@ function playGrantedSound() {
         </div>
         <!-- ── End OTP Block ── -->
 
+        <!-- ── Payment Method Selector ── -->
+        <div style="margin:14px 0 10px;">
+            <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Payment Method</div>
+            <div style="display:flex; gap:10px;">
+                <button id="pay-btn-gcash" onclick="setPaymentMethod('gcash')"
+                        style="flex:1; padding:10px 6px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
+                    💙 GCash
+                </button>
+                <button id="pay-btn-cash" onclick="setPaymentMethod('cash')"
+                        style="flex:1; padding:10px 6px; border-radius:12px; border:2px solid #d1d5db; background:#f9fafb; color:#6b7280; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                    💵 Cash on Pickup
+                </button>
+            </div>
+        </div>
+        <!-- ── End Payment Method Selector ── -->
+
         <!-- ── GCash Payment Block ── -->
-        <div style="margin:14px 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f0f7ff,#dbeafe); border:1.5px solid #93c5fd; border-radius:14px;">
+        <div id="gcash-payment-block" style="margin:0 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f0f7ff,#dbeafe); border:1.5px solid #93c5fd; border-radius:14px;">
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
                 <span style="font-size:1.1rem;">💙</span>
                 <span style="font-weight:800; font-size:0.88rem; color:#1e40af;">GCash Payment</span>
@@ -4957,6 +4784,17 @@ function playGrantedSound() {
             <div style="font-size:0.75rem; color:#3b82f6; font-weight:700; text-align:center;">Send the exact amount and include your name as the GCash note.</div>
         </div>
         <!-- ── End GCash Block ── -->
+
+        <!-- ── Cash on Pickup Block ── -->
+        <div id="cash-payment-block" style="display:none; margin:0 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f9fafb,#f3f4f6); border:1.5px solid #d1d5db; border-radius:14px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                <span style="font-size:1.1rem;">💵</span>
+                <span style="font-weight:800; font-size:0.88rem; color:#374151;">Cash on Pickup</span>
+                <span style="margin-left:auto; background:#6b7280; color:#fff; font-size:0.68rem; font-weight:800; padding:3px 9px; border-radius:20px; letter-spacing:0.5px;">IN-STORE</span>
+            </div>
+            <div style="font-size:0.8rem; color:#4b5563; font-weight:600; text-align:center; line-height:1.5;">Please prepare the exact amount when you pick up your order. Payment is collected at the counter.</div>
+        </div>
+        <!-- ── End Cash Block ── -->
 
         <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()" disabled style="opacity:0.45; cursor:not-allowed;">
             <i class="fas fa-plane"></i> Confirm &amp; Place Order
@@ -5459,6 +5297,27 @@ function playGrantedSound() {
         document.getElementById('btn-dine-in').className = type === 'Dine-In' ? 'type-btn active' : 'type-btn';
         document.getElementById('btn-take-out').className = type === 'Take-Out' ? 'type-btn active' : 'type-btn';
         if(!silent) saveCartToSession();
+    }
+
+    let paymentMethod = 'gcash'; // default: GCash for online orders
+
+    function setPaymentMethod(method) {
+        paymentMethod = method;
+        const gcashBtn   = document.getElementById('pay-btn-gcash');
+        const cashBtn    = document.getElementById('pay-btn-cash');
+        const gcashBlock = document.getElementById('gcash-payment-block');
+        const cashBlock  = document.getElementById('cash-payment-block');
+        if (method === 'gcash') {
+            gcashBtn.style.cssText  = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;box-shadow:0 3px 10px rgba(37,99,235,0.3);';
+            cashBtn.style.cssText   = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #d1d5db;background:#f9fafb;color:#6b7280;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;';
+            gcashBlock.style.display = '';
+            cashBlock.style.display  = 'none';
+        } else {
+            cashBtn.style.cssText   = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #374151;background:linear-gradient(135deg,#374151,#1f2937);color:#fff;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;box-shadow:0 3px 10px rgba(55,65,81,0.3);';
+            gcashBtn.style.cssText  = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #d1d5db;background:#f9fafb;color:#6b7280;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;';
+            gcashBlock.style.display = 'none';
+            cashBlock.style.display  = '';
+        }
     }
 
     let sizePrice16 = 49, sizePrice22 = 59;
@@ -6341,6 +6200,7 @@ function playGrantedSound() {
             customer_lat: document.getElementById('customer-lat').value || null,
             customer_lng: document.getElementById('customer-lng').value || null,
             address: _capturedGeoAddress || document.getElementById('customer-address').value || '',
+            payment_method: paymentMethod,
             items: cart.map(i => ({ foundation: i.name, size: i.size, sweetener: i.sugar, ice: i.ice, waterTemp: i.waterTemp||'', addons: i.addons.join(', '), pearls: orderType, price: i.price }))
         };
         try {
@@ -6374,6 +6234,11 @@ function playGrantedSound() {
                 window._lastReceipt = { code, name, pickup, total, items: payload.items, source: 'Online' };
 
                 document.getElementById('success-modal').style.display = 'flex';
+                // Hide Track Order FAB and sticky bar while success modal is visible
+                const _fab = document.getElementById('track-order-fab');
+                if (_fab) _fab.style.display = 'none';
+                const _sb = document.getElementById('sticky-bar');
+                if (_sb) _sb.classList.remove('bar-visible');
                 try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
                 let orders = JSON.parse(localStorage.getItem('myOrders')) || [];
                 orders.push({code, status: 'Waiting Confirmation'});
@@ -6401,6 +6266,9 @@ function playGrantedSound() {
     function closeSuccessAndReset() {
         // Hide the modal without reloading the page (reload would trigger the closed-store page)
         document.getElementById('success-modal').style.display = 'none';
+        // Restore Track Order FAB now that the modal is gone
+        const _fab = document.getElementById('track-order-fab');
+        if (_fab) _fab.style.display = '';
         // Clear cart state
         cart = [];
         try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
@@ -11868,7 +11736,6 @@ def google_auth():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/auth/manual', methods=['POST'])
-@limiter.limit("30 per minute")
 def manual_auth():
     """Manual sign-in: name + email + optional phone + required location + hCaptcha token."""
     data = request.json or {}
@@ -12101,7 +11968,6 @@ def employee_logout():
     return redirect(url_for('employee_login'))
 
 @app.route('/employee', methods=['GET'])
-@limiter.limit("10 per minute")
 def employee_dashboard():
     # Ensure tables exist on first hit (Vercel cold-start safety)
     try:
@@ -12418,7 +12284,6 @@ def otp_verify():
 
 
 @app.route('/reserve', methods=['POST'])
-@limiter.limit("5 per minute")
 def reserve_blend():
     data = request.json
     email  = data.get('email', '')
@@ -12447,43 +12312,15 @@ def reserve_blend():
         return jsonify({"status": "blocked", "message": err_msg}), 429
     # ─────────────────────────────────────────────────────────────────────
 
-    # ── Duplicate order check ─────────────────────────────────────────────
-    norm_email = (email or '').lower().strip()
-    dup_window = get_ph_time() - timedelta(hours=2)
-    # Block if same email placed any order in the last 2 hours
-    if norm_email:
-        recent_by_email = Reservation.query.filter(
-            Reservation.patron_email == norm_email,
-            Reservation.created_at >= dup_window,
-            Reservation.order_source == 'Online'
-        ).first()
-        if recent_by_email:
-            return jsonify({
-                "status": "blocked",
-                "message": "This email was already used to place a recent order. Please wait before ordering again."
-            }), 429
-    # Block if identical item names are submitted again within 2 hours (any email)
-    incoming_items = data.get('items', [])
-    incoming_names = sorted([str(i.get('foundation','')).strip().lower() for i in incoming_items])
-    if incoming_names:
-        recent_orders = Reservation.query.filter(
-            Reservation.created_at >= dup_window,
-            Reservation.order_source == 'Online'
-        ).all()
-        for ro in recent_orders:
-            ro_names = sorted([inf.foundation.strip().lower() for inf in ro.infusions])
-            if ro_names == incoming_names:
-                return jsonify({
-                    "status": "blocked",
-                    "message": "This exact order was already placed recently. Please try a different combination."
-                }), 429
-    # ─────────────────────────────────────────────────────────────────────
 
     try:
         initial_status = "Waiting Confirmation"
         # Large orders need staff confirmation before they can be Prepared
         if 'large_order' in flags:
             initial_status = "Pending Staff Approval"
+
+        payment_method = data.get('payment_method', 'gcash').strip().lower()
+        is_paid_online = (payment_method == 'gcash')
 
         new_res = Reservation(
             patron_name=name,
@@ -12494,7 +12331,7 @@ def reserve_blend():
             order_source="Online",
             status=initial_status,
             patron_address=data.get('address',''),
-            is_paid=True,  # GCash online payment — auto-marked as paid
+            is_paid=is_paid_online,  # True for GCash online payment; False for cash on pickup
             user_agent=request.headers.get('User-Agent','')[:300],
             ip_address=get_client_ip()
         )
@@ -12940,7 +12777,6 @@ def customer_order_status():
     return jsonify([{'code': o.reservation_code, 'status': o.status, 'cancel_reason': o.cancel_reason or ''} for o in orders])
 
 @app.route('/api/customer/update_order', methods=['POST'])
-@limiter.limit("15 per minute")
 def customer_update_order():
     """Append new items to an existing order (customer-facing, permission-gated)."""
     data = request.json or {}
