@@ -47,8 +47,9 @@ app = Flask(__name__)
 
 # Tells Flask it is behind a secure proxy to preserve Cookies
 app.wsgi_app = ProxyFix(
-    app.wsgi_app, 
-    x_proto=1, 
+    app.wsgi_app,
+    x_for=1,      # trust X-Forwarded-For: use real client IP, not the proxy's
+    x_proto=1,
     x_host=1
 )
 
@@ -723,7 +724,17 @@ NOSHOW_BLOCK_THRESHOLD   = 2    # after this many no-shows → require prepaymen
 CANCEL_FLAG_THRESHOLD    = 3    # after this many cancellations → flag next order for manual review
 
 def get_client_ip():
-    """Extract real client IP, respecting X-Forwarded-For from trusted proxies."""
+    """
+    Extract the real client IP from the request.
+    Priority:
+      1. X-Real-IP        — set by Vercel and most CDNs as a single clean IP
+      2. X-Forwarded-For  — leftmost entry is the originating client
+      3. request.remote_addr — direct connection (local dev)
+    ProxyFix (x_for=1) must be set so Werkzeug trusts these headers.
+    """
+    real_ip = request.headers.get('X-Real-IP', '').strip()
+    if real_ip:
+        return real_ip
     forwarded = request.headers.get('X-Forwarded-For', '')
     if forwarded:
         return forwarded.split(',')[0].strip()
