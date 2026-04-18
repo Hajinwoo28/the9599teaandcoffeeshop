@@ -6797,6 +6797,76 @@ function playGrantedSound() {
   </div>
 </div>
 
+<!-- ── Rating Detail Modal (Admin: full feedback view) ── -->
+<div id="rat-detail-modal" onclick="if(event.target===this)closeRatingDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9750;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 28px 70px rgba(0,0,0,0.2);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
+    <!-- Header bar -->
+    <div style="padding:20px 24px 16px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Customer Review</div>
+        <div style="font-family:monospace;font-weight:900;font-size:1rem;color:#0D7A6A;" id="rfd-code">#—</div>
+      </div>
+      <button onclick="closeRatingDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px;">
+      <!-- Star badge -->
+      <div style="display:flex;align-items:center;justify-content:center;">
+        <span id="rfd-badge" style="font-size:1.1rem;font-weight:900;padding:8px 22px;border-radius:30px;letter-spacing:2px;"></span>
+      </div>
+      <!-- Meta row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:0.75rem;color:#888;">
+        <span><i class="fas fa-envelope" style="margin-right:5px;font-size:0.68rem;"></i><span id="rfd-email">—</span></span>
+        <span><i class="fas fa-calendar-alt" style="margin-right:5px;font-size:0.68rem;"></i><span id="rfd-date">—</span></span>
+      </div>
+      <!-- Feedback message -->
+      <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.62rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Feedback Message</div>
+        <div id="rfd-message" style="font-size:0.88rem;line-height:1.65;color:var(--text,#2d3a3a);border-left:3px solid #ddd;padding-left:12px;white-space:pre-wrap;word-break:break-word;"></div>
+      </div>
+      <!-- Close button -->
+      <button onclick="closeRatingDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;margin-top:2px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Audit Log Detail Modal ── -->
+<div id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9760;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 28px 70px rgba(0,0,0,0.2);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
+    <!-- Header -->
+    <div style="padding:18px 22px 14px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:14px;">
+      <div id="aud-det-icon-wrap" style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:1rem;"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Audit Entry</div>
+        <div id="aud-det-action" style="font-size:0.9rem;font-weight:900;color:var(--text,#2d3a3a);line-height:1.3;word-break:break-word;"></div>
+      </div>
+      <button onclick="closeAuditDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;align-self:flex-start;">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;">
+      <!-- Meta chips -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+        <span id="aud-det-badge" style="font-size:0.7rem;font-weight:800;padding:3px 12px;border-radius:20px;border:1.5px solid transparent;"></span>
+        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-clock" style="font-size:0.62rem;"></i><span id="aud-det-time">—</span>
+        </span>
+        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-network-wired" style="font-size:0.62rem;"></i><span id="aud-det-ip" style="font-family:monospace;">—</span>
+        </span>
+      </div>
+      <!-- Details box -->
+      <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>
+        <div id="aud-det-details" style="font-size:0.85rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;"></div>
+      </div>
+      <!-- Close -->
+      <button onclick="closeAuditDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Replacement Mode Banner (shown while customer picks a replacement) ── -->
 <div id="replacement-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9400; background:linear-gradient(135deg,#1a6b5a,#2E7D32); color:#fff; padding:12px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
     <div style="max-width:600px; margin:0 auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
@@ -7764,9 +7834,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .audit-search-inp{flex:1;min-width:160px;padding:9px 13px 9px 36px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;outline:none;color:var(--text);background:var(--white);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238D6E55' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;transition:border-color 0.2s;}
 .audit-search-inp:focus{border-color:var(--brown);}
 .audit-filter-sel{padding:9px 12px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:700;color:var(--text);background:var(--white);outline:none;cursor:pointer;}
-.audit-entry{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-bottom:1px solid var(--cream-dark);transition:background 0.12s;position:relative;}
+.audit-entry{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-bottom:1px solid var(--cream-dark);transition:background 0.12s;position:relative;cursor:pointer;}
 .audit-entry:last-child{border-bottom:none;}
-.audit-entry:hover{background:rgba(61,36,16,0.03);}
+.audit-entry:hover{background:rgba(61,36,16,0.05);}
 .audit-icon-wrap{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.88rem;flex-shrink:0;margin-top:1px;}
 .audit-icon-wrap.order{background:rgba(25,118,210,0.1);color:#1976D2;border:1px solid rgba(25,118,210,0.15);}
 .audit-icon-wrap.stock{background:rgba(245,124,0,0.1);color:var(--orange);border:1px solid rgba(245,124,0,0.15);}
@@ -9072,7 +9142,7 @@ ens-wrap">
     <div style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
 
       <!-- Summary Cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;">
         <div class="section card" style="padding:14px;text-align:center;">
           <div style="font-size:2rem;font-weight:900;color:#f1c40f;" id="rat-avg">—</div>
           <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Avg Rating</div>
@@ -9086,19 +9156,36 @@ ens-wrap">
           <div style="font-size:2rem;font-weight:900;color:var(--green);" id="rat-positive">—</div>
           <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">4-5 ★ Reviews</div>
         </div>
+        <div class="section card" style="padding:14px;text-align:center;">
+          <div style="font-size:2rem;font-weight:900;color:#9b59b6;" id="rat-satisfaction">—</div>
+          <div style="font-size:0.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Satisfaction %</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:4px;">of 4-5★ ratings</div>
+        </div>
       </div>
 
       <!-- Distribution bar -->
       <div class="section card" style="padding:14px;">
         <div style="font-size:0.78rem;font-weight:900;color:var(--text);margin-bottom:12px;">⭐ Rating Distribution</div>
-        <div id="rat-dist" style="display:flex;flex-direction:column;gap:7px;"></div>
+        <div id="rat-dist" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
 
-      <!-- Recent feedback table -->
+      <!-- Recent feedback cards -->
       <div class="section card" style="padding:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:0.78rem;font-weight:900;color:var(--text);">💬 Recent Feedback</div>
-          <button class="btn-secondary" onclick="loadRatings()"><i class="fas fa-sync-alt"></i></button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:0.78rem;font-weight:900;color:var(--text);">💬 Feedback</div>
+          <button class="btn-secondary" onclick="loadRatings()" style="padding:6px 12px;font-size:0.78rem;"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <!-- Filter pills -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center;">
+          <button class="rat-filter-btn rat-filter-active" data-stars="0" onclick="applyRatingFilter(0,this)" style="font-size:0.72rem;padding:4px 11px;border-radius:20px;border:1.5px solid var(--teal-dark);background:var(--teal-dark);color:#fff;font-weight:700;cursor:pointer;transition:all 0.15s;">All</button>
+          <button class="rat-filter-btn" data-stars="5" onclick="applyRatingFilter(5,this)" style="font-size:0.72rem;padding:4px 11px;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:var(--text);font-weight:700;cursor:pointer;transition:all 0.15s;">🤩 5★</button>
+          <button class="rat-filter-btn" data-stars="4" onclick="applyRatingFilter(4,this)" style="font-size:0.72rem;padding:4px 11px;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:var(--text);font-weight:700;cursor:pointer;transition:all 0.15s;">😃 4★</button>
+          <button class="rat-filter-btn" data-stars="3" onclick="applyRatingFilter(3,this)" style="font-size:0.72rem;padding:4px 11px;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:var(--text);font-weight:700;cursor:pointer;transition:all 0.15s;">😊 3★</button>
+          <button class="rat-filter-btn" data-stars="2" onclick="applyRatingFilter(2,this)" style="font-size:0.72rem;padding:4px 11px;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:var(--text);font-weight:700;cursor:pointer;transition:all 0.15s;">😕 2★</button>
+          <button class="rat-filter-btn" data-stars="1" onclick="applyRatingFilter(1,this)" style="font-size:0.72rem;padding:4px 11px;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:var(--text);font-weight:700;cursor:pointer;transition:all 0.15s;">😞 1★</button>
+          <label style="margin-left:4px;display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--muted);font-weight:700;cursor:pointer;">
+            <input type="checkbox" id="rat-comments-only" onchange="applyRatingFilter(_ratActiveFilter, document.querySelector('.rat-filter-active'))" style="accent-color:var(--teal-dark);cursor:pointer;"> Comments only
+          </label>
         </div>
         <div id="rat-table"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
       </div>
@@ -9370,6 +9457,9 @@ function goScreen(name, btn){
 /* Make goScreen available globally immediately */
 window.goScreen = goScreen;
 
+let _ratingsCache = [];
+let _ratActiveFilter = 0;
+
 async function loadRatings() {
   try {
     const r = await apiFetch('/api/rating/summary');
@@ -9383,56 +9473,154 @@ async function loadRatings() {
     const pos = (d.distribution?.['4'] || 0) + (d.distribution?.['5'] || 0);
     document.getElementById('rat-positive').textContent = pos;
 
+    // Satisfaction %
+    const satPct = d.total ? Math.round((pos / d.total) * 100) : 0;
+    const satEl = document.getElementById('rat-satisfaction');
+    if(satEl) {
+      satEl.textContent = d.total ? satPct + '%' : '—';
+      satEl.style.color = satPct >= 80 ? '#2ecc71' : satPct >= 60 ? '#f1c40f' : '#e74c3c';
+    }
+
     // Star display
     const filled = Math.round(avg);
     document.getElementById('rat-stars-display').textContent = avg
       ? '★'.repeat(filled) + '☆'.repeat(5 - filled) : '—';
 
-    // Distribution bars
+    // Distribution bars with percentage
     const distEl = document.getElementById('rat-dist');
-    const labels = ['','😞 1 Star','😕 2 Stars','😊 3 Stars','😃 4 Stars','🤩 5 Stars'];
+    const labels = ['','😞 1★','😕 2★','😊 3★','😃 4★','🤩 5★'];
     const colors = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
     let distHtml = '';
     [5,4,3,2,1].forEach(i => {
       const cnt = d.distribution?.[String(i)] || 0;
       const pct = d.total ? Math.round((cnt/d.total)*100) : 0;
       distHtml += `<div style="display:flex;align-items:center;gap:10px;font-size:0.76rem;">
-        <span style="width:62px;color:var(--muted);font-weight:700;flex-shrink:0;">${labels[i]}</span>
-        <div style="flex:1;height:10px;background:rgba(0,0,0,0.06);border-radius:20px;overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:${colors[i]};border-radius:20px;transition:width 0.6s ease;"></div>
+        <span style="width:52px;color:var(--muted);font-weight:700;flex-shrink:0;">${labels[i]}</span>
+        <div style="flex:1;height:11px;background:rgba(0,0,0,0.06);border-radius:20px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${colors[i]};border-radius:20px;transition:width 0.7s ease;"></div>
         </div>
-        <span style="width:28px;text-align:right;font-weight:800;color:var(--text);">${cnt}</span>
+        <span style="width:26px;text-align:right;font-weight:800;color:var(--text);">${cnt}</span>
+        <span style="width:34px;text-align:right;font-size:0.68rem;color:var(--muted);font-weight:600;">${pct}%</span>
       </div>`;
     });
     distEl.innerHTML = distHtml || '<div style="color:var(--muted);font-size:0.8rem;">No ratings yet.</div>';
 
-    // Recent table
-    const tbl = document.getElementById('rat-table');
-    if(!d.recent || !d.recent.length) {
-      tbl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.82rem;">No feedback submitted yet.</div>';
-      return;
-    }
-    const STAR_COLOR = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
-    tbl.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">'
-      + '<thead><tr style="border-bottom:2px solid var(--border-color);">'
-      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Order</th>'
-      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Rating</th>'
-      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Feedback</th>'
-      + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">Date</th>'
-      + '</tr></thead><tbody>'
-      + d.recent.map(row => {
-          const stars = '★'.repeat(row.stars) + '☆'.repeat(5-row.stars);
-          return `<tr style="border-bottom:1px solid var(--border-color);">
-            <td style="padding:9px 10px;font-family:monospace;font-weight:800;color:var(--teal-dark);">#${escapeHTML(row.code)}</td>
-            <td style="padding:9px 10px;font-size:1rem;color:${STAR_COLOR[row.stars]};white-space:nowrap;letter-spacing:1px;">${stars}</td>
-            <td style="padding:9px 10px;color:var(--text);font-size:0.8rem;max-width:320px;">${row.feedback ? escapeHTML(row.feedback) : '<span style="color:var(--muted);font-style:italic;">No comment</span>'}</td>
-            <td style="padding:9px 10px;color:var(--muted);font-size:0.72rem;white-space:nowrap;">${escapeHTML(row.date)}</td>
-          </tr>`;
-        }).join('')
-      + '</tbody></table></div>';
+    // Cache all recent and render
+    _ratingsCache = d.recent || [];
+    _ratActiveFilter = 0;
+    // Reset filter pills
+    document.querySelectorAll('.rat-filter-btn').forEach(b => {
+      b.classList.remove('rat-filter-active');
+      b.style.background = 'transparent';
+      b.style.color = 'var(--text)';
+      b.style.borderColor = '#e0e0e0';
+    });
+    const allBtn = document.querySelector('.rat-filter-btn[data-stars="0"]');
+    if(allBtn) { _activateRatPill(allBtn); }
+    const commentsChk = document.getElementById('rat-comments-only');
+    if(commentsChk) commentsChk.checked = false;
+    renderRatingCards(_ratingsCache);
   } catch(e) {
     console.error('loadRatings error:', e);
   }
+}
+
+function _activateRatPill(btn) {
+  btn.classList.add('rat-filter-active');
+  btn.style.background = 'var(--teal-dark)';
+  btn.style.color = '#fff';
+  btn.style.borderColor = 'var(--teal-dark)';
+}
+
+function applyRatingFilter(stars, btn) {
+  _ratActiveFilter = stars;
+  document.querySelectorAll('.rat-filter-btn').forEach(b => {
+    b.classList.remove('rat-filter-active');
+    b.style.background = 'transparent';
+    b.style.color = 'var(--text)';
+    b.style.borderColor = '#e0e0e0';
+  });
+  if(btn) _activateRatPill(btn);
+  const commentsOnly = document.getElementById('rat-comments-only')?.checked;
+  let filtered = stars === 0 ? _ratingsCache : _ratingsCache.filter(r => r.stars === stars);
+  if(commentsOnly) filtered = filtered.filter(r => r.feedback && r.feedback.trim());
+  renderRatingCards(filtered);
+}
+
+// Indexed store so onclick can look up the full row data safely
+const _ratCardStore = {};
+
+function renderRatingCards(rows) {
+  const tbl = document.getElementById('rat-table');
+  if(!rows || !rows.length) {
+    tbl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px;font-size:0.82rem;">No matching feedback found.</div>';
+    return;
+  }
+  const STAR_COLOR = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
+  const STAR_BG    = ['','#fdf0ee','#fef5ec','#fefbe8','#edfaf3','#e8f8f5'];
+  const LABELS     = ['','Poor','Fair','Good','Great','Excellent'];
+  // Clear store and refill for this render
+  Object.keys(_ratCardStore).forEach(k => delete _ratCardStore[k]);
+  tbl.innerHTML = rows.map((row, idx) => {
+    _ratCardStore[idx] = row;
+    const stars = '★'.repeat(row.stars) + '☆'.repeat(5-row.stars);
+    const hasFeedback = row.feedback && row.feedback.trim();
+    const emailMasked = row.email ? escapeHTML(row.email) : '';
+    const preview = hasFeedback
+      ? (row.feedback.length > 100 ? escapeHTML(row.feedback.slice(0,100)) + '…' : escapeHTML(row.feedback))
+      : null;
+    return `<div onclick="openRatingDetail(${idx})" style="border:1.5px solid var(--border-color);border-radius:14px;padding:13px 15px;margin-bottom:9px;background:var(--card-bg,#fff);cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.09)';this.style.borderColor='var(--teal-dark)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border-color)'">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-family:monospace;font-weight:800;font-size:0.78rem;color:var(--teal-dark);background:rgba(13,122,106,0.08);padding:2px 8px;border-radius:8px;">#${escapeHTML(row.code)}</span>
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:800;background:${STAR_BG[row.stars]};color:${STAR_COLOR[row.stars]};">
+            ${stars} <span style="font-size:0.68rem;">${LABELS[row.stars]}</span>
+          </span>
+          ${emailMasked ? `<span style="font-size:0.7rem;color:var(--muted);"><i class="fas fa-envelope" style="font-size:0.62rem;margin-right:3px;"></i>${emailMasked}</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span style="font-size:0.68rem;color:var(--muted);font-weight:600;white-space:nowrap;">${escapeHTML(row.date)}</span>
+          <i class="fas fa-chevron-right" style="font-size:0.62rem;color:var(--muted);"></i>
+        </div>
+      </div>
+      ${preview
+        ? `<div style="margin-top:9px;font-size:0.8rem;color:var(--text);line-height:1.5;border-left:3px solid ${STAR_COLOR[row.stars]};padding-left:10px;">${preview}</div>`
+        : `<div style="margin-top:7px;font-size:0.74rem;color:var(--muted);font-style:italic;">No written comment. Tap to view details.</div>`}
+    </div>`;
+  }).join('');
+}
+
+function openRatingDetail(idx) {
+  const row = _ratCardStore[idx];
+  if(!row) return;
+  const STAR_COLOR = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
+  const STAR_BG    = ['','#fdf0ee','#fef5ec','#fefbe8','#edfaf3','#e8f8f5'];
+  const LABELS     = ['','😞 Poor','😕 Fair','😊 Good','😃 Great','🤩 Excellent'];
+  const stars = '★'.repeat(row.stars) + '☆'.repeat(5-row.stars);
+  // Populate modal fields
+  document.getElementById('rfd-code').textContent  = '#' + row.code;
+  document.getElementById('rfd-date').textContent  = row.date;
+  document.getElementById('rfd-email').textContent = row.email || '—';
+  document.getElementById('rfd-badge').textContent = stars + '  ' + LABELS[row.stars];
+  document.getElementById('rfd-badge').style.color      = STAR_COLOR[row.stars];
+  document.getElementById('rfd-badge').style.background = STAR_BG[row.stars];
+  const msgEl = document.getElementById('rfd-message');
+  if(row.feedback && row.feedback.trim()) {
+    msgEl.textContent = row.feedback;
+    msgEl.style.fontStyle = 'normal';
+    msgEl.style.color = 'var(--text)';
+    msgEl.style.borderLeftColor = STAR_COLOR[row.stars];
+  } else {
+    msgEl.textContent = 'No written comment was provided.';
+    msgEl.style.fontStyle = 'italic';
+    msgEl.style.color = 'var(--muted)';
+    msgEl.style.borderLeftColor = '#ddd';
+  }
+  document.getElementById('rat-detail-modal').style.display = 'flex';
+}
+
+function closeRatingDetail() {
+  document.getElementById('rat-detail-modal').style.display = 'none';
 }
 
 /* ══ DAILY CHECKLIST ADMIN ══ */
@@ -10147,6 +10335,7 @@ async function toggleOOS(id,state){
 /* ══ AUDIT (paginated) ══ */
 let auditAllLogs=[], auditPage=1;
 const AUDIT_PER_PAGE=15;
+const _auditStore={};
 
 function getAuditIcon(action){
   const a=(action||'').toLowerCase();
@@ -10203,19 +10392,25 @@ function renderAuditPage(logs){
   if(auditPage<1)auditPage=1;
   const start=(auditPage-1)*AUDIT_PER_PAGE;
   const slice=data.slice(start,start+AUDIT_PER_PAGE);
+  // Clear store for this page
+  Object.keys(_auditStore).forEach(k=>delete _auditStore[k]);
   if(!total){
     list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(123,79,46,0.08);border:1.5px solid rgba(123,79,46,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fas fa-shield-alt" style="opacity:0.35;color:var(--brown);"></i></div>No audit logs found.</div>';
   } else {
-    list.innerHTML=slice.map(l=>{
+    list.innerHTML=slice.map((l,idx)=>{
+      _auditStore[idx]=l;
       const ic=getAuditIcon(l.action);
       const ipBadge=l.ip?`<span style="font-family:monospace;font-size:0.68rem;color:var(--brown);background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;padding:1px 7px;margin-left:6px;white-space:nowrap;">${escapeHTML(l.ip)}</span>`:'';
-      return`<div class="audit-entry">
+      return`<div class="audit-entry" onclick="openAuditDetail(${idx})" style="cursor:pointer;">
         <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
         <div class="audit-body">
           <div class="audit-action">${escapeHTML(l.action)}${ipBadge}</div>
           ${l.details?`<div class="audit-details">${escapeHTML(l.details)}</div>`:''}
         </div>
-        <div class="audit-time">${escapeHTML(l.time)}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <div class="audit-time">${escapeHTML(l.time)}</div>
+          <i class="fas fa-chevron-right" style="font-size:0.58rem;color:var(--muted);opacity:0.5;"></i>
+        </div>
       </div>`;
     }).join('');
   }
@@ -10243,6 +10438,48 @@ function renderAuditPage(logs){
 
 function auditChangePage(dir){auditPage+=dir;renderAuditList();}
 function auditGoPage(p){auditPage=p;renderAuditList();}
+
+// ── Audit Detail Modal ──────────────────────────────────────────────────────
+const _AUDIT_CLS_LABELS={order:'Order',stock:'Stock',menu:'Menu',finance:'Finance',auth:'Auth',settings:'Settings',other:'System'};
+const _AUDIT_CLS_COLORS={order:'#1976D2',stock:'#F57C00',menu:'#27AE60',finance:'#27AE60',auth:'#C0392B',settings:'#7B4F2E',other:'#7B4F2E'};
+
+function openAuditDetail(idx){
+  const l=_auditStore[idx];
+  if(!l)return;
+  const ic=getAuditIcon(l.action);
+  const color=_AUDIT_CLS_COLORS[ic.cls]||'#555';
+  const label=_AUDIT_CLS_LABELS[ic.cls]||'System';
+  // Icon
+  const iconEl=document.getElementById('aud-det-icon');
+  if(iconEl){iconEl.className=`fas ${ic.icon}`;iconEl.style.color=color;}
+  const iconWrap=document.getElementById('aud-det-icon-wrap');
+  if(iconWrap)iconWrap.style.background=color+'18';
+  // Badge
+  const badgeEl=document.getElementById('aud-det-badge');
+  if(badgeEl){badgeEl.textContent=label;badgeEl.style.color=color;badgeEl.style.background=color+'18';badgeEl.style.borderColor=color+'33';}
+  // Fields
+  const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val||'—';};
+  set('aud-det-action', l.action);
+  set('aud-det-time',   l.time);
+  set('aud-det-ip',     l.ip||'—');
+  const detEl=document.getElementById('aud-det-details');
+  if(detEl){
+    if(l.details&&l.details.trim()){
+      detEl.textContent=l.details;
+      detEl.style.fontStyle='normal';
+      detEl.style.color='var(--text,#2d3a3a)';
+    } else {
+      detEl.textContent='No additional details recorded.';
+      detEl.style.fontStyle='italic';
+      detEl.style.color='var(--muted,#888)';
+    }
+  }
+  document.getElementById('audit-detail-modal').style.display='flex';
+}
+
+function closeAuditDetail(){
+  document.getElementById('audit-detail-modal').style.display='none';
+}
 
 /* ══ BACKUP ══ */
 async function downloadBackup(){
@@ -15748,6 +15985,7 @@ def rating_summary():
                 "code": r.order_code,
                 "stars": r.stars,
                 "feedback": r.feedback or '',
+                "email": r.customer_email or '',
                 "date": r.created_at.strftime('%b %d, %Y') if r.created_at else ''
             } for r in ratings[:20]]
         })
