@@ -10481,10 +10481,9 @@ function renderAuditPage(logs){
     list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(123,79,46,0.08);border:1.5px solid rgba(123,79,46,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fas fa-shield-alt" style="opacity:0.35;color:var(--brown);"></i></div>No audit logs found.</div>';
   } else {
     list.innerHTML=slice.map((l,idx)=>{
-      _auditStore[idx]=l;
       const ic=getAuditIcon(l.action);
       const ipBadge=l.ip?`<span style="font-family:monospace;font-size:0.68rem;color:var(--brown);background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;padding:1px 7px;margin-left:6px;white-space:nowrap;">${escapeHTML(l.ip)}</span>`:'';
-      return`<div class="audit-entry" onclick="openAuditDetail(${idx})" style="cursor:pointer;">
+      return`<div class="audit-entry">
         <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
         <div class="audit-body">
           <div class="audit-action">${escapeHTML(l.action)}${ipBadge}</div>
@@ -10492,7 +10491,6 @@ function renderAuditPage(logs){
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <div class="audit-time">${escapeHTML(l.time)}</div>
-          <i class="fas fa-chevron-right" style="font-size:0.58rem;color:var(--muted);opacity:0.5;"></i>
         </div>
       </div>`;
     }).join('');
