@@ -4773,17 +4773,13 @@ function playGrantedSound() {
         </div>
         <!-- ── End OTP Block ── -->
 
-        <!-- ── Payment Method Selector ── -->
+        <!-- ── Payment Method Selector ── GCash only ── -->
         <div style="margin:14px 0 10px;">
             <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Payment Method</div>
             <div style="display:flex; gap:10px;">
-                <button id="pay-btn-gcash" onclick="setPaymentMethod('gcash')"
-                        style="flex:1; padding:10px 6px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
+                <button id="pay-btn-gcash"
+                        style="flex:1; padding:10px 6px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.82rem; cursor:default; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
                     💙 GCash
-                </button>
-                <button id="pay-btn-cash" onclick="setPaymentMethod('cash')"
-                        style="flex:1; padding:10px 6px; border-radius:12px; border:2px solid #d1d5db; background:#f9fafb; color:#6b7280; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
-                    💵 Cash on Pickup
                 </button>
             </div>
         </div>
@@ -4802,14 +4798,8 @@ function playGrantedSound() {
         </div>
         <!-- ── End GCash Block ── -->
 
-        <!-- ── Cash on Pickup Block ── -->
-        <div id="cash-payment-block" style="display:none; margin:0 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f9fafb,#f3f4f6); border:1.5px solid #d1d5db; border-radius:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                <span style="font-size:1.1rem;">💵</span>
-                <span style="font-weight:800; font-size:0.88rem; color:#374151;">Cash on Pickup</span>
-                <span style="margin-left:auto; background:#6b7280; color:#fff; font-size:0.68rem; font-weight:800; padding:3px 9px; border-radius:20px; letter-spacing:0.5px;">IN-STORE</span>
-            </div>
-            <div style="font-size:0.8rem; color:#4b5563; font-weight:600; text-align:center; line-height:1.5;">Please prepare the exact amount when you pick up your order. Payment is collected at the counter.</div>
+        <!-- ── Cash on Pickup Block ── hidden: GCash is required ── -->
+        <div id="cash-payment-block" style="display:none;">
         </div>
         <!-- ── End Cash Block ── -->
 
@@ -5316,25 +5306,11 @@ function playGrantedSound() {
         if(!silent) saveCartToSession();
     }
 
-    let paymentMethod = 'gcash'; // default: GCash for online orders
+    let paymentMethod = 'gcash'; // GCash is the only accepted payment method
 
     function setPaymentMethod(method) {
-        paymentMethod = method;
-        const gcashBtn   = document.getElementById('pay-btn-gcash');
-        const cashBtn    = document.getElementById('pay-btn-cash');
-        const gcashBlock = document.getElementById('gcash-payment-block');
-        const cashBlock  = document.getElementById('cash-payment-block');
-        if (method === 'gcash') {
-            gcashBtn.style.cssText  = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;box-shadow:0 3px 10px rgba(37,99,235,0.3);';
-            cashBtn.style.cssText   = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #d1d5db;background:#f9fafb;color:#6b7280;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;';
-            gcashBlock.style.display = '';
-            cashBlock.style.display  = 'none';
-        } else {
-            cashBtn.style.cssText   = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #374151;background:linear-gradient(135deg,#374151,#1f2937);color:#fff;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;box-shadow:0 3px 10px rgba(55,65,81,0.3);';
-            gcashBtn.style.cssText  = 'flex:1;padding:10px 6px;border-radius:12px;border:2px solid #d1d5db;background:#f9fafb;color:#6b7280;font-weight:800;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;';
-            gcashBlock.style.display = 'none';
-            cashBlock.style.display  = '';
-        }
+        // GCash is always required — this function is kept for compatibility but does nothing
+        paymentMethod = 'gcash';
     }
 
     let sizePrice16 = 49, sizePrice22 = 59;
@@ -5620,6 +5596,9 @@ function playGrantedSound() {
         sidebar.classList.add('sheet-open');
         if(backdrop) backdrop.classList.add('show');
         if(chevron) { chevron.classList.remove('fa-chevron-down'); chevron.classList.add('fa-chevron-up'); }
+        // Hide Track Order FAB while order sheet is open
+        const fab = document.getElementById('track-order-fab');
+        if(fab) fab.style.display = 'none';
     }
 
     function closeOrderSheet() {
@@ -5629,6 +5608,9 @@ function playGrantedSound() {
         sidebar.classList.remove('sheet-open');
         if(backdrop) backdrop.classList.remove('show');
         if(chevron) { chevron.classList.remove('fa-chevron-up'); chevron.classList.add('fa-chevron-down'); }
+        // Restore Track Order FAB when order sheet closes
+        const fab = document.getElementById('track-order-fab');
+        if(fab) fab.style.display = '';
     }
 
     function toggleOrderSheet() {
@@ -12574,8 +12556,8 @@ def reserve_blend():
         if 'large_order' in flags:
             initial_status = "Pending Staff Approval"
 
-        payment_method = data.get('payment_method', 'gcash').strip().lower()
-        is_paid_online = (payment_method == 'gcash')
+        payment_method = 'gcash'   # GCash is the only accepted payment method
+        is_paid_online = True       # All online orders are treated as GCash/paid
 
         new_res = Reservation(
             patron_name=name,
