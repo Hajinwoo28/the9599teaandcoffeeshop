@@ -6914,38 +6914,31 @@ function playGrantedSound() {
 </div>
 
 <!-- ── Audit Log Detail Modal ── -->
-<div id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9760;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 28px 70px rgba(0,0,0,0.2);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
-    <!-- Header -->
-    <div style="padding:18px 22px 14px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:14px;">
-      <div id="aud-det-icon-wrap" style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:1rem;"></i>
+<div class="adm-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()">
+    <button class="adm-modal-close" onclick="closeAuditDetail()"><i class="fas fa-times"></i></button>
+    <!-- Header — matches ord-detail-header style -->
+    <div class="ord-detail-header" id="aud-det-head">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="aud-det-icon-wrap" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:0.9rem;color:#fff;"></i>
+        </div>
+        <div>
+          <div style="font-size:0.58rem;font-weight:800;color:rgba(196,168,130,0.7);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Audit Entry</div>
+          <div id="aud-det-action" class="ord-detail-code" style="font-size:0.95rem;letter-spacing:0.5px;word-break:break-word;line-height:1.3;"></div>
+        </div>
       </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Audit Entry</div>
-        <div id="aud-det-action" style="font-size:0.9rem;font-weight:900;color:var(--text,#2d3a3a);line-height:1.3;word-break:break-word;"></div>
-      </div>
-      <button onclick="closeAuditDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;align-self:flex-start;">✕</button>
+      <div id="aud-det-category" class="ord-detail-name" style="margin-top:8px;padding-left:44px;"></div>
     </div>
-    <!-- Body -->
-    <div style="padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;">
-      <!-- Meta chips -->
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
-        <span id="aud-det-badge" style="font-size:0.7rem;font-weight:800;padding:3px 12px;border-radius:20px;border:1.5px solid transparent;"></span>
-        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
-          <i class="fas fa-clock" style="font-size:0.62rem;"></i><span id="aud-det-time">—</span>
-        </span>
-        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
-          <i class="fas fa-network-wired" style="font-size:0.62rem;"></i><span id="aud-det-ip" style="font-family:monospace;">—</span>
-        </span>
-      </div>
-      <!-- Details box -->
-      <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>
-        <div id="aud-det-details" style="font-size:0.85rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;"></div>
-      </div>
-      <!-- Close -->
-      <button onclick="closeAuditDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;">Close</button>
+    <!-- Meta rows -->
+    <div id="aud-det-meta" style="margin-bottom:14px;"></div>
+    <!-- Details card -->
+    <div class="ord-detail-item" style="margin-bottom:0;" id="aud-det-details-wrap">
+      <div style="font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Details</div>
+      <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
+    </div>
+    <!-- Button -->
+    <div class="adm-modal-btns" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="closeAuditDetail()">Close</button>
     </div>
   </div>
 </div>
@@ -10532,34 +10525,42 @@ function openAuditDetail(idx){
   const label=_AUDIT_CLS_LABELS[ic.cls]||'System';
   // Icon
   const iconEl=document.getElementById('aud-det-icon');
-  if(iconEl){iconEl.className=`fas ${ic.icon}`;iconEl.style.color=color;}
+  if(iconEl){iconEl.className=`fas ${ic.icon}`;iconEl.style.color='#fff';}
   const iconWrap=document.getElementById('aud-det-icon-wrap');
-  if(iconWrap)iconWrap.style.background=color+'18';
-  // Badge
-  const badgeEl=document.getElementById('aud-det-badge');
-  if(badgeEl){badgeEl.textContent=label;badgeEl.style.color=color;badgeEl.style.background=color+'18';badgeEl.style.borderColor=color+'33';}
-  // Fields
-  const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val||'—';};
-  set('aud-det-action', l.action);
-  set('aud-det-time',   l.time);
-  set('aud-det-ip',     l.ip||'—');
+  if(iconWrap)iconWrap.style.background='rgba(255,255,255,0.18)';
+  // Action title
+  const actionEl=document.getElementById('aud-det-action');
+  if(actionEl)actionEl.textContent=l.action||'—';
+  // Category subtitle
+  const catEl=document.getElementById('aud-det-category');
+  if(catEl)catEl.textContent=label+(l.ip?' · '+l.ip:'');
+  // Meta rows (Time + IP)
+  const metaEl=document.getElementById('aud-det-meta');
+  if(metaEl){
+    const rows=[
+      ['Time', l.time||'—'],
+      ['IP Address', l.ip||'—'],
+    ];
+    metaEl.innerHTML=rows.filter(([,v])=>v&&v!=='—').map(([lbl,val])=>`<div class="ord-detail-row"><span class="ord-detail-lbl">${lbl}</span><span class="ord-detail-val" style="${lbl==='IP Address'?'font-family:monospace;':''}">${escapeHTML(String(val))}</span></div>`).join('');
+  }
+  // Details
   const detEl=document.getElementById('aud-det-details');
   if(detEl){
     if(l.details&&l.details.trim()){
       detEl.textContent=l.details;
       detEl.style.fontStyle='normal';
       detEl.style.color='var(--text,#2d3a3a)';
-    } else {
+    }else{
       detEl.textContent='No additional details recorded.';
       detEl.style.fontStyle='italic';
       detEl.style.color='var(--muted,#888)';
     }
   }
-  document.getElementById('audit-detail-modal').style.display='flex';
+  document.getElementById('audit-detail-modal').classList.add('open');
 }
 
 function closeAuditDetail(){
-  document.getElementById('audit-detail-modal').style.display='none';
+  document.getElementById('audit-detail-modal').classList.remove('open');
 }
 
 /* ══ BACKUP ══ */
@@ -11267,16 +11268,6 @@ function openOrdDetail(o){
   document.getElementById('ord-detail-customer').textContent=(o.name||'Unknown')+' · '+(o.source||'');
   const itemsEl=document.getElementById('ord-detail-items');
   if(o.items&&o.items.length){
-    if(o.items.length>=3){
-      itemsEl.style.maxHeight='220px';
-      itemsEl.style.overflowY='auto';
-      itemsEl.style.paddingRight='4px';
-      itemsEl.style.scrollbarWidth='thin';
-    }else{
-      itemsEl.style.maxHeight='';
-      itemsEl.style.overflowY='';
-      itemsEl.style.paddingRight='';
-    }
     itemsEl.innerHTML=o.items.map(i=>`<div class="ord-detail-item">
       <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
         <div>
