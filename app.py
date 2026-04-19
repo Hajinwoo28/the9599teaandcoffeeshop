@@ -6915,8 +6915,8 @@ function playGrantedSound() {
 
 <!-- ── Audit Log Detail Modal ── -->
 <div class="adm-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()">
+  <div class="adm-modal ord-detail-modal" id="aud-det-box">
     <button class="adm-modal-close" onclick="closeAuditDetail()"><i class="fas fa-times"></i></button>
-    <!-- Header — matches ord-detail-header style -->
     <div class="ord-detail-header" id="aud-det-head">
       <div style="display:flex;align-items:center;gap:10px;">
         <div id="aud-det-icon-wrap" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -6929,14 +6929,11 @@ function playGrantedSound() {
       </div>
       <div id="aud-det-category" class="ord-detail-name" style="margin-top:8px;padding-left:44px;"></div>
     </div>
-    <!-- Meta rows -->
     <div id="aud-det-meta" style="margin-bottom:14px;"></div>
-    <!-- Details card -->
     <div class="ord-detail-item" style="margin-bottom:0;" id="aud-det-details-wrap">
       <div style="font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Details</div>
       <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
     </div>
-    <!-- Button -->
     <div class="adm-modal-btns" style="margin-top:16px;">
       <button class="btn-secondary" onclick="closeAuditDetail()">Close</button>
     </div>
@@ -10474,9 +10471,10 @@ function renderAuditPage(logs){
     list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(123,79,46,0.08);border:1.5px solid rgba(123,79,46,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fas fa-shield-alt" style="opacity:0.35;color:var(--brown);"></i></div>No audit logs found.</div>';
   } else {
     list.innerHTML=slice.map((l,idx)=>{
+      _auditStore[idx]=l;
       const ic=getAuditIcon(l.action);
       const ipBadge=l.ip?`<span style="font-family:monospace;font-size:0.68rem;color:var(--brown);background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;padding:1px 7px;margin-left:6px;white-space:nowrap;">${escapeHTML(l.ip)}</span>`:'';
-      return`<div class="audit-entry">
+      return`<div class="audit-entry" onclick="openAuditDetail(${idx})" style="cursor:pointer;" onmouseover="this.style.background='var(--cream,#faf7f2)'" onmouseout="this.style.background=''">
         <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
         <div class="audit-body">
           <div class="audit-action">${escapeHTML(l.action)}${ipBadge}</div>
@@ -10484,6 +10482,7 @@ function renderAuditPage(logs){
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <div class="audit-time">${escapeHTML(l.time)}</div>
+          <i class="fas fa-chevron-right" style="font-size:0.65rem;color:var(--muted,#aaa);"></i>
         </div>
       </div>`;
     }).join('');
@@ -10523,27 +10522,19 @@ function openAuditDetail(idx){
   const ic=getAuditIcon(l.action);
   const color=_AUDIT_CLS_COLORS[ic.cls]||'#555';
   const label=_AUDIT_CLS_LABELS[ic.cls]||'System';
-  // Icon
   const iconEl=document.getElementById('aud-det-icon');
   if(iconEl){iconEl.className=`fas ${ic.icon}`;iconEl.style.color='#fff';}
   const iconWrap=document.getElementById('aud-det-icon-wrap');
   if(iconWrap)iconWrap.style.background='rgba(255,255,255,0.18)';
-  // Action title
   const actionEl=document.getElementById('aud-det-action');
   if(actionEl)actionEl.textContent=l.action||'—';
-  // Category subtitle
   const catEl=document.getElementById('aud-det-category');
   if(catEl)catEl.textContent=label+(l.ip?' · '+l.ip:'');
-  // Meta rows (Time + IP)
   const metaEl=document.getElementById('aud-det-meta');
   if(metaEl){
-    const rows=[
-      ['Time', l.time||'—'],
-      ['IP Address', l.ip||'—'],
-    ];
+    const rows=[['Time',l.time||'—'],['IP Address',l.ip||'—']];
     metaEl.innerHTML=rows.filter(([,v])=>v&&v!=='—').map(([lbl,val])=>`<div class="ord-detail-row"><span class="ord-detail-lbl">${lbl}</span><span class="ord-detail-val" style="${lbl==='IP Address'?'font-family:monospace;':''}">${escapeHTML(String(val))}</span></div>`).join('');
   }
-  // Details
   const detEl=document.getElementById('aud-det-details');
   if(detEl){
     if(l.details&&l.details.trim()){
@@ -11268,6 +11259,17 @@ function openOrdDetail(o){
   document.getElementById('ord-detail-customer').textContent=(o.name||'Unknown')+' · '+(o.source||'');
   const itemsEl=document.getElementById('ord-detail-items');
   if(o.items&&o.items.length){
+    if(o.items.length>=3){
+      itemsEl.style.maxHeight='220px';
+      itemsEl.style.overflowY='auto';
+      itemsEl.style.paddingRight='4px';
+      itemsEl.style.scrollbarWidth='thin';
+    }else{
+      itemsEl.style.maxHeight='';
+      itemsEl.style.overflowY='';
+      itemsEl.style.paddingRight='';
+      itemsEl.style.scrollbarWidth='';
+    }
     itemsEl.innerHTML=o.items.map(i=>`<div class="ord-detail-item">
       <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
         <div>
