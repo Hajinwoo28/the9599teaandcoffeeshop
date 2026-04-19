@@ -10975,11 +10975,25 @@ function renderLoCards(){
 }
 
 async function loUpdateStatus(orderId,status,sel){
+  // Optimistically update local state immediately so the 10s auto-refresh can't win a race and revert the UI
+  const order=_loOrders.find(o=>o.id===orderId);
+  const _prevStatus=order?order.status:null;
+  if(order){order.status=status;renderLoCards();renderLoStats();}
   try{
     const r=await apiFetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
-    if(r&&r.ok){showToast(`Order updated: ${status}`,'success');fetchLiveOrders();}
-    else showToast('Update failed','error');
-  }catch(e){showToast('Error','error');}
+    if(r&&r.ok){
+      showToast(`Order updated: ${status}`,'success');
+      fetchLiveOrders();
+    }else{
+      showToast('Update failed','error');
+      if(order&&_prevStatus){order.status=_prevStatus;renderLoCards();renderLoStats();}
+      fetchLiveOrders();
+    }
+  }catch(e){
+    showToast('Error updating status','error');
+    if(order&&_prevStatus){order.status=_prevStatus;renderLoCards();renderLoStats();}
+    fetchLiveOrders();
+  }
 }
 
 /* ══ FRAUD CONTROL ══ */
