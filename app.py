@@ -11267,6 +11267,16 @@ function openOrdDetail(o){
   document.getElementById('ord-detail-customer').textContent=(o.name||'Unknown')+' · '+(o.source||'');
   const itemsEl=document.getElementById('ord-detail-items');
   if(o.items&&o.items.length){
+    if(o.items.length>=3){
+      itemsEl.style.maxHeight='220px';
+      itemsEl.style.overflowY='auto';
+      itemsEl.style.paddingRight='4px';
+      itemsEl.style.scrollbarWidth='thin';
+    }else{
+      itemsEl.style.maxHeight='';
+      itemsEl.style.overflowY='';
+      itemsEl.style.paddingRight='';
+    }
     itemsEl.innerHTML=o.items.map(i=>`<div class="ord-detail-item">
       <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
         <div>
