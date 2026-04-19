@@ -6913,32 +6913,7 @@ function playGrantedSound() {
   </div>
 </div>
 
-<!-- ── Audit Log Detail Modal ── -->
-<div class="adm-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()">
-  <div class="adm-modal ord-detail-modal" id="aud-det-box">
-    <button class="adm-modal-close" onclick="closeAuditDetail()"><i class="fas fa-times"></i></button>
-    <div class="ord-detail-header" id="aud-det-head">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="aud-det-icon-wrap" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:0.9rem;color:#fff;"></i>
-        </div>
-        <div>
-          <div style="font-size:0.58rem;font-weight:800;color:rgba(196,168,130,0.7);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Audit Entry</div>
-          <div id="aud-det-action" class="ord-detail-code" style="font-size:0.95rem;letter-spacing:0.5px;word-break:break-word;line-height:1.3;"></div>
-        </div>
-      </div>
-      <div id="aud-det-category" class="ord-detail-name" style="margin-top:8px;padding-left:44px;"></div>
-    </div>
-    <div id="aud-det-meta" style="margin-bottom:14px;"></div>
-    <div class="ord-detail-item" style="margin-bottom:0;" id="aud-det-details-wrap">
-      <div style="font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Details</div>
-      <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
-    </div>
-    <div class="adm-modal-btns" style="margin-top:16px;">
-      <button class="btn-secondary" onclick="closeAuditDetail()">Close</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- ── Replacement Mode Banner (shown while customer picks a replacement) ── -->
 <div id="replacement-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9400; background:linear-gradient(135deg,#1a6b5a,#2E7D32); color:#fff; padding:12px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
@@ -9392,6 +9367,33 @@ ens-wrap">
     <div class="adm-modal-btns" style="margin-top:16px;">
       <button class="btn-secondary" onclick="closeOrdDetail()">Close</button>
       <button class="btn-primary" style="margin:0;" id="ord-detail-print-btn"><i class="fas fa-print"></i> Print Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUDIT LOG DETAIL MODAL ══ -->
+<div class="adm-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()">
+  <div class="adm-modal ord-detail-modal" id="aud-det-box">
+    <button class="adm-modal-close" onclick="closeAuditDetail()"><i class="fas fa-times"></i></button>
+    <div class="ord-detail-header" id="aud-det-head">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="aud-det-icon-wrap" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:0.9rem;color:#fff;"></i>
+        </div>
+        <div>
+          <div style="font-size:0.58rem;font-weight:800;color:rgba(196,168,130,0.7);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Audit Entry</div>
+          <div id="aud-det-action" class="ord-detail-code" style="font-size:0.95rem;letter-spacing:0.5px;word-break:break-word;line-height:1.3;"></div>
+        </div>
+      </div>
+      <div id="aud-det-category" class="ord-detail-name" style="margin-top:8px;padding-left:44px;"></div>
+    </div>
+    <div id="aud-det-meta" style="margin-bottom:14px;"></div>
+    <div class="ord-detail-item" style="margin-bottom:0;" id="aud-det-details-wrap">
+      <div style="font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Details</div>
+      <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
+    </div>
+    <div class="adm-modal-btns" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="closeAuditDetail()">Close</button>
     </div>
   </div>
 </div>
