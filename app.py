@@ -9142,42 +9142,7 @@ ens-wrap">
         <div id="fraud-reps"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
       </div>
 
-      <!-- ── Behavioural Limits Info ── -->
-      <div class="section card" style="padding:14px;">
-        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:10px;">⚙️ Active Behavioural Limits</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
-            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Cooldown Period</div>
-            <div style="font-size:1rem;font-weight:900;color:var(--brown);">30 min</div>
-            <div style="font-size:0.7rem;color:var(--muted);">Between orders from same email</div>
-          </div>
-          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
-            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Daily Order Cap</div>
-            <div style="font-size:1rem;font-weight:900;color:var(--brown);">5 orders</div>
-            <div style="font-size:0.7rem;color:var(--muted);">Per email per day</div>
-          </div>
-          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
-            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Suspicious Pattern</div>
-            <div style="font-size:1rem;font-weight:900;color:var(--orange);">5+ in 1 hour</div>
-            <div style="font-size:0.7rem;color:var(--muted);">Same name → manual review flag</div>
-          </div>
-          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
-            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">No-Show Threshold</div>
-            <div style="font-size:1rem;font-weight:900;color:var(--red);">2 no-shows</div>
-            <div style="font-size:0.7rem;color:var(--muted);">→ Prepayment required</div>
-          </div>
-          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
-            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Large Order Threshold</div>
-            <div style="font-size:1rem;font-weight:900;color:var(--brown);">₱500+</div>
-            <div style="font-size:0.7rem;color:var(--muted);">Requires staff confirmation</div>
-          </div>
-          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
-            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Holding Fee</div>
-            <div style="font-size:1rem;font-weight:900;color:var(--brown);">20%</div>
-            <div style="font-size:0.7rem;color:var(--muted);">Of large-order total (refunded on pickup)</div>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 
@@ -13858,10 +13823,25 @@ def update_order_status(order_id):
         except Exception:
             pass
 
+    # ── Commit the status change first so logging side-effects can never roll it back ──
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Failed to update order status"}), 500
+
     # Write customer record only once, when order is first marked Completed
     if new_status == 'Completed' and prev_status != 'Completed':
+        # Snapshot the infusion names NOW (before any new session work)
         try:
-            items_summary = ', '.join(i.foundation for i in order.infusions)
+            infusion_names = [i.foundation for i in order.infusions]
+            items_summary  = ', '.join(infusion_names)
+        except Exception:
+            infusion_names = []
+            items_summary  = ''
+
+        # ── CustomerLog + reputation (own transaction, never blocks status) ──
+        try:
             clog = CustomerLog(
                 full_name=order.patron_name,
                 gmail=order.patron_email,
@@ -13874,7 +13854,6 @@ def update_order_status(order_id):
                 ip_address=order.ip_address or ''
             )
             db.session.add(clog)
-            # Increment reputation completed counter
             try:
                 rep = get_or_create_reputation(order.patron_email)
                 if rep:
@@ -13882,16 +13861,19 @@ def update_order_status(order_id):
                     rep.display_name = order.patron_name
             except Exception:
                 pass
+            db.session.commit()
         except Exception:
-            pass  # Never block status update due to log failure
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
-        # ── Deduct ingredients based on each item's recipe ──
+        # ── Deduct ingredients based on each item's recipe (own transaction) ──
         try:
             deduction_log = []
-            for infusion in order.infusions:
-                # Match by name (case-insensitive strip)
+            for foundation in infusion_names:
                 menu_item = MenuItem.query.filter(
-                    db.func.lower(MenuItem.name) == infusion.foundation.strip().lower()
+                    db.func.lower(MenuItem.name) == foundation.strip().lower()
                 ).first()
                 if not menu_item:
                     continue
@@ -13909,9 +13891,13 @@ def update_order_status(order_id):
                     "Ingredient Deduction",
                     f"Order {order.reservation_code} completed — {'; '.join(deduction_log)}"
                 )
-        except Exception as deduct_err:
-            pass  # Never block status update due to deduction failure
-    db.session.commit()
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
     push_event('order_status', {'id': order_id, 'status': new_status})
     return jsonify({"status": "success"})
 
@@ -14039,7 +14025,7 @@ def api_orders():
                 'status': r.status or '',
                 'pickup_time': r.pickup_time or '',
                 'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
-                'over_limit': len(r.infusions) >= 3,
+                'over_limit': len(r.infusions) > 3,
                 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total or 0.0} for i in r.infusions],
                 # ── fraud control metadata ──
                 'is_flagged':               meta.is_flagged if meta else False,
