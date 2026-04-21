@@ -136,12 +136,6 @@ token_serializer = URLSafeTimedSerializer(app.secret_key)
 LINK_SECRET = os.environ.get('LINK_SECRET', 'link-9599-store-permanent').strip()
 link_serializer = URLSafeTimedSerializer(LINK_SECRET)
 
-# ── PayMongo GCash Payment Gateway ───────────────────────────────────────────
-# Sign up at https://dashboard.paymongo.com and get your secret key.
-# Set PAYMONGO_SECRET_KEY in your .env / Vercel environment variables.
-PAYMONGO_SECRET_KEY = os.environ.get('PAYMONGO_SECRET_KEY', '').strip()
-PAYMONGO_API_BASE   = 'https://api.paymongo.com/v1'
-
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -4848,22 +4842,39 @@ function playGrantedSound() {
         </div>
         <!-- ── End Payment Method Selector ── -->
 
-        <!-- ── GCash Payment Block ── -->
-        <div id="gcash-payment-block" style="margin:0 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f0f7ff,#dbeafe); border:1.5px solid #93c5fd; border-radius:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                <span style="font-size:1.1rem;">💙</span>
-                <span style="font-weight:800; font-size:0.88rem; color:#1e40af;">GCash Payment</span>
-                <span style="margin-left:auto; background:#2563eb; color:#fff; font-size:0.68rem; font-weight:800; padding:3px 9px; border-radius:20px; letter-spacing:0.5px;">ONLINE</span>
+        <!-- ── GCash Direct Payment Block ── -->
+        <div id="gcash-payment-block" style="margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(37,99,235,0.18); border:2px solid #2563eb;">
+            <!-- GCash header bar -->
+            <div style="background:linear-gradient(135deg,#1a6fe8,#1552c4); padding:12px 16px; display:flex; align-items:center; gap:10px;">
+                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">💙</div>
+                <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">GCash</span>
             </div>
-            <div style="font-size:0.82rem; color:#1e3a8a; font-weight:600; margin-bottom:6px;">Send your payment to:</div>
-            <div style="font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:900; color:#1d4ed8; letter-spacing:3px; text-align:center; background:#eff6ff; border-radius:10px; padding:10px; border:1.5px dashed #93c5fd; margin-bottom:6px;">0926 419 5603</div>
-            <div style="font-size:0.75rem; color:#3b82f6; font-weight:700; text-align:center;">Send the exact amount and include your name as the GCash note.</div>
+            <!-- Details table -->
+            <div style="background:#fff; padding:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.88rem; color:#888; font-weight:600;">Merchant</span>
+                    <span style="font-size:0.88rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.88rem; color:#888; font-weight:600;">Amount Due</span>
+                    <span id="gcash-amount-display" style="font-size:1rem; color:#2563eb; font-weight:900;">₱0.00</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 18px;">
+                    <span style="font-size:0.88rem; color:#888; font-weight:600;">Send to</span>
+                    <span style="font-size:1rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span>
+                </div>
+            </div>
+            <!-- Instruction footer -->
+            <div style="background:#f0f6ff; padding:10px 18px; border-top:1px solid #dbeafe;">
+                <p style="margin:0; font-size:0.75rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">
+                    📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
+                </p>
+            </div>
         </div>
         <!-- ── End GCash Block ── -->
 
         <!-- ── Cash on Pickup Block ── hidden: GCash is required ── -->
-        <div id="cash-payment-block" style="display:none;">
-        </div>
+        <div id="cash-payment-block" style="display:none;"></div>
         <!-- ── End Cash Block ── -->
 
         <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()" disabled style="opacity:0.45; cursor:not-allowed;">
@@ -5838,6 +5849,10 @@ function playGrantedSound() {
         if(cart.length === 0) return;
         document.getElementById('pickup-modal').classList.add('show');
         otpInitModal();   // pre-fill phone & restore verified state if already done
+        // Update the GCash amount display with the current cart total
+        const total = cart.reduce((s,i)=>s+i.price, 0);
+        const amountEl = document.getElementById('gcash-amount-display');
+        if(amountEl) amountEl.textContent = '₱' + total.toFixed(2);
     }
 
     function closePickupModal() {
@@ -6248,7 +6263,7 @@ function playGrantedSound() {
             document.getElementById('vpn-modal').classList.add('show');
             return;
         }
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating payment…';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
 
         let tStr = document.getElementById('pickup-time').value.trim();
         let pTimeMins = parseTimeStr(tStr);
@@ -6259,7 +6274,6 @@ function playGrantedSound() {
             btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             return;
         }
-
         if(pTimeMins > closeMins) {
             showToast("Store is closed at this time.", "error");
             btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
@@ -6284,77 +6298,59 @@ function playGrantedSound() {
         };
 
         try {
-            // Step 1 — Create GCash payment link via PayMongo
-            const res = await fetch('/api/create_gcash_payment', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
+            const res = await fetch('/reserve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
             const data = await res.json();
+            if(res.ok) {
+                const code = data.reservation_code;
+                document.getElementById('display-code').innerText = code;
 
-            if (res.ok && data.checkout_url) {
-                // Step 2 — Save cart to sessionStorage so we can restore if cancelled
-                try { sessionStorage.setItem('sf_cart', JSON.stringify(cart)); } catch(e){}
-                try { sessionStorage.setItem('sf_orderType', orderType); } catch(e){}
-                // Step 3 — Redirect to GCash payment page
-                showToast('Redirecting to GCash…', 'success');
-                setTimeout(() => { window.location.href = data.checkout_url; }, 600);
-            } else if (data.status === 'otp_required') {
-                openPickupModal();
-                otpSetStatus('⚠️ ' + (data.message || 'Please verify your phone first.'), 'red');
-                btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
-            } else if (data.status === 'blocked') {
-                showToast(data.message || 'Order blocked.', 'error');
-                btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
+                // Build receipt preview
+                const name = document.getElementById('customer-name').value;
+                const pickup = tStr;
+                const total = payload.total;
+                let rows = payload.items.map(i => {
+                    let detail = i.size && i.size !== 'Regular' ? ` (${i.size})` : '';
+                    let mods = [i.sweetener, i.ice].filter(v => v && v !== 'N/A').join(', ');
+                    let addons = i.addons ? ` +${i.addons}` : '';
+                    return `<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>${escapeHTML(i.foundation)}${escapeHTML(detail)}${mods ? '<br><span style="font-size:0.72rem; color:#888;">' + escapeHTML(mods) + escapeHTML(addons) + '</span>' : ''}</span>
+                        <span style="font-weight:700; white-space:nowrap; padding-left:8px;">₱${i.price.toFixed(2)}</span>
+                    </div>`;
+                }).join('');
+                document.getElementById('receipt-details').innerHTML = `
+                    <div style="margin-bottom:6px;"><b>Code:</b> ${escapeHTML(code)}</div>
+                    <div style="margin-bottom:6px;"><b>Name:</b> ${escapeHTML(name)}</div>
+                    <div style="margin-bottom:8px;"><b>Pick-up:</b> ${escapeHTML(pickup)}</div>
+                    <div style="border-top:1px dashed #ddd; margin-bottom:8px;"></div>
+                    ${rows}`;
+                document.getElementById('receipt-total').innerText = `₱${total.toFixed(2)}`;
+
+                window._lastReceipt = { code, name, pickup, total, items: payload.items, source: 'Online' };
+
+                document.getElementById('success-modal').style.display = 'flex';
+                const _fab = document.getElementById('track-order-fab');
+                if (_fab) _fab.style.display = 'none';
+                const _sb = document.getElementById('sticky-bar');
+                if (_sb) _sb.classList.remove('bar-visible');
+                try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
+                let orders = JSON.parse(localStorage.getItem('myOrders')) || [];
+                orders.push({code, status: 'Waiting Confirmation'});
+                localStorage.setItem('myOrders', JSON.stringify(orders));
             } else {
-                showToast(data.error || 'Could not create payment. Please try again.', 'error');
+                if (data.status === 'otp_required') {
+                    openPickupModal();
+                    otpSetStatus('⚠️ ' + (data.message || 'Please verify your phone first.'), 'red');
+                } else if (data.status === 'error' || data.redirect_home) {
+                    window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
+                } else {
+                    showToast("Error: " + (data.message || 'Something went wrong.'), "error");
+                }
                 btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
             }
         } catch(e) {
             window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
         }
     }
-
-    // ── Handle return from PayMongo (success / cancel) ────────────────────────
-    (function handlePaymentReturn() {
-        const params = new URLSearchParams(window.location.search);
-        const payment = params.get('payment');
-        const code    = params.get('code');
-        if (!payment) return;
-
-        // Strip payment params from URL without reloading
-        const cleanUrl = window.location.pathname + '?token=' + params.get('token');
-        history.replaceState(null, '', cleanUrl);
-
-        if (payment === 'success' && code) {
-            // Clear old cart
-            try { sessionStorage.removeItem('sf_cart'); sessionStorage.removeItem('sf_orderType'); } catch(e) {}
-            cart = [];
-            renderCart();
-
-            // Show the success modal with the order code
-            document.getElementById('display-code').innerText = code;
-            document.getElementById('receipt-details').innerHTML =
-                '<div style="text-align:center;padding:10px 0;font-size:0.9rem;color:#555;">GCash payment confirmed! ✅<br>Your order has been placed.</div>';
-            document.getElementById('receipt-total').innerText = '';
-            document.getElementById('success-modal').style.display = 'flex';
-            const _fab = document.getElementById('track-order-fab');
-            if (_fab) _fab.style.display = 'none';
-            const _sb = document.getElementById('sticky-bar');
-            if (_sb) _sb.classList.remove('bar-visible');
-
-            // Save to localStorage for tracking
-            let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-            orders.push({code, status: 'Waiting Confirmation'});
-            localStorage.setItem('myOrders', JSON.stringify(orders));
-
-        } else if (payment === 'cancelled') {
-            showToast('Payment cancelled. Your cart is still saved.', 'error');
-        } else if (payment === 'error') {
-            showToast('⚠️ Payment received but order failed. Please contact the shop.', 'error');
-        }
-    })();
-
 
 
     function closeSuccessAndReset() {
@@ -6913,7 +6909,42 @@ function playGrantedSound() {
   </div>
 </div>
 
-
+<!-- ── Audit Log Detail Modal ── -->
+<div id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9760;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 28px 70px rgba(0,0,0,0.2);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
+    <!-- Header -->
+    <div style="padding:18px 22px 14px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:14px;">
+      <div id="aud-det-icon-wrap" style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:1rem;"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Audit Entry</div>
+        <div id="aud-det-action" style="font-size:0.9rem;font-weight:900;color:var(--text,#2d3a3a);line-height:1.3;word-break:break-word;"></div>
+      </div>
+      <button onclick="closeAuditDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;align-self:flex-start;">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;">
+      <!-- Meta chips -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+        <span id="aud-det-badge" style="font-size:0.7rem;font-weight:800;padding:3px 12px;border-radius:20px;border:1.5px solid transparent;"></span>
+        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-clock" style="font-size:0.62rem;"></i><span id="aud-det-time">—</span>
+        </span>
+        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-network-wired" style="font-size:0.62rem;"></i><span id="aud-det-ip" style="font-family:monospace;">—</span>
+        </span>
+      </div>
+      <!-- Details box -->
+      <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>
+        <div id="aud-det-details" style="font-size:0.85rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;"></div>
+      </div>
+      <!-- Close -->
+      <button onclick="closeAuditDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Replacement Mode Banner (shown while customer picks a replacement) ── -->
 <div id="replacement-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9400; background:linear-gradient(135deg,#1a6b5a,#2E7D32); color:#fff; padding:12px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
@@ -9142,7 +9173,42 @@ ens-wrap">
         <div id="fraud-reps"><div style="text-align:center;color:var(--muted);padding:14px;font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
       </div>
 
-
+      <!-- ── Behavioural Limits Info ── -->
+      <div class="section card" style="padding:14px;">
+        <div style="font-size:0.82rem;font-weight:900;color:var(--text);margin-bottom:10px;">⚙️ Active Behavioural Limits</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Cooldown Period</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">30 min</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Between orders from same email</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Daily Order Cap</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">5 orders</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Per email per day</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Suspicious Pattern</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--orange);">5+ in 1 hour</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Same name → manual review flag</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">No-Show Threshold</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--red);">2 no-shows</div>
+            <div style="font-size:0.7rem;color:var(--muted);">→ Prepayment required</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Large Order Threshold</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">₱500+</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Requires staff confirmation</div>
+          </div>
+          <div style="background:var(--cream);border-radius:10px;padding:10px 12px;border:1.5px solid var(--cream-dark);">
+            <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Holding Fee</div>
+            <div style="font-size:1rem;font-weight:900;color:var(--brown);">20%</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Of large-order total (refunded on pickup)</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -9332,33 +9398,6 @@ ens-wrap">
     <div class="adm-modal-btns" style="margin-top:16px;">
       <button class="btn-secondary" onclick="closeOrdDetail()">Close</button>
       <button class="btn-primary" style="margin:0;" id="ord-detail-print-btn"><i class="fas fa-print"></i> Print Receipt</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ AUDIT LOG DETAIL MODAL ══ -->
-<div class="adm-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()">
-  <div class="adm-modal ord-detail-modal" id="aud-det-box">
-    <button class="adm-modal-close" onclick="closeAuditDetail()"><i class="fas fa-times"></i></button>
-    <div class="ord-detail-header" id="aud-det-head">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="aud-det-icon-wrap" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:0.9rem;color:#fff;"></i>
-        </div>
-        <div>
-          <div style="font-size:0.58rem;font-weight:800;color:rgba(196,168,130,0.7);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px;">Audit Entry</div>
-          <div id="aud-det-action" class="ord-detail-code" style="font-size:0.95rem;letter-spacing:0.5px;word-break:break-word;line-height:1.3;"></div>
-        </div>
-      </div>
-      <div id="aud-det-category" class="ord-detail-name" style="margin-top:8px;padding-left:44px;"></div>
-    </div>
-    <div id="aud-det-meta" style="margin-bottom:14px;"></div>
-    <div class="ord-detail-item" style="margin-bottom:0;" id="aud-det-details-wrap">
-      <div style="font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Details</div>
-      <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text);"></div>
-    </div>
-    <div class="adm-modal-btns" style="margin-top:16px;">
-      <button class="btn-secondary" onclick="closeAuditDetail()">Close</button>
     </div>
   </div>
 </div>
@@ -10438,10 +10477,9 @@ function renderAuditPage(logs){
     list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(123,79,46,0.08);border:1.5px solid rgba(123,79,46,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fas fa-shield-alt" style="opacity:0.35;color:var(--brown);"></i></div>No audit logs found.</div>';
   } else {
     list.innerHTML=slice.map((l,idx)=>{
-      _auditStore[idx]=l;
       const ic=getAuditIcon(l.action);
       const ipBadge=l.ip?`<span style="font-family:monospace;font-size:0.68rem;color:var(--brown);background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;padding:1px 7px;margin-left:6px;white-space:nowrap;">${escapeHTML(l.ip)}</span>`:'';
-      return`<div class="audit-entry" onclick="openAuditDetail(${idx})" style="cursor:pointer;" onmouseover="this.style.background='var(--cream,#faf7f2)'" onmouseout="this.style.background=''">
+      return`<div class="audit-entry">
         <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
         <div class="audit-body">
           <div class="audit-action">${escapeHTML(l.action)}${ipBadge}</div>
@@ -10449,7 +10487,6 @@ function renderAuditPage(logs){
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <div class="audit-time">${escapeHTML(l.time)}</div>
-          <i class="fas fa-chevron-right" style="font-size:0.65rem;color:var(--muted,#aaa);"></i>
         </div>
       </div>`;
     }).join('');
@@ -10489,36 +10526,36 @@ function openAuditDetail(idx){
   const ic=getAuditIcon(l.action);
   const color=_AUDIT_CLS_COLORS[ic.cls]||'#555';
   const label=_AUDIT_CLS_LABELS[ic.cls]||'System';
+  // Icon
   const iconEl=document.getElementById('aud-det-icon');
-  if(iconEl){iconEl.className=`fas ${ic.icon}`;iconEl.style.color='#fff';}
+  if(iconEl){iconEl.className=`fas ${ic.icon}`;iconEl.style.color=color;}
   const iconWrap=document.getElementById('aud-det-icon-wrap');
-  if(iconWrap)iconWrap.style.background='rgba(255,255,255,0.18)';
-  const actionEl=document.getElementById('aud-det-action');
-  if(actionEl)actionEl.textContent=l.action||'—';
-  const catEl=document.getElementById('aud-det-category');
-  if(catEl)catEl.textContent=label+(l.ip?' · '+l.ip:'');
-  const metaEl=document.getElementById('aud-det-meta');
-  if(metaEl){
-    const rows=[['Time',l.time||'—'],['IP Address',l.ip||'—']];
-    metaEl.innerHTML=rows.filter(([,v])=>v&&v!=='—').map(([lbl,val])=>`<div class="ord-detail-row"><span class="ord-detail-lbl">${lbl}</span><span class="ord-detail-val" style="${lbl==='IP Address'?'font-family:monospace;':''}">${escapeHTML(String(val))}</span></div>`).join('');
-  }
+  if(iconWrap)iconWrap.style.background=color+'18';
+  // Badge
+  const badgeEl=document.getElementById('aud-det-badge');
+  if(badgeEl){badgeEl.textContent=label;badgeEl.style.color=color;badgeEl.style.background=color+'18';badgeEl.style.borderColor=color+'33';}
+  // Fields
+  const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val||'—';};
+  set('aud-det-action', l.action);
+  set('aud-det-time',   l.time);
+  set('aud-det-ip',     l.ip||'—');
   const detEl=document.getElementById('aud-det-details');
   if(detEl){
     if(l.details&&l.details.trim()){
       detEl.textContent=l.details;
       detEl.style.fontStyle='normal';
       detEl.style.color='var(--text,#2d3a3a)';
-    }else{
+    } else {
       detEl.textContent='No additional details recorded.';
       detEl.style.fontStyle='italic';
       detEl.style.color='var(--muted,#888)';
     }
   }
-  document.getElementById('audit-detail-modal').classList.add('open');
+  document.getElementById('audit-detail-modal').style.display='flex';
 }
 
 function closeAuditDetail(){
-  document.getElementById('audit-detail-modal').classList.remove('open');
+  document.getElementById('audit-detail-modal').style.display='none';
 }
 
 /* ══ BACKUP ══ */
@@ -10940,25 +10977,11 @@ function renderLoCards(){
 }
 
 async function loUpdateStatus(orderId,status,sel){
-  // Optimistically update local state immediately so the 10s auto-refresh can't win a race and revert the UI
-  const order=_loOrders.find(o=>o.id===orderId);
-  const _prevStatus=order?order.status:null;
-  if(order){order.status=status;renderLoCards();renderLoStats();}
   try{
     const r=await apiFetch(`/api/orders/${orderId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
-    if(r&&r.ok){
-      showToast(`Order updated: ${status}`,'success');
-      fetchLiveOrders();
-    }else{
-      showToast('Update failed','error');
-      if(order&&_prevStatus){order.status=_prevStatus;renderLoCards();renderLoStats();}
-      fetchLiveOrders();
-    }
-  }catch(e){
-    showToast('Error updating status','error');
-    if(order&&_prevStatus){order.status=_prevStatus;renderLoCards();renderLoStats();}
-    fetchLiveOrders();
-  }
+    if(r&&r.ok){showToast(`Order updated: ${status}`,'success');fetchLiveOrders();}
+    else showToast('Update failed','error');
+  }catch(e){showToast('Error','error');}
 }
 
 /* ══ FRAUD CONTROL ══ */
@@ -11240,17 +11263,6 @@ function openOrdDetail(o){
   document.getElementById('ord-detail-customer').textContent=(o.name||'Unknown')+' · '+(o.source||'');
   const itemsEl=document.getElementById('ord-detail-items');
   if(o.items&&o.items.length){
-    if(o.items.length>=3){
-      itemsEl.style.maxHeight='220px';
-      itemsEl.style.overflowY='auto';
-      itemsEl.style.paddingRight='4px';
-      itemsEl.style.scrollbarWidth='thin';
-    }else{
-      itemsEl.style.maxHeight='';
-      itemsEl.style.overflowY='';
-      itemsEl.style.paddingRight='';
-      itemsEl.style.scrollbarWidth='';
-    }
     itemsEl.innerHTML=o.items.map(i=>`<div class="ord-detail-item">
       <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
         <div>
@@ -12876,224 +12888,6 @@ def otp_verify():
 
 
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PAYMONGO GCASH PAYMENT INTEGRATION
-# ══════════════════════════════════════════════════════════════════════════════
-
-import base64
-
-def _paymongo_auth_header():
-    """Return the Basic auth header for PayMongo API calls."""
-    encoded = base64.b64encode(f"{PAYMONGO_SECRET_KEY}:".encode()).decode()
-    return {"Authorization": f"Basic {encoded}", "Content-Type": "application/json"}
-
-
-@app.route('/api/create_gcash_payment', methods=['POST'])
-@limiter.limit("10 per minute")
-def create_gcash_payment():
-    """
-    Step 1 of GCash flow:
-    Validate the order, save it to the session, create a PayMongo payment
-    link, and return the checkout URL to the frontend.
-    """
-    if not PAYMONGO_SECRET_KEY:
-        return jsonify({"error": "GCash payments are not configured yet. Please contact the shop."}), 503
-
-    data  = request.json or {}
-    email = data.get('email', '').strip()
-    phone = data.get('phone', '').strip()
-    name  = data.get('name', '').strip()
-    total = float(data.get('total', 0))
-
-    # ── OTP gate ──────────────────────────────────────────────────────────────
-    verified_phone = session.get('otp_verified_phone', '')
-    if not verified_phone:
-        return jsonify({"status": "otp_required", "message": "Please verify your phone number first."}), 403
-    if _normalize_ph_number(verified_phone) != _normalize_ph_number(phone):
-        return jsonify({"status": "otp_required", "message": "Verified phone does not match."}), 403
-
-    # ── Behavioral limit gate ─────────────────────────────────────────────────
-    allowed, err_msg, flags = check_order_limits(email, phone, name, total)
-    if not allowed:
-        return jsonify({"status": "blocked", "message": err_msg}), 429
-
-    # ── Save pending order to session so we can place it after payment ─────────
-    session['pending_order'] = {
-        'name':    name,
-        'email':   email,
-        'phone':   phone,
-        'total':   total,
-        'flags':   flags,
-        'pickup_time':  data.get('pickup_time', ''),
-        'address':      data.get('address', ''),
-        'customer_lat': data.get('customer_lat'),
-        'customer_lng': data.get('customer_lng'),
-        'items':        data.get('items', []),
-    }
-    session.modified = True
-
-    # ── Create PayMongo Payment Link ──────────────────────────────────────────
-    amount_centavos = int(round(total * 100))  # PayMongo uses centavos
-    success_url = request.host_url.rstrip('/') + '/payment/success'
-    cancel_url  = request.host_url.rstrip('/') + '/payment/cancel'
-
-    payload = {
-        "data": {
-            "attributes": {
-                "amount":      amount_centavos,
-                "description": f"9599 Tea & Coffee — Order for {name}",
-                "remarks":     f"Pickup: {data.get('pickup_time', '')}",
-                "success_url": success_url,
-                "cancel_url":  cancel_url,
-            }
-        }
-    }
-
-    try:
-        resp = requests.post(
-            f"{PAYMONGO_API_BASE}/links",
-            json=payload,
-            headers=_paymongo_auth_header(),
-            timeout=15
-        )
-        resp_data = resp.json()
-        if resp.status_code not in (200, 201):
-            err = resp_data.get('errors', [{}])[0].get('detail', 'Payment creation failed.')
-            return jsonify({"error": err}), 502
-
-        checkout_url = resp_data['data']['attributes']['checkout_url']
-        link_id      = resp_data['data']['id']
-        session['pending_paymongo_link_id'] = link_id
-        session.modified = True
-
-        return jsonify({"checkout_url": checkout_url, "link_id": link_id})
-
-    except Exception as e:
-        return jsonify({"error": f"Could not reach payment gateway: {str(e)}"}), 502
-
-
-@app.route('/payment/success')
-def payment_success():
-    """
-    Step 2 of GCash flow (success redirect):
-    PayMongo redirects here after a successful payment.
-    We retrieve the pending order from the session and place it.
-    """
-    pending = session.get('pending_order')
-    link_id = session.get('pending_paymongo_link_id', '')
-
-    if not pending:
-        # No pending order — redirect back to storefront
-        return redirect('/')
-
-    # ── Verify payment status with PayMongo ───────────────────────────────────
-    payment_confirmed = False
-    try:
-        if link_id and PAYMONGO_SECRET_KEY:
-            resp = requests.get(
-                f"{PAYMONGO_API_BASE}/links/{link_id}",
-                headers=_paymongo_auth_header(),
-                timeout=10
-            )
-            if resp.status_code == 200:
-                status = resp.json()['data']['attributes'].get('status', '')
-                payment_confirmed = (status == 'paid')
-    except Exception:
-        pass  # Fall through — still allow order if redirect happened (webhook will confirm)
-
-    # ── Place the order ───────────────────────────────────────────────────────
-    try:
-        name    = pending['name']
-        email   = pending['email']
-        phone   = pending['phone']
-        total   = float(pending['total'])
-        flags   = pending.get('flags', [])
-        items   = pending.get('items', [])
-
-        initial_status = "Pending Staff Approval" if 'large_order' in flags else "Waiting Confirmation"
-
-        new_res = Reservation(
-            patron_name=name,
-            patron_email=email,
-            patron_phone=phone,
-            total_investment=total,
-            pickup_time=pending.get('pickup_time', ''),
-            order_source="Online",
-            status=initial_status,
-            patron_address=pending.get('address', ''),
-            is_paid=True,  # GCash payment confirmed
-            user_agent=request.headers.get('User-Agent', '')[:300],
-            ip_address=get_client_ip()
-        )
-        db.session.add(new_res)
-        db.session.flush()
-
-        for i in items:
-            inf = Infusion(
-                reservation_id=new_res.id,
-                foundation=i.get('foundation', 'Unknown'),
-                cup_size=i.get('size', '16 oz'),
-                sweetener=i.get('sweetener', 'N/A'),
-                ice_level=i.get('ice', 'Normal Ice'),
-                pearls=i.get('pearls', 'Online'),
-                addons=i.get('addons', ''),
-                item_total=float(i.get('price', 0))
-            )
-            db.session.add(inf)
-
-        build_order_meta(new_res.id, flags, total, email)
-        db.session.commit()
-
-        code = new_res.reservation_code
-        push_event('order_new', {'code': code, 'name': name, 'total': total})
-        log_audit("Order Placed via GCash", f"Code: {code}, ₱{total:.2f}, {name} ({email})")
-
-        # Clear pending order from session
-        session.pop('pending_order', None)
-        session.pop('pending_paymongo_link_id', None)
-        session.pop('otp_verified_phone', None)
-        session.modified = True
-
-        # Redirect to storefront with success params
-        token = link_serializer.dumps({'store': '9599', 'v': 2})
-        return redirect(f'/?token={token}&payment=success&code={code}')
-
-    except Exception as e:
-        db.session.rollback()
-        log_audit("GCash Order Error", f"Failed to place order after payment: {str(e)}")
-        token = link_serializer.dumps({'store': '9599', 'v': 2})
-        return redirect(f'/?token={token}&payment=error')
-
-
-@app.route('/payment/cancel')
-def payment_cancel():
-    """Customer cancelled on the PayMongo page — clear pending order and go back."""
-    session.pop('pending_order', None)
-    session.pop('pending_paymongo_link_id', None)
-    session.modified = True
-    token = link_serializer.dumps({'store': '9599', 'v': 2})
-    return redirect(f'/?token={token}&payment=cancelled')
-
-
-@app.route('/api/paymongo/webhook', methods=['POST'])
-def paymongo_webhook():
-    """
-    PayMongo sends payment events here.
-    Set this URL in your PayMongo dashboard → Webhooks:
-      https://YOUR_DOMAIN/api/paymongo/webhook
-    Events to subscribe: payment.paid
-    """
-    try:
-        payload = request.json or {}
-        event_type = payload.get('data', {}).get('attributes', {}).get('type', '')
-        if event_type == 'payment.paid':
-            log_audit("PayMongo Webhook", "payment.paid event received")
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @app.route('/reserve', methods=['POST'])
 
 def reserve_blend():
@@ -13823,25 +13617,10 @@ def update_order_status(order_id):
         except Exception:
             pass
 
-    # ── Commit the status change first so logging side-effects can never roll it back ──
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": "Failed to update order status"}), 500
-
     # Write customer record only once, when order is first marked Completed
     if new_status == 'Completed' and prev_status != 'Completed':
-        # Snapshot the infusion names NOW (before any new session work)
         try:
-            infusion_names = [i.foundation for i in order.infusions]
-            items_summary  = ', '.join(infusion_names)
-        except Exception:
-            infusion_names = []
-            items_summary  = ''
-
-        # ── CustomerLog + reputation (own transaction, never blocks status) ──
-        try:
+            items_summary = ', '.join(i.foundation for i in order.infusions)
             clog = CustomerLog(
                 full_name=order.patron_name,
                 gmail=order.patron_email,
@@ -13854,6 +13633,7 @@ def update_order_status(order_id):
                 ip_address=order.ip_address or ''
             )
             db.session.add(clog)
+            # Increment reputation completed counter
             try:
                 rep = get_or_create_reputation(order.patron_email)
                 if rep:
@@ -13861,19 +13641,16 @@ def update_order_status(order_id):
                     rep.display_name = order.patron_name
             except Exception:
                 pass
-            db.session.commit()
         except Exception:
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
+            pass  # Never block status update due to log failure
 
-        # ── Deduct ingredients based on each item's recipe (own transaction) ──
+        # ── Deduct ingredients based on each item's recipe ──
         try:
             deduction_log = []
-            for foundation in infusion_names:
+            for infusion in order.infusions:
+                # Match by name (case-insensitive strip)
                 menu_item = MenuItem.query.filter(
-                    db.func.lower(MenuItem.name) == foundation.strip().lower()
+                    db.func.lower(MenuItem.name) == infusion.foundation.strip().lower()
                 ).first()
                 if not menu_item:
                     continue
@@ -13891,13 +13668,9 @@ def update_order_status(order_id):
                     "Ingredient Deduction",
                     f"Order {order.reservation_code} completed — {'; '.join(deduction_log)}"
                 )
-            db.session.commit()
-        except Exception:
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-
+        except Exception as deduct_err:
+            pass  # Never block status update due to deduction failure
+    db.session.commit()
     push_event('order_status', {'id': order_id, 'status': new_status})
     return jsonify({"status": "success"})
 
@@ -14025,7 +13798,7 @@ def api_orders():
                 'status': r.status or '',
                 'pickup_time': r.pickup_time or '',
                 'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
-                'over_limit': len(r.infusions) > 3,
+                'over_limit': len(r.infusions) >= 3,
                 'items': [{'foundation': i.foundation, 'size': i.cup_size, 'addons': i.addons, 'sweetener': i.sweetener, 'ice': i.ice_level, 'item_total': i.item_total or 0.0} for i in r.infusions],
                 # ── fraud control metadata ──
                 'is_flagged':               meta.is_flagged if meta else False,
