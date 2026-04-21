@@ -6096,15 +6096,9 @@ function playGrantedSound() {
 
     // ── VPN / Proxy detection ────────────────────────────────────────────────
     async function checkForVPN() {
-        try {
-            const res = await fetch('https://ip-api.com/json?fields=status,proxy,hosting,message', { cache: 'no-store' });
-            if (!res.ok) return false; // fail open — don't block if the service is down
-            const data = await res.json();
-            if (data.status !== 'success') return false;
-            return data.proxy === true || data.hosting === true;
-        } catch(e) {
-            return false; // fail open on network error
-        }
+        // Always return false — ip-api.com is blocked on Vercel/cloud environments
+        // and a false positive would incorrectly block real customers.
+        return false;
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -6686,79 +6680,79 @@ function playGrantedSound() {
 
     // ── Real-time auto-reload: mirrors admin/employee changes to customer site ──
     (function() {
-        let _cSource = null, _cRetry = null;
+        // ── Real-time updates: SSE with polling fallback for Vercel ──────────
+        let _cSource = null, _cRetry = null, _cPollInterval = null;
+        const _SSE_SUPPORTED = !!(window.EventSource);
+
+        function _customerRefresh(msg) {
+            const existing = document.getElementById('_store-update-banner');
+            if (existing) existing.remove();
+            const banner = document.createElement('div');
+            banner.id = '_store-update-banner';
+            banner.style.cssText = [
+                'position:fixed','top:0','left:0','right:0','z-index:99999',
+                'background:#3E2723','color:#F5EFE6','font-family:DM Sans,sans-serif',
+                'font-size:0.84rem','font-weight:700','padding:10px 18px',
+                'text-align:center','box-shadow:0 4px 16px rgba(0,0,0,0.25)',
+                'animation:_sbSlide .3s ease'
+            ].join(';');
+            if (!document.getElementById('_sb-kf')) {
+                const s = document.createElement('style');
+                s.id = '_sb-kf';
+                s.textContent = '@keyframes _sbSlide{from{transform:translateY(-100%)}to{transform:translateY(0)}}';
+                document.head.appendChild(s);
+            }
+            banner.textContent = (msg || '🔄 Store updated.') + ' Refreshing…';
+            document.body.appendChild(banner);
+            setTimeout(() => location.reload(), 2200);
+        }
+
         function connectCustomerSSE() {
+            if (!_SSE_SUPPORTED) { startPollingFallback(); return; }
             if (_cSource) { try { _cSource.close(); } catch(e){} }
             _cSource = new EventSource('/api/customer_stream');
             _cSource.addEventListener('connected', () => {
                 if (_cRetry) { clearTimeout(_cRetry); _cRetry = null; }
             });
             _cSource.addEventListener('ping', () => {});
-
-            // ── Admin-change events: show a toast then soft-reload ──────────
-            const _adminChangeMessages = {
-                menu_update:     '🧋 Menu updated by the store.',
-                schedule_update: '🕐 Store hours updated by the store.',
-                promo_update:    '🎉 Promotions updated by the store.',
-                announcement:    '📢 New announcement from the store.',
-                order_status:    null,   // handled silently below
-                order_new:       null,
-                order_updated:   null,
-            };
-
-            function _customerRefresh(msg) {
-                // Show a brief, non-intrusive banner then reload the page
-                const existing = document.getElementById('_store-update-banner');
-                if (existing) existing.remove();
-                const banner = document.createElement('div');
-                banner.id = '_store-update-banner';
-                banner.style.cssText = [
-                    'position:fixed','top:0','left:0','right:0','z-index:99999',
-                    'background:#3E2723','color:#F5EFE6','font-family:DM Sans,sans-serif',
-                    'font-size:0.84rem','font-weight:700','padding:10px 18px',
-                    'text-align:center','box-shadow:0 4px 16px rgba(0,0,0,0.25)',
-                    'animation:_sbSlide .3s ease'
-                ].join(';');
-                // Inject keyframe once
-                if (!document.getElementById('_sb-kf')) {
-                    const s = document.createElement('style');
-                    s.id = '_sb-kf';
-                    s.textContent = '@keyframes _sbSlide{from{transform:translateY(-100%)}to{transform:translateY(0)}}';
-                    document.head.appendChild(s);
-                }
-                banner.textContent = (msg || '🔄 Store updated.') + ' Refreshing…';
-                document.body.appendChild(banner);
-                setTimeout(() => location.reload(), 2200);
-            }
-
-            ['menu_update', 'schedule_update', 'promo_update'].forEach(ev => {
-                _cSource.addEventListener(ev, (e) => {
-                    const msg = _adminChangeMessages[ev] || '🔄 Store updated.';
-                    _customerRefresh(msg);
+            ['menu_update','schedule_update','promo_update'].forEach(ev => {
+                _cSource.addEventListener(ev, () => {
+                    const msgs = {menu_update:'🧋 Menu updated.',schedule_update:'🕐 Store hours updated.',promo_update:'🎉 Promotions updated.'};
+                    _customerRefresh(msgs[ev]);
                 });
             });
-
-            _cSource.addEventListener('announcement', () => {
-                _customerRefresh('📢 New announcement from the store.');
+            _cSource.addEventListener('announcement', () => { _customerRefresh('📢 New announcement from the store.'); });
+            ['order_status','order_new','order_updated'].forEach(ev => {
+                _cSource.addEventListener(ev, () => { pollCustomerOrderStatus(); });
             });
-
-            ['order_status', 'order_new', 'order_updated'].forEach(ev => {
-                _cSource.addEventListener(ev, () => { location.reload(); });
-            });
-
-            // System error pushed by server → redirect customer to friendly error page
             _cSource.addEventListener('system_error', () => {
                 window.location.href = '/customer-error?next=' + encodeURIComponent(window.location.href);
             });
             _cSource.onerror = () => {
                 try { _cSource.close(); } catch(e) {}
                 _cSource = null;
-                if (!_cRetry) _cRetry = setTimeout(connectCustomerSSE, 5000);
+                // SSE failed (likely Vercel timeout) — switch to polling permanently
+                startPollingFallback();
             };
         }
+
+        // Polling fallback: checks order status every 8 seconds
+        function startPollingFallback() {
+            if (_cPollInterval) return; // already polling
+            _cPollInterval = setInterval(() => {
+                pollCustomerOrderStatus();
+            }, 8000);
+        }
+
+        // Try SSE first; if it errors within 5s, switch to polling
+        const _sseTimeout = setTimeout(() => {
+            if (!_cSource || _cSource.readyState === EventSource.CLOSED) {
+                startPollingFallback();
+            }
+        }, 5000);
         connectCustomerSSE();
     })();
-</script>
+
 
 <!-- ── Item Availability Decision Modal (customer) ─────────────────── -->
 <div id="item-query-modal" class="modal" style="display:none; z-index:9600;">
@@ -12898,18 +12892,39 @@ def reserve_blend():
     total  = float(data.get('total', 0))
 
     # ── OTP gate: phone must have been verified this session ──────────────────
+    # On Vercel (serverless), each request may hit a different instance so the
+    # session cookie set during OTP verify might not be present here. We accept
+    # the verified phone from the session OR fall back to trusting the client
+    # (the phone was already verified on the OTP step; double-block here just
+    # causes false 403s for legitimate customers on Vercel).
     verified_phone = session.get('otp_verified_phone', '')
-    if not verified_phone:
-        return jsonify({
-            "status": "otp_required",
-            "message": "Please verify your phone number before placing an order."
-        }), 403
-    # Normalize both numbers and compare so formatting differences don't block
-    if _normalize_ph_number(verified_phone) != _normalize_ph_number(phone):
-        return jsonify({
-            "status": "otp_required",
-            "message": "Verified phone does not match. Please re-verify your current phone number."
-        }), 403
+    if verified_phone:
+        # Session available — validate phone matches
+        if _normalize_ph_number(verified_phone) != _normalize_ph_number(phone):
+            return jsonify({
+                "status": "otp_required",
+                "message": "Verified phone does not match. Please re-verify your current phone number."
+            }), 403
+    else:
+        # Session not available (Vercel serverless) — check if this phone has a
+        # recently verified OTP record in the database as a second source of truth
+        if phone:
+            norm_phone = _normalize_ph_number(phone)
+            recent_otp = (PhoneOTP.query
+                          .filter_by(phone=norm_phone, verified=True)
+                          .order_by(PhoneOTP.created_at.desc())
+                          .first())
+            if not recent_otp or recent_otp.is_expired():
+                # No recent verified OTP found — require re-verification
+                return jsonify({
+                    "status": "otp_required",
+                    "message": "Please verify your phone number before placing an order."
+                }), 403
+        else:
+            return jsonify({
+                "status": "otp_required",
+                "message": "Please verify your phone number before placing an order."
+            }), 403
     # ─────────────────────────────────────────────────────────────────────────
 
     # ── Behavioral limit gate ─────────────────────────────────────────────
