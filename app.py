@@ -3789,6 +3789,14 @@ STOREFRONT_HTML = """
             box-shadow: -8px 0 32px rgba(44,26,18,0.14);
         }
         .sidebar.sheet-open { transform: translateX(0); }
+        @keyframes sidebarFadeOut {
+            0%   { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(40px); }
+        }
+        .sidebar.order-placed-fade {
+            animation: sidebarFadeOut 0.55s cubic-bezier(0.4,0,0.2,1) forwards;
+            pointer-events: none;
+        }
 
         /* Sheet overlay backdrop */
         #sheet-backdrop {
@@ -4854,6 +4862,16 @@ function playGrantedSound() {
         </div>
         <!-- ── End OTP Block ── -->
 
+        <!-- ── Payment Sent Confirmation (GCash / Maya only) ── -->
+        <div id="payment-sent-block" style="display:none; margin:14px 0 10px;">
+            <label id="payment-sent-label" style="display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#fffbeb,#fef3c7); border:2px solid #f59e0b; border-radius:14px; padding:14px 16px; cursor:pointer; transition:all 0.25s; user-select:none;" onclick="togglePaymentSent()">
+                <span id="payment-sent-box" style="width:22px; height:22px; border:2.5px solid #d97706; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#fff; transition:all 0.2s; font-size:0.9rem;"></span>
+                <span style="font-size:0.84rem; font-weight:800; color:#92400e; line-height:1.4; flex:1;">
+                    I have already <span id="payment-sent-method-label" style="color:#b45309;">sent the payment</span> via <span id="payment-sent-wallet-label" style="color:#b45309;">GCash</span>.
+                </span>
+            </label>
+        </div>
+
         <!-- ── Payment Method Selector ── -->
         <div style="margin:14px 0 10px;">
             <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Payment Method</div>
@@ -5545,6 +5563,60 @@ function playGrantedSound() {
     let paymentMethod  = 'gcash'; // default
     let partialWallet  = 'gcash'; // e-wallet used for partial payment
     let partialAmount  = 0;       // amount sent online in partial mode
+    let _paymentSentConfirmed = false; // tracks the "I have sent my payment" checkbox
+
+    /** Central gate: enables the Confirm & Place Order button only when all
+     *  pre-conditions are met (OTP verified + payment sent for e-wallet methods). */
+    function _updateConfirmBtnState() {
+        const confirmBtn = document.getElementById('pickup-confirm-btn');
+        if (!confirmBtn) return;
+        const needsPaymentConfirm = (paymentMethod === 'gcash' || paymentMethod === 'maya');
+        const ready = _otpVerified && (!needsPaymentConfirm || _paymentSentConfirmed);
+        confirmBtn.disabled   = !ready;
+        confirmBtn.style.opacity = ready ? '1' : '0.45';
+        confirmBtn.style.cursor  = ready ? 'pointer' : 'not-allowed';
+    }
+
+    /** Toggle the "I have sent my payment" checkbox. */
+    function togglePaymentSent() {
+        _paymentSentConfirmed = !_paymentSentConfirmed;
+        const box   = document.getElementById('payment-sent-box');
+        const label = document.getElementById('payment-sent-label');
+        if (_paymentSentConfirmed) {
+            box.textContent = '✓';
+            box.style.background   = '#f59e0b';
+            box.style.borderColor  = '#d97706';
+            box.style.color        = '#fff';
+            label.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
+            label.style.borderColor= '#d97706';
+        } else {
+            box.textContent = '';
+            box.style.background   = '#fff';
+            box.style.borderColor  = '#d97706';
+            box.style.color        = '';
+            label.style.background = 'linear-gradient(135deg,#fffbeb,#fef3c7)';
+            label.style.borderColor= '#f59e0b';
+        }
+        _updateConfirmBtnState();
+    }
+
+    /** Show or hide the payment-sent checkbox based on selected method and OTP state. */
+    function _refreshPaymentSentBlock() {
+        const block  = document.getElementById('payment-sent-block');
+        const wallet = document.getElementById('payment-sent-wallet-label');
+        if (!block) return;
+        const isEwallet = (paymentMethod === 'gcash' || paymentMethod === 'maya');
+        block.style.display = (isEwallet && _otpVerified) ? 'block' : 'none';
+        if (wallet) wallet.textContent = paymentMethod === 'maya' ? 'Maya' : 'GCash';
+        // Reset tick when toggling methods
+        if (!isEwallet || !_otpVerified) {
+            _paymentSentConfirmed = false;
+            const box = document.getElementById('payment-sent-box');
+            const lbl = document.getElementById('payment-sent-label');
+            if (box) { box.textContent = ''; box.style.background = '#fff'; box.style.color = ''; }
+            if (lbl) { lbl.style.background = 'linear-gradient(135deg,#fffbeb,#fef3c7)'; lbl.style.borderColor = '#f59e0b'; }
+        }
+    }
 
     const _PAY_BTN_STYLES = {
         gcash:   { a: 'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
@@ -5573,6 +5645,10 @@ function playGrantedSound() {
             const el = document.getElementById(m + '-payment-block');
             if (el) el.style.display = (m === method) ? 'block' : 'none';
         });
+
+        // Show/hide payment-sent checkbox and re-evaluate confirm button
+        _refreshPaymentSentBlock();
+        _updateConfirmBtnState();
 
         // Reset partial block inputs when switching away
         if (method !== 'partial') { _resetPartialBlock(); }
@@ -6113,6 +6189,12 @@ function playGrantedSound() {
         // Reset partial block
         _resetPartialBlock();
         setPartialWallet('gcash');   // default e-wallet inside partial
+        // Reset payment-sent confirmation on every open
+        _paymentSentConfirmed = false;
+        const _psBox = document.getElementById('payment-sent-box');
+        const _psLbl = document.getElementById('payment-sent-label');
+        if (_psBox) { _psBox.textContent = ''; _psBox.style.background = '#fff'; _psBox.style.color = ''; }
+        if (_psLbl) { _psLbl.style.background = 'linear-gradient(135deg,#fffbeb,#fef3c7)'; _psLbl.style.borderColor = '#f59e0b'; }
         // Reset to GCash on every open
         setPaymentMethod('gcash');
     }
@@ -6415,12 +6497,10 @@ function playGrantedSound() {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send Code';
         document.querySelectorAll('.otp-digit').forEach(d => { d.value = ''; d.classList.remove('filled', 'error', 'verified'); });
-        const confirmBtn = document.getElementById('pickup-confirm-btn');
-        confirmBtn.disabled = true;
-        confirmBtn.style.opacity = '0.45';
-        confirmBtn.style.cursor = 'not-allowed';
         const stepEl = document.getElementById('otp-step-send');
         if (stepEl) { stepEl.style.background = 'linear-gradient(135deg,#f0fdf4,#dcfce7)'; stepEl.style.borderColor = '#86efac'; }
+        _refreshPaymentSentBlock();
+        _updateConfirmBtnState();
     }
 
     function _otpShowVerifiedState() {
@@ -6433,10 +6513,8 @@ function playGrantedSound() {
         const stepEl = document.getElementById('otp-step-send');
         if (stepEl) { stepEl.style.background = 'linear-gradient(135deg,#dcfce7,#bbf7d0)'; stepEl.style.borderColor = '#4ade80'; }
         otpSetStatus('✅ Phone verified! You can now place your order.', 'green');
-        const confirmBtn = document.getElementById('pickup-confirm-btn');
-        confirmBtn.disabled = false;
-        confirmBtn.style.opacity = '1';
-        confirmBtn.style.cursor = 'pointer';
+        _refreshPaymentSentBlock();
+        _updateConfirmBtnState();
     }
 
     function otpSetStatus(msg, color) {
@@ -6638,6 +6716,17 @@ function playGrantedSound() {
                 window._lastReceipt = { code, name, pickup, total, items: payload.items, source: 'Online' };
 
                 document.getElementById('success-modal').style.display = 'flex';
+                // Fade out the "Your Order" sidebar panel
+                const _sidebarEl = document.getElementById('sidebar');
+                if (_sidebarEl) {
+                    _sidebarEl.classList.add('order-placed-fade');
+                    setTimeout(() => {
+                        _sidebarEl.classList.remove('sheet-open', 'order-placed-fade');
+                        _sidebarEl.style.opacity = '';
+                    }, 560);
+                }
+                const _backdrop = document.getElementById('sheet-backdrop');
+                if (_backdrop) { _backdrop.classList.remove('show'); }
                 const _fab = document.getElementById('track-order-fab');
                 if (_fab) _fab.style.display = 'none';
                 const _sb = document.getElementById('sticky-bar');
