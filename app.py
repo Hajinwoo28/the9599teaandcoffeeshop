@@ -3706,8 +3706,6 @@ STOREFRONT_HTML = """
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous"></script>
     
     <style>
         :root {
@@ -3992,7 +3990,7 @@ STOREFRONT_HTML = """
         .geo-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .geo-status { font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; min-height: 16px; color: var(--text-light); text-align: center; }
         .geo-map-wrap { border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border-color); margin-bottom: 10px; display: none; }
-        .geo-map-wrap .leaflet-container { height: 150px; width: 100%; }
+        .geo-map-wrap iframe { height: 150px; width: 100%; border: none; display: block; }
         .geo-addr { font-size: 0.75rem; font-weight: 700; color: var(--text-dark); padding: 7px 10px; background: var(--gold-light); border-top: 1px solid var(--border-color); line-height: 1.4; }
 
         /* ── VPN Blocked Modal ── */
@@ -6283,8 +6281,7 @@ function playGrantedSound() {
 
 
     // ── Geolocation & map ────────────────────────────────────────────────────
-    let geoMap = null;
-    let geoMarker = null;
+    // (map preview now uses a plain OSM iframe — no JS map library needed)
 
     function useMyLocation() {
         const btn = document.getElementById('geo-btn');
@@ -6310,30 +6307,16 @@ function playGrantedSound() {
                 status.innerText = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> Location set';
 
-                // Show map (only if Leaflet loaded successfully)
+                // Show map preview using a zero-dependency OpenStreetMap iframe
                 const wrap = document.getElementById('geo-map-wrap');
                 wrap.style.display = 'block';
-                if (typeof L !== 'undefined') {
-                    if (!geoMap) {
-                        geoMap = L.map('geo-map', { zoomControl: true, attributionControl: false }).setView([lat, lng], 16);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(geoMap);
-                        geoMarker = L.marker([lat, lng], { draggable: true }).addTo(geoMap);
-                        geoMarker.on('dragend', async function() {
-                            const p = geoMarker.getLatLng();
-                            document.getElementById('customer-lat').value = p.lat;
-                            document.getElementById('customer-lng').value = p.lng;
-                            await reverseGeocode(p.lat, p.lng);
-                        });
-                    } else {
-                        geoMap.setView([lat, lng], 16);
-                        geoMarker.setLatLng([lat, lng]);
-                    }
-                    // Force map to render correctly after display:block
-                    setTimeout(() => geoMap.invalidateSize(), 100);
-                } else {
-                    // Leaflet unavailable — show coords text fallback
-                    wrap.innerHTML = `<div style="padding:10px 12px;font-size:0.78rem;font-weight:700;color:#2E7D32;">📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}</div>`;
-                }
+                const z = 16;
+                const bbox = [lng-0.003, lat-0.002, lng+0.003, lat+0.002].join(',');
+                wrap.innerHTML = `<iframe
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}"
+                    loading="lazy"
+                    style="height:150px;width:100%;border:none;display:block;"
+                    title="Your location map"></iframe>`;
                 await reverseGeocode(lat, lng);
             },
             (err) => {
@@ -7238,20 +7221,20 @@ function playGrantedSound() {
 
 <!-- ── Audit Log Detail Modal ── -->
 <div id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9760;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 28px 70px rgba(0,0,0,0.2);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
+  <div style="background:#fff;border-radius:22px;max-width:480px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(0,0,0,0.22);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
     <!-- Header -->
-    <div style="padding:18px 22px 14px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:14px;">
-      <div id="aud-det-icon-wrap" style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:1rem;"></i>
+    <div style="padding:18px 22px 14px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div id="aud-det-icon-wrap" style="width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:1.05rem;"></i>
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Audit Entry</div>
-        <div id="aud-det-action" style="font-size:0.9rem;font-weight:900;color:var(--text,#2d3a3a);line-height:1.3;word-break:break-word;"></div>
+        <div id="aud-det-action" style="font-size:0.92rem;font-weight:900;color:var(--text,#2d3a3a);line-height:1.3;word-break:break-word;"></div>
       </div>
-      <button onclick="closeAuditDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;align-self:flex-start;">✕</button>
+      <button onclick="closeAuditDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:4px 6px;line-height:1;flex-shrink:0;align-self:flex-start;border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='none'">✕</button>
     </div>
-    <!-- Body -->
-    <div style="padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;">
+    <!-- Scrollable body -->
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;">
       <!-- Meta chips -->
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
         <span id="aud-det-badge" style="font-size:0.7rem;font-weight:800;padding:3px 12px;border-radius:20px;border:1.5px solid transparent;"></span>
@@ -7262,13 +7245,13 @@ function playGrantedSound() {
           <i class="fas fa-network-wired" style="font-size:0.62rem;"></i><span id="aud-det-ip" style="font-family:monospace;">—</span>
         </span>
       </div>
-      <!-- Details box -->
+      <!-- Details box — scrollable if very long -->
       <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Details</div>
-        <div id="aud-det-details" style="font-size:0.85rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;"></div>
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Details</div>
+        <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:38vh;overflow-y:auto;"></div>
       </div>
       <!-- Close -->
-      <button onclick="closeAuditDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;">Close</button>
+      <button onclick="closeAuditDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;flex-shrink:0;">Close</button>
     </div>
   </div>
 </div>
@@ -8518,22 +8501,26 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-stat-lbl{font-size:0.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
 
 /* ══ ORDER DETAIL MODAL ══ */
-.ord-detail-modal{max-width:500px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
-.ord-detail-header{background:linear-gradient(135deg,#2A1505,var(--brown-dark));border-radius:16px 16px 0 0;padding:18px 20px;margin:-30px -26px 20px;color:#fff;flex-shrink:0;}
+.ord-detail-modal{max-width:500px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+.ord-detail-header{background:linear-gradient(135deg,#2A1505,var(--brown-dark));border-radius:16px 16px 0 0;padding:18px 20px;margin:-30px -26px 16px;color:#fff;flex-shrink:0;}
 .ord-detail-code{font-family:monospace;font-size:1.1rem;font-weight:900;letter-spacing:2px;}
 .ord-detail-name{font-size:0.82rem;color:rgba(196,168,130,0.8);margin-top:3px;font-weight:600;}
-.ord-detail-scroll{flex:1;min-height:0;overflow-y:auto;padding-right:2px;}
-.ord-detail-scroll::-webkit-scrollbar{width:4px;}
-.ord-detail-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
-.ord-detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cream-dark);}
+/* Items section: scrollable, max 40% of modal height */
+.ord-detail-items-scroll{max-height:38vh;overflow-y:auto;margin-bottom:12px;padding-right:2px;flex-shrink:0;}
+.ord-detail-items-scroll::-webkit-scrollbar{width:4px;}
+.ord-detail-items-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
+/* Meta section: never scrolls, always fully visible */
+.ord-detail-meta-block{flex-shrink:0;border-top:1px solid var(--cream-dark);padding-top:2px;}
+.ord-detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--cream-dark);}
 .ord-detail-row:last-child{border-bottom:none;}
-.ord-detail-lbl{font-size:0.75rem;font-weight:700;color:var(--muted);}
-.ord-detail-val{font-size:0.82rem;font-weight:800;color:var(--text);text-align:right;max-width:65%;}
+.ord-detail-lbl{font-size:0.75rem;font-weight:700;color:var(--muted);flex-shrink:0;margin-right:12px;}
+.ord-detail-val{font-size:0.82rem;font-weight:800;color:var(--text);text-align:right;max-width:68%;word-break:break-word;}
 .ord-detail-item{background:var(--cream);border-radius:10px;padding:10px 12px;margin-bottom:7px;}
+.ord-detail-item:last-child{margin-bottom:0;}
 .ord-detail-item-name{font-size:0.84rem;font-weight:800;color:var(--text);}
 .ord-detail-item-opts{font-size:0.73rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.5;}
 .ord-detail-item-price{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:var(--green);text-align:right;white-space:nowrap;}
-.ord-detail-footer{flex-shrink:0;padding-top:14px;border-top:1px solid var(--cream-dark);margin-top:4px;}
+.ord-detail-footer{flex-shrink:0;padding-top:14px;border-top:1px solid var(--cream-dark);margin-top:10px;}
 
 /* ══ ADD INGREDIENT MODAL ══ */
 .add-ing-modal{max-width:400px;}
@@ -9724,11 +9711,12 @@ ens-wrap">
       <div class="ord-detail-code" id="ord-detail-code">—</div>
       <div class="ord-detail-name" id="ord-detail-customer">—</div>
     </div>
-    <!-- Scrollable body: items + meta -->
-    <div class="ord-detail-scroll">
-      <div id="ord-detail-items" style="margin-bottom:14px;"></div>
-      <div id="ord-detail-meta"></div>
+    <!-- Items list: scrollable -->
+    <div class="ord-detail-items-scroll">
+      <div id="ord-detail-items"></div>
     </div>
+    <!-- Meta info: always visible, no scroll -->
+    <div id="ord-detail-meta" class="ord-detail-meta-block"></div>
     <!-- Sticky footer buttons -->
     <div class="ord-detail-footer">
       <div class="adm-modal-btns">
