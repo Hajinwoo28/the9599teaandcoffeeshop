@@ -435,6 +435,7 @@ class Reservation(db.Model):
     cancel_reason = db.Column(db.String(300), nullable=True, default='')
     patron_address = db.Column(db.String(300), nullable=True, default='')
     is_paid = db.Column(db.Boolean, default=False, nullable=False)
+    partial_amount_paid = db.Column(db.Float, nullable=True, default=0.0)   # amount sent online for partial payments
     user_agent = db.Column(db.String(300), nullable=True, default='')
     ip_address = db.Column(db.String(60), nullable=True, default='')
     infusions = db.relationship('Infusion', backref='reservation', lazy=True, cascade="all, delete-orphan")
@@ -4855,52 +4856,181 @@ function playGrantedSound() {
         </div>
         <!-- ── End OTP Block ── -->
 
-        <!-- ── Payment Method Selector ── GCash only ── -->
+        <!-- ── Payment Method Selector ── -->
         <div style="margin:14px 0 10px;">
-            <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Payment Method</div>
-            <div style="display:flex; gap:10px;">
-                <button id="pay-btn-gcash"
-                        style="flex:1; padding:10px 6px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.82rem; cursor:default; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
+            <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Payment Method</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <!-- GCash -->
+                <button id="pay-btn-gcash" onclick="setPaymentMethod('gcash')"
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
                     💙 GCash
+                </button>
+                <!-- Maya -->
+                <button id="pay-btn-maya" onclick="setPaymentMethod('maya')"
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                    💚 Maya
+                </button>
+                <!-- Cash -->
+                <button id="pay-btn-cash" onclick="setPaymentMethod('cash')"
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                    💵 Cash
+                </button>
+                <!-- Partial -->
+                <button id="pay-btn-partial" onclick="setPaymentMethod('partial')"
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                    🔀 Partial
                 </button>
             </div>
         </div>
         <!-- ── End Payment Method Selector ── -->
 
-        <!-- ── GCash Direct Payment Block ── -->
-        <div id="gcash-payment-block" style="margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(37,99,235,0.18); border:2px solid #2563eb;">
-            <!-- GCash header bar -->
+        <!-- ── GCash Payment Block ── -->
+        <div id="gcash-payment-block" style="margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(37,99,235,0.15); border:2px solid #2563eb; transition:all 0.3s;">
             <div style="background:linear-gradient(135deg,#1a6fe8,#1552c4); padding:12px 16px; display:flex; align-items:center; gap:10px;">
-                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">💙</div>
+                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">💙</div>
                 <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">GCash</span>
+                <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 9px; border-radius:20px;">E-Wallet</span>
             </div>
-            <!-- Details table -->
             <div style="background:#fff; padding:0;">
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 18px; border-bottom:1px solid #f0f0f0;">
-                    <span style="font-size:0.88rem; color:#888; font-weight:600;">Merchant</span>
-                    <span style="font-size:0.88rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Merchant</span>
+                    <span style="font-size:0.85rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 18px; border-bottom:1px solid #f0f0f0;">
-                    <span style="font-size:0.88rem; color:#888; font-weight:600;">Amount Due</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Amount Due</span>
                     <span id="gcash-amount-display" style="font-size:1rem; color:#2563eb; font-weight:900;">₱0.00</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 18px;">
-                    <span style="font-size:0.88rem; color:#888; font-weight:600;">Send to</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Send to</span>
                     <span style="font-size:1rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span>
                 </div>
             </div>
-            <!-- Instruction footer -->
-            <div style="background:#f0f6ff; padding:10px 18px; border-top:1px solid #dbeafe;">
-                <p style="margin:0; font-size:0.75rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">
+            <div style="background:#eff6ff; padding:10px 18px; border-top:1px solid #dbeafe;">
+                <p style="margin:0; font-size:0.74rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">
                     📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
             </div>
         </div>
         <!-- ── End GCash Block ── -->
 
-        <!-- ── Cash on Pickup Block ── hidden: GCash is required ── -->
-        <div id="cash-payment-block" style="display:none;"></div>
+        <!-- ── Maya Payment Block ── -->
+        <div id="maya-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(0,168,107,0.15); border:2px solid #00a86b; transition:all 0.3s;">
+            <div style="background:linear-gradient(135deg,#00a86b,#007a4d); padding:12px 16px; display:flex; align-items:center; gap:10px;">
+                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">💚</div>
+                <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">Maya</span>
+                <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 9px; border-radius:20px;">E-Wallet</span>
+            </div>
+            <div style="background:#fff; padding:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Merchant</span>
+                    <span style="font-size:0.85rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Amount Due</span>
+                    <span id="maya-amount-display" style="font-size:1rem; color:#00a86b; font-weight:900;">₱0.00</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Send to</span>
+                    <span style="font-size:1rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span>
+                </div>
+            </div>
+            <div style="background:#f0fdf4; padding:10px 18px; border-top:1px solid #bbf7d0;">
+                <p style="margin:0; font-size:0.74rem; color:#15803d; font-weight:700; text-align:center; line-height:1.5;">
+                    📋 Include your <strong>full name</strong> as the Maya note.<br>Send the <strong>exact amount</strong> shown above.
+                </p>
+            </div>
+        </div>
+        <!-- ── End Maya Block ── -->
+
+        <!-- ── Cash on Pickup Block ── -->
+        <div id="cash-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(92,51,23,0.12); border:2px solid #8B5E3C; transition:all 0.3s;">
+            <div style="background:linear-gradient(135deg,#8B5E3C,#5C3317); padding:12px 16px; display:flex; align-items:center; gap:10px;">
+                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">💵</div>
+                <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">Cash on Pickup</span>
+                <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 9px; border-radius:20px;">Pay at Store</span>
+            </div>
+            <div style="background:#fff; padding:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Merchant</span>
+                    <span style="font-size:0.85rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Amount to Prepare</span>
+                    <span id="cash-amount-display" style="font-size:1rem; color:#8B5E3C; font-weight:900;">₱0.00</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">When to Pay</span>
+                    <span style="font-size:0.88rem; color:#222; font-weight:800;">Upon pickup at store</span>
+                </div>
+            </div>
+            <div style="background:#fdf8f0; padding:10px 18px; border-top:1px solid #e8d9c4;">
+                <p style="margin:0; font-size:0.74rem; color:#7B4F2E; font-weight:700; text-align:center; line-height:1.5;">
+                    🏪 Please have the <strong>exact amount</strong> ready when you pick up.<br>Your order will be prepared once confirmed by staff.
+                </p>
+            </div>
+        </div>
         <!-- ── End Cash Block ── -->
+
+        <!-- ── Partial Payment Block ── -->
+        <div id="partial-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(124,58,237,0.15); border:2px solid #7c3aed; transition:all 0.3s;">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6); padding:12px 16px; display:flex; align-items:center; gap:10px;">
+                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">🔀</div>
+                <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">Partial Payment</span>
+                <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 9px; border-radius:20px;">Split</span>
+            </div>
+            <!-- Info row -->
+            <div style="background:#fff; padding:14px 18px 10px; border-bottom:1px solid #f0f0f0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Total Order</span>
+                    <span id="partial-total-display" style="font-size:1rem; color:#222; font-weight:900;">₱0.00</span>
+                </div>
+                <!-- e-wallet selector inside partial -->
+                <div style="font-size:0.68rem; font-weight:800; color:#7c3aed; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Pay part via:</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px;">
+                    <button id="partial-ewallet-gcash" onclick="setPartialWallet('gcash')"
+                            style="padding:9px 6px; border-radius:10px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.76rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s;">
+                        💙 GCash
+                    </button>
+                    <button id="partial-ewallet-maya" onclick="setPartialWallet('maya')"
+                            style="padding:9px 6px; border-radius:10px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.76rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s;">
+                        💚 Maya
+                    </button>
+                </div>
+                <!-- Amount input -->
+                <div style="font-size:0.68rem; font-weight:800; color:#7c3aed; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">How much are you sending now?</div>
+                <div style="position:relative; margin-bottom:10px;">
+                    <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:1rem; font-weight:900; color:#7c3aed; pointer-events:none;">₱</span>
+                    <input type="number" id="partial-amount-input" min="1" step="1" placeholder="0"
+                           oninput="onPartialAmountInput()"
+                           style="width:100%; padding:11px 14px 11px 30px; border:2px solid #c4b5fd; border-radius:12px; font-size:1.2rem; font-weight:900; color:#5b21b6; background:#faf5ff; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.2s; box-sizing:border-box;">
+                </div>
+                <!-- Breakdown -->
+                <div id="partial-breakdown" style="display:none; background:#faf5ff; border:1.5px solid #c4b5fd; border-radius:12px; padding:12px 14px; margin-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-size:0.82rem; color:#7c3aed; font-weight:700;">Send now (<span id="partial-wallet-label">GCash</span>)</span>
+                        <span id="partial-send-now" style="font-size:0.9rem; color:#5b21b6; font-weight:900;">₱0.00</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding-top:7px; border-top:1px dashed #c4b5fd;">
+                        <span style="font-size:0.82rem; color:#8B5E3C; font-weight:700;">Pay at store <span style="font-size:0.7rem;">(cash on pickup)</span></span>
+                        <span id="partial-balance-due" style="font-size:0.9rem; color:#8B5E3C; font-weight:900;">₱0.00</span>
+                    </div>
+                </div>
+                <p id="partial-input-error" style="font-size:0.75rem; color:#dc2626; font-weight:700; margin:6px 0 0; display:none;"></p>
+            </div>
+            <!-- Send-to row -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 18px; background:#fff; border-bottom:1px solid #f0f0f0;">
+                <span style="font-size:0.85rem; color:#888; font-weight:600;">Send to</span>
+                <span style="font-size:1rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span>
+            </div>
+            <div style="background:#f5f3ff; padding:10px 18px; border-top:1px solid #ede9fe;">
+                <p style="margin:0; font-size:0.74rem; color:#7c3aed; font-weight:700; text-align:center; line-height:1.55;">
+                    📋 Include your <strong>full name</strong> as the payment note.<br>
+                    Send only the <strong>partial amount shown above</strong>. Pay the rest in cash at pickup.
+                </p>
+            </div>
+        </div>
+        <!-- ── End Partial Payment Block ── -->
 
         <button class="pickup-confirm-btn" id="pickup-confirm-btn" onclick="submitOrder()" disabled style="opacity:0.45; cursor:not-allowed;">
             <i class="fas fa-plane"></i> Confirm &amp; Place Order
@@ -5414,11 +5544,105 @@ function playGrantedSound() {
         if(!silent) saveCartToSession();
     }
 
-    let paymentMethod = 'gcash'; // GCash is the only accepted payment method
+    let paymentMethod  = 'gcash'; // default
+    let partialWallet  = 'gcash'; // e-wallet used for partial payment
+    let partialAmount  = 0;       // amount sent online in partial mode
+
+    const _PAY_BTN_STYLES = {
+        gcash:   { a: 'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        maya:    { a: 'border:2px solid #00a86b;background:linear-gradient(135deg,#00a86b,#007a4d);color:#fff;box-shadow:0 3px 10px rgba(0,168,107,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        cash:    { a: 'border:2px solid #8B5E3C;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;box-shadow:0 3px 10px rgba(92,51,23,0.3);',    i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        partial: { a: 'border:2px solid #7c3aed;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 3px 10px rgba(124,58,237,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+    };
 
     function setPaymentMethod(method) {
-        // GCash is always required — this function is kept for compatibility but does nothing
-        paymentMethod = 'gcash';
+        paymentMethod = method;
+
+        // Highlight selected tab button
+        ['gcash','maya','cash','partial'].forEach(m => {
+            const btn = document.getElementById('pay-btn-' + m);
+            if (!btn) return;
+            const s = _PAY_BTN_STYLES[m];
+            // Reset all style properties then apply active/idle
+            btn.style.cssText = btn.style.cssText
+                .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'')
+                .replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
+                + (m === method ? s.a : s.i);
+        });
+
+        // Show/hide payment blocks
+        ['gcash','maya','cash','partial'].forEach(m => {
+            const el = document.getElementById(m + '-payment-block');
+            if (el) el.style.display = (m === method) ? 'block' : 'none';
+        });
+
+        // Reset partial block inputs when switching away
+        if (method !== 'partial') { _resetPartialBlock(); }
+    }
+
+    /** Switch the e-wallet used inside the Partial Payment block */
+    function setPartialWallet(wallet) {
+        partialWallet = wallet;
+        const gBtn = document.getElementById('partial-ewallet-gcash');
+        const mBtn = document.getElementById('partial-ewallet-maya');
+        if (gBtn) gBtn.style.cssText = gBtn.style.cssText
+            .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
+            + (wallet === 'gcash' ? _PAY_BTN_STYLES.gcash.a : _PAY_BTN_STYLES.gcash.i);
+        if (mBtn) mBtn.style.cssText = mBtn.style.cssText
+            .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
+            + (wallet === 'maya'  ? _PAY_BTN_STYLES.maya.a  : _PAY_BTN_STYLES.maya.i);
+
+        const lbl = document.getElementById('partial-wallet-label');
+        if (lbl) lbl.textContent = wallet === 'gcash' ? 'GCash' : 'Maya';
+
+        // Re-run input validation to refresh breakdown
+        onPartialAmountInput();
+    }
+
+    /** Live update breakdown when customer types a partial amount */
+    function onPartialAmountInput() {
+        const total       = cart.reduce((s,i) => s+i.price, 0);
+        const raw         = parseFloat(document.getElementById('partial-amount-input').value) || 0;
+        const errEl       = document.getElementById('partial-input-error');
+        const breakdown   = document.getElementById('partial-breakdown');
+        const sendNowEl   = document.getElementById('partial-send-now');
+        const balanceEl   = document.getElementById('partial-balance-due');
+
+        errEl.style.display = 'none';
+        errEl.textContent   = '';
+
+        if (raw <= 0) { breakdown.style.display = 'none'; partialAmount = 0; return; }
+
+        if (raw >= total) {
+            errEl.textContent   = `Amount must be less than the total (₱${total.toFixed(2)}). Use GCash or Maya for full payment instead.`;
+            errEl.style.display = 'block';
+            breakdown.style.display = 'none';
+            partialAmount = 0;
+            return;
+        }
+        if (raw < 1) {
+            errEl.textContent   = 'Minimum partial payment is ₱1.';
+            errEl.style.display = 'block';
+            breakdown.style.display = 'none';
+            partialAmount = 0;
+            return;
+        }
+
+        partialAmount = raw;
+        const balance = total - raw;
+        if (sendNowEl)  sendNowEl.textContent  = '₱' + raw.toFixed(2);
+        if (balanceEl)  balanceEl.textContent  = '₱' + balance.toFixed(2);
+        breakdown.style.display = 'block';
+    }
+
+    function _resetPartialBlock() {
+        partialAmount = 0;
+        const inp = document.getElementById('partial-amount-input');
+        if (inp) inp.value = '';
+        const bd = document.getElementById('partial-breakdown');
+        if (bd) bd.style.display = 'none';
+        const err = document.getElementById('partial-input-error');
+        if (err) { err.style.display = 'none'; err.textContent = ''; }
     }
 
     let sizePrice16 = 49, sizePrice22 = 59;
@@ -5877,10 +6101,22 @@ function playGrantedSound() {
         if(cart.length === 0) return;
         document.getElementById('pickup-modal').classList.add('show');
         otpInitModal();   // pre-fill phone & restore verified state if already done
-        // Update the GCash amount display with the current cart total
+        // Update all payment amount displays with the current cart total
         const total = cart.reduce((s,i)=>s+i.price, 0);
-        const amountEl = document.getElementById('gcash-amount-display');
-        if(amountEl) amountEl.textContent = '₱' + total.toFixed(2);
+        const fmt = '₱' + total.toFixed(2);
+        const gcashEl   = document.getElementById('gcash-amount-display');
+        const mayaEl    = document.getElementById('maya-amount-display');
+        const cashEl    = document.getElementById('cash-amount-display');
+        const partialEl = document.getElementById('partial-total-display');
+        if (gcashEl)   gcashEl.textContent   = fmt;
+        if (mayaEl)    mayaEl.textContent    = fmt;
+        if (cashEl)    cashEl.textContent    = fmt;
+        if (partialEl) partialEl.textContent = fmt;
+        // Reset partial block
+        _resetPartialBlock();
+        setPartialWallet('gcash');   // default e-wallet inside partial
+        // Reset to GCash on every open
+        setPaymentMethod('gcash');
     }
 
     function closePickupModal() {
@@ -6336,6 +6572,23 @@ function playGrantedSound() {
             return;
         }
 
+        // ── Partial payment validation ────────────────────────────────────────
+        if (paymentMethod === 'partial') {
+            const orderTotal = cart.reduce((s,i)=>s+i.price, 0);
+            if (!partialAmount || partialAmount <= 0) {
+                showToast('Please enter how much you are sending now.', 'error');
+                btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
+                openPickupModal();
+                return;
+            }
+            if (partialAmount >= orderTotal) {
+                showToast('Partial amount must be less than the total. Use GCash or Maya for full payment.', 'error');
+                btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
+                openPickupModal();
+                return;
+            }
+        }
+
         const payload = {
             name:         document.getElementById('customer-name').value,
             email:        document.getElementById('customer-gmail').value,
@@ -6345,7 +6598,9 @@ function playGrantedSound() {
             customer_lat: document.getElementById('customer-lat').value || null,
             customer_lng: document.getElementById('customer-lng').value || null,
             address:      _capturedGeoAddress || document.getElementById('customer-address').value || '',
-            payment_method: 'gcash',
+            payment_method:   paymentMethod,
+            partial_amount:   paymentMethod === 'partial' ? partialAmount  : 0,
+            partial_wallet:   paymentMethod === 'partial' ? partialWallet  : '',
             items: cart.map(i => ({
                 foundation: i.name, size: i.size, sweetener: i.sugar,
                 ice: i.ice, waterTemp: i.waterTemp||'', addons: i.addons.join(', '),
@@ -6378,7 +6633,18 @@ function playGrantedSound() {
                     <div style="margin-bottom:6px;"><b>Name:</b> ${escapeHTML(name)}</div>
                     <div style="margin-bottom:8px;"><b>Pick-up:</b> ${escapeHTML(pickup)}</div>
                     <div style="border-top:1px dashed #ddd; margin-bottom:8px;"></div>
-                    ${rows}`;
+                    ${rows}
+                    ${payload.payment_method === 'partial' ? `
+                    <div style="margin-top:10px;border-top:1px dashed #ddd;padding-top:10px;">
+                      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span style="font-size:0.8rem;color:#7c3aed;font-weight:700;">Sent via ${payload.partial_wallet==='maya'?'Maya':'GCash'}</span>
+                        <span style="font-size:0.8rem;color:#5b21b6;font-weight:900;">₱${Number(payload.partial_amount).toFixed(2)}</span>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;">
+                        <span style="font-size:0.8rem;color:#8B5E3C;font-weight:700;">Balance (cash at pickup)</span>
+                        <span style="font-size:0.8rem;color:#8B5E3C;font-weight:900;">₱${(total - Number(payload.partial_amount)).toFixed(2)}</span>
+                      </div>
+                    </div>` : ''}`;
                 document.getElementById('receipt-total').innerText = `₱${total.toFixed(2)}`;
 
                 window._lastReceipt = { code, name, pickup, total, items: payload.items, source: 'Online' };
@@ -10370,7 +10636,14 @@ async function loadOrderHistory(page){
       <td style="max-width:180px;">${addrCell}</td>
       <td>${processCell}</td>
       <td style="color:var(--brown);font-weight:800;font-size:0.82rem;white-space:nowrap;">₱${o.total.toFixed(2)}</td>
-      <td>${o.is_paid?`<span style="background:rgba(39,174,96,0.15);color:#1a7a3c;padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> GCash Paid</span>`:`<span style="background:rgba(120,120,120,0.1);color:var(--muted);padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">Cash</span>`}</td>
+      <td>${(()=>{
+        if(o.partial_amount_paid>0){
+          const bal=(o.total-o.partial_amount_paid).toFixed(2);
+          return `<span style="background:rgba(124,58,237,0.12);color:#5b21b6;padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;" title="Paid ₱${o.partial_amount_paid.toFixed(2)} online · ₱${bal} cash due"><i class="fas fa-code-branch" style="font-size:0.6rem;"></i> Partial ₱${o.partial_amount_paid.toFixed(2)}<br><span style="font-size:0.58rem;opacity:0.8;">+₱${bal} cash</span></span>`;
+        }
+        if(o.is_paid) return `<span style="background:rgba(39,174,96,0.15);color:#1a7a3c;padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> E-Wallet Paid</span>`;
+        return `<span style="background:rgba(120,120,120,0.1);color:var(--muted);padding:3px 9px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">Cash</span>`;
+      })()}</td>
       <td><span style="background:${statusColors[o.status]||'var(--muted)'};color:#fff;padding:3px 8px;border-radius:20px;font-size:0.66rem;font-weight:800;white-space:nowrap;">${statusLabels[o.status]||o.status}</span></td>
     </tr>`}).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No orders found.</td></tr>';
     const total=data.total,perPage=data.per_page,totalPages=Math.ceil(total/perPage);
@@ -10997,7 +11270,8 @@ function renderLoCards(){
     if(o.is_flagged)fraudBadges+=`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-flag" style="font-size:0.55rem;"></i> Flagged</span> `;
     if(o.requires_staff_confirm&&!o.staff_confirmed)fraudBadges+=`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:0.55rem;"></i> Needs Approval</span> `;
     if(o.prepayment_required&&!o.prepayment_collected)fraudBadges+=`<span style="background:rgba(123,79,46,0.12);color:var(--brown);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;">💰 Fee</span> `;
-    if(o.is_paid)fraudBadges+=`<span style="background:rgba(39,174,96,0.13);color:var(--green);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-check-circle" style="font-size:0.55rem;"></i> GCash Paid</span> `;
+    if(o.partial_amount_paid>0)fraudBadges+=`<span style="background:rgba(124,58,237,0.13);color:#5b21b6;padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-code-branch" style="font-size:0.55rem;"></i> Partial ₱${Number(o.partial_amount_paid).toFixed(2)}</span> `;
+    else if(o.is_paid)fraudBadges+=`<span style="background:rgba(39,174,96,0.13);color:var(--green);padding:1px 6px;border-radius:6px;font-size:0.62rem;font-weight:900;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-check-circle" style="font-size:0.55rem;"></i> E-Wallet Paid</span> `;
     // Approval / photo actions in footer
     let extraActions='';
     if(o.requires_staff_confirm&&!o.staff_confirmed)extraActions+=`<button class="btn-primary" style="padding:3px 8px;margin:0;font-size:0.68rem;white-space:nowrap;" onclick="event.stopPropagation();staffConfirmOrder(${o.id}).then(()=>fetchLiveOrders())">✅ Approve</button>`;
@@ -13002,8 +13276,27 @@ def reserve_blend():
         if 'large_order' in flags:
             initial_status = "Pending Staff Approval"
 
-        payment_method = 'gcash'   # GCash is the only accepted payment method
-        is_paid_online = True       # All online orders are treated as GCash/paid
+        VALID_PAYMENT_METHODS = ('gcash', 'maya', 'cash', 'partial')
+        payment_method = data.get('payment_method', 'gcash').lower().strip()
+        if payment_method not in VALID_PAYMENT_METHODS:
+            payment_method = 'gcash'
+
+        # Partial payment: customer sends part online, pays remainder in cash at pickup
+        partial_amount = 0.0
+        partial_wallet = ''
+        if payment_method == 'partial':
+            partial_amount = float(data.get('partial_amount', 0) or 0)
+            partial_wallet = (data.get('partial_wallet', 'gcash') or 'gcash').lower().strip()
+            if partial_wallet not in ('gcash', 'maya'):
+                partial_wallet = 'gcash'
+            # Validate: partial amount must be positive and less than total
+            if partial_amount <= 0 or partial_amount >= total:
+                return jsonify({"status": "error",
+                    "message": "Invalid partial amount. It must be greater than ₱0 and less than the order total."}), 400
+
+        # Determine paid status:
+        # gcash/maya = fully paid online | partial = partially paid (not fully paid) | cash = unpaid
+        is_paid_online = payment_method in ('gcash', 'maya')
 
         new_res = Reservation(
             patron_name=name,
@@ -13014,7 +13307,8 @@ def reserve_blend():
             order_source="Online",
             status=initial_status,
             patron_address=data.get('address',''),
-            is_paid=is_paid_online,  # True for GCash online payment; False for cash on pickup
+            is_paid=is_paid_online,       # True for full GCash/Maya; False for cash or partial
+            partial_amount_paid=partial_amount if payment_method == 'partial' else 0.0,
             user_agent=request.headers.get('User-Agent','')[:300],
             ip_address=get_client_ip()
         )
@@ -13065,7 +13359,7 @@ def reserve_blend():
             resp["message"] = (
                 f"Your order has been received and is pending staff approval "
                 f"(high-value order ≥ ₱{LARGE_ORDER_THRESHOLD:.0f}). "
-                f"A 50% deposit of ₱{meta.prepayment_amount:.2f} is required via GCash/Maya before your order is prepared."
+                f"A 50% deposit of ₱{meta.prepayment_amount:.2f} is required via GCash or Maya before your order is prepared."
             )
         if 'high_cancel_rate' in flags and 'large_order' not in flags:
             resp["message"] = (
@@ -13886,6 +14180,7 @@ def api_orders():
                 'prepayment_amount':        meta.prepayment_amount if meta else 0.0,
                 'prepayment_collected':     meta.prepayment_collected if meta else False,
                 'is_paid':                  is_paid_val,
+                'partial_amount_paid':       float(r.partial_amount_paid or 0.0),
                 'has_pickup_photo':         meta.has_pickup_photo if meta else False,
             }
         orders_list = []
@@ -15167,6 +15462,31 @@ try:
         except Exception as migration_is_paid:
             db.session.rollback()
             print(f"Migration warning (non-fatal): {migration_is_paid}")
+
+        # Migrate: add partial_amount_paid column to reservations (for split e-wallet + cash orders)
+        try:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            col_exists = False
+            if is_postgres:
+                result = db.session.execute(db.text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_name='reservations' AND column_name='partial_amount_paid'"
+                )).scalar()
+                col_exists = (result > 0)
+            else:
+                cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
+                col_exists = any(row[1] == 'partial_amount_paid' for row in cols)
+            if not col_exists:
+                db.session.execute(db.text(
+                    "ALTER TABLE reservations ADD COLUMN partial_amount_paid FLOAT DEFAULT 0.0"
+                ))
+                db.session.commit()
+                print("Migration: added partial_amount_paid column to reservations")
+            else:
+                print("Migration: reservations.partial_amount_paid already exists, skipped")
+        except Exception as migration_partial:
+            db.session.rollback()
+            print(f"Migration warning (non-fatal): {migration_partial}")
 
         # ── Ensure all newer tables exist in existing databases ──────────────
         # db.create_all() only creates tables that are completely absent.
