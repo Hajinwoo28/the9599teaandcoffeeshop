@@ -3706,8 +3706,8 @@ STOREFRONT_HTML = """
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.min.css" crossorigin="">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.min.js" crossorigin=""></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous"></script>
     
     <style>
         :root {
@@ -6310,25 +6310,30 @@ function playGrantedSound() {
                 status.innerText = `📍 Location captured (±${Math.round(pos.coords.accuracy)}m accuracy)`;
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> Location set';
 
-                // Show map
+                // Show map (only if Leaflet loaded successfully)
                 const wrap = document.getElementById('geo-map-wrap');
                 wrap.style.display = 'block';
-                if (!geoMap) {
-                    geoMap = L.map('geo-map', { zoomControl: true, attributionControl: false }).setView([lat, lng], 16);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(geoMap);
-                    geoMarker = L.marker([lat, lng], { draggable: true }).addTo(geoMap);
-                    geoMarker.on('dragend', async function() {
-                        const p = geoMarker.getLatLng();
-                        document.getElementById('customer-lat').value = p.lat;
-                        document.getElementById('customer-lng').value = p.lng;
-                        await reverseGeocode(p.lat, p.lng);
-                    });
+                if (typeof L !== 'undefined') {
+                    if (!geoMap) {
+                        geoMap = L.map('geo-map', { zoomControl: true, attributionControl: false }).setView([lat, lng], 16);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(geoMap);
+                        geoMarker = L.marker([lat, lng], { draggable: true }).addTo(geoMap);
+                        geoMarker.on('dragend', async function() {
+                            const p = geoMarker.getLatLng();
+                            document.getElementById('customer-lat').value = p.lat;
+                            document.getElementById('customer-lng').value = p.lng;
+                            await reverseGeocode(p.lat, p.lng);
+                        });
+                    } else {
+                        geoMap.setView([lat, lng], 16);
+                        geoMarker.setLatLng([lat, lng]);
+                    }
+                    // Force map to render correctly after display:block
+                    setTimeout(() => geoMap.invalidateSize(), 100);
                 } else {
-                    geoMap.setView([lat, lng], 16);
-                    geoMarker.setLatLng([lat, lng]);
+                    // Leaflet unavailable — show coords text fallback
+                    wrap.innerHTML = `<div style="padding:10px 12px;font-size:0.78rem;font-weight:700;color:#2E7D32;">📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}</div>`;
                 }
-                // Force map to render correctly after display:block
-                setTimeout(() => geoMap.invalidateSize(), 100);
                 await reverseGeocode(lat, lng);
             },
             (err) => {
@@ -8513,18 +8518,22 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-stat-lbl{font-size:0.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
 
 /* ══ ORDER DETAIL MODAL ══ */
-.ord-detail-modal{max-width:500px;}
-.ord-detail-header{background:linear-gradient(135deg,#2A1505,var(--brown-dark));border-radius:16px 16px 0 0;padding:18px 20px;margin:-30px -26px 20px;color:#fff;}
+.ord-detail-modal{max-width:500px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.ord-detail-header{background:linear-gradient(135deg,#2A1505,var(--brown-dark));border-radius:16px 16px 0 0;padding:18px 20px;margin:-30px -26px 20px;color:#fff;flex-shrink:0;}
 .ord-detail-code{font-family:monospace;font-size:1.1rem;font-weight:900;letter-spacing:2px;}
 .ord-detail-name{font-size:0.82rem;color:rgba(196,168,130,0.8);margin-top:3px;font-weight:600;}
+.ord-detail-scroll{flex:1;min-height:0;overflow-y:auto;padding-right:2px;}
+.ord-detail-scroll::-webkit-scrollbar{width:4px;}
+.ord-detail-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
 .ord-detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cream-dark);}
 .ord-detail-row:last-child{border-bottom:none;}
 .ord-detail-lbl{font-size:0.75rem;font-weight:700;color:var(--muted);}
-.ord-detail-val{font-size:0.82rem;font-weight:800;color:var(--text);}
+.ord-detail-val{font-size:0.82rem;font-weight:800;color:var(--text);text-align:right;max-width:65%;}
 .ord-detail-item{background:var(--cream);border-radius:10px;padding:10px 12px;margin-bottom:7px;}
 .ord-detail-item-name{font-size:0.84rem;font-weight:800;color:var(--text);}
 .ord-detail-item-opts{font-size:0.73rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.5;}
-.ord-detail-item-price{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:var(--green);text-align:right;}
+.ord-detail-item-price{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:var(--green);text-align:right;white-space:nowrap;}
+.ord-detail-footer{flex-shrink:0;padding-top:14px;border-top:1px solid var(--cream-dark);margin-top:4px;}
 
 /* ══ ADD INGREDIENT MODAL ══ */
 .add-ing-modal{max-width:400px;}
@@ -9715,11 +9724,17 @@ ens-wrap">
       <div class="ord-detail-code" id="ord-detail-code">—</div>
       <div class="ord-detail-name" id="ord-detail-customer">—</div>
     </div>
-    <div id="ord-detail-items" style="margin-bottom:14px;"></div>
-    <div id="ord-detail-meta"></div>
-    <div class="adm-modal-btns" style="margin-top:16px;">
-      <button class="btn-secondary" onclick="closeOrdDetail()">Close</button>
-      <button class="btn-primary" style="margin:0;" id="ord-detail-print-btn"><i class="fas fa-print"></i> Print Receipt</button>
+    <!-- Scrollable body: items + meta -->
+    <div class="ord-detail-scroll">
+      <div id="ord-detail-items" style="margin-bottom:14px;"></div>
+      <div id="ord-detail-meta"></div>
+    </div>
+    <!-- Sticky footer buttons -->
+    <div class="ord-detail-footer">
+      <div class="adm-modal-btns">
+        <button class="btn-secondary" onclick="closeOrdDetail()">Close</button>
+        <button class="btn-primary" style="margin:0;" id="ord-detail-print-btn"><i class="fas fa-print"></i> Print Receipt</button>
+      </div>
     </div>
   </div>
 </div>
@@ -10806,9 +10821,11 @@ function renderAuditPage(logs){
     list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:0.83rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(123,79,46,0.08);border:1.5px solid rgba(123,79,46,0.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fas fa-shield-alt" style="opacity:0.35;color:var(--brown);"></i></div>No audit logs found.</div>';
   } else {
     list.innerHTML=slice.map((l,idx)=>{
+      const storeKey=start+idx;
+      _auditStore[storeKey]=l;                          // ← save for detail modal
       const ic=getAuditIcon(l.action);
       const ipBadge=l.ip?`<span style="font-family:monospace;font-size:0.68rem;color:var(--brown);background:var(--cream);border:1px solid var(--cream-dark);border-radius:5px;padding:1px 7px;margin-left:6px;white-space:nowrap;">${escapeHTML(l.ip)}</span>`:'';
-      return`<div class="audit-entry">
+      return`<div class="audit-entry" onclick="openAuditDetail(${storeKey})">
         <div class="audit-icon-wrap ${ic.cls}"><i class="fas ${ic.icon}"></i></div>
         <div class="audit-body">
           <div class="audit-action">${escapeHTML(l.action)}${ipBadge}</div>
@@ -10816,6 +10833,7 @@ function renderAuditPage(logs){
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <div class="audit-time">${escapeHTML(l.time)}</div>
+          <i class="fas fa-chevron-right" style="font-size:0.65rem;color:var(--muted);opacity:0.5;"></i>
         </div>
       </div>`;
     }).join('');
@@ -11605,12 +11623,16 @@ function openOrdDetail(o){
     </div>`).join('');
   }else{itemsEl.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No items.</div>';}
   const metaEl=document.getElementById('ord-detail-meta');
+  const payLabel = o.partial_amount_paid>0
+    ? `Partial — ₱${Number(o.partial_amount_paid).toFixed(2)} online · ₱${(Number(o.total||0)-Number(o.partial_amount_paid)).toFixed(2)} cash`
+    : o.is_paid ? 'E-Wallet (Paid)' : 'Cash on Pickup';
   const rows=[
     ['Status',o.status||'—'],
     ['Pick-up Time',o.pickup_time||'Walk-In'],
     ['Phone',o.phone||'—'],
     ['Address',o.address||'—'],
     ['Total','₱'+Number(o.total||0).toFixed(2)],
+    ['Payment',payLabel],
     ['Process Type',o.process_type||'—'],
   ];
   metaEl.innerHTML=rows.filter(([l,v])=>v&&v!=='—').map(([l,v])=>`<div class="ord-detail-row"><span class="ord-detail-lbl">${l}</span><span class="ord-detail-val">${escapeHTML(String(v))}</span></div>`).join('');
