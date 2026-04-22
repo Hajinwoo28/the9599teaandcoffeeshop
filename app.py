@@ -7069,6 +7069,7 @@ function playGrantedSound() {
         connectCustomerSSE();
     })();
 
+</script>
 
 <!-- ── Item Availability Decision Modal (customer) ─────────────────── -->
 <div id="item-query-modal" class="modal" style="display:none; z-index:9600;">
@@ -8501,16 +8502,16 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-stat-lbl{font-size:0.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
 
 /* ══ ORDER DETAIL MODAL ══ */
-.ord-detail-modal{max-width:500px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+.ord-detail-modal{max-width:500px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
 .ord-detail-header{background:linear-gradient(135deg,#2A1505,var(--brown-dark));border-radius:16px 16px 0 0;padding:18px 20px;margin:-30px -26px 16px;color:#fff;flex-shrink:0;}
 .ord-detail-code{font-family:monospace;font-size:1.1rem;font-weight:900;letter-spacing:2px;}
 .ord-detail-name{font-size:0.82rem;color:rgba(196,168,130,0.8);margin-top:3px;font-weight:600;}
-/* Items section: scrollable, max 40% of modal height */
-.ord-detail-items-scroll{max-height:38vh;overflow-y:auto;margin-bottom:12px;padding-right:2px;flex-shrink:0;}
+/* Items section: scrollable only, capped so meta is always visible */
+.ord-detail-items-scroll{max-height:220px;overflow-y:auto;margin-bottom:10px;padding-right:2px;flex-shrink:0;}
 .ord-detail-items-scroll::-webkit-scrollbar{width:4px;}
 .ord-detail-items-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:4px;}
-/* Meta section: never scrolls, always fully visible */
-.ord-detail-meta-block{flex-shrink:0;border-top:1px solid var(--cream-dark);padding-top:2px;}
+/* Meta section: never scrolls */
+.ord-detail-meta-block{flex-shrink:0;}
 .ord-detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--cream-dark);}
 .ord-detail-row:last-child{border-bottom:none;}
 .ord-detail-lbl{font-size:0.75rem;font-weight:700;color:var(--muted);flex-shrink:0;margin-right:12px;}
@@ -8520,7 +8521,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .ord-detail-item-name{font-size:0.84rem;font-weight:800;color:var(--text);}
 .ord-detail-item-opts{font-size:0.73rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.5;}
 .ord-detail-item-price{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:var(--green);text-align:right;white-space:nowrap;}
-.ord-detail-footer{flex-shrink:0;padding-top:14px;border-top:1px solid var(--cream-dark);margin-top:10px;}
+.ord-detail-footer{flex-shrink:0;padding-top:14px;border-top:1px solid var(--cream-dark);margin-top:8px;}
 
 /* ══ ADD INGREDIENT MODAL ══ */
 .add-ing-modal{max-width:400px;}
@@ -10857,7 +10858,7 @@ const _AUDIT_CLS_COLORS={order:'#1976D2',stock:'#F57C00',menu:'#27AE60',finance:
 
 function openAuditDetail(idx){
   const l=_auditStore[idx];
-  if(!l)return;
+  if(!l){console.warn('openAuditDetail: no log at idx',idx);return;}
   const ic=getAuditIcon(l.action);
   const color=_AUDIT_CLS_COLORS[ic.cls]||'#555';
   const label=_AUDIT_CLS_LABELS[ic.cls]||'System';
@@ -10892,6 +10893,9 @@ function openAuditDetail(idx){
 function closeAuditDetail(){
   document.getElementById('audit-detail-modal').style.display='none';
 }
+// Expose to global scope so onclick= inside innerHTML can reach them
+window.openAuditDetail = openAuditDetail;
+window.closeAuditDetail = closeAuditDetail;
 
 /* ══ BACKUP ══ */
 async function downloadBackup(){
@@ -11611,16 +11615,12 @@ function openOrdDetail(o){
     </div>`).join('');
   }else{itemsEl.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No items.</div>';}
   const metaEl=document.getElementById('ord-detail-meta');
-  const payLabel = o.partial_amount_paid>0
-    ? `Partial — ₱${Number(o.partial_amount_paid).toFixed(2)} online · ₱${(Number(o.total||0)-Number(o.partial_amount_paid)).toFixed(2)} cash`
-    : o.is_paid ? 'E-Wallet (Paid)' : 'Cash on Pickup';
   const rows=[
     ['Status',o.status||'—'],
     ['Pick-up Time',o.pickup_time||'Walk-In'],
     ['Phone',o.phone||'—'],
     ['Address',o.address||'—'],
     ['Total','₱'+Number(o.total||0).toFixed(2)],
-    ['Payment',payLabel],
     ['Process Type',o.process_type||'—'],
   ];
   metaEl.innerHTML=rows.filter(([l,v])=>v&&v!=='—').map(([l,v])=>`<div class="ord-detail-row"><span class="ord-detail-lbl">${l}</span><span class="ord-detail-val">${escapeHTML(String(v))}</span></div>`).join('');
