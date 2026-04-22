@@ -9770,8 +9770,44 @@ ens-wrap">
   </div>
 </div>
 
+<!-- ══ AUDIT DETAIL MODAL ══ -->
+<div id="audit-detail-modal" onclick="if(event.target===this)closeAuditDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9760;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:22px;max-width:480px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(0,0,0,0.22);animation:modalIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
+    <!-- Header -->
+    <div style="padding:18px 22px 14px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div id="aud-det-icon-wrap" style="width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i id="aud-det-icon" class="fas fa-shield-alt" style="font-size:1.05rem;"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Audit Entry</div>
+        <div id="aud-det-action" style="font-size:0.92rem;font-weight:900;color:var(--text,#2d3a3a);line-height:1.3;word-break:break-word;"></div>
+      </div>
+      <button onclick="closeAuditDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:4px 6px;line-height:1;flex-shrink:0;align-self:flex-start;border-radius:8px;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='none'">✕</button>
+    </div>
+    <!-- Scrollable body -->
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;">
+      <!-- Meta chips -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+        <span id="aud-det-badge" style="font-size:0.7rem;font-weight:800;padding:3px 12px;border-radius:20px;border:1.5px solid transparent;"></span>
+        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-clock" style="font-size:0.62rem;"></i><span id="aud-det-time">—</span>
+        </span>
+        <span style="font-size:0.72rem;color:var(--muted,#888);font-weight:600;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-network-wired" style="font-size:0.62rem;"></i><span id="aud-det-ip" style="font-family:monospace;">—</span>
+        </span>
+      </div>
+      <!-- Details box — scrollable if very long -->
+      <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
+        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Details</div>
+        <div id="aud-det-details" style="font-size:0.84rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:38vh;overflow-y:auto;"></div>
+      </div>
+      <!-- Close button -->
+      <button onclick="closeAuditDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;flex-shrink:0;">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ══ CLOCK & PING ══ */
 function updateClock(){const n=new Date();let h=n.getHours()%12||12,m=n.getMinutes().toString().padStart(2,'0'),ap=n.getHours()>=12?'PM':'AM';const t=h+':'+m+' '+ap;document.getElementById('clock').innerText=t;const sc=document.getElementById('sidebar-clock');if(sc)sc.innerText=t;}
 setInterval(updateClock,1000);updateClock();
 setInterval(async()=>{
