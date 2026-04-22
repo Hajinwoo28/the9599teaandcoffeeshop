@@ -3705,8 +3705,8 @@ STOREFRONT_HTML = """
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="/static/leaflet/leaflet.min.css">
-    <script src="/static/leaflet/leaflet.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.min.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.min.js" crossorigin=""></script>
     
     <style>
         :root {
@@ -4049,6 +4049,18 @@ STOREFRONT_HTML = """
         .loc-nav-btn.gmaps { background: #1a73e8; }
         .loc-close-btn { width: 100%; padding: 12px; border-radius: 14px; border: 1.5px solid #D7CCC8; background: #fff; color: #8D6E63; font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
         .gate-card { background: var(--card-bg); padding: 50px 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; border: 1px solid var(--border-color); }
+
+        /* ── OTP Digit Boxes ── */
+        @keyframes otpBadgePop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+        @keyframes otpSlideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes otpShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+        @keyframes otpSuccessPulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,0.5)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+        .otp-digit{width:44px;height:54px;border:2px solid #bbf7d0;border-radius:13px;text-align:center;font-size:1.6rem;font-weight:900;color:#166534;background:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.15s,transform 0.15s,box-shadow 0.15s,background 0.15s;caret-color:transparent;}
+        .otp-digit:focus{border-color:#16a34a;background:#f0fdf4;box-shadow:0 0 0 3px rgba(22,163,74,0.2);transform:scale(1.1);}
+        .otp-digit.filled{background:#dcfce7;border-color:#4ade80;}
+        .otp-digit.verified{background:#bbf7d0;border-color:#16a34a;animation:otpSuccessPulse 0.5s ease;}
+        .otp-digit.error{border-color:#f87171 !important;background:#fef2f2 !important;animation:otpShake 0.45s ease;}
+        #otp-code-area{animation:otpSlideDown 0.35s cubic-bezier(0.34,1.56,0.64,1);}
     </style>
 </head>
 <body>
@@ -4802,31 +4814,44 @@ function playGrantedSound() {
         <div style="text-align:center; font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:900; color:var(--gold); margin-bottom:4px;" id="pickup-time-preview">12:00 PM</div>
 
         <!-- ── Phone OTP Verification Block ── -->
-        <div id="otp-verify-block" style="margin:14px 0 10px; padding:14px 16px; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:1.5px solid #86efac; border-radius:14px;">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                <span style="font-size:1.1rem;">📱</span>
-                <span style="font-weight:800; font-size:0.88rem; color:#166534;">Verify Your Phone Number</span>
-                <div id="otp-verified-badge" style="display:none; margin-left:auto; background:#16a34a; color:#fff; font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:20px; letter-spacing:0.5px;">✓ VERIFIED</div>
+        <div id="otp-verify-block" style="margin:14px 0 10px;">
+          <div id="otp-step-send" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:16px;padding:16px;transition:background 0.4s,border-color 0.4s;">
+            <!-- Header row -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:13px;">
+              <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#15803d);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.05rem;box-shadow:0 3px 8px rgba(22,163,74,0.35);">📱</div>
+              <div style="flex:1;">
+                <div style="font-weight:900;font-size:0.88rem;color:#166534;line-height:1.1;">Verify Your Phone Number</div>
+                <div style="font-size:0.7rem;color:#4ade80;font-weight:700;margin-top:1px;">Required to place your order</div>
+              </div>
+              <div id="otp-verified-badge" style="display:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:0.68rem;font-weight:900;padding:4px 12px;border-radius:20px;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(22,163,74,0.4);animation:otpBadgePop 0.4s cubic-bezier(0.34,1.56,0.64,1);">✓ VERIFIED</div>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-                <input type="tel" id="otp-phone-display"
-                       placeholder="Your phone number"
-                       style="flex:1; padding:9px 12px; border:1.5px solid #bbf7d0; border-radius:10px; background:#f0fdf4; font-size:0.88rem; font-weight:700; color:#166534; font-family:'DM Sans',sans-serif; outline:none;">
-                <button type="button" id="otp-send-btn" onclick="otpSendCode()"
-                        style="padding:9px 14px; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:800; font-size:0.8rem; white-space:nowrap; font-family:'DM Sans',sans-serif; box-shadow:0 3px 10px rgba(22,163,74,0.35); transition:opacity 0.2s;">
-                    Send Code
-                </button>
+            <!-- Phone + Send row -->
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="tel" id="otp-phone-display" readonly placeholder="Your phone number"
+                     style="flex:1;padding:10px 12px;border:1.5px solid #bbf7d0;border-radius:11px;background:#fff;font-size:0.88rem;font-weight:700;color:#166534;font-family:'DM Sans',sans-serif;outline:none;min-width:0;">
+              <button type="button" id="otp-send-btn" onclick="otpSendCode()"
+                      style="padding:10px 16px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:800;font-size:0.82rem;white-space:nowrap;font-family:'DM Sans',sans-serif;box-shadow:0 3px 10px rgba(22,163,74,0.35);transition:opacity 0.2s,transform 0.15s;min-width:90px;">
+                Send Code
+              </button>
             </div>
-            <div id="otp-code-row" style="display:none; margin-top:10px; display:none; gap:8px; align-items:center;">
-                <input type="text" id="otp-code-input" maxlength="6" placeholder="Enter 6-digit code"
-                       inputmode="numeric" autocomplete="one-time-code"
-                       style="flex:1; padding:10px; border:1.5px solid #bbf7d0; border-radius:10px; font-size:1.4rem; font-weight:900; text-align:center; letter-spacing:6px; background:#fff; color:#166534; font-family:'DM Sans',sans-serif; outline:none; width:100%;">
-                <button type="button" onclick="otpVerifyCode()"
-                        style="padding:9px 14px; background:linear-gradient(135deg,#0d9488,#0f766e); color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:800; font-size:0.8rem; white-space:nowrap; font-family:'DM Sans',sans-serif; box-shadow:0 3px 10px rgba(13,148,136,0.35);">
-                    Verify
-                </button>
+            <!-- 6-digit code area (hidden until SMS sent) -->
+            <div id="otp-code-area" style="display:none;margin-top:14px;">
+              <div style="font-size:0.72rem;font-weight:800;color:#15803d;text-align:center;margin-bottom:11px;letter-spacing:0.3px;">Enter the 6-digit code sent to your phone</div>
+              <div id="otp-digits-row" style="display:flex;gap:7px;justify-content:center;margin-bottom:13px;">
+                <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code">
+                <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+              </div>
+              <button type="button" id="otp-verify-btn" onclick="otpVerifyCode()"
+                      style="width:100%;padding:12px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:800;font-size:0.9rem;font-family:'DM Sans',sans-serif;box-shadow:0 3px 12px rgba(13,148,136,0.35);display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.2s;">
+                <i class="fas fa-shield-alt"></i> Verify Code
+              </button>
             </div>
-            <p id="otp-status-msg" style="margin-top:8px; font-size:0.78rem; font-weight:700; color:#374151; min-height:16px;"></p>
+            <p id="otp-status-msg" style="margin-top:10px;font-size:0.78rem;font-weight:700;color:#374151;min-height:18px;text-align:center;transition:color 0.2s;line-height:1.4;"></p>
+          </div>
         </div>
         <!-- ── End OTP Block ── -->
 
@@ -5279,10 +5304,13 @@ function playGrantedSound() {
     async function fetchMenu() {
         try {
             const res = await fetch('/api/menu');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) throw new Error('Non-JSON response');
             menuItems = await res.json();
             const q = document.getElementById('menu-search').value.trim();
             if (q) searchMenu(q); else renderMenu(activeCategory);
-        } catch(e) { document.getElementById('menu-grid').innerHTML = '<div style="padding:20px; text-align:center;">Error loading menu.</div>'; }
+        } catch(e) { document.getElementById('menu-grid').innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-light);">Unable to load menu. Please refresh the page.</div>'; }
     }
 
     function renderMenu(cat) {
@@ -6102,7 +6130,7 @@ function playGrantedSound() {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // PHONE OTP — CLIENT-SIDE LOGIC
+    // PHONE OTP — CLIENT-SIDE LOGIC (digit boxes, auto-advance, auto-verify)
     // ══════════════════════════════════════════════════════════════════════
 
     let _otpVerified   = false;   // in-memory flag; server session is the real authority
@@ -6113,35 +6141,73 @@ function playGrantedSound() {
         const phone = document.getElementById('customer-phone').value.trim();
         const display = document.getElementById('otp-phone-display');
         if (display) display.value = phone;
+        if (_otpVerified) { _otpShowVerifiedState(); } else { _otpResetState(); }
+        _otpSetupDigitBoxes();
+    }
 
-        // If already verified this session, show badge and unlock button right away
-        if (_otpVerified) {
-            _otpShowVerifiedState();
-        } else {
-            _otpResetState();
-        }
+    /** Wire up digit-box keyboard/paste/auto-advance behaviour. */
+    function _otpSetupDigitBoxes() {
+        const digits = Array.from(document.querySelectorAll('.otp-digit'));
+        digits.forEach((el, idx) => {
+            el.value = '';
+            el.classList.remove('filled', 'error', 'verified');
+            el.oninput = function() {
+                const v = this.value.replace(/\D/g, '');
+                this.value = v ? v[0] : '';
+                this.classList.toggle('filled', !!this.value);
+                this.classList.remove('error');
+                if (this.value && idx < digits.length - 1) digits[idx + 1].focus();
+                if (digits.map(d => d.value).join('').length === 6) setTimeout(otpVerifyCode, 150);
+            };
+            el.onkeydown = function(e) {
+                if (e.key === 'Backspace') {
+                    if (!this.value && idx > 0) { digits[idx-1].focus(); digits[idx-1].value = ''; digits[idx-1].classList.remove('filled'); }
+                    else { this.value = ''; this.classList.remove('filled'); }
+                }
+                if (e.key === 'ArrowLeft' && idx > 0) digits[idx-1].focus();
+                if (e.key === 'ArrowRight' && idx < digits.length-1) digits[idx+1].focus();
+            };
+            el.onpaste = function(e) {
+                e.preventDefault();
+                const t = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+                t.split('').slice(0, 6).forEach((c, i) => {
+                    if (digits[i]) { digits[i].value = c; digits[i].classList.add('filled'); digits[i].classList.remove('error'); }
+                });
+                const last = Math.min(t.length, digits.length) - 1;
+                if (last >= 0) digits[last].focus();
+                if (digits.map(d => d.value).join('').length === 6) setTimeout(otpVerifyCode, 150);
+            };
+        });
     }
 
     function _otpResetState() {
         _otpVerified = false;
         document.getElementById('otp-verified-badge').style.display = 'none';
-        document.getElementById('otp-code-row').style.display = 'none';
+        document.getElementById('otp-code-area').style.display = 'none';
         document.getElementById('otp-status-msg').textContent = '';
         document.getElementById('otp-status-msg').style.color = '#374151';
-        document.getElementById('otp-send-btn').style.display = '';
-        document.getElementById('otp-send-btn').disabled = false;
-        document.getElementById('otp-send-btn').textContent = 'Send Code';
+        const sendBtn = document.getElementById('otp-send-btn');
+        sendBtn.style.display = '';
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Code';
+        document.querySelectorAll('.otp-digit').forEach(d => { d.value = ''; d.classList.remove('filled', 'error', 'verified'); });
         const confirmBtn = document.getElementById('pickup-confirm-btn');
         confirmBtn.disabled = true;
         confirmBtn.style.opacity = '0.45';
         confirmBtn.style.cursor = 'not-allowed';
+        const stepEl = document.getElementById('otp-step-send');
+        if (stepEl) { stepEl.style.background = 'linear-gradient(135deg,#f0fdf4,#dcfce7)'; stepEl.style.borderColor = '#86efac'; }
     }
 
     function _otpShowVerifiedState() {
         _otpVerified = true;
-        document.getElementById('otp-verified-badge').style.display = 'flex';
-        document.getElementById('otp-code-row').style.display = 'none';
+        const badge = document.getElementById('otp-verified-badge');
+        badge.style.display = 'flex';
+        badge.style.alignItems = 'center';
+        document.getElementById('otp-code-area').style.display = 'none';
         document.getElementById('otp-send-btn').style.display = 'none';
+        const stepEl = document.getElementById('otp-step-send');
+        if (stepEl) { stepEl.style.background = 'linear-gradient(135deg,#dcfce7,#bbf7d0)'; stepEl.style.borderColor = '#4ade80'; }
         otpSetStatus('✅ Phone verified! You can now place your order.', 'green');
         const confirmBtn = document.getElementById('pickup-confirm-btn');
         confirmBtn.disabled = false;
@@ -6159,16 +6225,11 @@ function playGrantedSound() {
     /** Send OTP — called when customer taps "Send Code". */
     async function otpSendCode() {
         const phone = document.getElementById('otp-phone-display').value.trim();
-        if (!phone) {
-            otpSetStatus('No phone number found. Please go back and enter your phone.', 'red');
-            return;
-        }
-
+        if (!phone) { otpSetStatus('No phone number found. Please go back and enter your phone.', 'red'); return; }
         const sendBtn = document.getElementById('otp-send-btn');
         sendBtn.disabled = true;
-        sendBtn.textContent = 'Sending…';
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         otpSetStatus('', '');
-
         try {
             const res = await fetch('/api/otp/send', {
                 method: 'POST',
@@ -6176,28 +6237,24 @@ function playGrantedSound() {
                 body: JSON.stringify({ phone })
             });
             const data = await res.json();
-
             if (data.status === 'sent') {
-                document.getElementById('otp-code-row').style.display = 'flex';
-                document.getElementById('otp-code-row').style.flexDirection = 'column';
-                document.getElementById('otp-code-input').value = '';
-                otpSetStatus('📨 Code sent! Check your SMS inbox. Valid for 5 minutes.', 'green');
-                // 60-second resend cooldown
+                const codeArea = document.getElementById('otp-code-area');
+                codeArea.style.display = 'block';
+                _otpSetupDigitBoxes();
+                setTimeout(() => { const d = document.querySelectorAll('.otp-digit')[0]; if(d) d.focus(); }, 120);
+                otpSetStatus('📨 Code sent! Check your SMS. Valid for 5 minutes.', 'green');
                 let secs = 60;
                 sendBtn.textContent = `Resend (${secs}s)`;
+                if (_otpResendTimer) clearInterval(_otpResendTimer);
                 _otpResendTimer = setInterval(() => {
                     secs--;
                     sendBtn.textContent = `Resend (${secs}s)`;
-                    if (secs <= 0) {
-                        clearInterval(_otpResendTimer);
-                        sendBtn.disabled = false;
-                        sendBtn.textContent = 'Resend Code';
-                    }
+                    if (secs <= 0) { clearInterval(_otpResendTimer); sendBtn.disabled = false; sendBtn.textContent = 'Resend'; }
                 }, 1000);
             } else {
                 otpSetStatus(data.message || 'Failed to send code. Try again.', 'red');
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Resend Code';
+                sendBtn.textContent = 'Send Code';
             }
         } catch (e) {
             otpSetStatus('Network error. Please check your connection and try again.', 'red');
@@ -6206,18 +6263,20 @@ function playGrantedSound() {
         }
     }
 
-    /** Verify OTP — called when customer taps "Verify". */
+    /** Verify OTP — called automatically when all 6 digits filled, or on button tap. */
     async function otpVerifyCode() {
         const phone = document.getElementById('otp-phone-display').value.trim();
-        const code  = (document.getElementById('otp-code-input').value || '').trim();
-
+        const digits = Array.from(document.querySelectorAll('.otp-digit'));
+        const code = digits.map(d => d.value).join('');
         if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
-            otpSetStatus('Please enter the 6-digit code from the SMS.', 'red');
+            digits.forEach(d => d.classList.add('error'));
+            setTimeout(() => digits.forEach(d => d.classList.remove('error')), 600);
+            otpSetStatus('Please enter all 6 digits.', 'red');
             return;
         }
-
+        const vBtn = document.getElementById('otp-verify-btn');
+        if (vBtn) { vBtn.disabled = true; vBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…'; }
         otpSetStatus('Verifying…', '');
-
         try {
             const res = await fetch('/api/otp/verify', {
                 method: 'POST',
@@ -6225,17 +6284,20 @@ function playGrantedSound() {
                 body: JSON.stringify({ phone, code })
             });
             const data = await res.json();
-
             if (data.status === 'verified') {
                 if (_otpResendTimer) clearInterval(_otpResendTimer);
-                _otpShowVerifiedState();
+                digits.forEach(d => { d.classList.remove('error'); d.classList.add('verified'); });
+                setTimeout(_otpShowVerifiedState, 400);
             } else {
-                otpSetStatus(data.message || 'Verification failed. Try again.', 'red');
-                document.getElementById('otp-code-input').value = '';
-                document.getElementById('otp-code-input').focus();
+                digits.forEach(d => { d.classList.add('error'); });
+                setTimeout(() => digits.forEach(d => { d.classList.remove('error'); d.value = ''; d.classList.remove('filled'); }), 550);
+                otpSetStatus(data.message || 'Incorrect code. Try again.', 'red');
+                if (vBtn) { vBtn.disabled = false; vBtn.innerHTML = '<i class="fas fa-shield-alt"></i> Verify Code'; }
+                setTimeout(() => { const d = document.querySelectorAll('.otp-digit')[0]; if(d) d.focus(); }, 600);
             }
         } catch (e) {
             otpSetStatus('Network error. Please check your connection and try again.', 'red');
+            if (vBtn) { vBtn.disabled = false; vBtn.innerHTML = '<i class="fas fa-shield-alt"></i> Verify Code'; }
         }
     }
 
