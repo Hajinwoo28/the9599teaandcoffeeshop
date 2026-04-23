@@ -5949,28 +5949,72 @@ function playGrantedSound() {
         confirmBtn.style.cursor  = ready ? 'pointer' : 'not-allowed';
     }
 
-    /** Open the appropriate payment app (GCash, Maya, PayPal). */
+    /** Open the appropriate payment app (GCash, Maya, PayPal) with amount pre-filled. */
     function openGCashApp(wallet) {
-        const phone = '09264195603';
-        let appUrl, fallbackUrl;
+        const phone    = '09264195603';
+        const merchant = encodeURIComponent('9599 Tea & Coffee');
+
+        // ── Resolve amount from the visible payment block ──────────────────
+        let rawAmount = 0;
+        if (wallet === 'gcash') {
+            const el = document.getElementById('gcash-amount-display');
+            rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
+        } else if (wallet === 'maya') {
+            const el = document.getElementById('maya-amount-display');
+            rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
+        } else if (wallet === 'partial') {
+            rawAmount = partialAmount || 0;
+        } else {
+            const el = document.getElementById('cart-total-amount');
+            rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
+        }
+        const amount = (!isNaN(rawAmount) && rawAmount > 0) ? rawAmount.toFixed(2) : '';
+
+        let appUrl, intentUrl, fallbackUrl;
+
         if (wallet === 'maya') {
-            appUrl     = 'maya://send?phone=' + phone;
-            fallbackUrl = 'https://www.maya.ph/';
+            const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
+            appUrl      = 'maya://send?' + p;
+            intentUrl   = 'intent://send?' + p + '#Intent;scheme=maya;package=ph.paymaya.android;end';
+            fallbackUrl = 'https://app.maya.ph/';
         } else if (wallet === 'paypal') {
-            appUrl     = 'paypal://send';
+            appUrl      = 'paypal://send' + (amount ? '?amount=' + amount : '');
+            intentUrl   = 'intent://send' + (amount ? '?amount=' + amount : '') + '#Intent;scheme=paypal;package=com.paypal.android.p2pmobile;end';
             fallbackUrl = 'https://www.paypal.com/send';
         } else {
-            appUrl     = 'gcash://transfer?phone=' + phone;
-            fallbackUrl = 'https://www.gcash.com/';
+            // GCash — pass phone + amount + merchant so the app shows the
+            // pre-filled checkout screen (Merchant / Amount Due) on open
+            const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
+            appUrl      = 'gcash://transfer?' + p;
+            intentUrl   = 'intent://transfer?' + p + '#Intent;scheme=gcash;package=com.globe.gcash.android;end';
+            fallbackUrl = 'https://app.gcash.com/';   // mobile web app, not homepage
         }
-        // Try deep link; fall back to web after short delay
-        const start = Date.now();
-        window.location = appUrl;
-        setTimeout(function() {
-            if (Date.now() - start < 2000) {
-                window.open(fallbackUrl, '_blank');
-            }
-        }, 1200);
+
+        // ── Launch: Android intent first, then scheme deep link, then web ──
+        const isAndroid = /android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            window.location = intentUrl;
+            const t1 = Date.now();
+            setTimeout(function() {
+                if (document.hidden || Date.now() - t1 >= 1400) return;
+                window.location = appUrl;
+                const t2 = Date.now();
+                setTimeout(function() {
+                    if (!document.hidden && Date.now() - t2 < 1200) {
+                        window.open(fallbackUrl, '_blank');
+                    }
+                }, 1200);
+            }, 1400);
+        } else {
+            // iOS / desktop: scheme first, web fallback
+            window.location = appUrl;
+            const t1 = Date.now();
+            setTimeout(function() {
+                if (!document.hidden && Date.now() - t1 < 1500) {
+                    window.open(fallbackUrl, '_blank');
+                }
+            }, 1500);
+        }
     }
 
     /** Update the partial wallet open button label. */
