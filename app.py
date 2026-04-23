@@ -4891,6 +4891,11 @@ function playGrantedSound() {
                         style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
                     💵 Cash
                 </button>
+                <!-- PayPal -->
+                <button id="pay-btn-paypal" onclick="setPaymentMethod('paypal')"
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                    🅿️ PayPal
+                </button>
                 <!-- Partial -->
                 <button id="pay-btn-partial" onclick="setPaymentMethod('partial')"
                         style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
@@ -4957,6 +4962,35 @@ function playGrantedSound() {
             </div>
         </div>
         <!-- ── End Maya Block ── -->
+
+        <!-- ── PayPal Payment Block ── -->
+        <div id="paypal-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(0,48,135,0.15); border:2px solid #003087; transition:all 0.3s;">
+            <div style="background:linear-gradient(135deg,#003087,#009cde); padding:12px 16px; display:flex; align-items:center; gap:10px;">
+                <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">🅿️</div>
+                <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">PayPal</span>
+                <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.65rem; font-weight:800; padding:3px 9px; border-radius:20px;">E-Wallet</span>
+            </div>
+            <div style="background:#fff; padding:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Merchant</span>
+                    <span style="font-size:0.85rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid #f0f0f0;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Amount Due</span>
+                    <span id="paypal-amount-display" style="font-size:1rem; color:#003087; font-weight:900;">₱0.00</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px;">
+                    <span style="font-size:0.85rem; color:#888; font-weight:600;">Send to</span>
+                    <span style="font-size:0.9rem; color:#222; font-weight:900; letter-spacing:0.3px;">9599teaandcoffee@paypal.com</span>
+                </div>
+            </div>
+            <div style="background:#e8f0fe; padding:10px 18px; border-top:1px solid #c7d9f8;">
+                <p style="margin:0; font-size:0.74rem; color:#003087; font-weight:700; text-align:center; line-height:1.5;">
+                    📋 Include your <strong>full name</strong> in the PayPal note.<br>Send the <strong>exact amount</strong> shown above.
+                </p>
+            </div>
+        </div>
+        <!-- ── End PayPal Block ── -->
 
         <!-- ── Cash on Pickup Block ── -->
         <div id="cash-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(92,51,23,0.12); border:2px solid #8B5E3C; transition:all 0.3s;">
@@ -5570,7 +5604,7 @@ function playGrantedSound() {
     function _updateConfirmBtnState() {
         const confirmBtn = document.getElementById('pickup-confirm-btn');
         if (!confirmBtn) return;
-        const needsPaymentConfirm = (paymentMethod === 'gcash' || paymentMethod === 'maya');
+        const needsPaymentConfirm = (paymentMethod === 'gcash' || paymentMethod === 'maya' || paymentMethod === 'paypal');
         const ready = _otpVerified && (!needsPaymentConfirm || _paymentSentConfirmed);
         confirmBtn.disabled   = !ready;
         confirmBtn.style.opacity = ready ? '1' : '0.45';
@@ -5605,9 +5639,9 @@ function playGrantedSound() {
         const block  = document.getElementById('payment-sent-block');
         const wallet = document.getElementById('payment-sent-wallet-label');
         if (!block) return;
-        const isEwallet = (paymentMethod === 'gcash' || paymentMethod === 'maya');
+        const isEwallet = (paymentMethod === 'gcash' || paymentMethod === 'maya' || paymentMethod === 'paypal');
         block.style.display = (isEwallet && _otpVerified) ? 'block' : 'none';
-        if (wallet) wallet.textContent = paymentMethod === 'maya' ? 'Maya' : 'GCash';
+        if (wallet) wallet.textContent = paymentMethod === 'maya' ? 'Maya' : paymentMethod === 'paypal' ? 'PayPal' : 'GCash';
         // Reset tick when toggling methods
         if (!isEwallet || !_otpVerified) {
             _paymentSentConfirmed = false;
@@ -5621,6 +5655,7 @@ function playGrantedSound() {
     const _PAY_BTN_STYLES = {
         gcash:   { a: 'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
         maya:    { a: 'border:2px solid #00a86b;background:linear-gradient(135deg,#00a86b,#007a4d);color:#fff;box-shadow:0 3px 10px rgba(0,168,107,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        paypal:  { a: 'border:2px solid #003087;background:linear-gradient(135deg,#003087,#009cde);color:#fff;box-shadow:0 3px 10px rgba(0,48,135,0.35);',  i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
         cash:    { a: 'border:2px solid #8B5E3C;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;box-shadow:0 3px 10px rgba(92,51,23,0.3);',    i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
         partial: { a: 'border:2px solid #7c3aed;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 3px 10px rgba(124,58,237,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
     };
@@ -5629,7 +5664,7 @@ function playGrantedSound() {
         paymentMethod = method;
 
         // Highlight selected tab button
-        ['gcash','maya','cash','partial'].forEach(m => {
+        ['gcash','maya','paypal','cash','partial'].forEach(m => {
             const btn = document.getElementById('pay-btn-' + m);
             if (!btn) return;
             const s = _PAY_BTN_STYLES[m];
@@ -5641,7 +5676,7 @@ function playGrantedSound() {
         });
 
         // Show/hide payment blocks
-        ['gcash','maya','cash','partial'].forEach(m => {
+        ['gcash','maya','paypal','cash','partial'].forEach(m => {
             const el = document.getElementById(m + '-payment-block');
             if (el) el.style.display = (m === method) ? 'block' : 'none';
         });
@@ -6180,10 +6215,12 @@ function playGrantedSound() {
         const fmt = '₱' + total.toFixed(2);
         const gcashEl   = document.getElementById('gcash-amount-display');
         const mayaEl    = document.getElementById('maya-amount-display');
+        const paypalEl  = document.getElementById('paypal-amount-display');
         const cashEl    = document.getElementById('cash-amount-display');
         const partialEl = document.getElementById('partial-total-display');
         if (gcashEl)   gcashEl.textContent   = fmt;
         if (mayaEl)    mayaEl.textContent    = fmt;
+        if (paypalEl)  paypalEl.textContent  = fmt;
         if (cashEl)    cashEl.textContent    = fmt;
         if (partialEl) partialEl.textContent = fmt;
         // Reset partial block
@@ -13411,7 +13448,7 @@ def reserve_blend():
         if 'large_order' in flags:
             initial_status = "Pending Staff Approval"
 
-        VALID_PAYMENT_METHODS = ('gcash', 'maya', 'cash', 'partial')
+        VALID_PAYMENT_METHODS = ('gcash', 'maya', 'paypal', 'cash', 'partial')
         payment_method = data.get('payment_method', 'gcash').lower().strip()
         if payment_method not in VALID_PAYMENT_METHODS:
             payment_method = 'gcash'
@@ -13431,7 +13468,7 @@ def reserve_blend():
 
         # Determine paid status:
         # gcash/maya = fully paid online | partial = partially paid (not fully paid) | cash = unpaid
-        is_paid_online = payment_method in ('gcash', 'maya')
+        is_paid_online = payment_method in ('gcash', 'maya', 'paypal')
 
         new_res = Reservation(
             patron_name=name,
