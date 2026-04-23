@@ -4154,8 +4154,34 @@ STOREFRONT_HTML = """
         .toast.error { background-color: #C62828; }
         .toast.success { background-color: #388E3C; }
 
-        .notif-bell { cursor: pointer; position: relative; padding: 10px; border-radius: 50%; background: var(--gold-light); color: var(--gold); border: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); transition: background 0.2s; }
-        .notif-bell:hover { background: var(--border-color); }
+        /* ── Pop-in / Pop-out animations for the 3 header icon buttons ── */
+        @keyframes headerBtnPopIn {
+            0%   { opacity: 0; transform: scale(0.35) translateY(10px); }
+            65%  { opacity: 1; transform: scale(1.18) translateY(-3px); }
+            82%  { transform: scale(0.93) translateY(1px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes headerBtnPopOut {
+            0%   { transform: scale(1); }
+            30%  { transform: scale(0.82); }
+            65%  { transform: scale(1.22); }
+            85%  { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        .header-icon-btn {
+            opacity: 0;
+            animation: headerBtnPopIn 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        }
+        .header-icon-btn:hover  { transform: scale(1.12); transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), background 0.2s; }
+        .header-icon-btn:active { transform: scale(0.88); transition: transform 0.1s ease; }
+        .header-icon-btn.pop-click { animation: headerBtnPopOut 0.38s cubic-bezier(0.34,1.56,0.64,1); }
+        .header-icon-btn:nth-child(1) { animation-delay: 0.08s; }
+        .header-icon-btn:nth-child(2) { animation-delay: 0.18s; }
+        .header-icon-btn:nth-child(3) { animation-delay: 0.28s; }
+
+        .notif-bell { cursor: pointer; position: relative; padding: 10px; border-radius: 50%; background: var(--gold-light); color: var(--gold); border: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); transition: background 0.2s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1); }
+        .notif-bell:hover { background: var(--border-color); transform: scale(1.12); }
+        .notif-bell:active { transform: scale(0.88); }
         .notif-badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: white; border-radius: 50%; min-width: 18px; height: 18px; font-size: 0.65rem; font-weight: 800; display: none; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid #fff; }
         .notif-dropdown { position: absolute; top: 48px; right: 0; background: #fff; border: 1px solid var(--border-color); border-radius: 14px; box-shadow: 0 8px 30px rgba(44,26,18,0.12); width: 300px; z-index: 9999; overflow: hidden; display: none; }
         .notif-dropdown.open { display: block; }
@@ -4764,14 +4790,14 @@ function playGrantedSound() {
         </div>
     </div>
     <div class="notif-container" style="display:flex; align-items:center; gap:10px; position:relative;">
-        <div title="Find Us" onclick="openLocModal()" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--gold-light); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
+        <div title="Find Us" onclick="triggerPopClick(this); openLocModal();" class="header-icon-btn" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--gold-light); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
             <i class="fas fa-map-marker-alt" style="color:var(--gold); font-size:16px;"></i>
         </div>
-        <button class="notif-bell" id="basket-btn" onclick="cart.length > 0 ? openOrderSheet() : toggleMobileCart()" title="View Your Order" style="position:relative;">
+        <button class="notif-bell header-icon-btn" id="basket-btn" onclick="triggerPopClick(this); cart.length > 0 ? openOrderSheet() : toggleMobileCart();" title="View Your Order" style="position:relative;">
             <i class="fas fa-shopping-basket" style="font-size:15px;"></i>
             <span class="notif-badge" id="basket-badge" style="display:none;">0</span>
         </button>
-        <button class="notif-bell" id="notif-bell-btn" onclick="toggleNotifDropdown()" title="Order Notifications">
+        <button class="notif-bell header-icon-btn" id="notif-bell-btn" onclick="triggerPopClick(this); toggleNotifDropdown();" title="Order Notifications">
             <i class="fas fa-bell" style="font-size:15px;"></i><span class="notif-badge" id="notif-badge">0</span>
         </button>
         <div class="notif-dropdown" id="notif-dropdown">
@@ -4983,7 +5009,7 @@ function playGrantedSound() {
             </div>
             <!-- 6-digit code area (hidden until SMS sent) -->
             <div id="otp-code-area" style="display:none;margin-top:14px;">
-              <div style="font-size:0.72rem;font-weight:800;color:#15803d;text-align:center;margin-bottom:11px;letter-spacing:0.3px;">Enter the 6-digit code sent to your phone</div>
+              <div style="font-size:0.72rem;font-weight:800;color:#15803d;text-align:center;margin-bottom:11px;letter-spacing:0.3px;" id="otp-code-label">Enter the 6-digit code sent to your phone</div>
               <div id="otp-digits-row" style="display:flex;gap:7px;justify-content:center;margin-bottom:13px;">
                 <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code">
                 <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
@@ -4997,20 +5023,32 @@ function playGrantedSound() {
                 <i class="fas fa-shield-alt"></i> Verify Code
               </button>
             </div>
+
+            <!-- ── Email fallback (shown when SMS fails) ── -->
+            <div id="otp-email-fallback" style="display:none; margin-top:14px; background:linear-gradient(135deg,#eff6ff,#dbeafe); border:1.5px solid #93c5fd; border-radius:14px; padding:14px 16px; animation:custSuccessSheet 0.35s cubic-bezier(0.34,1.56,0.64,1);">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;">
+                <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.9rem;">📧</div>
+                <div>
+                  <div style="font-weight:900;font-size:0.85rem;color:#1e40af;line-height:1.1;">Didn't receive the SMS?</div>
+                  <div style="font-size:0.7rem;color:#3b82f6;font-weight:700;margin-top:1px;">Get the code via email instead</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="email" id="otp-email-input" placeholder="your@email.com" autocomplete="email"
+                       style="flex:1;padding:10px 12px;border:1.5px solid #93c5fd;border-radius:11px;background:#fff;font-size:0.88rem;font-weight:600;color:#1e3a8a;font-family:'DM Sans',sans-serif;outline:none;min-width:0;">
+                <button type="button" id="otp-email-send-btn" onclick="otpSendEmailFallback()"
+                        style="padding:10px 14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:800;font-size:0.8rem;white-space:nowrap;font-family:'DM Sans',sans-serif;box-shadow:0 3px 10px rgba(37,99,235,0.35);min-width:80px;transition:opacity 0.2s;">
+                  Send Email
+                </button>
+              </div>
+              <p id="otp-email-status" style="margin:8px 0 0;font-size:0.75rem;font-weight:700;color:#374151;min-height:16px;text-align:center;"></p>
+            </div>
             <p id="otp-status-msg" style="margin-top:10px;font-size:0.78rem;font-weight:700;color:#374151;min-height:18px;text-align:center;transition:color 0.2s;line-height:1.4;"></p>
           </div>
         </div>
         <!-- ── End OTP Block ── -->
 
-        <!-- ── Payment Sent Confirmation (GCash / Maya only) ── -->
-        <div id="payment-sent-block" style="display:none; margin:14px 0 10px;">
-            <label id="payment-sent-label" style="display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#fffbeb,#fef3c7); border:2px solid #f59e0b; border-radius:14px; padding:14px 16px; cursor:pointer; transition:all 0.25s; user-select:none;" onclick="togglePaymentSent()">
-                <span id="payment-sent-box" style="width:22px; height:22px; border:2.5px solid #d97706; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#fff; transition:all 0.2s; font-size:0.9rem;"></span>
-                <span style="font-size:0.84rem; font-weight:800; color:#92400e; line-height:1.4; flex:1;">
-                    I have already <span id="payment-sent-method-label" style="color:#b45309;">sent the payment</span> via <span id="payment-sent-wallet-label" style="color:#b45309;">GCash</span>.
-                </span>
-            </label>
-        </div>
+        <!-- Payment Sent Confirmation block removed -->
 
         <!-- ── Payment Method Selector ── -->
         <div style="margin:14px 0 10px;">
@@ -5067,9 +5105,12 @@ function playGrantedSound() {
                 </div>
             </div>
             <div style="background:#eff6ff; padding:10px 18px; border-top:1px solid #dbeafe;">
-                <p style="margin:0; font-size:0.74rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">
+                <p style="margin:0 0 10px; font-size:0.74rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">
                     📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
+                <button onclick="openGCashApp('gcash')" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#1a6fe8,#1552c4); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all 0.2s; letter-spacing:0.3px;">
+                    💙 Open GCash to Send Payment
+                </button>
             </div>
         </div>
         <!-- ── End GCash Block ── -->
@@ -5096,9 +5137,12 @@ function playGrantedSound() {
                 </div>
             </div>
             <div style="background:#f0fdf4; padding:10px 18px; border-top:1px solid #bbf7d0;">
-                <p style="margin:0; font-size:0.74rem; color:#15803d; font-weight:700; text-align:center; line-height:1.5;">
+                <p style="margin:0 0 10px; font-size:0.74rem; color:#15803d; font-weight:700; text-align:center; line-height:1.5;">
                     📋 Include your <strong>full name</strong> as the Maya note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
+                <button onclick="openGCashApp('maya')" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#00a86b,#007a4d); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(0,168,107,0.35); transition:all 0.2s; letter-spacing:0.3px;">
+                    💚 Open Maya to Send Payment
+                </button>
             </div>
         </div>
         <!-- ── End Maya Block ── -->
@@ -5125,9 +5169,12 @@ function playGrantedSound() {
                 </div>
             </div>
             <div style="background:#e8f0fe; padding:10px 18px; border-top:1px solid #c7d9f8;">
-                <p style="margin:0; font-size:0.74rem; color:#003087; font-weight:700; text-align:center; line-height:1.5;">
+                <p style="margin:0 0 10px; font-size:0.74rem; color:#003087; font-weight:700; text-align:center; line-height:1.5;">
                     📋 Include your <strong>full name</strong> in the PayPal note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
+                <button onclick="openGCashApp('paypal')" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#003087,#009cde); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(0,48,135,0.3); transition:all 0.2s; letter-spacing:0.3px;">
+                    🅿️ Open PayPal to Send Payment
+                </button>
             </div>
         </div>
         <!-- ── End PayPal Block ── -->
@@ -5214,10 +5261,13 @@ function playGrantedSound() {
                 <span style="font-size:1rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span>
             </div>
             <div style="background:#f5f3ff; padding:10px 18px; border-top:1px solid #ede9fe;">
-                <p style="margin:0; font-size:0.74rem; color:#7c3aed; font-weight:700; text-align:center; line-height:1.55;">
+                <p style="margin:0 0 10px; font-size:0.74rem; color:#7c3aed; font-weight:700; text-align:center; line-height:1.55;">
                     📋 Include your <strong>full name</strong> as the payment note.<br>
                     Send only the <strong>partial amount shown above</strong>. Pay the rest in cash at pickup.
                 </p>
+                <button onclick="openGCashApp(partialWallet)" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(124,58,237,0.35); transition:all 0.2s; letter-spacing:0.3px;" id="partial-open-btn">
+                    💙 Open GCash to Send Partial Payment
+                </button>
             </div>
         </div>
         <!-- ── End Partial Payment Block ── -->
@@ -5387,6 +5437,145 @@ function playGrantedSound() {
     </div>
 </div>
 
+<!-- ── Update Order Payment Modal ─────────────────────────────────────── -->
+<div id="update-pay-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9900; align-items:flex-end; justify-content:center; padding:0;">
+  <div id="update-pay-sheet" style="background:#fff; border-radius:24px 24px 0 0; width:100%; max-width:480px; margin:0 auto; padding:22px 20px 32px; box-shadow:0 -8px 40px rgba(0,0,0,0.18); max-height:92vh; overflow-y:auto; transform:translateY(100%); transition:transform 0.38s cubic-bezier(0.34,1.1,0.64,1);">
+    <!-- Handle -->
+    <div style="width:40px; height:4px; background:#e5e7eb; border-radius:4px; margin:0 auto 18px;"></div>
+    <!-- Header -->
+    <div style="text-align:center; margin-bottom:18px;">
+      <div style="font-size:2rem; margin-bottom:6px;">💳</div>
+      <h2 style="font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:900; color:#1a1a1a; margin:0 0 4px;">Pay for Added Items</h2>
+      <p style="font-size:0.82rem; font-weight:600; color:#888; margin:0;">Select how you'll pay the additional amount.</p>
+    </div>
+    <!-- Amount Due -->
+    <div style="background:linear-gradient(135deg,#fef3c7,#fffbeb); border:2px solid #f59e0b; border-radius:14px; padding:14px 18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.85rem; font-weight:700; color:#92400e;">Additional Amount Due</span>
+      <span id="upay-amount" style="font-size:1.25rem; font-weight:900; color:#b45309;">₱0.00</span>
+    </div>
+    <!-- Payment Method Tabs -->
+    <div style="margin-bottom:12px;">
+      <div style="font-size:0.68rem; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Payment Method</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <button id="upay-btn-gcash"   onclick="setUPayMethod('gcash')"   style="padding:10px 8px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">💙 GCash</button>
+        <button id="upay-btn-maya"    onclick="setUPayMethod('maya')"    style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">💚 Maya</button>
+        <button id="upay-btn-cash"    onclick="setUPayMethod('cash')"    style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">💵 Cash</button>
+        <button id="upay-btn-paypal"  onclick="setUPayMethod('paypal')"  style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">🅿️ PayPal</button>
+        <button id="upay-btn-partial" onclick="setUPayMethod('partial')" style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; grid-column:span 2;">🔀 Partial Payment</button>
+      </div>
+    </div>
+
+    <!-- GCash block -->
+    <div id="upay-gcash-block" style="margin:0 0 12px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(37,99,235,0.15); border:2px solid #2563eb;">
+      <div style="background:linear-gradient(135deg,#1a6fe8,#1552c4); padding:11px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="background:#fff; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">💙</div>
+        <span style="color:#fff; font-weight:900; font-size:0.95rem;">GCash</span>
+        <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.62rem; font-weight:800; padding:2px 8px; border-radius:20px;">E-Wallet</span>
+      </div>
+      <div style="background:#fff; padding:0;">
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Merchant</span><span style="font-size:0.83rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Amount Due</span><span id="upay-gcash-amt" style="font-size:0.98rem; color:#2563eb; font-weight:900;">₱0.00</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Send to</span><span style="font-size:0.98rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span></div>
+      </div>
+      <div style="background:#eff6ff; padding:10px 16px; border-top:1px solid #dbeafe;">
+        <p style="margin:0 0 8px; font-size:0.72rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">📋 Include your <strong>full name</strong> as the GCash note.</p>
+        <button onclick="openGCashApp('gcash')" style="width:100%; padding:10px; border-radius:11px; border:none; background:linear-gradient(135deg,#1a6fe8,#1552c4); color:#fff; font-weight:900; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 3px 10px rgba(37,99,235,0.3);">💙 Open GCash to Send Payment</button>
+      </div>
+    </div>
+
+    <!-- Maya block -->
+    <div id="upay-maya-block" style="display:none; margin:0 0 12px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(0,168,107,0.15); border:2px solid #00a86b;">
+      <div style="background:linear-gradient(135deg,#00a86b,#007a4d); padding:11px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="background:#fff; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:1rem;">💚</div>
+        <span style="color:#fff; font-weight:900; font-size:0.95rem;">Maya</span>
+        <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.62rem; font-weight:800; padding:2px 8px; border-radius:20px;">E-Wallet</span>
+      </div>
+      <div style="background:#fff; padding:0;">
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Merchant</span><span style="font-size:0.83rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Amount Due</span><span id="upay-maya-amt" style="font-size:0.98rem; color:#00a86b; font-weight:900;">₱0.00</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Send to</span><span style="font-size:0.98rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span></div>
+      </div>
+      <div style="background:#f0fdf4; padding:10px 16px; border-top:1px solid #bbf7d0;">
+        <p style="margin:0 0 8px; font-size:0.72rem; color:#15803d; font-weight:700; text-align:center; line-height:1.5;">📋 Include your <strong>full name</strong> as the Maya note.</p>
+        <button onclick="openGCashApp('maya')" style="width:100%; padding:10px; border-radius:11px; border:none; background:linear-gradient(135deg,#00a86b,#007a4d); color:#fff; font-weight:900; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 3px 10px rgba(0,168,107,0.3);">💚 Open Maya to Send Payment</button>
+      </div>
+    </div>
+
+    <!-- PayPal block -->
+    <div id="upay-paypal-block" style="display:none; margin:0 0 12px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(0,48,135,0.15); border:2px solid #003087;">
+      <div style="background:linear-gradient(135deg,#003087,#009cde); padding:11px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="background:#fff; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:1rem;">🅿️</div>
+        <span style="color:#fff; font-weight:900; font-size:0.95rem;">PayPal</span>
+        <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.62rem; font-weight:800; padding:2px 8px; border-radius:20px;">E-Wallet</span>
+      </div>
+      <div style="background:#fff; padding:0;">
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Merchant</span><span style="font-size:0.83rem; color:#222; font-weight:800;">9599 Tea &amp; Coffee</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Amount Due</span><span id="upay-paypal-amt" style="font-size:0.98rem; color:#003087; font-weight:900;">₱0.00</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Send to</span><span style="font-size:0.98rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span></div>
+      </div>
+      <div style="background:#e8f0fe; padding:10px 16px; border-top:1px solid #c7d9f8;">
+        <p style="margin:0 0 8px; font-size:0.72rem; color:#003087; font-weight:700; text-align:center; line-height:1.5;">📋 Include your <strong>full name</strong> in the PayPal note.</p>
+        <button onclick="openGCashApp('paypal')" style="width:100%; padding:10px; border-radius:11px; border:none; background:linear-gradient(135deg,#003087,#009cde); color:#fff; font-weight:900; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 3px 10px rgba(0,48,135,0.3);">🅿️ Open PayPal to Send Payment</button>
+      </div>
+    </div>
+
+    <!-- Cash block -->
+    <div id="upay-cash-block" style="display:none; margin:0 0 12px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(92,51,23,0.12); border:2px solid #8B5E3C;">
+      <div style="background:linear-gradient(135deg,#8B5E3C,#5C3317); padding:11px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="background:#fff; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:1rem;">💵</div>
+        <span style="color:#fff; font-weight:900; font-size:0.95rem;">Cash on Pickup</span>
+        <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.62rem; font-weight:800; padding:2px 8px; border-radius:20px;">Pay at Store</span>
+      </div>
+      <div style="background:#fff; padding:0;">
+        <div style="display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Extra Amount</span><span id="upay-cash-amt" style="font-size:0.98rem; color:#8B5E3C; font-weight:900;">₱0.00</span></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 16px;"><span style="font-size:0.83rem; color:#888; font-weight:600;">When to Pay</span><span style="font-size:0.85rem; color:#222; font-weight:800;">Upon pickup at store</span></div>
+      </div>
+      <div style="background:#fdf8f0; padding:10px 16px; border-top:1px solid #e8d9c4;">
+        <p style="margin:0; font-size:0.72rem; color:#7B4F2E; font-weight:700; text-align:center; line-height:1.5;">🏪 Prepare the <strong>exact extra amount</strong> in cash when you pick up your order.</p>
+      </div>
+    </div>
+
+    <!-- Partial block -->
+    <div id="upay-partial-block" style="display:none; margin:0 0 12px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(124,58,237,0.15); border:2px solid #7c3aed;">
+      <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6); padding:11px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="background:#fff; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:1rem;">🔀</div>
+        <span style="color:#fff; font-weight:900; font-size:0.95rem;">Partial Payment</span>
+        <span style="margin-left:auto; background:rgba(255,255,255,0.2); color:#fff; font-size:0.62rem; font-weight:800; padding:2px 8px; border-radius:20px;">Split</span>
+      </div>
+      <div style="background:#fff; padding:14px 16px 10px; border-bottom:1px solid #f0f0f0;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Extra Total</span><span id="upay-partial-total" style="font-size:0.98rem; color:#222; font-weight:900;">₱0.00</span></div>
+        <div style="font-size:0.67rem; font-weight:800; color:#7c3aed; text-transform:uppercase; letter-spacing:1px; margin-bottom:7px;">Pay part via:</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:11px;">
+          <button id="upay-partial-gcash-btn" onclick="setUPayPartialWallet('gcash')" style="padding:8px 6px; border-radius:10px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px;">💙 GCash</button>
+          <button id="upay-partial-maya-btn"  onclick="setUPayPartialWallet('maya')"  style="padding:8px 6px; border-radius:10px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px;">💚 Maya</button>
+        </div>
+        <div style="font-size:0.67rem; font-weight:800; color:#7c3aed; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">How much sending now?</div>
+        <div style="position:relative; margin-bottom:8px;">
+          <span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:1rem; font-weight:900; color:#7c3aed; pointer-events:none;">₱</span>
+          <input type="number" id="upay-partial-input" min="1" step="1" placeholder="0" oninput="onUPayPartialInput()" style="width:100%; padding:10px 13px 10px 28px; border:2px solid #c4b5fd; border-radius:11px; font-size:1.1rem; font-weight:900; color:#5b21b6; background:#faf5ff; outline:none; box-sizing:border-box;">
+        </div>
+        <div id="upay-partial-breakdown" style="display:none; background:#faf5ff; border:1.5px solid #c4b5fd; border-radius:11px; padding:11px 13px; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-size:0.8rem; color:#7c3aed; font-weight:700;">Send now (<span id="upay-partial-wallet-lbl">GCash</span>)</span><span id="upay-partial-send-now" style="font-size:0.88rem; color:#5b21b6; font-weight:900;">₱0.00</span></div>
+          <div style="display:flex; justify-content:space-between; padding-top:6px; border-top:1px dashed #c4b5fd;"><span style="font-size:0.8rem; color:#8B5E3C; font-weight:700;">Pay at store (cash)</span><span id="upay-partial-balance" style="font-size:0.88rem; color:#8B5E3C; font-weight:900;">₱0.00</span></div>
+        </div>
+        <p id="upay-partial-err" style="font-size:0.74rem; color:#dc2626; font-weight:700; margin:4px 0 0; display:none;"></p>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 16px; background:#fff; border-bottom:1px solid #f0f0f0;"><span style="font-size:0.83rem; color:#888; font-weight:600;">Send to</span><span style="font-size:0.98rem; color:#222; font-weight:900; letter-spacing:1px;">0926 419 5603</span></div>
+      <div style="background:#f5f3ff; padding:10px 16px; border-top:1px solid #ede9fe;">
+        <p style="margin:0 0 8px; font-size:0.72rem; color:#7c3aed; font-weight:700; text-align:center; line-height:1.5;">📋 Include your <strong>full name</strong> as the note. Pay the rest in cash at pickup.</p>
+        <button id="upay-partial-open-btn" onclick="openGCashApp(uPayPartialWallet)" style="width:100%; padding:10px; border-radius:11px; border:none; background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; font-weight:900; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 3px 10px rgba(124,58,237,0.3);">💙 Open GCash to Send Partial</button>
+      </div>
+    </div>
+
+    <!-- Confirm + Cancel buttons -->
+    <button id="upay-confirm-btn" onclick="confirmUpdatePayment()" style="width:100%; padding:14px; border-radius:14px; border:none; background:linear-gradient(135deg,#C8A84B,#a07830); color:#fff; font-weight:900; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; box-shadow:0 4px 16px rgba(139,94,60,0.35); margin-bottom:10px; letter-spacing:0.3px;">
+      <i class="fas fa-check-circle"></i> Confirm &amp; Update Order
+    </button>
+    <button onclick="closeUpdatePayModal()" style="width:100%; padding:12px; border-radius:14px; border:1.5px solid #e5e7eb; background:#fff; color:#64748b; font-weight:800; font-size:0.9rem; cursor:pointer;">Cancel</button>
+  </div>
+</div>
+<!-- ── End Update Order Payment Modal ─────────────────────────────────── -->
+
 <!-- My Order Modal (basket button) -->
 <div id="my-order-modal" class="modal">
     <div class="modal-content" style="text-align:center; max-width:460px;">
@@ -5467,6 +5656,17 @@ function playGrantedSound() {
             if(c) cart = JSON.parse(c);
             if(ot) { orderType = ot; setOrderType(orderType, true); }
         } catch(e) {}
+    }
+
+    // ── Pop-click animation helper for header icon buttons ───────────────────
+    function triggerPopClick(el) {
+        el.classList.remove('pop-click');
+        void el.offsetWidth; // reflow to restart animation
+        el.classList.add('pop-click');
+        el.addEventListener('animationend', function h() {
+            el.classList.remove('pop-click');
+            el.removeEventListener('animationend', h);
+        });
     }
 
     // ── Notification dropdown ─────────────────────────────────────────────
@@ -5738,60 +5938,61 @@ function playGrantedSound() {
     let paymentMethod  = 'gcash'; // default
     let partialWallet  = 'gcash'; // e-wallet used for partial payment
     let partialAmount  = 0;       // amount sent online in partial mode
-    let _paymentSentConfirmed = false; // tracks the "I have sent my payment" checkbox
 
-    /** Central gate: enables the Confirm & Place Order button only when all
-     *  pre-conditions are met (OTP verified + payment sent for e-wallet methods). */
+    /** Central gate: enables the Confirm & Place Order button only when OTP is verified. */
     function _updateConfirmBtnState() {
         const confirmBtn = document.getElementById('pickup-confirm-btn');
         if (!confirmBtn) return;
-        const needsPaymentConfirm = (paymentMethod === 'gcash' || paymentMethod === 'maya' || paymentMethod === 'paypal');
-        const ready = _otpVerified && (!needsPaymentConfirm || _paymentSentConfirmed);
+        const ready = _otpVerified;
         confirmBtn.disabled   = !ready;
         confirmBtn.style.opacity = ready ? '1' : '0.45';
         confirmBtn.style.cursor  = ready ? 'pointer' : 'not-allowed';
     }
 
-    /** Toggle the "I have sent my payment" checkbox. */
-    function togglePaymentSent() {
-        _paymentSentConfirmed = !_paymentSentConfirmed;
-        const box   = document.getElementById('payment-sent-box');
-        const label = document.getElementById('payment-sent-label');
-        if (_paymentSentConfirmed) {
-            box.textContent = '✓';
-            box.style.background   = '#f59e0b';
-            box.style.borderColor  = '#d97706';
-            box.style.color        = '#fff';
-            label.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
-            label.style.borderColor= '#d97706';
+    /** Open the appropriate payment app (GCash, Maya, PayPal). */
+    function openGCashApp(wallet) {
+        const phone = '09264195603';
+        let appUrl, fallbackUrl;
+        if (wallet === 'maya') {
+            appUrl     = 'maya://send?phone=' + phone;
+            fallbackUrl = 'https://www.maya.ph/';
+        } else if (wallet === 'paypal') {
+            appUrl     = 'paypal://send';
+            fallbackUrl = 'https://www.paypal.com/send';
         } else {
-            box.textContent = '';
-            box.style.background   = '#fff';
-            box.style.borderColor  = '#d97706';
-            box.style.color        = '';
-            label.style.background = 'linear-gradient(135deg,#fffbeb,#fef3c7)';
-            label.style.borderColor= '#f59e0b';
+            appUrl     = 'gcash://transfer?phone=' + phone;
+            fallbackUrl = 'https://www.gcash.com/';
         }
-        _updateConfirmBtnState();
+        // Try deep link; fall back to web after short delay
+        const start = Date.now();
+        window.location = appUrl;
+        setTimeout(function() {
+            if (Date.now() - start < 2000) {
+                window.open(fallbackUrl, '_blank');
+            }
+        }, 1200);
     }
 
-    /** Show or hide the payment-sent checkbox based on selected method and OTP state. */
-    function _refreshPaymentSentBlock() {
-        const block  = document.getElementById('payment-sent-block');
-        const wallet = document.getElementById('payment-sent-wallet-label');
-        if (!block) return;
-        const isEwallet = (paymentMethod === 'gcash' || paymentMethod === 'maya' || paymentMethod === 'paypal');
-        block.style.display = (isEwallet && _otpVerified) ? 'block' : 'none';
-        if (wallet) wallet.textContent = paymentMethod === 'maya' ? 'Maya' : paymentMethod === 'paypal' ? 'PayPal' : 'GCash';
-        // Reset tick when toggling methods
-        if (!isEwallet || !_otpVerified) {
-            _paymentSentConfirmed = false;
-            const box = document.getElementById('payment-sent-box');
-            const lbl = document.getElementById('payment-sent-label');
-            if (box) { box.textContent = ''; box.style.background = '#fff'; box.style.color = ''; }
-            if (lbl) { lbl.style.background = 'linear-gradient(135deg,#fffbeb,#fef3c7)'; lbl.style.borderColor = '#f59e0b'; }
+    /** Update the partial wallet open button label. */
+    function _updatePartialOpenBtn() {
+        const btn = document.getElementById('partial-open-btn');
+        if (!btn) return;
+        if (partialWallet === 'maya') {
+            btn.innerHTML = '💚 Open Maya to Send Partial Payment';
+            btn.style.background = 'linear-gradient(135deg,#00a86b,#007a4d)';
+            btn.style.boxShadow  = '0 4px 12px rgba(0,168,107,0.35)';
+        } else {
+            btn.innerHTML = '💙 Open GCash to Send Partial Payment';
+            btn.style.background = 'linear-gradient(135deg,#7c3aed,#5b21b6)';
+            btn.style.boxShadow  = '0 4px 12px rgba(124,58,237,0.35)';
         }
     }
+
+    /** Stub — checkbox removed; kept for compatibility. */
+    function togglePaymentSent() {}
+
+    /** Stub — checkbox removed; kept for compatibility. */
+    function _refreshPaymentSentBlock() {}
 
     const _PAY_BTN_STYLES = {
         gcash:   { a: 'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
@@ -5852,6 +6053,9 @@ function playGrantedSound() {
 
         const lbl = document.getElementById('partial-wallet-label');
         if (lbl) lbl.textContent = wallet === 'gcash' ? 'GCash' : 'Maya';
+
+        // Update the open-app button label
+        _updatePartialOpenBtn();
 
         // Re-run input validation to refresh breakdown
         onPartialAmountInput();
@@ -6399,12 +6603,6 @@ function playGrantedSound() {
         // Reset partial block
         _resetPartialBlock();
         setPartialWallet('gcash');   // default e-wallet inside partial
-        // Reset payment-sent confirmation on every open
-        _paymentSentConfirmed = false;
-        const _psBox = document.getElementById('payment-sent-box');
-        const _psLbl = document.getElementById('payment-sent-label');
-        if (_psBox) { _psBox.textContent = ''; _psBox.style.background = '#fff'; _psBox.style.color = ''; }
-        if (_psLbl) { _psLbl.style.background = 'linear-gradient(135deg,#fffbeb,#fef3c7)'; _psLbl.style.borderColor = '#f59e0b'; }
         // Reset to GCash on every open
         setPaymentMethod('gcash');
     }
@@ -6526,50 +6724,156 @@ function playGrantedSound() {
         updateCartUI();
     }
 
-    async function submitOrderUpdate() {
-        if(!updateModeCode) return;
-        if(cart.length === 0) {
-            showToast('Please pick at least one item to add.', 'error');
+    // ── Update-Order Payment Modal ────────────────────────────────────────────
+    let _uPayMethod       = 'gcash';
+    let uPayPartialWallet = 'gcash';
+
+    const _UPAY_BTN_STYLES = {
+        gcash:   { a:'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        maya:    { a:'border:2px solid #00a86b;background:linear-gradient(135deg,#00a86b,#007a4d);color:#fff;box-shadow:0 3px 10px rgba(0,168,107,0.35);', i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        cash:    { a:'border:2px solid #8B5E3C;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;box-shadow:0 3px 10px rgba(92,51,23,0.3);',    i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        paypal:  { a:'border:2px solid #003087;background:linear-gradient(135deg,#003087,#009cde);color:#fff;box-shadow:0 3px 10px rgba(0,48,135,0.35);',  i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        partial: { a:'border:2px solid #7c3aed;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 3px 10px rgba(124,58,237,0.35);', i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+    };
+
+    function openUpdatePayModal() {
+        const extra = cart.reduce((s, i) => s + i.price, 0);
+        const fmt = '₱' + extra.toFixed(2);
+        document.getElementById('upay-amount').textContent      = fmt;
+        document.getElementById('upay-gcash-amt').textContent   = fmt;
+        document.getElementById('upay-maya-amt').textContent    = fmt;
+        document.getElementById('upay-paypal-amt').textContent  = fmt;
+        document.getElementById('upay-cash-amt').textContent    = fmt;
+        document.getElementById('upay-partial-total').textContent = fmt;
+        document.getElementById('upay-partial-input').value     = '';
+        document.getElementById('upay-partial-breakdown').style.display = 'none';
+        document.getElementById('upay-partial-err').style.display = 'none';
+        _uPayMethod       = 'gcash';
+        uPayPartialWallet = 'gcash';
+        setUPayMethod('gcash');
+        const ov = document.getElementById('update-pay-modal');
+        const sh = document.getElementById('update-pay-sheet');
+        ov.style.display = 'flex';
+        requestAnimationFrame(() => { sh.style.transform = 'translateY(0)'; });
+    }
+
+    function closeUpdatePayModal() {
+        const sh = document.getElementById('update-pay-sheet');
+        sh.style.transform = 'translateY(100%)';
+        setTimeout(() => { document.getElementById('update-pay-modal').style.display = 'none'; }, 380);
+    }
+
+    function setUPayMethod(method) {
+        _uPayMethod = method;
+        ['gcash','maya','cash','paypal','partial'].forEach(m => {
+            const btn = document.getElementById('upay-btn-' + m);
+            if (!btn) return;
+            const s = _UPAY_BTN_STYLES[m];
+            btn.style.cssText = btn.style.cssText
+                .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
+                + (m === method ? s.a : s.i);
+            const block = document.getElementById('upay-' + m + '-block');
+            if (block) block.style.display = (m === method) ? 'block' : 'none';
+        });
+    }
+
+    function setUPayPartialWallet(wallet) {
+        uPayPartialWallet = wallet;
+        const gBtn = document.getElementById('upay-partial-gcash-btn');
+        const mBtn = document.getElementById('upay-partial-maya-btn');
+        if (gBtn) gBtn.style.cssText = gBtn.style.cssText.replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'') + (wallet==='gcash' ? _UPAY_BTN_STYLES.gcash.a : _UPAY_BTN_STYLES.gcash.i);
+        if (mBtn) mBtn.style.cssText = mBtn.style.cssText.replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'') + (wallet==='maya'  ? _UPAY_BTN_STYLES.maya.a  : _UPAY_BTN_STYLES.maya.i);
+        const lbl = document.getElementById('upay-partial-wallet-lbl');
+        if (lbl) lbl.textContent = wallet === 'gcash' ? 'GCash' : 'Maya';
+        const openBtn = document.getElementById('upay-partial-open-btn');
+        if (openBtn) {
+            openBtn.innerHTML = wallet === 'maya' ? '💚 Open Maya to Send Partial' : '💙 Open GCash to Send Partial';
+            openBtn.style.background = wallet === 'maya' ? 'linear-gradient(135deg,#00a86b,#007a4d)' : 'linear-gradient(135deg,#7c3aed,#5b21b6)';
+        }
+        onUPayPartialInput();
+    }
+
+    function onUPayPartialInput() {
+        const total = cart.reduce((s, i) => s + i.price, 0);
+        const raw   = parseFloat(document.getElementById('upay-partial-input').value) || 0;
+        const errEl = document.getElementById('upay-partial-err');
+        const bd    = document.getElementById('upay-partial-breakdown');
+        errEl.style.display = 'none';
+        if (raw <= 0) { bd.style.display = 'none'; return; }
+        if (raw >= total) {
+            errEl.textContent   = 'Amount must be less than the total. Use GCash or Maya for full payment.';
+            errEl.style.display = 'block';
+            bd.style.display    = 'none';
             return;
         }
-        const btn = document.getElementById('checkout-btn');
+        bd.style.display = 'block';
+        document.getElementById('upay-partial-send-now').textContent = '₱' + raw.toFixed(2);
+        document.getElementById('upay-partial-balance').textContent  = '₱' + (total - raw).toFixed(2);
+    }
+
+    async function submitOrderUpdate() {
+        if (!updateModeCode) return;
+        if (cart.length === 0) { showToast('Please pick at least one item to add.', 'error'); return; }
+        // Open payment modal before submitting
+        openUpdatePayModal();
+    }
+
+    async function confirmUpdatePayment() {
+        if (!updateModeCode) return;
+        const btn = document.getElementById('upay-confirm-btn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating order…';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating…';
+
+        // Build partial info if needed
+        let partialAmt = 0;
+        if (_uPayMethod === 'partial') {
+            partialAmt = parseFloat(document.getElementById('upay-partial-input').value) || 0;
+            const total = cart.reduce((s, i) => s + i.price, 0);
+            if (partialAmt <= 0 || partialAmt >= total) {
+                document.getElementById('upay-partial-err').textContent = 'Please enter a valid partial amount.';
+                document.getElementById('upay-partial-err').style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm &amp; Update Order';
+                return;
+            }
+        }
+
         const payload = {
             code: updateModeCode,
+            payment_method: _uPayMethod,
+            partial_wallet: _uPayMethod === 'partial' ? uPayPartialWallet : '',
+            partial_amount: partialAmt,
             items: cart.map(i => ({
                 foundation: i.name,
-                size: i.size || '16 oz',
-                sweetener: i.sugar || 'N/A',
-                ice: i.ice || 'Normal Ice',
-                addons: Array.isArray(i.addons) ? i.addons.join(', ') : (i.addons || ''),
-                price: i.price
+                size:       i.size   || '16 oz',
+                sweetener:  i.sugar  || 'N/A',
+                ice:        i.ice    || 'Normal Ice',
+                addons:     Array.isArray(i.addons) ? i.addons.join(', ') : (i.addons || ''),
+                price:      i.price
             }))
         };
         try {
-            const res = await fetch('/api/customer/update_order', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
+            const res  = await fetch('/api/customer/update_order', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
             const data = await res.json();
-            if(res.ok) {
-                const savedCode = updateModeCode;
-                const addedTotal = data.added_total || 0;
+            if (res.ok) {
+                const savedCode   = updateModeCode;
+                const addedTotal  = data.added_total || 0;
+                closeUpdatePayModal();
                 showToast('✅ Order #' + savedCode + ' updated! +₱' + addedTotal.toFixed(2) + ' added.', 'success');
                 addNotifMessage('✅ Order #' + savedCode + ' updated — ₱' + addedTotal.toFixed(2) + ' added.');
                 deactivateEditMode();
             } else {
                 showToast('Error: ' + (data.error || 'Could not update order.'), 'error');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Update Order #' + escapeHTML(updateModeCode);
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm &amp; Update Order';
             }
         } catch(e) {
             showToast('Connection error. Please try again.', 'error');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-circle"></i> Update Order #' + escapeHTML(updateModeCode);
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm &amp; Update Order';
         }
     }
+    // ── End Update-Order Payment Modal ────────────────────────────────────────
 
 
     // ── Geolocation & map ────────────────────────────────────────────────────
@@ -6709,6 +7013,17 @@ function playGrantedSound() {
         document.querySelectorAll('.otp-digit').forEach(d => { d.value = ''; d.classList.remove('filled', 'error', 'verified'); });
         const stepEl = document.getElementById('otp-step-send');
         if (stepEl) { stepEl.style.background = 'linear-gradient(135deg,#f0fdf4,#dcfce7)'; stepEl.style.borderColor = '#86efac'; }
+        // Reset email fallback
+        const fallback = document.getElementById('otp-email-fallback');
+        if (fallback) fallback.style.display = 'none';
+        const emailInput = document.getElementById('otp-email-input');
+        if (emailInput) emailInput.value = '';
+        const emailStatus = document.getElementById('otp-email-status');
+        if (emailStatus) emailStatus.textContent = '';
+        const emailBtn = document.getElementById('otp-email-send-btn');
+        if (emailBtn) { emailBtn.disabled = false; emailBtn.textContent = 'Send Email'; }
+        const codeLabel = document.getElementById('otp-code-label');
+        if (codeLabel) codeLabel.textContent = 'Enter the 6-digit code sent to your phone';
         _refreshPaymentSentBlock();
         _updateConfirmBtnState();
     }
@@ -6742,6 +7057,8 @@ function playGrantedSound() {
         sendBtn.disabled = true;
         sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         otpSetStatus('', '');
+        // Hide email fallback on fresh send attempt
+        document.getElementById('otp-email-fallback').style.display = 'none';
         try {
             const res = await fetch('/api/otp/send', {
                 method: 'POST',
@@ -6752,6 +7069,7 @@ function playGrantedSound() {
             if (data.status === 'sent') {
                 const codeArea = document.getElementById('otp-code-area');
                 codeArea.style.display = 'block';
+                document.getElementById('otp-code-label').textContent = 'Enter the 6-digit code sent to your phone';
                 _otpSetupDigitBoxes();
                 setTimeout(() => { const d = document.querySelectorAll('.otp-digit')[0]; if(d) d.focus(); }, 120);
                 otpSetStatus('📨 Code sent! Check your SMS. Valid for 5 minutes.', 'green');
@@ -6764,14 +7082,71 @@ function playGrantedSound() {
                     if (secs <= 0) { clearInterval(_otpResendTimer); sendBtn.disabled = false; sendBtn.textContent = 'Resend'; }
                 }, 1000);
             } else {
-                otpSetStatus(data.message || 'Failed to send code. Try again.', 'red');
+                // SMS failed — show error + email fallback
+                otpSetStatus((data.message || 'Failed to send SMS.') + ' Try the email option below ↓', 'red');
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Send Code';
+                sendBtn.textContent = 'Retry SMS';
+                document.getElementById('otp-email-fallback').style.display = 'block';
+                document.getElementById('otp-email-status').textContent = '';
             }
         } catch (e) {
             otpSetStatus('Network error. Please check your connection and try again.', 'red');
             sendBtn.disabled = false;
             sendBtn.textContent = 'Send Code';
+            document.getElementById('otp-email-fallback').style.display = 'block';
+        }
+    }
+
+    /** Email fallback — send the same 6-digit code via email when SMS fails. */
+    async function otpSendEmailFallback() {
+        const phone   = document.getElementById('otp-phone-display').value.trim();
+        const email   = (document.getElementById('otp-email-input').value || '').trim();
+        const statusEl = document.getElementById('otp-email-status');
+        const btn     = document.getElementById('otp-email-send-btn');
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = '⚠️ Please enter a valid email address.';
+            return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        statusEl.style.color = '#374151';
+        statusEl.textContent = 'Sending…';
+        try {
+            const res  = await fetch('/api/otp/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, email })
+            });
+            const data = await res.json();
+            if (data.status === 'sent') {
+                statusEl.style.color = '#16a34a';
+                statusEl.textContent = '✅ ' + (data.message || 'Code sent! Check your inbox.');
+                // Show digit boxes for email code
+                const codeArea = document.getElementById('otp-code-area');
+                codeArea.style.display = 'block';
+                document.getElementById('otp-code-label').textContent = 'Enter the 6-digit code sent to your email';
+                _otpSetupDigitBoxes();
+                setTimeout(() => { const d = document.querySelectorAll('.otp-digit')[0]; if(d) d.focus(); }, 150);
+                // Countdown resend
+                let secs = 60;
+                btn.textContent = `Resend (${secs}s)`;
+                const t = setInterval(() => {
+                    secs--;
+                    btn.textContent = `Resend (${secs}s)`;
+                    if (secs <= 0) { clearInterval(t); btn.disabled = false; btn.textContent = 'Send Email'; }
+                }, 1000);
+            } else {
+                statusEl.style.color = '#dc2626';
+                statusEl.textContent = '❌ ' + (data.message || 'Failed to send email. Try again.');
+                btn.disabled = false;
+                btn.textContent = 'Send Email';
+            }
+        } catch(e) {
+            statusEl.style.color = '#dc2626';
+            statusEl.textContent = '❌ Network error. Please try again.';
+            btn.disabled = false;
+            btn.textContent = 'Send Email';
         }
     }
 
@@ -12685,7 +13060,7 @@ _CUSTOMER_ROUTES = {
     '/api/auth/google', '/api/auth/manual',
     '/api/public/announcements',
     '/api/store/status', '/api/menu',
-    '/api/otp/send', '/api/otp/verify',
+    '/api/otp/send', '/api/otp/verify', '/api/otp/send-email',
     '/api/permission_request', '/api/permission_status',
     '/api/customer/status', '/api/customer/update_order', '/api/customer/order_detail',
     '/api/item_query',
@@ -13589,8 +13964,137 @@ def otp_verify():
     return jsonify({"status": "verified", "message": "Phone number verified! You may now place your order."})
 
 
+@app.route('/api/otp/send-email', methods=['POST'])
+@limiter.limit("3 per 10 minutes")
+def otp_send_email():
+    """
+    Fallback: send the same 6-digit OTP via email when SMS delivery fails.
+    Reuses or creates a PhoneOTP record for the given phone number,
+    then delivers the code by email using Resend or Gmail SMTP.
+    """
+    data  = request.get_json(silent=True) or {}
+    phone = (data.get('phone') or '').strip()
+    email = (data.get('email') or '').strip().lower()
 
-@app.route('/reserve', methods=['POST'])
+    if not phone or not re.fullmatch(r'[\d\s\+\-\(\)]{7,20}', phone):
+        return jsonify({"status": "error", "message": "Invalid phone number."}), 400
+    if not email or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email):
+        return jsonify({"status": "error", "message": "Please enter a valid email address."}), 400
+
+    phone = _normalize_ph_number(phone)
+
+    # Reuse an existing unverified OTP or generate a fresh one
+    try:
+        existing = (PhoneOTP.query
+                    .filter_by(phone=phone, verified=False)
+                    .order_by(PhoneOTP.created_at.desc())
+                    .first())
+        if existing and not existing.is_expired():
+            code = existing.code
+        else:
+            # Invalidate old records and create a new one
+            PhoneOTP.query.filter_by(phone=phone, verified=False).delete()
+            db.session.commit()
+            code = str(random.randint(100000, 999999))
+            otp  = PhoneOTP(phone=phone, code=code)
+            db.session.add(otp)
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Could not prepare verification code. Please try again."}), 500
+
+    # Build a clean HTML email with the code
+    html_body = f"""
+    <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+      <div style="background:linear-gradient(135deg,#8B5E3C,#5C3317);padding:28px 32px;text-align:center;">
+        <div style="font-size:2.2rem;margin-bottom:6px;">☕</div>
+        <h1 style="color:#fff;margin:0;font-size:1.4rem;font-weight:900;letter-spacing:0.5px;">9599 Tea &amp; Coffee</h1>
+        <p style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:0.85rem;">Order Verification Code</p>
+      </div>
+      <div style="padding:32px;">
+        <p style="font-size:0.95rem;color:#444;margin:0 0 18px;line-height:1.6;">
+          Hi there! Your SMS verification code could not be delivered, so here it is via email instead.
+        </p>
+        <div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:2px dashed #f59e0b;border-radius:14px;padding:22px;text-align:center;margin-bottom:24px;">
+          <div style="font-size:0.75rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">Your Verification Code</div>
+          <div style="font-size:2.8rem;font-weight:900;color:#8B5E3C;letter-spacing:12px;font-family:'Courier New',monospace;">{code}</div>
+          <div style="font-size:0.78rem;color:#b45309;font-weight:700;margin-top:10px;">⏱ Valid for 5 minutes</div>
+        </div>
+        <p style="font-size:0.82rem;color:#888;margin:0;line-height:1.6;">
+          Enter this code in the verification box to complete your order.<br>
+          Do <strong>not</strong> share this code with anyone.<br>
+          If you did not request this, please ignore this email.
+        </p>
+      </div>
+      <div style="background:#f9f9f9;padding:16px 32px;text-align:center;border-top:1px solid #eee;">
+        <p style="font-size:0.72rem;color:#bbb;margin:0;">9599 Tea &amp; Coffee &nbsp;·&nbsp; Automated verification email</p>
+      </div>
+    </div>
+    """
+
+    subject     = f"Your 9599 Tea & Coffee verification code: {code}"
+    ok, err     = _send_otp_email(email, subject, html_body)
+
+    if not ok:
+        return jsonify({"status": "error", "message": f"Could not send email: {err or 'Unknown error'}. Please check your email address and try again."}), 502
+
+    session.pop('otp_verified_phone', None)
+    masked = email[:2] + '***@' + email.split('@')[-1] if '@' in email else email
+    return jsonify({"status": "sent", "message": f"A 6-digit code was sent to {masked}. Check your inbox (and spam folder). It expires in 5 minutes."})
+
+
+def _send_otp_email(to_email: str, subject: str, html_body: str) -> tuple:
+    """Send an email using Resend API or Gmail SMTP. Returns (ok, error_msg)."""
+    # ── Method 1: Resend API ──────────────────────────────────────────────
+    resend_key  = os.environ.get('RESEND_API_KEY', '').strip()
+    resend_from = os.environ.get('RESEND_FROM', 'onboarding@resend.dev').strip()
+    if resend_key:
+        try:
+            resp = requests.post(
+                'https://api.resend.com/emails',
+                headers={'Authorization': f'Bearer {resend_key}', 'Content-Type': 'application/json'},
+                json={'from': resend_from, 'to': [to_email], 'subject': subject, 'html': html_body},
+                timeout=10
+            )
+            if resp.status_code in (200, 201, 202):
+                return True, ''
+            return False, f"Resend error {resp.status_code}: {resp.text[:200]}"
+        except Exception as e:
+            return False, str(e)
+
+    # ── Method 2: Gmail SMTP ──────────────────────────────────────────────
+    gmail_sender = os.environ.get('GMAIL_SENDER', '').strip()
+    gmail_pass   = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+    if gmail_sender and gmail_pass:
+        try:
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From']    = f'9599 Tea & Coffee <{gmail_sender}>'
+            msg['To']      = to_email
+            msg.attach(MIMEText(html_body, 'html'))
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as srv:
+                srv.login(gmail_sender, gmail_pass)
+                srv.sendmail(gmail_sender, [to_email], msg.as_string())
+            return True, ''
+        except Exception as e:
+            return False, str(e)
+
+    # ── Dev fallback — no email provider configured ───────────────────────
+    print(f"\n{'='*55}")
+    print(f"  [DEV EMAIL OTP]  No email provider configured.")
+    print(f"  To: {to_email}")
+    print(f"  Subject: {subject}")
+    print(f"  Set RESEND_API_KEY or GMAIL_SENDER+GMAIL_APP_PASSWORD in .env")
+    print(f"{'='*55}\n")
+    if _ON_CLOUD:
+        return False, 'No email provider configured. Set RESEND_API_KEY or GMAIL_SENDER in your environment variables.'
+    return True, ''   # dev only — check terminal for the code
+
+
+
 
 def reserve_blend():
     data = request.json
@@ -14129,8 +14633,11 @@ def customer_order_status():
 def customer_update_order():
     """Append new items to an existing order (customer-facing, permission-gated)."""
     data = request.json or {}
-    code  = data.get('code', '').strip().upper()
-    items = data.get('items', [])
+    code           = data.get('code', '').strip().upper()
+    items          = data.get('items', [])
+    payment_method = data.get('payment_method', '').strip() or 'gcash'
+    partial_wallet = data.get('partial_wallet', '').strip()
+    partial_amount = float(data.get('partial_amount', 0) or 0)
     if not code:
         return jsonify({'error': 'No order code provided'}), 400
     if not items:
@@ -14157,8 +14664,12 @@ def customer_update_order():
             added_total += float(i.get('price', 0))
         order.total_investment += added_total
         db.session.commit()
-        push_event('order_updated', {'code': code, 'name': order.patron_name, 'added': added_total})
-        log_audit("Order Updated by Customer", f"Code: {code}, +₱{added_total:.2f} ({len(items)} item(s))")
+        # Build payment note for staff
+        pay_note = payment_method.title()
+        if payment_method == 'partial' and partial_wallet:
+            pay_note = f"Partial ({partial_wallet.title()} ₱{partial_amount:.2f} + Cash)"
+        push_event('order_updated', {'code': code, 'name': order.patron_name, 'added': added_total, 'payment': pay_note})
+        log_audit("Order Updated by Customer", f"Code: {code}, +₱{added_total:.2f} ({len(items)} item(s)) via {pay_note}")
         return jsonify({'status': 'success', 'new_total': order.total_investment, 'added_total': added_total})
     except Exception as e:
         db.session.rollback()
