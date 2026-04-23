@@ -5302,13 +5302,13 @@ function playGrantedSound() {
                     <option value="0% Sugar">0% (No Sugar)</option>
                 </select>
             </div>
-            <div class="sel-group" id="ice-level-section">
-                <span class="modal-section-label">Ice Level</span>
-                <select id="ice-level-select">
-                    <option value="Normal Ice">Normal Ice</option>
-                    <option value="Less Ice">Less Ice</option>
-                    <option value="No Ice">No Ice</option>
-                </select>
+        </div>
+        <div id="ice-level-section">
+            <span class="modal-section-label">Ice Level</span>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;margin-bottom:20px;">
+                <label class="addon-label"><input type="radio" name="ice_level" value="Normal Ice" checked> <span>Normal Ice</span></label>
+                <label class="addon-label"><input type="radio" name="ice_level" value="Less Ice"> <span>Less Ice</span></label>
+                <label class="addon-label"><input type="radio" name="ice_level" value="No Ice"> <span>No Ice</span></label>
             </div>
         </div>
         <div class="sel-row" id="water-temp-section" style="display:none;">
@@ -5809,7 +5809,7 @@ function playGrantedSound() {
             iceSection.style.display = 'none';
         } else {
             iceSection.style.display = '';
-            document.getElementById('ice-level-select').value = 'Normal Ice';
+            document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         }
     }
 
@@ -6173,14 +6173,14 @@ function playGrantedSound() {
         const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
         Object.entries(addonVisMap).forEach(([val,id])=>{const el=document.getElementById(id);if(el)el.style.display=(allowedAddons&&!allowedAddons.includes(val))?'none':'';});
         document.getElementById('sugar-level-select').value = '100% Sugar';
-        document.getElementById('ice-level-select').value = 'Normal Ice';
+        document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         document.getElementById('size-qty').innerText = '1';
         const showWT = ['Iced Americano','Cappuccino'].includes(name);
         document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
         document.getElementById('water-temp-select').value = 'Cold';
         // Default: Cold = ice shown; Hot = ice hidden
         document.getElementById('ice-level-section').style.display = '';
-        document.getElementById('ice-level-select').value = 'Normal Ice';
+        document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
         // Hide Track Order FAB while modal is open
@@ -6253,7 +6253,7 @@ function playGrantedSound() {
         const item = {
             name: pendingItemName, cat: pendingCat, size: pendingSize,
             sugar: sugar,
-            ice: document.getElementById('ice-level-section').style.display === 'none' ? 'N/A' : document.getElementById('ice-level-select').value,
+            ice: document.getElementById('ice-level-section').style.display === 'none' ? 'N/A' : (document.querySelector('input[name="ice_level"]:checked') ? document.querySelector('input[name="ice_level"]:checked').value : 'Normal Ice'),
             waterTemp: waterTemp,
             addons, price: pendingPrice + cost
         };
@@ -6366,7 +6366,7 @@ function playGrantedSound() {
             // Restore saved options
             selectSize(item.size || '16 oz');
             if (showSugar) document.getElementById('sugar-level-select').value = item.sugar || '100% Sugar';
-            document.getElementById('ice-level-select').value = item.ice || 'Normal Ice';
+            const _iceVal = item.ice || 'Normal Ice'; document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value===_iceVal);
             if (item.waterTemp) {
                 document.getElementById('water-temp-select').value = item.waterTemp;
                 document.getElementById('water-temp-select').dispatchEvent(new Event('change'));
