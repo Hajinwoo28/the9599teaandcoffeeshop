@@ -5993,72 +5993,85 @@ function playGrantedSound() {
 
     /** Open the appropriate payment app (GCash, Maya, PayPal) with amount pre-filled. */
     function openGCashApp(wallet) {
-        const phone    = '09264195603';
-        const merchant = encodeURIComponent('9599 Tea & Coffee');
+        try {
+            const phone    = '09264195603';
+            const merchant = encodeURIComponent('9599 Tea & Coffee');
 
-        // ── Resolve amount from the visible payment block ──────────────────
-        let rawAmount = 0;
-        if (wallet === 'gcash') {
-            const el = document.getElementById('gcash-amount-display');
-            rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
-        } else if (wallet === 'maya') {
-            const el = document.getElementById('maya-amount-display');
-            rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
-        } else if (wallet === 'partial') {
-            rawAmount = partialAmount || 0;
-        } else {
-            const el = document.getElementById('cart-total-amount');
-            rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
-        }
-        const amount = (!isNaN(rawAmount) && rawAmount > 0) ? rawAmount.toFixed(2) : '';
-
-        let appUrl, intentUrl, fallbackUrl;
-
-        if (wallet === 'maya') {
-            const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
-            appUrl      = 'maya://send?' + p;
-            intentUrl   = 'intent://open#Intent;scheme=maya;action=android.intent.action.VIEW;package=ph.paymaya.android;S.browser_fallback_url=' + encodeURIComponent('https://www.maya.ph/') + ';end';
-            fallbackUrl = 'https://www.maya.ph/';
-        } else if (wallet === 'paypal') {
-            appUrl      = 'paypal://send' + (amount ? '?amount=' + amount : '');
-            intentUrl   = 'intent://open#Intent;scheme=paypal;action=android.intent.action.VIEW;package=com.paypal.android.p2pmobile;S.browser_fallback_url=' + encodeURIComponent('https://www.paypal.com/send') + ';end';
-            fallbackUrl = 'https://www.paypal.com/send';
-        } else {
-            const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
-            appUrl      = 'gcash://transfer?' + p;
-            intentUrl   = 'intent://open#Intent;scheme=gcash;action=android.intent.action.VIEW;package=com.globe.gcash.android;S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/') + ';end';
-            fallbackUrl = 'https://www.gcash.com/';
-        }
-
-        // ── Launch via hidden anchor click (Android + iOS + Desktop) ─────
-        const isAndroid = /android/i.test(navigator.userAgent);
-        const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const isMobile  = isAndroid || isIOS;
-
-        if (isAndroid) {
-            // Android: use intent:// with S.browser_fallback_url so the OS
-            // handles app-vs-fallback natively — no JS timeout needed.
-            // If GCash/Maya/PayPal is installed it opens directly;
-            // if not, Android follows browser_fallback_url automatically.
-            window.location.href = intentUrl;
-        } else if (isIOS) {
-            // iOS: try custom scheme; fall back to web after 1.8 s if app
-            // didn't open (document stays visible).
-            window.location.href = appUrl;
-            const t0 = Date.now();
-            setTimeout(function() {
-                if (!document.hidden && Date.now() - t0 < 2000) {
-                    window.location.href = fallbackUrl;
-                }
-            }, 1800);
-        } else {
-            // Desktop: show the GCash QR modal so the customer can scan with
-            // their phone and pay without installing anything.
-            if (wallet === 'gcash' || wallet === 'partial') {
-                showGCashQR(amount);
+            // ── Resolve amount ─────────────────────────────────────────────
+            let rawAmount = 0;
+            if (wallet === 'gcash') {
+                const el = document.getElementById('gcash-amount-display');
+                rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
+            } else if (wallet === 'maya') {
+                const el = document.getElementById('maya-amount-display');
+                rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
+            } else if (wallet === 'partial') {
+                rawAmount = partialAmount || 0;
             } else {
-                window.location.href = fallbackUrl;
+                const el = document.getElementById('cart-total-amount');
+                rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
             }
+            const amount = (!isNaN(rawAmount) && rawAmount > 0) ? rawAmount.toFixed(2) : '';
+
+            const isAndroid = /android/i.test(navigator.userAgent);
+            const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+            if (wallet === 'maya') {
+                if (isAndroid || isIOS) {
+                    // Try app scheme; OS opens Maya if installed
+                    window.location.href = 'maya://';
+                    setTimeout(function() {
+                        if (!document.hidden) return;
+                    }, 1500);
+                    setTimeout(function() {
+                        if (document.visibilityState !== 'hidden') {
+                            window.location.href = 'https://www.maya.ph/';
+                        }
+                    }, 2000);
+                } else {
+                    window.location.href = 'https://www.maya.ph/';
+                }
+
+            } else if (wallet === 'paypal') {
+                if (isAndroid || isIOS) {
+                    window.location.href = 'paypal://';
+                    setTimeout(function() {
+                        if (document.visibilityState !== 'hidden') {
+                            window.location.href = 'https://www.paypal.com/send';
+                        }
+                    }, 2000);
+                } else {
+                    window.location.href = 'https://www.paypal.com/send';
+                }
+
+            } else {
+                // GCash (default + partial)
+                if (isAndroid) {
+                    // On Android Chrome, the most reliable way to open GCash
+                    // is the launcher intent targeting the package directly.
+                    // This bypasses any unregistered deep-link paths.
+                    var intentUrl = 'intent://#Intent'
+                        + ';action=android.intent.action.MAIN'
+                        + ';category=android.intent.category.LAUNCHER'
+                        + ';package=com.globe.gcash.android'
+                        + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
+                        + ';end';
+                    window.location.href = intentUrl;
+                } else if (isIOS) {
+                    // iOS: gcash:// scheme opens the app; fallback after 2s
+                    window.location.href = 'gcash://';
+                    setTimeout(function() {
+                        if (document.visibilityState !== 'hidden') {
+                            window.location.href = 'https://www.gcash.com/';
+                        }
+                    }, 2000);
+                } else {
+                    // Desktop: show QR modal
+                    showGCashQR(amount);
+                }
+            }
+        } catch(e) {
+            console.error('openGCashApp error:', e);
         }
     }
 
