@@ -3957,6 +3957,7 @@ STOREFRONT_HTML = """
             background: var(--bg-base); width: 100%; max-width: 480px;
             border-radius: 24px 24px 0 0; padding: 20px 24px max(28px, env(safe-area-inset-bottom,0px));
             animation: slideUpSheet 0.28s ease;
+            max-height: 92vh; overflow-y: auto;
         }
         @keyframes slideUpSheet { from { transform: translateY(70px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
         @keyframes custFadeIn { from { opacity: 0; } to { opacity: 1; } }
