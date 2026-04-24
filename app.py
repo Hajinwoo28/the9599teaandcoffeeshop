@@ -5989,35 +5989,31 @@ function playGrantedSound() {
             fallbackUrl = 'https://www.gcash.com/';
         }
 
-        // ── Launch: Android intent first, then scheme deep link, then web ──
+        // ── Launch via hidden anchor click (Android + iOS + Desktop) ─────
         const isAndroid = /android/i.test(navigator.userAgent);
         const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const isMobile  = isAndroid || isIOS;
 
-        if (isAndroid) {
-            window.location = intentUrl;
-            const t1 = Date.now();
+        if (isMobile) {
+            // Hidden <a> click is treated as a real user gesture by Chrome/Safari,
+            // reliably opening the registered app scheme without Play Store redirect.
+            const a = document.createElement('a');
+            a.href = appUrl;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // If the app did not open (tab still visible after 1.8s), fall back
+            // to the wallet website so the user still has a way to pay.
+            const t0 = Date.now();
             setTimeout(function() {
-                if (document.hidden || Date.now() - t1 >= 1400) return;
-                window.location = appUrl;
-                const t2 = Date.now();
-                setTimeout(function() {
-                    if (!document.hidden && Date.now() - t2 < 1200) {
-                        window.open(fallbackUrl, '_blank');
-                    }
-                }, 1200);
-            }, 1400);
-        } else if (isIOS) {
-            // iOS: scheme deep link, fall back to web if app not installed
-            window.location = appUrl;
-            const t1 = Date.now();
-            setTimeout(function() {
-                if (!document.hidden && Date.now() - t1 < 1500) {
-                    window.open(fallbackUrl, '_blank');
+                if (!document.hidden && Date.now() - t0 < 2000) {
+                    window.location.href = fallbackUrl;
                 }
-            }, 1500);
+            }, 1800);
         } else {
-            // Desktop: custom schemes have no registered handler, skip deep
-            // link entirely and navigate directly to the wallet website.
+            // Desktop: no app scheme handler — navigate straight to wallet site.
             window.location.href = fallbackUrl;
         }
     }
