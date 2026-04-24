@@ -5993,6 +5993,8 @@ function playGrantedSound() {
 
         // ── Launch: Android intent first, then scheme deep link, then web ──
         const isAndroid = /android/i.test(navigator.userAgent);
+        const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
         if (isAndroid) {
             window.location = intentUrl;
             const t1 = Date.now();
@@ -6006,8 +6008,8 @@ function playGrantedSound() {
                     }
                 }, 1200);
             }, 1400);
-        } else {
-            // iOS / desktop: scheme first, web fallback
+        } else if (isIOS) {
+            // iOS: scheme deep link, fall back to web if app not installed
             window.location = appUrl;
             const t1 = Date.now();
             setTimeout(function() {
@@ -6015,6 +6017,10 @@ function playGrantedSound() {
                     window.open(fallbackUrl, '_blank');
                 }
             }, 1500);
+        } else {
+            // Desktop: custom schemes have no registered handler, skip deep
+            // link entirely and open the wallet web app in a new tab.
+            window.open(fallbackUrl, '_blank');
         }
     }
 
