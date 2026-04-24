@@ -6017,16 +6017,16 @@ function playGrantedSound() {
         if (wallet === 'maya') {
             const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
             appUrl      = 'maya://send?' + p;
-            intentUrl   = 'intent://send?' + p + '#Intent;scheme=maya;package=ph.paymaya.android;S.browser_fallback_url=' + encodeURIComponent('https://www.maya.ph/') + ';end';
+            intentUrl   = 'intent:#Intent;package=ph.paymaya.android;S.browser_fallback_url=' + encodeURIComponent('https://www.maya.ph/') + ';end';
             fallbackUrl = 'https://www.maya.ph/';
         } else if (wallet === 'paypal') {
             appUrl      = 'paypal://send' + (amount ? '?amount=' + amount : '');
-            intentUrl   = 'intent://send' + (amount ? '?amount=' + amount : '') + '#Intent;scheme=paypal;package=com.paypal.android.p2pmobile;S.browser_fallback_url=' + encodeURIComponent('https://www.paypal.com/send') + ';end';
+            intentUrl   = 'intent:#Intent;package=com.paypal.android.p2pmobile;S.browser_fallback_url=' + encodeURIComponent('https://www.paypal.com/send') + ';end';
             fallbackUrl = 'https://www.paypal.com/send';
         } else {
             const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
             appUrl      = 'gcash://transfer?' + p;
-            intentUrl   = 'intent://transfer?' + p + '#Intent;scheme=gcash;package=com.globe.gcash.android;S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/') + ';end';
+            intentUrl   = 'intent:#Intent;package=com.globe.gcash.android;S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/') + ';end';
             fallbackUrl = 'https://www.gcash.com/';
         }
 
