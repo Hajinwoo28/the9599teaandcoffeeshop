@@ -3793,6 +3793,46 @@ setInterval(empLoadAnnouncements, 120000);
 
 <!-- GRANT REPLY MODAL -->
 
+<!-- ── GCash QR Desktop Modal ── -->
+<div id="gcash-qr-modal" onclick="if(event.target===this)closeGCashQR()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(30,30,60,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:18px;overflow:hidden;max-width:420px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.28);animation:custSuccessSheet 0.32s ease;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a6fe8,#1552c4);padding:18px 22px;display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/GCash_logo.svg/320px-GCash_logo.svg.png" alt="GCash" style="height:32px;filter:brightness(0) invert(1);">
+    </div>
+    <!-- Body -->
+    <div style="padding:24px 28px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:0.8rem;color:#64748b;font-weight:600;letter-spacing:0.3px;">Securely complete the payment with your GCash app</p>
+      <p style="margin:0 0 18px;font-size:1rem;color:#1a6fe8;font-weight:700;">Log in to GCash and scan this QR with the QR Scanner.</p>
+      <!-- QR Code container -->
+      <div id="gcash-qr-canvas" style="display:inline-block;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:18px;"></div>
+      <!-- Payment details -->
+      <div style="background:#eff6ff;border-radius:10px;padding:12px 16px;text-align:left;margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:0.82rem;color:#64748b;font-weight:600;">Send to</span>
+          <span style="font-size:0.88rem;color:#1e293b;font-weight:800;letter-spacing:1px;">0926 419 5603</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:0.82rem;color:#64748b;font-weight:600;">Amount Due</span>
+          <span id="gcash-qr-amount" style="font-size:0.95rem;color:#1a6fe8;font-weight:900;">₱0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-size:0.82rem;color:#64748b;font-weight:600;">Merchant</span>
+          <span style="font-size:0.82rem;color:#1e293b;font-weight:700;">9599 Tea & Coffee</span>
+        </div>
+      </div>
+      <p style="margin:10px 0 0;font-size:0.74rem;color:#2563eb;font-weight:700;line-height:1.5;">
+        📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
+      </p>
+    </div>
+    <!-- Footer close button -->
+    <div style="padding:0 28px 22px;">
+      <button onclick="closeGCashQR()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid #cbd5e1;background:#fff;color:#475569;font-weight:700;font-size:0.88rem;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+<!-- ── End GCash QR Modal ── -->
+
 </body>
 </html>
 """
@@ -3809,6 +3849,7 @@ STOREFRONT_HTML = """
     
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     
     <style>
         :root {
@@ -5976,16 +6017,16 @@ function playGrantedSound() {
         if (wallet === 'maya') {
             const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
             appUrl      = 'maya://send?' + p;
-            intentUrl   = 'intent://send?' + p + '#Intent;scheme=maya;package=ph.paymaya.android;end';
+            intentUrl   = 'intent://send?' + p + '#Intent;scheme=maya;package=ph.paymaya.android;S.browser_fallback_url=' + encodeURIComponent('https://www.maya.ph/') + ';end';
             fallbackUrl = 'https://www.maya.ph/';
         } else if (wallet === 'paypal') {
             appUrl      = 'paypal://send' + (amount ? '?amount=' + amount : '');
-            intentUrl   = 'intent://send' + (amount ? '?amount=' + amount : '') + '#Intent;scheme=paypal;package=com.paypal.android.p2pmobile;end';
+            intentUrl   = 'intent://send' + (amount ? '?amount=' + amount : '') + '#Intent;scheme=paypal;package=com.paypal.android.p2pmobile;S.browser_fallback_url=' + encodeURIComponent('https://www.paypal.com/send') + ';end';
             fallbackUrl = 'https://www.paypal.com/send';
         } else {
             const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
             appUrl      = 'gcash://transfer?' + p;
-            intentUrl   = 'intent://transfer?' + p + '#Intent;scheme=gcash;package=com.globe.gcash.android;end';
+            intentUrl   = 'intent://transfer?' + p + '#Intent;scheme=gcash;package=com.globe.gcash.android;S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/') + ';end';
             fallbackUrl = 'https://www.gcash.com/';
         }
 
@@ -5994,18 +6035,16 @@ function playGrantedSound() {
         const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
         const isMobile  = isAndroid || isIOS;
 
-        if (isMobile) {
-            // Hidden <a> click is treated as a real user gesture by Chrome/Safari,
-            // reliably opening the registered app scheme without Play Store redirect.
-            const a = document.createElement('a');
-            a.href = appUrl;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            // If the app did not open (tab still visible after 1.8s), fall back
-            // to the wallet website so the user still has a way to pay.
+        if (isAndroid) {
+            // Android: use intent:// with S.browser_fallback_url so the OS
+            // handles app-vs-fallback natively — no JS timeout needed.
+            // If GCash/Maya/PayPal is installed it opens directly;
+            // if not, Android follows browser_fallback_url automatically.
+            window.location.href = intentUrl;
+        } else if (isIOS) {
+            // iOS: try custom scheme; fall back to web after 1.8 s if app
+            // didn't open (document stays visible).
+            window.location.href = appUrl;
             const t0 = Date.now();
             setTimeout(function() {
                 if (!document.hidden && Date.now() - t0 < 2000) {
@@ -6013,9 +6052,38 @@ function playGrantedSound() {
                 }
             }, 1800);
         } else {
-            // Desktop: no app scheme handler — navigate straight to wallet site.
-            window.location.href = fallbackUrl;
+            // Desktop: show the GCash QR modal so the customer can scan with
+            // their phone and pay without installing anything.
+            if (wallet === 'gcash' || wallet === 'partial') {
+                showGCashQR(amount);
+            } else {
+                window.location.href = fallbackUrl;
+            }
         }
+    }
+
+    function showGCashQR(amount) {
+        const modal = document.getElementById('gcash-qr-modal');
+        if (!modal) return;
+        // Update amount display
+        document.getElementById('gcash-qr-amount').textContent = amount ? '\u20B1' + parseFloat(amount).toFixed(2) : '\u20B1—';
+        // Generate QR code (encode GCash number so app can scan & pre-fill)
+        const canvas = document.getElementById('gcash-qr-canvas');
+        canvas.innerHTML = '';
+        const qrData = '09264195603'; // GCash number — scannable by GCash QR scanner
+        new QRCode(canvas, {
+            text: qrData,
+            width: 200, height: 200,
+            colorDark: '#000', colorLight: '#fff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeGCashQR() {
+        const modal = document.getElementById('gcash-qr-modal');
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
     }
 
     /** Update the partial wallet open button label. */
