@@ -5977,18 +5977,16 @@ function playGrantedSound() {
             const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
             appUrl      = 'maya://send?' + p;
             intentUrl   = 'intent://send?' + p + '#Intent;scheme=maya;package=ph.paymaya.android;end';
-            fallbackUrl = 'https://app.maya.ph/';
+            fallbackUrl = 'https://www.maya.ph/';
         } else if (wallet === 'paypal') {
             appUrl      = 'paypal://send' + (amount ? '?amount=' + amount : '');
             intentUrl   = 'intent://send' + (amount ? '?amount=' + amount : '') + '#Intent;scheme=paypal;package=com.paypal.android.p2pmobile;end';
             fallbackUrl = 'https://www.paypal.com/send';
         } else {
-            // GCash — pass phone + amount + merchant so the app shows the
-            // pre-filled checkout screen (Merchant / Amount Due) on open
             const p = 'phone=' + phone + (amount ? '&amount=' + amount : '') + '&remarks=' + merchant;
             appUrl      = 'gcash://transfer?' + p;
             intentUrl   = 'intent://transfer?' + p + '#Intent;scheme=gcash;package=com.globe.gcash.android;end';
-            fallbackUrl = 'https://app.gcash.com/';   // mobile web app, not homepage
+            fallbackUrl = 'https://www.gcash.com/';
         }
 
         // ── Launch: Android intent first, then scheme deep link, then web ──
@@ -6019,8 +6017,8 @@ function playGrantedSound() {
             }, 1500);
         } else {
             // Desktop: custom schemes have no registered handler, skip deep
-            // link entirely and open the wallet web app in a new tab.
-            window.open(fallbackUrl, '_blank');
+            // link entirely and navigate directly to the wallet website.
+            window.location.href = fallbackUrl;
         }
     }
 
