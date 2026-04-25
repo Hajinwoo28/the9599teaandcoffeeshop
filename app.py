@@ -1129,64 +1129,326 @@ LOGIN_HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Admin Login | 9599 Tea &amp; Coffee</title>
-<!-- DNS / connection hints: establish early to avoid cold-start latency -->
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-<!-- Font Awesome via cdnjs (avoids Edge Tracking Prevention triggered by jsdelivr) -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
 <style>
 :root{
-  --brown:#7B4F2E; --brown-dark:#3D2410; --brown-mid:#A0724A;
-  --cream:#F0EDE4; --cream-dark:#E2DAC8; --tan:#C4A882;
-  --red:#C0392B; --green:#27AE60;
-  --text:#2A1505; --muted:#8D6E55;
+  --bg-a:#1A0A00; --bg-b:#3B1A08; --bg-c:#6B3A1F;
+  --card-bg:rgba(255,248,240,0.07);
+  --card-border:rgba(255,220,170,0.18);
+  --gold:#E8C98A; --gold-bright:#F5E0A8; --gold-dim:#B89450;
+  --cream:#FFF8F0; --cream-dim:rgba(255,248,240,0.7);
+  --red:#FF6B6B; --green:#52D68A;
+  --text-light:#FFF8F0; --text-muted:rgba(255,248,240,0.5);
+  --btn-a:#C8823A; --btn-b:#8B4F18;
+  --inp-bg:rgba(255,248,240,0.06); --inp-border:rgba(255,220,170,0.25);
+  --inp-focus:rgba(232,201,138,0.5);
 }
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent;}
-body{background:linear-gradient(160deg,var(--brown-dark) 0%,var(--brown) 60%,var(--brown-mid) 100%);display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
-.wrap{width:100%;max-width:380px;}
-.logo-area{text-align:center;margin-bottom:26px;}
-.logo-img-wrap{width:76px;height:76px;border-radius:50%;background:var(--cream);border:4px solid var(--tan);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);}
-.logo-img-wrap img{width:100%;height:100%;object-fit:cover;}
-.logo-img-wrap .logo-fallback{font-size:2rem;}
-.logo-area h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--cream);letter-spacing:0.5px;}
-.logo-area p{font-size:0.72rem;color:var(--tan);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
-.card{background:var(--cream);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);padding:30px 26px;}
-.pill{display:inline-flex;align-items:center;gap:6px;background:var(--brown-dark);color:var(--tan);font-size:0.66rem;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;}
-h2{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:var(--text);margin-bottom:3px;}
-.sub{font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:20px;}
-.lbl{font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:block;}
-.inp{width:100%;padding:13px;border:2px solid var(--cream-dark);border-radius:12px;font-size:1.55rem;text-align:center;letter-spacing:10px;margin-bottom:16px;outline:none;font-weight:900;color:var(--brown-dark);background:#fff;font-family:'Nunito',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
-.inp:focus{border-color:var(--brown);box-shadow:0 0 0 4px rgba(123,79,46,0.12);}
-.btn{width:100%;background:linear-gradient(135deg,var(--brown) 0%,var(--brown-dark) 100%);color:var(--cream);border:none;padding:13px;border-radius:12px;font-weight:800;font-size:0.95rem;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:10px;font-family:'Nunito',sans-serif;box-shadow:0 4px 16px rgba(61,36,16,0.35);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,opacity 0.15s;}
-.btn:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(61,36,16,0.45);opacity:0.97;}
-.btn:active{transform:scale(0.96);opacity:0.88;}
-.err{background:#FFF0F0;color:var(--red);padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:700;margin-bottom:16px;border:1.5px solid #F5C6C6;display:flex;align-items:center;gap:8px;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:radial-gradient(ellipse at 20% 0%,var(--bg-c) 0%,var(--bg-b) 45%,var(--bg-a) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;overflow:hidden;
+}
+
+/* ── Canvas bubbles ── */
+canvas#bubbleCanvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
+
+/* ── Grain overlay ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+
+.wrap{position:relative;z-index:2;width:100%;max-width:400px;}
+
+/* ── Logo area ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.8) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes dotPop{0%{transform:scale(0);}70%{transform:scale(1.4);}100%{transform:scale(1);}}
+@keyframes steamRise{
+  0%{transform:translateY(0) translateX(-50%) scaleX(1);opacity:0;}
+  20%{opacity:0.6;}
+  100%{transform:translateY(-36px) translateX(-50%) scaleX(0.5);opacity:0;}
+}
+@keyframes ringPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(232,201,138,0.25),0 20px 60px rgba(0,0,0,0.55);}
+  50%{box-shadow:0 0 0 12px rgba(232,201,138,0),0 20px 60px rgba(0,0,0,0.55);}
+}
+
+.logo-area{text-align:center;margin-bottom:28px;animation:fadeUp 0.8s cubic-bezier(0.22,1,0.36,1) both;}
+
+.logo-ring{
+  position:relative;width:88px;height:88px;margin:0 auto 14px;
+  border-radius:50%;padding:3px;
+  background:conic-gradient(var(--gold) 0deg,var(--gold-bright) 90deg,var(--gold-dim) 180deg,var(--gold) 360deg);
+  animation:ringPulse 3s ease-in-out infinite;
+}
+.logo-ring-inner{
+  width:100%;height:100%;border-radius:50%;overflow:hidden;
+  background:var(--bg-a);border:2px solid var(--bg-a);
+}
+.logo-ring-inner img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.logo-ring-inner .logo-emoji{display:none;font-size:2.4rem;
+  width:100%;height:100%;border-radius:50%;background:var(--bg-b);
+  align-items:center;justify-content:center;}
+
+/* Steam wisps */
+.steam-wand{position:absolute;bottom:calc(100% - 2px);left:50%;}
+.steam-wand span{
+  position:absolute;bottom:0;display:block;
+  width:2px;border-radius:2px;background:rgba(255,248,240,0.35);
+  animation:steamRise 2.4s ease-in infinite;
+}
+.steam-wand span:nth-child(1){left:-7px;height:18px;animation-delay:0s;}
+.steam-wand span:nth-child(2){left:0px;height:24px;animation-delay:0.5s;}
+.steam-wand span:nth-child(3){left:7px;height:16px;animation-delay:1.1s;}
+
+.logo-area h1{
+  font-family:'Cormorant Garamond',serif;font-size:1.65rem;font-weight:700;
+  color:var(--cream);letter-spacing:0.5px;line-height:1.2;
+}
+.logo-area .tagline{
+  font-size:0.68rem;color:var(--gold-dim);font-weight:600;
+  letter-spacing:2.5px;text-transform:uppercase;margin-top:4px;
+}
+
+/* ── Glass card ── */
+.card{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:24px;
+  padding:32px 28px 28px;
+  backdrop-filter:blur(20px) saturate(1.2);
+  -webkit-backdrop-filter:blur(20px) saturate(1.2);
+  box-shadow:0 32px 80px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.08);
+  animation:fadeUp 0.8s 0.12s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* ── Pill badge ── */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(232,201,138,0.12);color:var(--gold);
+  border:1px solid rgba(232,201,138,0.3);
+  font-size:0.62rem;font-weight:700;padding:5px 12px;
+  border-radius:40px;margin-bottom:14px;letter-spacing:1.5px;text-transform:uppercase;
+  animation:fadeIn 0.6s 0.35s both;
+}
+
+h2{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.55rem;font-weight:700;color:var(--cream);
+  margin-bottom:4px;animation:fadeUp 0.6s 0.25s both;
+}
+.sub{font-size:0.82rem;color:var(--text-muted);font-weight:400;margin-bottom:22px;animation:fadeUp 0.6s 0.3s both;}
+
+/* ── Error box ── */
+.err{
+  background:rgba(255,107,107,0.12);color:#FF9999;
+  padding:10px 14px;border-radius:12px;font-size:0.82rem;font-weight:600;
+  margin-bottom:16px;border:1px solid rgba(255,107,107,0.3);
+  display:flex;align-items:center;gap:8px;
+  animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* ── Label ── */
+.lbl{font-size:0.65rem;font-weight:700;color:var(--text-muted);
+     text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;display:block;}
+
+/* ── PIN input with dot overlay ── */
+.pin-wrap{position:relative;margin-bottom:18px;}
+.pin-dots{
+  position:absolute;inset:0;pointer-events:none;z-index:2;
+  display:flex;align-items:center;justify-content:center;gap:14px;
+}
+.pin-dot{
+  width:13px;height:13px;border-radius:50%;
+  border:2px solid rgba(232,201,138,0.4);
+  background:transparent;transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+.pin-dot.filled{
+  background:var(--gold);border-color:var(--gold);
+  box-shadow:0 0 12px rgba(232,201,138,0.5);
+  animation:dotPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.inp{
+  width:100%;padding:16px;
+  border:1.5px solid var(--inp-border);border-radius:14px;
+  font-size:1.6rem;text-align:center;letter-spacing:12px;
+  outline:none;font-weight:900;
+  color:transparent;caret-color:var(--gold);
+  background:var(--inp-bg);
+  font-family:'DM Sans',sans-serif;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.inp:focus{border-color:rgba(232,201,138,0.6);box-shadow:0 0 0 4px var(--inp-focus);}
+.inp::selection{background:rgba(232,201,138,0.2);}
+
+/* ── Submit button ── */
+@keyframes shimmer{
+  0%{background-position:200% center;}100%{background-position:-200% center;}
+}
+.btn{
+  width:100%;
+  background:linear-gradient(135deg,var(--btn-a),var(--btn-b));
+  color:var(--cream);border:none;padding:15px;border-radius:14px;
+  font-weight:700;font-size:0.95rem;cursor:pointer;
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  font-family:'DM Sans',sans-serif;
+  box-shadow:0 6px 24px rgba(200,130,58,0.35),inset 0 1px 0 rgba(255,255,255,0.15);
+  transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,opacity 0.15s;
+  position:relative;overflow:hidden;letter-spacing:0.3px;
+}
+.btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.1) 50%,transparent 100%);
+  background-size:200% 100%;
+  animation:shimmer 2.5s linear infinite;
+  border-radius:inherit;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(200,130,58,0.5),inset 0 1px 0 rgba(255,255,255,0.15);}
+.btn:active{transform:scale(0.97);opacity:0.92;}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+/* ── Divider ── */
+.divider{
+  display:flex;align-items:center;gap:10px;margin:6px 0 4px;
+}
+.divider hr{flex:1;border:none;border-top:1px solid rgba(255,255,255,0.08);}
+.divider span{font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;}
+
+/* ── Footer link ── */
+.footer-link{
+  text-align:center;margin-top:18px;font-size:0.76rem;
+  color:var(--text-muted);animation:fadeIn 0.6s 0.5s both;
+}
+.footer-link a{color:var(--gold-dim);text-decoration:none;font-weight:600;}
+.footer-link a:hover{color:var(--gold);}
 </style>
 </head>
 <body>
+<canvas id="bubbleCanvas"></canvas>
+
 <div class="wrap">
   <div class="logo-area">
-    <div class="logo-img-wrap">
-      <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-      <span class="logo-fallback" style="display:none;">☕</span>
+    <div class="logo-ring">
+      <div class="logo-ring-inner">
+        <img src="/static/images/9599.jpg" alt="9599"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="logo-emoji">☕</div>
+      </div>
+      <div class="steam-wand">
+        <span></span><span></span><span></span>
+      </div>
     </div>
     <h1>9599 Tea &amp; Coffee</h1>
-    <p>Parne Na! — Management System</p>
+    <div class="tagline">Parne Na! — Management System</div>
   </div>
+
   <div class="card">
-    <div class="pill"><i class="fas fa-shield-alt"></i> Admin Panel</div>
-    <h2>Admin Access</h2>
-    <p class="sub">Enter the 5-digit master PIN to continue</p>
-    {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
-    <form method="POST">
-      <input type="text" name="_email_confirm" style="display:none;position:absolute;left:-9999px;" tabindex="-1" autocomplete="off">
-      <label class="lbl">Master PIN (5 digits)</label>
-      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code" title="Enter exactly 5 digits">
-      <button type="submit" class="btn"><i class="fas fa-lock"></i> Login Securely</button>
+    <div class="pill"><i class="fas fa-shield-halved"></i>&ensp;Admin Portal</div>
+    <h2>Welcome Back</h2>
+    <p class="sub">Enter your 5-digit master PIN to access the admin panel.</p>
+
+    {% if error %}
+    <div class="err"><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" id="loginForm">
+      <input type="text" name="_email_confirm"
+             style="display:none;position:absolute;left:-9999px;"
+             tabindex="-1" autocomplete="off">
+      <label class="lbl">Master PIN</label>
+      <div class="pin-wrap">
+        <div class="pin-dots">
+          <div class="pin-dot" id="d1"></div>
+          <div class="pin-dot" id="d2"></div>
+          <div class="pin-dot" id="d3"></div>
+          <div class="pin-dot" id="d4"></div>
+          <div class="pin-dot" id="d5"></div>
+        </div>
+        <input type="password" name="pin" class="inp" id="pinInput"
+               placeholder="" required autofocus maxlength="5" minlength="5"
+               pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
+      </div>
+      <button type="submit" class="btn" id="submitBtn">
+        <i class="fas fa-lock"></i> Login Securely
+      </button>
     </form>
   </div>
+
+  <div class="footer-link">
+    Staff? <a href="/employee/login">Employee station &rarr;</a>
+  </div>
 </div>
+
+<script>
+window._bubbleColors = [
+  'rgba(232,201,138,0.07)',
+  'rgba(200,130,58,0.05)',
+  'rgba(255,248,240,0.04)'
+];
+// PIN dot logic
+var pinInput = document.getElementById('pinInput');
+var dots = [document.getElementById('d1'),document.getElementById('d2'),
+            document.getElementById('d3'),document.getElementById('d4'),
+            document.getElementById('d5')];
+
+pinInput.addEventListener('input', function(){
+  var len = this.value.length;
+  dots.forEach(function(d,i){
+    if(i < len){ if(!d.classList.contains('filled')){ d.classList.add('filled'); } }
+    else { d.classList.remove('filled'); }
+  });
+});
+
+// Submit guard
+document.getElementById('loginForm').addEventListener('submit', function(){
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+});
+</script>
+
+<script>
+(function(){
+  var canvas=document.getElementById('bubbleCanvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var W,H,bubbles=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  var C=window._bubbleColors||['rgba(255,255,255,0.06)'];
+  for(var i=0;i<26;i++){
+    var r=5+Math.random()*20;
+    bubbles.push({x:Math.random()*window.innerWidth,
+      y:window.innerHeight+r+Math.random()*window.innerHeight,
+      r:r,speed:0.35+Math.random()*0.7,drift:(Math.random()-.5)*.35,
+      color:C[Math.floor(Math.random()*C.length)]});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    bubbles.forEach(function(b){
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.strokeStyle=b.color.replace(/[\d.]+\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
+      ctx.fillStyle=b.color;ctx.fill();
+      ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.28)';ctx.fill();
+      b.y-=b.speed;b.x+=b.drift;
+      if(b.y<-b.r*2){b.y=H+b.r;b.x=Math.random()*W;}
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
 </body>
 </html>
 """
@@ -1199,60 +1461,248 @@ EMPLOYEE_LOGIN_HTML = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-<title>Employee Login | 9599 Tea &amp; Coffee</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<title>Employee Station | 9599 Tea &amp; Coffee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
 <style>
 :root{
-  --teal:#0D7A6A; --teal-dark:#094F44; --teal-mid:#12937E;
-  --cream:#F0F5F4; --cream-dark:#D0E4E0; --gold:#C8A84B;
-  --red:#C0392B; --green:#27AE60;
-  --text:#0A2925; --muted:#557570;
+  --bg-a:#010F0D; --bg-b:#083028; --bg-c:#0D5E4A;
+  --card-bg:rgba(220,255,248,0.05);
+  --card-border:rgba(100,220,190,0.18);
+  --teal:#3ECFAD; --teal-bright:#72E8CC; --teal-dim:#1E8C72;
+  --gold:#C8A84B; --gold-dim:#907535;
+  --cream:#F0FDF8; --cream-dim:rgba(240,253,248,0.55);
+  --red:#FF6B6B;
+  --text-light:#E8FFF8; --text-muted:rgba(220,255,248,0.5);
+  --btn-a:#0D8A6E; --btn-b:#055040;
+  --inp-bg:rgba(220,255,248,0.05); --inp-border:rgba(100,220,190,0.22);
+  --inp-focus:rgba(62,207,173,0.22);
 }
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent;}
-body{background:linear-gradient(160deg,var(--teal-dark) 0%,var(--teal) 60%,var(--teal-mid) 100%);display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
-.wrap{width:100%;max-width:380px;}
-.logo-area{text-align:center;margin-bottom:26px;}
-.logo-img-wrap{width:76px;height:76px;border-radius:50%;background:var(--cream);border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);}
-.logo-img-wrap img{width:100%;height:100%;object-fit:cover;}
-.logo-img-wrap .logo-fallback{font-size:2rem;}
-.logo-area h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:0.5px;}
-.logo-area p{font-size:0.72rem;color:var(--gold);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
-.card{background:var(--cream);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);padding:30px 26px;}
-.pill{display:inline-flex;align-items:center;gap:6px;background:var(--teal-dark);color:var(--gold);font-size:0.66rem;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;}
-h2{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:var(--text);margin-bottom:3px;}
-.sub{font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:20px;}
-.lbl{font-size:0.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:block;}
-.inp{width:100%;padding:13px;border:2px solid var(--cream-dark);border-radius:12px;font-size:1.55rem;text-align:center;letter-spacing:10px;margin-bottom:16px;outline:none;font-weight:900;color:var(--teal-dark);background:#fff;font-family:'Nunito',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
-.inp:focus{border-color:var(--teal);box-shadow:0 0 0 4px rgba(13,122,106,0.12);}
-.btn{width:100%;background:linear-gradient(135deg,var(--teal) 0%,var(--teal-dark) 100%);color:#fff;border:none;padding:13px;border-radius:12px;font-weight:800;font-size:0.95rem;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:10px;font-family:'Nunito',sans-serif;box-shadow:0 4px 16px rgba(9,79,68,0.35);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,opacity 0.15s;}
-.btn:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(9,79,68,0.45);opacity:0.97;}
-.btn:active{transform:scale(0.96);opacity:0.88;}
-.err{background:#FFF0F0;color:var(--red);padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:700;margin-bottom:16px;border:1.5px solid #F5C6C6;display:flex;align-items:center;gap:8px;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:radial-gradient(ellipse at 80% 10%,var(--bg-c) 0%,var(--bg-b) 40%,var(--bg-a) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;overflow:hidden;
+}
+canvas#bubbleCanvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
+body::before{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:0.35;
+}
+.wrap{position:relative;z-index:2;width:100%;max-width:400px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.8) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes dotPop{0%{transform:scale(0);}70%{transform:scale(1.4);}100%{transform:scale(1);}}
+@keyframes steamRise{
+  0%{transform:translateY(0) translateX(-50%) scaleX(1);opacity:0;}
+  20%{opacity:0.55;}
+  100%{transform:translateY(-38px) translateX(-50%) scaleX(0.4);opacity:0;}
+}
+@keyframes ringPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(62,207,173,0.2),0 20px 60px rgba(0,0,0,0.6);}
+  50%{box-shadow:0 0 0 12px rgba(62,207,173,0),0 20px 60px rgba(0,0,0,0.6);}
+}
+@keyframes shimmer{0%{background-position:200% center;}100%{background-position:-200% center;}}
+
+.logo-area{text-align:center;margin-bottom:28px;animation:fadeUp 0.8s cubic-bezier(0.22,1,0.36,1) both;}
+.logo-ring{
+  position:relative;width:88px;height:88px;margin:0 auto 14px;
+  border-radius:50%;padding:3px;
+  background:conic-gradient(var(--teal) 0deg,var(--teal-bright) 90deg,var(--teal-dim) 200deg,var(--teal) 360deg);
+  animation:ringPulse 3s ease-in-out infinite;
+}
+.logo-ring-inner{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--bg-a);}
+.logo-ring-inner img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.logo-ring-inner .logo-emoji{display:none;font-size:2.4rem;width:100%;height:100%;border-radius:50%;
+  background:var(--bg-b);align-items:center;justify-content:center;}
+.steam-wand{position:absolute;bottom:calc(100% - 2px);left:50%;}
+.steam-wand span{position:absolute;bottom:0;display:block;width:2px;border-radius:2px;
+  background:rgba(220,255,248,0.3);animation:steamRise 2.4s ease-in infinite;}
+.steam-wand span:nth-child(1){left:-7px;height:18px;animation-delay:0.2s;}
+.steam-wand span:nth-child(2){left:0px;height:25px;animation-delay:0.7s;}
+.steam-wand span:nth-child(3){left:7px;height:15px;animation-delay:1.3s;}
+
+.logo-area h1{font-family:'Cormorant Garamond',serif;font-size:1.65rem;font-weight:700;
+  color:var(--cream);letter-spacing:0.5px;line-height:1.2;}
+.logo-area .tagline{font-size:0.68rem;color:var(--gold-dim);font-weight:600;
+  letter-spacing:2.5px;text-transform:uppercase;margin-top:4px;}
+
+.card{
+  background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;
+  padding:32px 28px 28px;backdrop-filter:blur(20px) saturate(1.3);
+  -webkit-backdrop-filter:blur(20px) saturate(1.3);
+  box-shadow:0 32px 80px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.07);
+  animation:fadeUp 0.8s 0.12s cubic-bezier(0.22,1,0.36,1) both;
+}
+.pill{display:inline-flex;align-items:center;gap:6px;
+  background:rgba(62,207,173,0.1);color:var(--teal);
+  border:1px solid rgba(62,207,173,0.28);
+  font-size:0.62rem;font-weight:700;padding:5px 12px;
+  border-radius:40px;margin-bottom:14px;letter-spacing:1.5px;text-transform:uppercase;
+  animation:fadeIn 0.6s 0.35s both;}
+h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
+  color:var(--cream);margin-bottom:4px;animation:fadeUp 0.6s 0.25s both;}
+.sub{font-size:0.82rem;color:var(--text-muted);font-weight:400;margin-bottom:22px;animation:fadeUp 0.6s 0.3s both;}
+
+.err{background:rgba(255,107,107,0.1);color:#FF9999;padding:10px 14px;border-radius:12px;
+  font-size:0.82rem;font-weight:600;margin-bottom:16px;border:1px solid rgba(255,107,107,0.28);
+  display:flex;align-items:center;gap:8px;animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+
+.lbl{font-size:0.65rem;font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;display:block;}
+
+.pin-wrap{position:relative;margin-bottom:18px;}
+.pin-dots{position:absolute;inset:0;pointer-events:none;z-index:2;
+  display:flex;align-items:center;justify-content:center;gap:14px;}
+.pin-dot{width:13px;height:13px;border-radius:50%;
+  border:2px solid rgba(62,207,173,0.35);background:transparent;
+  transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);}
+.pin-dot.filled{background:var(--teal);border-color:var(--teal);
+  box-shadow:0 0 12px rgba(62,207,173,0.5);animation:dotPop 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+.inp{width:100%;padding:16px;border:1.5px solid var(--inp-border);border-radius:14px;
+  font-size:1.6rem;text-align:center;letter-spacing:12px;outline:none;font-weight:900;
+  color:transparent;caret-color:var(--teal);background:var(--inp-bg);
+  font-family:'DM Sans',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
+.inp:focus{border-color:rgba(62,207,173,0.5);box-shadow:0 0 0 4px var(--inp-focus);}
+
+.btn{width:100%;background:linear-gradient(135deg,var(--btn-a),var(--btn-b));
+  color:var(--cream);border:none;padding:15px;border-radius:14px;
+  font-weight:700;font-size:0.95rem;cursor:pointer;
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  font-family:'DM Sans',sans-serif;
+  box-shadow:0 6px 24px rgba(13,138,110,0.35),inset 0 1px 0 rgba(255,255,255,0.12);
+  transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,opacity 0.15s;
+  position:relative;overflow:hidden;letter-spacing:0.3px;}
+.btn::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.08) 50%,transparent 100%);
+  background-size:200% 100%;animation:shimmer 2.5s linear infinite;border-radius:inherit;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(13,138,110,0.5),inset 0 1px 0 rgba(255,255,255,0.12);}
+.btn:active{transform:scale(0.97);opacity:0.92;}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+.footer-link{text-align:center;margin-top:18px;font-size:0.76rem;
+  color:var(--text-muted);animation:fadeIn 0.6s 0.5s both;}
+.footer-link a{color:var(--teal-dim);text-decoration:none;font-weight:600;}
+.footer-link a:hover{color:var(--teal);}
 </style>
 </head>
 <body>
+<canvas id="bubbleCanvas"></canvas>
+
 <div class="wrap">
   <div class="logo-area">
-    <div class="logo-img-wrap">
-      <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-      <span class="logo-fallback" style="display:none;">☕</span>
+    <div class="logo-ring">
+      <div class="logo-ring-inner">
+        <img src="/static/images/9599.jpg" alt="9599"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="logo-emoji">🧋</div>
+      </div>
+      <div class="steam-wand">
+        <span></span><span></span><span></span>
+      </div>
     </div>
     <h1>9599 Tea &amp; Coffee</h1>
-    <p>Parne Na! — Employee Station</p>
+    <div class="tagline">Parne Na! — Employee Station</div>
   </div>
+
   <div class="card">
-    <div class="pill"><i class="fas fa-user-tie"></i> Staff Access</div>
-    <h2>Employee Access</h2>
-    <p class="sub">Enter the 5-digit master PIN to continue</p>
-    {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
-    <form method="POST">
-      <label class="lbl">Master PIN (5 digits)</label>
-      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code" title="Enter exactly 5 digits">
-      <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
+    <div class="pill"><i class="fas fa-mug-hot"></i>&ensp;Staff Access</div>
+    <h2>Employee Sign In</h2>
+    <p class="sub">Enter your 5-digit staff PIN to start your shift.</p>
+
+    {% if error %}
+    <div class="err"><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" id="empForm">
+      <label class="lbl">Staff PIN</label>
+      <div class="pin-wrap">
+        <div class="pin-dots">
+          <div class="pin-dot" id="d1"></div>
+          <div class="pin-dot" id="d2"></div>
+          <div class="pin-dot" id="d3"></div>
+          <div class="pin-dot" id="d4"></div>
+          <div class="pin-dot" id="d5"></div>
+        </div>
+        <input type="password" name="pin" class="inp" id="pinInput"
+               placeholder="" required autofocus maxlength="5" minlength="5"
+               pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
+      </div>
+      <button type="submit" class="btn" id="submitBtn">
+        <i class="fas fa-arrow-right-to-bracket"></i> Sign In to Station
+      </button>
     </form>
   </div>
+
+  <div class="footer-link">
+    Admin? <a href="/login">Admin panel &rarr;</a>
+  </div>
 </div>
+
+<script>
+window._bubbleColors = [
+  'rgba(62,207,173,0.07)',
+  'rgba(13,138,110,0.05)',
+  'rgba(220,255,248,0.04)'
+];
+var pinInput = document.getElementById('pinInput');
+var dots = [document.getElementById('d1'),document.getElementById('d2'),
+            document.getElementById('d3'),document.getElementById('d4'),
+            document.getElementById('d5')];
+pinInput.addEventListener('input', function(){
+  var len = this.value.length;
+  dots.forEach(function(d,i){
+    if(i<len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
+    else d.classList.remove('filled');
+  });
+});
+document.getElementById('empForm').addEventListener('submit', function(){
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in…';
+});
+</script>
+
+<script>
+(function(){
+  var canvas=document.getElementById('bubbleCanvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var W,H,bubbles=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  var C=window._bubbleColors||['rgba(255,255,255,0.06)'];
+  for(var i=0;i<26;i++){
+    var r=5+Math.random()*20;
+    bubbles.push({x:Math.random()*window.innerWidth,
+      y:window.innerHeight+r+Math.random()*window.innerHeight,
+      r:r,speed:0.35+Math.random()*0.7,drift:(Math.random()-.5)*.35,
+      color:C[Math.floor(Math.random()*C.length)]});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    bubbles.forEach(function(b){
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.strokeStyle=b.color.replace(/[\d.]+\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
+      ctx.fillStyle=b.color;ctx.fill();
+      ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.28)';ctx.fill();
+      b.y-=b.speed;b.x+=b.drift;
+      if(b.y<-b.r*2){b.y=H+b.r;b.x=Math.random()*W;}
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
 </body>
 </html>
 """
@@ -1266,80 +1716,246 @@ LOCKED_HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Session Active | 9599 Tea &amp; Coffee</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
 <style>
 {% if role=='Admin' %}
-:root{--accent:#7B4F2E;--accent-dark:#3D2410;--accent-mid:#A0724A;--accent-light:#F0EDE4;--accent-border:#E2DAC8;--btn-grad:linear-gradient(135deg,#7B4F2E 0%,#3D2410 100%);--pill-bg:#3D2410;--pill-color:#C4A882;--inp-focus:#7B4F2E;--inp-color:#3D2410;}
+:root{
+  --bg-a:#1A0A00;--bg-b:#3B1A08;--bg-c:#6B3A1F;
+  --accent:#E8C98A;--accent-dim:#B89450;--accent-glow:rgba(232,201,138,0.2);
+  --btn-a:#C8823A;--btn-b:#8B4F18;
+  --pill-bg:rgba(232,201,138,0.1);--pill-border:rgba(232,201,138,0.28);
+  --inp-border:rgba(255,220,170,0.22);--inp-focus:rgba(232,201,138,0.18);
+  --warn-bg:rgba(255,160,80,0.1);--warn-border:rgba(255,160,80,0.3);--warn-text:#FFBA70;
+  --card-bg:rgba(255,248,240,0.06);--card-border:rgba(255,220,170,0.15);
+}
 {% else %}
-:root{--accent:#0D7A6A;--accent-dark:#094F44;--accent-mid:#12937E;--accent-light:#F0F5F4;--accent-border:#D0E4E0;--btn-grad:linear-gradient(135deg,#0D7A6A 0%,#094F44 100%);--pill-bg:#094F44;--pill-color:#C8A84B;--inp-focus:#0D7A6A;--inp-color:#0A2925;}
+:root{
+  --bg-a:#010F0D;--bg-b:#083028;--bg-c:#0D5E4A;
+  --accent:#3ECFAD;--accent-dim:#1E8C72;--accent-glow:rgba(62,207,173,0.18);
+  --btn-a:#0D8A6E;--btn-b:#055040;
+  --pill-bg:rgba(62,207,173,0.1);--pill-border:rgba(62,207,173,0.28);
+  --inp-border:rgba(100,220,190,0.22);--inp-focus:rgba(62,207,173,0.16);
+  --warn-bg:rgba(255,170,80,0.1);--warn-border:rgba(255,170,80,0.28);--warn-text:#FFB060;
+  --card-bg:rgba(220,255,248,0.05);--card-border:rgba(100,220,190,0.15);
+}
 {% endif %}
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent;}
-body{background:linear-gradient(160deg,var(--accent-dark) 0%,var(--accent) 60%,var(--accent-mid) 100%);display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
-.wrap{width:100%;max-width:390px;}
-.logo-area{text-align:center;margin-bottom:22px;}
-.logo-img-wrap{width:68px;height:68px;border-radius:50%;background:var(--accent-light);border:3px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.25);}
-.logo-img-wrap img{width:100%;height:100%;object-fit:cover;}
-.logo-area h1{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:900;color:#fff;letter-spacing:0.3px;}
-.logo-area p{font-size:0.68rem;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
-.card{background:var(--accent-light);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);padding:28px 24px;}
-.alert-row{display:flex;align-items:flex-start;gap:12px;background:rgba(200,80,60,0.09);border:1.5px solid rgba(200,80,60,0.25);border-radius:12px;padding:13px 14px;margin-bottom:20px;}
-.alert-icon{font-size:1.3rem;flex-shrink:0;margin-top:1px;}
-.alert-text{font-size:0.82rem;font-weight:700;color:#7B2A1A;line-height:1.5;}
-.alert-text b{display:block;font-size:0.88rem;margin-bottom:2px;color:#5C1A0E;}
-.divider{display:flex;align-items:center;gap:10px;margin:18px 0;}
-.divider hr{flex:1;border:none;border-top:1.5px solid var(--accent-border);}
-.divider span{font-size:0.68rem;font-weight:800;color:#9E8E80;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
-.pill{display:inline-flex;align-items:center;gap:6px;background:var(--pill-bg);color:var(--pill-color);font-size:0.64rem;font-weight:800;padding:4px 11px;border-radius:20px;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;}
-.section-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--inp-color);margin-bottom:3px;}
-.section-sub{font-size:0.78rem;color:#8D7060;font-weight:600;margin-bottom:18px;}
-.lbl{font-size:0.66rem;font-weight:800;color:#8D7060;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:block;}
-.inp{width:100%;padding:12px;border:2px solid var(--accent-border);border-radius:12px;font-size:1.5rem;text-align:center;letter-spacing:10px;margin-bottom:14px;outline:none;font-weight:900;color:var(--inp-color);background:#fff;font-family:'Nunito',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
-.inp:focus{border-color:var(--inp-focus);box-shadow:0 0 0 4px rgba(200,155,60,0.12);}
-.btn{width:100%;background:var(--btn-grad);color:#fff;border:none;padding:12px;border-radius:12px;font-weight:800;font-size:0.92rem;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:9px;font-family:'Nunito',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,0.25);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,opacity 0.15s;}
-.btn:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.3);opacity:0.97;}
-.btn:active{transform:scale(0.96);opacity:0.88;}
-.err{background:#FFF0F0;color:#C0392B;padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:700;margin-bottom:14px;border:1.5px solid #F5C6C6;display:flex;align-items:center;gap:8px;}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:radial-gradient(ellipse at 30% 10%,var(--bg-c) 0%,var(--bg-b) 40%,var(--bg-a) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;overflow:hidden;
+}
+canvas#bubbleCanvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:0.35;}
+.wrap{position:relative;z-index:2;width:100%;max-width:420px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
+@keyframes dotPop{0%{transform:scale(0);}70%{transform:scale(1.4);}100%{transform:scale(1);}}
+@keyframes shimmer{0%{background-position:200% center;}100%{background-position:-200% center;}}
+@keyframes warnPulse{
+  0%,100%{border-color:var(--warn-border);}
+  50%{border-color:rgba(255,160,80,0.6);}
+}
+
+.logo-area{text-align:center;margin-bottom:22px;animation:fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;}
+.logo-small{width:60px;height:60px;border-radius:50%;margin:0 auto 10px;overflow:hidden;
+  border:2px solid var(--accent-dim);box-shadow:0 6px 20px rgba(0,0,0,0.4);}
+.logo-small img{width:100%;height:100%;object-fit:cover;}
+.logo-area h1{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:700;
+  color:rgba(255,255,255,0.9);letter-spacing:0.3px;}
+.logo-area .tagline{font-size:0.65rem;color:rgba(255,255,255,0.35);font-weight:600;
+  letter-spacing:2px;text-transform:uppercase;margin-top:3px;}
+
+.card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;
+  padding:28px 24px 24px;backdrop-filter:blur(20px) saturate(1.2);
+  -webkit-backdrop-filter:blur(20px) saturate(1.2);
+  box-shadow:0 32px 80px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.07);
+  animation:fadeUp 0.8s 0.1s cubic-bezier(0.22,1,0.36,1) both;}
+
+/* Warning banner */
+.warn-banner{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--warn-bg);border:1px solid var(--warn-border);
+  border-radius:14px;padding:14px 16px;margin-bottom:22px;
+  animation:warnPulse 2.5s ease-in-out infinite;
+}
+.warn-icon{font-size:1.4rem;flex-shrink:0;margin-top:1px;}
+.warn-body{flex:1;}
+.warn-body strong{display:block;font-size:0.86rem;font-weight:700;
+  color:var(--warn-text);margin-bottom:3px;}
+.warn-body span{font-size:0.78rem;color:rgba(255,255,255,0.45);line-height:1.5;}
+
+/* Divider */
+.divider{display:flex;align-items:center;gap:10px;margin:2px 0 20px;}
+.divider hr{flex:1;border:none;border-top:1px solid rgba(255,255,255,0.07);}
+.divider span{font-size:0.6rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--pill-bg);color:var(--accent);
+  border:1px solid var(--pill-border);font-size:0.62rem;font-weight:700;padding:5px 12px;
+  border-radius:40px;margin-bottom:12px;letter-spacing:1.5px;text-transform:uppercase;}
+h2{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;
+  color:rgba(255,255,255,0.9);margin-bottom:3px;}
+.sub{font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:18px;}
+
+.err{background:rgba(255,107,107,0.1);color:#FF9999;padding:10px 14px;border-radius:12px;
+  font-size:0.82rem;font-weight:600;margin-bottom:14px;border:1px solid rgba(255,107,107,0.28);
+  display:flex;align-items:center;gap:8px;animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+
+.lbl{font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.35);
+  text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;display:block;}
+
+.pin-wrap{position:relative;margin-bottom:16px;}
+.pin-dots{position:absolute;inset:0;pointer-events:none;z-index:2;
+  display:flex;align-items:center;justify-content:center;gap:14px;}
+.pin-dot{width:12px;height:12px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.2);background:transparent;
+  transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent);
+  box-shadow:0 0 10px var(--accent-glow);animation:dotPop 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+.inp{width:100%;padding:15px;border:1.5px solid var(--inp-border);border-radius:14px;
+  font-size:1.55rem;text-align:center;letter-spacing:12px;outline:none;font-weight:900;
+  color:transparent;caret-color:var(--accent);background:rgba(255,255,255,0.04);
+  font-family:'DM Sans',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
+.inp:focus{border-color:var(--accent-dim);box-shadow:0 0 0 4px var(--inp-focus);}
+
+.btn{width:100%;background:linear-gradient(135deg,var(--btn-a),var(--btn-b));
+  color:rgba(255,255,255,0.95);border:none;padding:14px;border-radius:14px;
+  font-weight:700;font-size:0.95rem;cursor:pointer;
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  font-family:'DM Sans',sans-serif;
+  box-shadow:0 6px 24px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.12);
+  transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s;
+  position:relative;overflow:hidden;letter-spacing:0.3px;}
+.btn::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+  background-size:200% 100%;animation:shimmer 2.5s linear infinite;border-radius:inherit;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.12);}
+.btn:active{transform:scale(0.97);}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 </style>
 </head>
 <body>
+<canvas id="bubbleCanvas"></canvas>
+
 <div class="wrap">
   <div class="logo-area">
-    <div class="logo-img-wrap">
-      <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+    <div class="logo-small">
+      <img src="/static/images/9599.jpg" alt="9599"
+           onerror="this.style.display='none';">
     </div>
     <h1>9599 Tea &amp; Coffee</h1>
-    <p>Parne Na! — Management System</p>
+    <div class="tagline">Parne Na! — Management System</div>
   </div>
-  <div class="card">
 
-    <div class="alert-row">
-      <div class="alert-icon">⚠️</div>
-      <div class="alert-text">
-        <b>{{ role }} panel is active on another device</b>
-        Another device is currently logged in to this panel. Enter the 5-digit PIN below to take over the session and access this device.
+  <div class="card">
+    <div class="warn-banner">
+      <div class="warn-icon">⚠️</div>
+      <div class="warn-body">
+        <strong>{{ role }} panel is active on another device</strong>
+        <span>Another device is currently logged in. Enter your PIN below to take over and access this device.</span>
       </div>
     </div>
 
     <div class="divider"><hr><span>Take over session</span><hr></div>
 
-    <div class="pill"><i class="fas fa-key"></i> PIN Required</div>
-    <div class="section-title">Enter Master PIN</div>
-    <p class="section-sub">Enter the correct PIN to sign in and end the other session.</p>
+    <div class="pill"><i class="fas fa-key"></i>&ensp;PIN Required</div>
+    <h2>Enter Master PIN</h2>
+    <p class="sub">Correct PIN ends the other session immediately.</p>
 
-    {% if error %}<div class="err"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>{% endif %}
+    {% if error %}
+    <div class="err"><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
+    {% endif %}
 
-    <form method="POST" action="{{ action_url }}">
+    <form method="POST" action="{{ action_url }}" id="takeoverForm">
       <input type="hidden" name="force" value="1">
       <label class="lbl">Master PIN (5 digits)</label>
-      <input type="password" name="pin" class="inp" placeholder="•••••" required autofocus
-             maxlength="5" minlength="5" pattern="[0-9]{5}" inputmode="numeric"
-             autocomplete="one-time-code" title="Enter exactly 5 digits">
-      <button type="submit" class="btn" onclick="this.disabled=true;this.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Taking over…';this.form.submit();"><i class="fas fa-sign-in-alt"></i> Take Over &amp; Sign In</button>
+      <div class="pin-wrap">
+        <div class="pin-dots">
+          <div class="pin-dot" id="d1"></div>
+          <div class="pin-dot" id="d2"></div>
+          <div class="pin-dot" id="d3"></div>
+          <div class="pin-dot" id="d4"></div>
+          <div class="pin-dot" id="d5"></div>
+        </div>
+        <input type="password" name="pin" class="inp" id="pinInput"
+               placeholder="" required autofocus maxlength="5" minlength="5"
+               pattern="[0-9]{5}" inputmode="numeric"
+               autocomplete="one-time-code">
+      </div>
+      <button type="submit" class="btn" id="takeoverBtn">
+        <i class="fas fa-arrow-right-to-bracket"></i> Take Over &amp; Sign In
+      </button>
     </form>
-
   </div>
 </div>
+
+<script>
+window._bubbleColors = [
+  {% if role=='Admin' %}
+  'rgba(232,201,138,0.07)','rgba(200,130,58,0.05)','rgba(255,248,240,0.04)'
+  {% else %}
+  'rgba(62,207,173,0.07)','rgba(13,138,110,0.05)','rgba(220,255,248,0.04)'
+  {% endif %}
+];
+var pinInput = document.getElementById('pinInput');
+var dots = [document.getElementById('d1'),document.getElementById('d2'),
+            document.getElementById('d3'),document.getElementById('d4'),
+            document.getElementById('d5')];
+pinInput.addEventListener('input', function(){
+  var len = this.value.length;
+  dots.forEach(function(d,i){
+    if(i<len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
+    else d.classList.remove('filled');
+  });
+});
+document.getElementById('takeoverForm').addEventListener('submit', function(){
+  var btn = document.getElementById('takeoverBtn');
+  btn.disabled = true;
+  btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Taking over…";
+});
+</script>
+
+<script>
+(function(){
+  var canvas=document.getElementById('bubbleCanvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var W,H,bubbles=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  var C=window._bubbleColors||['rgba(255,255,255,0.06)'];
+  for(var i=0;i<26;i++){
+    var r=5+Math.random()*20;
+    bubbles.push({x:Math.random()*window.innerWidth,
+      y:window.innerHeight+r+Math.random()*window.innerHeight,
+      r:r,speed:0.35+Math.random()*0.7,drift:(Math.random()-.5)*.35,
+      color:C[Math.floor(Math.random()*C.length)]});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    bubbles.forEach(function(b){
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.strokeStyle=b.color.replace(/[\d.]+\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
+      ctx.fillStyle=b.color;ctx.fill();
+      ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.28)';ctx.fill();
+      b.y-=b.speed;b.x+=b.drift;
+      if(b.y<-b.r*2){b.y=H+b.r;b.x=Math.random()*W;}
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
 </body>
 </html>
 """
