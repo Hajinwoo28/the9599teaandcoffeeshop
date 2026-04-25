@@ -3990,15 +3990,24 @@ STOREFRONT_HTML = """
         /* ── Pickup Time Modal ── */
         #pickup-modal {
             display: none; position: fixed; inset: 0; z-index: 9100;
-            background: rgba(44,26,18,0.6); backdrop-filter: blur(4px);
+            background: rgba(44,26,18,0.0); backdrop-filter: blur(0px);
             align-items: flex-end; justify-content: center;
+            transition: background 0.35s ease, backdrop-filter 0.35s ease;
         }
         #pickup-modal.show { display: flex; }
+        #pickup-modal.show-active {
+            background: rgba(44,26,18,0.6);
+            backdrop-filter: blur(4px);
+        }
         .pickup-sheet {
             background: var(--bg-base); width: 100%; max-width: 480px;
             border-radius: 24px 24px 0 0; padding: 20px 24px max(28px, env(safe-area-inset-bottom,0px));
-            animation: slideUpSheet 0.28s ease;
             max-height: 92vh; overflow-y: auto;
+            opacity: 0; transform: translateY(80px) scale(0.97);
+            transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.34,1.2,0.64,1);
+        }
+        #pickup-modal.show-active .pickup-sheet {
+            opacity: 1; transform: translateY(0) scale(1);
         }
         @keyframes slideUpSheet { from { transform: translateY(70px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
         @keyframes custFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -6113,27 +6122,29 @@ function playGrantedSound() {
     /** Stub — checkbox removed; kept for compatibility. */
     function _refreshPaymentSentBlock() {}
 
+    // Active/idle styles per payment method — keyed by property for direct assignment
     const _PAY_BTN_STYLES = {
-        gcash:   { a: 'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        maya:    { a: 'border:2px solid #00a86b;background:linear-gradient(135deg,#00a86b,#007a4d);color:#fff;box-shadow:0 3px 10px rgba(0,168,107,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        paypal:  { a: 'border:2px solid #003087;background:linear-gradient(135deg,#003087,#009cde);color:#fff;box-shadow:0 3px 10px rgba(0,48,135,0.35);',  i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        cash:    { a: 'border:2px solid #8B5E3C;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;box-shadow:0 3px 10px rgba(92,51,23,0.3);',    i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        partial: { a: 'border:2px solid #7c3aed;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 3px 10px rgba(124,58,237,0.35);', i: 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        gcash:   { a: { border: '2px solid #2563eb', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff',    boxShadow: '0 3px 10px rgba(37,99,235,0.35)'  }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        maya:    { a: { border: '2px solid #00a86b', background: 'linear-gradient(135deg,#00a86b,#007a4d)', color: '#fff',    boxShadow: '0 3px 10px rgba(0,168,107,0.35)'  }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        paypal:  { a: { border: '2px solid #003087', background: 'linear-gradient(135deg,#003087,#009cde)', color: '#fff',    boxShadow: '0 3px 10px rgba(0,48,135,0.35)'   }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        cash:    { a: { border: '2px solid #8B5E3C', background: 'linear-gradient(135deg,#8B5E3C,#5C3317)', color: '#fff',    boxShadow: '0 3px 10px rgba(92,51,23,0.3)'    }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        partial: { a: { border: '2px solid #7c3aed', background: 'linear-gradient(135deg,#7c3aed,#5b21b6)', color: '#fff',    boxShadow: '0 3px 10px rgba(124,58,237,0.35)' }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
     };
 
     function setPaymentMethod(method) {
         paymentMethod = method;
 
-        // Highlight selected tab button
+        // Highlight selected tab button — use direct property assignment instead
+        // of regex on cssText, which breaks when browsers normalize shorthand
+        // properties (e.g. border → border-color, making /color:/ match wrong)
         ['gcash','maya','paypal','cash','partial'].forEach(m => {
             const btn = document.getElementById('pay-btn-' + m);
             if (!btn) return;
-            const s = _PAY_BTN_STYLES[m];
-            // Reset all style properties then apply active/idle
-            btn.style.cssText = btn.style.cssText
-                .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'')
-                .replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
-                + (m === method ? s.a : s.i);
+            const s = _PAY_BTN_STYLES[m][m === method ? 'a' : 'i'];
+            btn.style.border     = s.border;
+            btn.style.background = s.background;
+            btn.style.color      = s.color;
+            btn.style.boxShadow  = s.boxShadow;
         });
 
         // Show/hide payment blocks with fade animation
@@ -6163,12 +6174,16 @@ function playGrantedSound() {
         partialWallet = wallet;
         const gBtn = document.getElementById('partial-ewallet-gcash');
         const mBtn = document.getElementById('partial-ewallet-maya');
-        if (gBtn) gBtn.style.cssText = gBtn.style.cssText
-            .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
-            + (wallet === 'gcash' ? _PAY_BTN_STYLES.gcash.a : _PAY_BTN_STYLES.gcash.i);
-        if (mBtn) mBtn.style.cssText = mBtn.style.cssText
-            .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
-            + (wallet === 'maya'  ? _PAY_BTN_STYLES.maya.a  : _PAY_BTN_STYLES.maya.i);
+        if (gBtn) {
+            const gs = _PAY_BTN_STYLES.gcash[wallet === 'gcash' ? 'a' : 'i'];
+            gBtn.style.border = gs.border; gBtn.style.background = gs.background;
+            gBtn.style.color  = gs.color;  gBtn.style.boxShadow  = gs.boxShadow;
+        }
+        if (mBtn) {
+            const ms = _PAY_BTN_STYLES.maya[wallet === 'maya' ? 'a' : 'i'];
+            mBtn.style.border = ms.border; mBtn.style.background = ms.background;
+            mBtn.style.color  = ms.color;  mBtn.style.boxShadow  = ms.boxShadow;
+        }
 
         const lbl = document.getElementById('partial-wallet-label');
         if (lbl) lbl.textContent = wallet === 'gcash' ? 'GCash' : 'Maya';
@@ -6704,7 +6719,15 @@ function playGrantedSound() {
 
     function openPickupModal() {
         if(cart.length === 0) return;
-        document.getElementById('pickup-modal').classList.add('show');
+        const modal = document.getElementById('pickup-modal');
+        modal.classList.add('show');
+        // Small rAF delay so the browser registers display:flex before
+        // adding the transition class — gives a smooth fade-in + slide-up
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                modal.classList.add('show-active');
+            });
+        });
         otpInitModal();   // pre-fill phone & restore verified state if already done
         // Update all payment amount displays with the current cart total
         const total = cart.reduce((s,i)=>s+i.price, 0);
@@ -6727,7 +6750,12 @@ function playGrantedSound() {
     }
 
     function closePickupModal() {
-        document.getElementById('pickup-modal').classList.remove('show');
+        const modal = document.getElementById('pickup-modal');
+        modal.classList.remove('show-active');
+        // Wait for fade-out transition to finish before hiding
+        setTimeout(function() {
+            modal.classList.remove('show');
+        }, 350);
     }
 
     function adjustPickupTime(part, dir) {
@@ -6848,11 +6876,11 @@ function playGrantedSound() {
     let uPayPartialWallet = 'gcash';
 
     const _UPAY_BTN_STYLES = {
-        gcash:   { a:'border:2px solid #2563eb;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.35);', i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        maya:    { a:'border:2px solid #00a86b;background:linear-gradient(135deg,#00a86b,#007a4d);color:#fff;box-shadow:0 3px 10px rgba(0,168,107,0.35);', i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        cash:    { a:'border:2px solid #8B5E3C;background:linear-gradient(135deg,#8B5E3C,#5C3317);color:#fff;box-shadow:0 3px 10px rgba(92,51,23,0.3);',    i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        paypal:  { a:'border:2px solid #003087;background:linear-gradient(135deg,#003087,#009cde);color:#fff;box-shadow:0 3px 10px rgba(0,48,135,0.35);',  i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
-        partial: { a:'border:2px solid #7c3aed;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 3px 10px rgba(124,58,237,0.35);', i:'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;box-shadow:none;' },
+        gcash:   { a: { border: '2px solid #2563eb', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff',    boxShadow: '0 3px 10px rgba(37,99,235,0.35)'  }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        maya:    { a: { border: '2px solid #00a86b', background: 'linear-gradient(135deg,#00a86b,#007a4d)', color: '#fff',    boxShadow: '0 3px 10px rgba(0,168,107,0.35)'  }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        cash:    { a: { border: '2px solid #8B5E3C', background: 'linear-gradient(135deg,#8B5E3C,#5C3317)', color: '#fff',    boxShadow: '0 3px 10px rgba(92,51,23,0.3)'    }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        paypal:  { a: { border: '2px solid #003087', background: 'linear-gradient(135deg,#003087,#009cde)', color: '#fff',    boxShadow: '0 3px 10px rgba(0,48,135,0.35)'   }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
+        partial: { a: { border: '2px solid #7c3aed', background: 'linear-gradient(135deg,#7c3aed,#5b21b6)', color: '#fff',    boxShadow: '0 3px 10px rgba(124,58,237,0.35)' }, i: { border: '2px solid #e2e8f0', background: '#f8fafc', color: '#64748b', boxShadow: 'none' } },
     };
 
     function openUpdatePayModal() {
@@ -6887,10 +6915,11 @@ function playGrantedSound() {
         ['gcash','maya','cash','paypal','partial'].forEach(m => {
             const btn = document.getElementById('upay-btn-' + m);
             if (!btn) return;
-            const s = _UPAY_BTN_STYLES[m];
-            btn.style.cssText = btn.style.cssText
-                .replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'').replace(/box-shadow:[^;]+;/g,'')
-                + (m === method ? s.a : s.i);
+            const s = _UPAY_BTN_STYLES[m][m === method ? 'a' : 'i'];
+            btn.style.border     = s.border;
+            btn.style.background = s.background;
+            btn.style.color      = s.color;
+            btn.style.boxShadow  = s.boxShadow;
             const block = document.getElementById('upay-' + m + '-block');
             if (block) block.style.display = (m === method) ? 'block' : 'none';
         });
@@ -6900,8 +6929,16 @@ function playGrantedSound() {
         uPayPartialWallet = wallet;
         const gBtn = document.getElementById('upay-partial-gcash-btn');
         const mBtn = document.getElementById('upay-partial-maya-btn');
-        if (gBtn) gBtn.style.cssText = gBtn.style.cssText.replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'') + (wallet==='gcash' ? _UPAY_BTN_STYLES.gcash.a : _UPAY_BTN_STYLES.gcash.i);
-        if (mBtn) mBtn.style.cssText = mBtn.style.cssText.replace(/border:[^;]+;/g,'').replace(/background:[^;]+;/g,'').replace(/color:[^;]+;/g,'') + (wallet==='maya'  ? _UPAY_BTN_STYLES.maya.a  : _UPAY_BTN_STYLES.maya.i);
+        if (gBtn) {
+            const gs = _UPAY_BTN_STYLES.gcash[wallet === 'gcash' ? 'a' : 'i'];
+            gBtn.style.border = gs.border; gBtn.style.background = gs.background;
+            gBtn.style.color  = gs.color;  gBtn.style.boxShadow  = gs.boxShadow;
+        }
+        if (mBtn) {
+            const ms = _UPAY_BTN_STYLES.maya[wallet === 'maya' ? 'a' : 'i'];
+            mBtn.style.border = ms.border; mBtn.style.background = ms.background;
+            mBtn.style.color  = ms.color;  mBtn.style.boxShadow  = ms.boxShadow;
+        }
         const lbl = document.getElementById('upay-partial-wallet-lbl');
         if (lbl) lbl.textContent = wallet === 'gcash' ? 'GCash' : 'Maya';
         const openBtn = document.getElementById('upay-partial-open-btn');
