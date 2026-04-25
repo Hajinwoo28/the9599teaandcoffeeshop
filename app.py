@@ -1371,7 +1371,8 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
 #toast-container{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;min-width:200px;}
 .toast{background:var(--teal-dark);color:#fff;padding:10px 20px;border-radius:20px;font-weight:700;font-size:0.84rem;box-shadow:0 4px 16px rgba(13,122,106,0.3);text-align:center;}
-.toast.error{background:var(--red);}
+@keyframes toastShake{0%,100%{transform:translateX(0);}15%,45%,75%{transform:translateX(-9px);}30%,60%,90%{transform:translateX(9px);}}
+.toast.error{background:var(--red);animation:toastSlide 0.32s cubic-bezier(0.34,1.56,0.64,1),toastShake 0.45s cubic-bezier(0.36,0.07,0.19,0.97) 0.28s both;}
 .toast.success{background:var(--green);}
 
 .topbar{height:var(--topbar-h);background:var(--teal-dark);border-bottom:3px solid var(--teal-mid);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:0 2px 12px rgba(9,79,68,0.3);z-index:100;}
@@ -4340,7 +4341,8 @@ STOREFRONT_HTML = """
         .vpn-body b { color: var(--text-dark); }
         .vpn-close-btn { background: var(--danger); color: #fff; border: none; border-radius: 12px; padding: 12px 28px; font-weight: 800; font-size: 0.9rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
         .toast { background-color: #3E2723; color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
-        .toast.error { background-color: #C62828; }
+        @keyframes toastShakeEmp{0%,100%{transform:translateX(0);}15%,45%,75%{transform:translateX(-9px);}30%,60%,90%{transform:translateX(9px);}}
+        .toast.error { background-color: #C62828; animation: toastShakeEmp 0.45s cubic-bezier(0.36,0.07,0.19,0.97) 0.28s both; }
         .toast.success { background-color: #388E3C; }
 
         /* ── Pop-in / Pop-out animations for the 3 header icon buttons ── */
@@ -8825,6 +8827,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 @keyframes badgeBounce{0%,100%{transform:scale(1);}30%{transform:scale(1.45);}60%{transform:scale(0.9);}}
 @keyframes toastSlide{from{opacity:0;transform:translate(-50%,-28px) scale(0.94);}to{opacity:1;transform:translate(-50%,0) scale(1);}}
 @keyframes toastOut{from{opacity:1;transform:translate(-50%,0) scale(1);}to{opacity:0;transform:translate(-50%,-16px) scale(0.95);}}
+@keyframes toastShakeAdm{0%,100%{transform:translateX(0);}15%,45%,75%{transform:translateX(-9px);}30%,60%,90%{transform:translateX(9px);}}
 @keyframes modalIn{from{opacity:0;transform:scale(0.88) translateY(24px);}60%{transform:scale(1.02) translateY(-3px);}to{opacity:1;transform:scale(1) translateY(0);}}
 @keyframes overlayIn{from{opacity:0;}to{opacity:1;}}
 @keyframes adminRowIn{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:translateX(0);}}
@@ -8952,7 +8955,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ══ TOAST ── */
 #toast-container{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;min-width:200px;}
 .toast{background:var(--brown-dark);color:var(--cream);padding:10px 20px;border-radius:20px;font-weight:700;font-size:0.84rem;box-shadow:0 4px 16px rgba(61,36,16,0.35);text-align:center;}
-.toast.error{background:var(--red);}
+.toast.error{background:var(--red);animation:toastSlide 0.32s cubic-bezier(0.34,1.56,0.64,1),toastShakeAdm 0.45s cubic-bezier(0.36,0.07,0.19,0.97) 0.28s both;}
 .toast.success{background:var(--green);}
 
 /* ── TOPBAR ── */
