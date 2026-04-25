@@ -5997,13 +5997,15 @@ function playGrantedSound() {
             const phone    = '09264195603';
             const merchant = encodeURIComponent('9599 Tea & Coffee');
 
-            // ── Resolve amount ─────────────────────────────────────────────
+            // ── Resolve amount (checks both regular + upay modal IDs) ──────
             let rawAmount = 0;
             if (wallet === 'gcash') {
-                const el = document.getElementById('gcash-amount-display');
+                const el = document.getElementById('gcash-amount-display')
+                        || document.getElementById('upay-gcash-amt');
                 rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
             } else if (wallet === 'maya') {
-                const el = document.getElementById('maya-amount-display');
+                const el = document.getElementById('maya-amount-display')
+                        || document.getElementById('upay-maya-amt');
                 rawAmount = el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) : 0;
             } else if (wallet === 'partial') {
                 rawAmount = partialAmount || 0;
@@ -6017,46 +6019,44 @@ function playGrantedSound() {
             const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
             if (wallet === 'maya') {
-                if (isAndroid || isIOS) {
-                    // Try app scheme; OS opens Maya if installed
-                    window.location.href = 'maya://';
-                    setTimeout(function() {
-                        if (!document.hidden) return;
-                    }, 1500);
-                    setTimeout(function() {
-                        if (document.visibilityState !== 'hidden') {
-                            window.location.href = 'https://www.maya.ph/';
-                        }
-                    }, 2000);
-                } else {
-                    window.location.href = 'https://www.maya.ph/';
-                }
+                // Try app scheme; OS opens Maya if installed, fallback to web
+                window.location.href = (isAndroid || isIOS) ? 'maya://' : 'https://www.maya.ph/';
+                setTimeout(function() {
+                    if (document.visibilityState !== 'hidden')
+                        window.location.href = 'https://www.maya.ph/';
+                }, 2000);
 
             } else if (wallet === 'paypal') {
-                if (isAndroid || isIOS) {
-                    window.location.href = 'paypal://';
-                    setTimeout(function() {
-                        if (document.visibilityState !== 'hidden') {
-                            window.location.href = 'https://www.paypal.com/send';
-                        }
-                    }, 2000);
-                } else {
-                    window.location.href = 'https://www.paypal.com/send';
-                }
+                window.location.href = (isAndroid || isIOS) ? 'paypal://' : 'https://www.paypal.com/send';
+                setTimeout(function() {
+                    if (document.visibilityState !== 'hidden')
+                        window.location.href = 'https://www.paypal.com/send';
+                }, 2000);
 
             } else {
                 // GCash (default + partial)
                 if (isAndroid) {
-                    // On Android Chrome, the most reliable way to open GCash
-                    // is the launcher intent targeting the package directly.
-                    // This bypasses any unregistered deep-link paths.
+                    // ✅ Use a hidden <a> tag click — works across ALL Android
+                    // browsers (Chrome, Samsung Internet, Firefox, WebView),
+                    // unlike window.location.href which only works in Chrome.
                     var intentUrl = 'intent://#Intent'
                         + ';action=android.intent.action.MAIN'
                         + ';category=android.intent.category.LAUNCHER'
                         + ';package=com.globe.gcash.android'
                         + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
                         + ';end';
-                    window.location.href = intentUrl;
+                    var a = document.createElement('a');
+                    a.href = intentUrl;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    // Fallback: if GCash app didn't open after 2s, show QR
+                    setTimeout(function() {
+                        if (document.visibilityState !== 'hidden') {
+                            showGCashQR(amount);
+                        }
+                    }, 2000);
                 } else if (isIOS) {
                     // iOS: gcash:// scheme opens the app; fallback after 2s
                     window.location.href = 'gcash://';
@@ -6072,6 +6072,7 @@ function playGrantedSound() {
             }
         } catch(e) {
             console.error('openGCashApp error:', e);
+            showGCashQR('');  // Last-resort fallback: show QR so customer is never stuck
         }
     }
 
