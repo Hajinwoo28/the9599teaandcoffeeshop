@@ -1926,6 +1926,26 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 /* ══ NEW ORDER HIGHLIGHT ══ */
 .kds-row-new{animation:newOrderFlash 2s ease-out;}
 
+/* ══ QUEUE ANIMATIONS ══ */
+@keyframes queueRowEnter {
+  from { opacity:0; transform:translateY(-22px) scale(0.97); }
+  60%  { transform:translateY(4px) scale(1.005); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes queueRowExit {
+  from { opacity:1; transform:translateX(0) scale(1); max-height:200px; }
+  to   { opacity:0; transform:translateX(32px) scale(0.94); max-height:0; padding:0; margin:0; }
+}
+@keyframes queueStatusPulse {
+  0%   { box-shadow:0 0 0 0 var(--q-pulse-color,rgba(13,122,106,0.5)); }
+  40%  { box-shadow:0 0 0 8px transparent; }
+  100% { box-shadow:0 0 0 0 transparent; }
+}
+.kds-row-enter  { animation:queueRowEnter 0.38s cubic-bezier(0.34,1.3,0.64,1) both; }
+.kds-row-exit   { animation:queueRowExit  0.28s ease-in forwards; overflow:hidden; }
+.kds-row-move   { transition:transform 0.36s cubic-bezier(0.34,1.2,0.64,1); }
+.kds-row-status { animation:queueStatusPulse 0.55s ease-out; }
+
 /* ══ RIPPLE ON EMP BUTTONS ══ */
 .btn-action,.drawer-nav-item,.emp-status-btn{position:relative;overflow:hidden;}
 .emp-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:empRippleExpand 0.5s linear;pointer-events:none;}
@@ -2773,15 +2793,6 @@ async function fetchOrders(){
     }
     allOrders.forEach(o=>knownOrderIds.add(o.id));
     renderOrders();
-    // Flash new order rows after render
-    if(newOrders.length){
-      setTimeout(()=>{
-        newOrders.forEach(o=>{
-          const row=document.querySelector(`[data-order-id="${o.id}"]`);
-          if(row){row.classList.add('kds-row-new');setTimeout(()=>row.classList.remove('kds-row-new'),2200);}
-        });
-      },80);
-    }
     updateStats();
     updateBell();
   }catch(e){}
@@ -2807,11 +2818,33 @@ function renderOrders(){
   if(activeFilter==='Online') orders=orders.filter(o=>o.source==='Online');
   else if(activeFilter==='Walk-In') orders=orders.filter(o=>o.source!=='Online');
   else if(activeFilter!=='All') orders=orders.filter(o=>o.status===activeFilter);
+
   if(!orders.length){
-    tbody.innerHTML='<tr class="empty-row"><td colspan="8">No active orders</td></tr>';
+    // Animate out any existing rows before clearing
+    Array.from(tbody.querySelectorAll('tr[data-order-id]')).forEach(row=>{
+      row.classList.add('kds-row-exit');
+    });
+    setTimeout(()=>{ tbody.innerHTML='<tr class="empty-row"><td colspan="8">No active orders</td></tr>'; },280);
     return;
   }
+
   const statusClass={'Waiting Confirmation':'sel-waiting','Preparing':'sel-preparing','Ready for Pickup':'sel-ready','Completed':'sel-completed','Cancelled':'sel-cancelled','Awaiting Customer':'sel-waiting'};
+  const statusPulseColor={'Waiting Confirmation':'rgba(230,81,0,0.45)','Preparing':'rgba(21,101,192,0.45)','Ready for Pickup':'rgba(249,168,37,0.5)','Completed':'rgba(46,125,50,0.45)','Cancelled':'rgba(183,28,28,0.45)'};
+
+  // ── FIRST: snapshot current row positions & statuses ────────────────────
+  const prevRects={};
+  const prevStatus={};
+  Array.from(tbody.querySelectorAll('tr[data-order-id]')).forEach(row=>{
+    const id=row.dataset.orderId;
+    prevRects[id]=row.getBoundingClientRect();
+    prevStatus[id]=row.dataset.status||'';
+  });
+
+  // ── Identify which IDs are brand-new (not in DOM yet) ───────────────────
+  const existingIds=new Set(Object.keys(prevRects));
+  const incomingIds=new Set(orders.map(o=>String(o.id)));
+
+  // ── Re-render HTML ───────────────────────────────────────────────────────
   tbody.innerHTML=orders.map(o=>{
     const isOnline=o.source==='Online';
     const sourceBadge=isOnline
@@ -2819,8 +2852,7 @@ function renderOrders(){
       :'<span class="badge badge-walkin" style="font-size:0.67rem;">🚶 Walk-In</span>';
     const itemsSummary=o.items.map(i=>escapeHTML(i.foundation+(i.size&&i.size!=='16 oz'?' ('+i.size+')':''))).join(', ');
     const cls=statusClass[o.status]||'sel-waiting';
-    const isAwaiting = o.status === 'Awaiting Customer';
-    // Timer badge
+    const isAwaiting=o.status==='Awaiting Customer';
     const timerBadge=(function(){
       if(!o.created_at)return'';
       const mins=Math.round((Date.now()-new Date(o.created_at).getTime())/60000);
@@ -2837,7 +2869,7 @@ function renderOrders(){
       <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>❌ Cancelled</option>
       ${isAwaiting?'<option value="Awaiting Customer" selected>🕐 Awaiting Customer</option>':''}
     </select>`;
-    return `<tr data-order-id="${o.id}">
+    return `<tr data-order-id="${o.id}" data-status="${escapeHTML(o.status||'')}">
       <td><span class="order-num">#${escapeHTML(o.code)}</span>${timerBadge}</td>
       <td>${sourceBadge}</td>
       <td style="font-weight:700;white-space:nowrap;">${escapeHTML(o.name)}</td>
@@ -2851,6 +2883,53 @@ function renderOrders(){
       </div></td>
     </tr>`;
   }).join('');
+
+  // ── LAST → INVERT → PLAY (FLIP) ─────────────────────────────────────────
+  requestAnimationFrame(()=>{
+    Array.from(tbody.querySelectorAll('tr[data-order-id]')).forEach(row=>{
+      const id=row.dataset.orderId;
+      const currentStatus=row.dataset.status||'';
+
+      if(!existingIds.has(id)){
+        // ── Brand-new row: slide in from top ────────────────────────────
+        row.classList.add('kds-row-enter');
+        row.addEventListener('animationend',()=>row.classList.remove('kds-row-enter'),{once:true});
+
+      } else {
+        // ── Existing row: FLIP move if it shifted position ───────────────
+        const prev=prevRects[id];
+        const curr=row.getBoundingClientRect();
+        const dy=prev.top-curr.top;
+        const dx=prev.left-curr.left;
+
+        if(Math.abs(dy)>1||Math.abs(dx)>1){
+          // Snap back to old position instantly, then transition to new
+          row.style.transform=`translate(${dx}px,${dy}px)`;
+          row.style.transition='none';
+          requestAnimationFrame(()=>{
+            row.classList.add('kds-row-move');
+            row.style.transform='translate(0,0)';
+            row.addEventListener('transitionend',()=>{
+              row.style.transform='';
+              row.style.transition='';
+              row.classList.remove('kds-row-move');
+            },{once:true});
+          });
+        }
+
+        // ── Status changed: color pulse ──────────────────────────────────
+        if(prevStatus[id] && prevStatus[id]!==currentStatus){
+          const pulseColor=statusPulseColor[currentStatus]||'rgba(13,122,106,0.45)';
+          row.style.setProperty('--q-pulse-color',pulseColor);
+          row.classList.add('kds-row-status');
+          row.addEventListener('animationend',()=>{
+            row.classList.remove('kds-row-status');
+            row.style.removeProperty('--q-pulse-color');
+          },{once:true});
+        }
+      }
+    });
+  });
 }
 
 async function updateStatus(orderId,status,selectEl){
@@ -3233,6 +3312,48 @@ function closeCustomizeModal(){
   }
 }
 
+function flyToCartAnimation(originEl) {
+    // Get start position (Add to Cart button)
+    const originRect = originEl.getBoundingClientRect();
+    const startX = originRect.left + originRect.width  / 2;
+    const startY = originRect.top  + originRect.height / 2;
+
+    // Get target: cart-count badge (desktop sidebar) or sticky bar (mobile)
+    const targetEl = document.getElementById('cart-count') ||
+                     document.getElementById('sticky-bar');
+    if (!targetEl) return;
+    const targetRect = targetEl.getBoundingClientRect();
+    const endX = targetRect.left + targetRect.width  / 2;
+    const endY = targetRect.top  + targetRect.height / 2;
+
+    // Create the flying bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'fly-bubble';
+    bubble.innerHTML = '<i class="fas fa-shopping-bag"></i>';
+
+    // Position it at the button's center, offset by half its own size (44px)
+    bubble.style.left = (startX - 22) + 'px';
+    bubble.style.top  = (startY - 22) + 'px';
+
+    // Set CSS vars for the destination delta
+    bubble.style.setProperty('--fly-x', (endX - startX) + 'px');
+    bubble.style.setProperty('--fly-y', (endY - startY) + 'px');
+
+    document.body.appendChild(bubble);
+
+    // Pop the cart count badge when bubble arrives
+    bubble.addEventListener('animationend', () => {
+        bubble.remove();
+        const count = document.getElementById('cart-count');
+        if (count) {
+            count.classList.remove('pop');
+            void count.offsetWidth; // reflow
+            count.classList.add('pop');
+            setTimeout(() => count.classList.remove('pop'), 400);
+        }
+    });
+}
+
 function addToCart(){
   if(!currentItem) return;
   const sizeSur=SIZE_SURCHARGE[currentOpts.size]||0;
@@ -3241,6 +3362,9 @@ function addToCart(){
   const isFries=FRIES_FLAVOR_ITEMS.includes(currentItem.name);
   const foundationName=isFries?`${currentItem.name} (${currentOpts.flavor})`:currentItem.name;
   cart.push({id:Date.now(),menuId:currentItem.id,foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price});
+  // Trigger flying bubble from the Add to Cart button to the cart badge
+  const addBtn = document.querySelector('#customize-modal .btn-modal-add');
+  if (addBtn) flyToCartAnimation(addBtn);
   closeCustomizeModal();
   renderCart();
   showToast(`${foundationName} added!`,'success');
@@ -4020,6 +4144,20 @@ STOREFRONT_HTML = """
         @keyframes custCartItemIn { from{opacity:0;transform:translateX(18px);} to{opacity:1;transform:translateX(0);} }
         @keyframes custCartItemOut { to{opacity:0;transform:translateX(20px) scale(0.9);} }
         @keyframes custBadgePop { 0%{transform:scale(0);} 60%{transform:scale(1.3);} 100%{transform:scale(1);} }
+        @keyframes flyToCart {
+            0%   { opacity: 1; transform: translate(0,0) scale(1); }
+            60%  { opacity: 1; transform: translate(var(--fly-x), var(--fly-y)) scale(0.55); }
+            100% { opacity: 0; transform: translate(var(--fly-x), var(--fly-y)) scale(0.15); }
+        }
+        .fly-bubble {
+            position: fixed; z-index: 99999; pointer-events: none;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: var(--teal-dark, #0d7a6a);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.1rem;
+            box-shadow: 0 4px 18px rgba(13,122,106,0.45);
+            animation: flyToCart 0.62s cubic-bezier(0.4,0,0.2,1) forwards;
+        }
         @keyframes custTotalPop { 0%{transform:scale(1);} 35%{transform:scale(1.12);} 100%{transform:scale(1);} }
         @keyframes custSCTick { 0%{transform:scale(1);} 30%{transform:scale(1.3);} 60%{transform:scale(0.9);} 100%{transform:scale(1);} }
 
