@@ -14472,6 +14472,17 @@ def admin_login():
 def admin_logout():
     session.pop('is_admin', None)
     session.pop('admin_id', None)
+    # Clear the active-session record so the login page shows the normal
+    # PIN form instead of the "session active on another device" screen.
+    try:
+        state = _get_state()
+        if state:
+            state.active_session_id = ''
+            state.last_ping = datetime.min
+            db.session.commit()
+    except Exception:
+        try: db.session.rollback()
+        except Exception: pass
     log_audit("Admin Logout", "Admin logged out")
     return redirect(url_for('admin_login'))
 
@@ -14558,6 +14569,17 @@ def employee_login():
 def employee_logout():
     session.pop('is_employee', None)
     session.pop('employee_id', None)
+    # Clear the employee active-session record so the login page shows the
+    # normal PIN form instead of the "session active on another device" screen.
+    try:
+        state = _get_state()
+        if state:
+            state.active_employee_session_id = ''
+            state.employee_last_ping = datetime.min
+            db.session.commit()
+    except Exception:
+        try: db.session.rollback()
+        except Exception: pass
     log_audit("Employee Logout", "Staff logged out of employee station")
     return redirect(url_for('employee_login'))
 
