@@ -5994,9 +5994,6 @@ function playGrantedSound() {
     /** Open the appropriate payment app (GCash, Maya, PayPal) with amount pre-filled. */
     function openGCashApp(wallet) {
         try {
-            const phone    = '09264195603';
-            const merchant = encodeURIComponent('9599 Tea & Coffee');
-
             // ── Resolve amount (checks both regular + upay modal IDs) ──────
             let rawAmount = 0;
             if (wallet === 'gcash') {
@@ -6035,44 +6032,35 @@ function playGrantedSound() {
 
             } else {
                 // GCash (default + partial)
+                // ── PRIMARY: Show QR modal immediately so customer always
+                //    sees something right away — no dead 2-second wait.
+                //    QR scanning is the standard GCash payment method in PH
+                //    and works 100% regardless of browser, OS, or network type.
+                showGCashQR(amount);
+
+                // ── SECONDARY: Also try to launch the GCash app in parallel.
+                //    Uses window.location.href (preserves the user gesture),
+                //    which works on Chrome Android even on HTTP/local-IP pages.
+                //    If the app is installed it will open; if not, the QR modal
+                //    is already visible so the customer can just scan instead.
                 if (isAndroid) {
-                    // ✅ Use a hidden <a> tag click — works across ALL Android
-                    // browsers (Chrome, Samsung Internet, Firefox, WebView),
-                    // unlike window.location.href which only works in Chrome.
-                    var intentUrl = 'intent://#Intent'
-                        + ';action=android.intent.action.MAIN'
-                        + ';category=android.intent.category.LAUNCHER'
-                        + ';package=com.globe.gcash.android'
-                        + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
-                        + ';end';
-                    var a = document.createElement('a');
-                    a.href = intentUrl;
-                    a.style.display = 'none';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    // Fallback: if GCash app didn't open after 2s, show QR
                     setTimeout(function() {
-                        if (document.visibilityState !== 'hidden') {
-                            showGCashQR(amount);
-                        }
-                    }, 2000);
+                        window.location.href = 'intent://#Intent'
+                            + ';action=android.intent.action.MAIN'
+                            + ';category=android.intent.category.LAUNCHER'
+                            + ';package=com.globe.gcash.android'
+                            + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
+                            + ';end';
+                    }, 300); // slight delay so QR modal renders first
                 } else if (isIOS) {
-                    // iOS: gcash:// scheme opens the app; fallback after 2s
-                    window.location.href = 'gcash://';
                     setTimeout(function() {
-                        if (document.visibilityState !== 'hidden') {
-                            window.location.href = 'https://www.gcash.com/';
-                        }
-                    }, 2000);
-                } else {
-                    // Desktop: show QR modal
-                    showGCashQR(amount);
+                        window.location.href = 'gcash://';
+                    }, 300);
                 }
             }
         } catch(e) {
             console.error('openGCashApp error:', e);
-            showGCashQR('');  // Last-resort fallback: show QR so customer is never stuck
+            showGCashQR('');  // Last-resort fallback: always show QR
         }
     }
 
@@ -6081,16 +6069,20 @@ function playGrantedSound() {
         if (!modal) return;
         // Update amount display
         document.getElementById('gcash-qr-amount').textContent = amount ? '\u20B1' + parseFloat(amount).toFixed(2) : '\u20B1—';
-        // Generate QR code (encode GCash number so app can scan & pre-fill)
+        // Safely clear and re-render QR (handles repeated calls without errors)
         const canvas = document.getElementById('gcash-qr-canvas');
-        canvas.innerHTML = '';
+        while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
         const qrData = '09264195603'; // GCash number — scannable by GCash QR scanner
-        new QRCode(canvas, {
-            text: qrData,
-            width: 200, height: 200,
-            colorDark: '#000', colorLight: '#fff',
-            correctLevel: QRCode.CorrectLevel.M
-        });
+        try {
+            new QRCode(canvas, {
+                text: qrData,
+                width: 200, height: 200,
+                colorDark: '#000', colorLight: '#fff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch(qrErr) {
+            canvas.innerHTML = '<p style="color:#e53e3e;font-size:0.8rem;text-align:center;">QR unavailable.<br>Send to: <strong>09264195603</strong></p>';
+        }
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
