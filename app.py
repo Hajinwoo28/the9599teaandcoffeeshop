@@ -5283,13 +5283,13 @@ STOREFRONT_HTML = """
         .ticker-inner { display: inline-block; animation: ticker 25s linear infinite; }
         @keyframes ticker { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 
-        header { background: var(--bg-base); padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-        .logo-area { display: flex; align-items: center; gap: 12px; }
-        .logo-ring { width: 46px; height: 46px; border-radius: 50%; border: 2.5px solid var(--gold); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
-        .logo-img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
-        .logo-text-wrapper { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
-        .logo-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.15rem; color: var(--text-dark); line-height: 1.1; }
-        .logo-sub { font-family: 'Playfair Display', serif; font-size: 0.62rem; font-weight: 800; letter-spacing: 2.5px; color: var(--gold); text-transform: uppercase; }
+        header { background: var(--bg-base); padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-ring { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold); display: flex; justify-content: center; align-items: center; }
+        .logo-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+        .logo-text-wrapper { display: flex; flex-direction: column; }
+        .logo-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.05rem; color: var(--text-dark); line-height: 1; }
+        .logo-sub { font-family: 'Playfair Display', serif; font-size: 0.6rem; font-weight: 900; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-top: 3px; }
 
         .main-container { display: flex; flex: 1; overflow: hidden; }
         .menu-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-base); }
@@ -15688,8 +15688,6 @@ def admin_login():
 
 @app.route('/logout')
 def admin_logout():
-    session.pop('is_admin', None)
-    session.pop('admin_id', None)
     # Clear the active-session record so the login page shows the normal
     # PIN form instead of the "session active on another device" screen.
     try:
@@ -15701,8 +15699,14 @@ def admin_logout():
     except Exception:
         try: db.session.rollback()
         except Exception: pass
-    log_audit("Admin Logout", "Admin logged out")
-    return redirect(url_for('admin_login'))
+    log_audit("Admin Logout", "Admin locked — session ended")
+    session.clear()   # wipe entire session, not just admin keys
+    response = redirect(url_for('admin_login'))
+    # Prevent browser from caching the admin panel after logout
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/admin', methods=['GET'])
 def admin_dashboard():
