@@ -2025,7 +2025,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .logout-btn:hover{transform:scale(1.04);}
 
 /* ── Screen entrance ── */
-.screen.active{animation:g-fadeUp var(--dur-lg,480ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both !important;}
+/* screen.active animation handled per-template below */
 
 /* ── Bottom nav active indicator ── */
 .nav-item.active .nav-icon{position:relative;}
@@ -4760,35 +4760,36 @@ window.animNewRows=function(tbody,newIdSet){
   });
 };
 
-/* ── Page transition on link click ───────────────────────────────────── */
+/* ── Page transition on link click (safe version) ── */
 (function(){
   document.addEventListener('click',function(e){
-    const a=e.target.closest('a[href]:not([href^="#"]):not([href^="javascript"]):not([target])');
-    if(!a||a.getAttribute('href').startsWith('mailto'))return;
-    const href=a.getAttribute('href');
-    if(!href||href==='#')return;
+    var a=e.target.closest('a[href]');
+    if(!a)return;
+    var href=a.getAttribute('href')||'';
+    if(!href||href==="#"||href.startsWith('javascript')||href.startsWith('mailto')||a.target)return;
     e.preventDefault();
     document.body.style.cssText='opacity:0;transition:opacity 0.18s ease;pointer-events:none;';
-    setTimeout(()=>window.location.href=href,180);
+    setTimeout(function(){window.location.href=href;},180);
   });
-  /* Fade in on page load */
-  document.body.style.opacity='0';
-  window.addEventListener('load',function(){
+  function doFadeIn(){
+    document.body.style.opacity='';
     document.body.style.transition='opacity 0.28s ease';
-    document.body.style.opacity='1';
-  });
+    requestAnimationFrame(function(){document.body.style.opacity='1';});
+  }
+  if(document.readyState==='complete'){doFadeIn();}
+  else{window.addEventListener('load',doFadeIn);}
 })();
 
-/* ── SSE visual indicator: show a "Live" dot next to topbar brand ─── */
+/* ── SSE live dot — appended inside the brand text span, not after ── */
 (function(){
-  const brand=document.querySelector('.brand,.topbar-logo .brand');
-  if(!brand)return;
-  const dot=document.createElement('span');
+  var brand=document.querySelector('.brand');
+  if(!brand||document.getElementById('global-sse-dot'))return;
+  var dot=document.createElement('span');
   dot.id='global-sse-dot';
   dot.className='sse-dot';
-  dot.title='Real-time updates active';
-  dot.style.cssText='margin-left:6px;vertical-align:middle;';
-  brand.parentNode.insertBefore(dot,brand.nextSibling);
+  dot.title='Live updates active';
+  dot.style.cssText='margin-left:5px;vertical-align:middle;display:inline-block;';
+  brand.appendChild(dot);
 })();
 
 /* ── Upgrade animateCount in admin to use premiumCount ─────────────── */
@@ -4844,15 +4845,17 @@ fetchStockAlerts(); // pre-load badge count on startup
     setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove();},240);},3200);
     if(_orig)try{_orig(msg,type);}catch(e){}
   };
-  /* SSE live dot in topbar */
+  /* SSE live dot — inside the brand span so layout stays intact */
   var brand=document.querySelector('.brand');
   if(brand&&!document.getElementById('global-sse-dot')){
-    var dot=document.createElement('span');dot.id='global-sse-dot';dot.className='sse-dot';dot.title='Live updates';dot.style.cssText='margin-left:6px;vertical-align:middle;';
-    brand.parentNode.insertBefore(dot,brand.nextSibling);
+    var dot=document.createElement('span');dot.id='global-sse-dot';dot.className='sse-dot';dot.title='Live updates';dot.style.cssText='margin-left:5px;vertical-align:middle;display:inline-block;';
+    brand.appendChild(dot);
   }
-  /* Page fade-in */
-  document.body.style.opacity='0';
-  window.addEventListener('load',function(){document.body.style.transition='opacity 0.28s ease';document.body.style.opacity='1';});
+  /* Page fade-in (safe — never set opacity=0 synchronously) */
+  (function(){
+    function _doFade(){document.body.style.transition='opacity 0.28s ease';requestAnimationFrame(function(){document.body.style.opacity='1';});}
+    if(document.readyState==='complete'){_doFade();}else{window.addEventListener('load',_doFade);}
+  })();
 })();
 
 // ── Employee SSE — real-time stock updates from admin ──
@@ -14868,23 +14871,24 @@ window.animNewRows=function(tbody,newIdSet){
   });
 };
 
-/* ── Page transition on link click ───────────────────────────────────── */
+/* ── Page transition on link click (safe version) ── */
 (function(){
   document.addEventListener('click',function(e){
-    const a=e.target.closest('a[href]:not([href^="#"]):not([href^="javascript"]):not([target])');
-    if(!a||a.getAttribute('href').startsWith('mailto'))return;
-    const href=a.getAttribute('href');
-    if(!href||href==='#')return;
+    var a=e.target.closest('a[href]');
+    if(!a)return;
+    var href=a.getAttribute('href')||'';
+    if(!href||href==="#"||href.startsWith('javascript')||href.startsWith('mailto')||a.target)return;
     e.preventDefault();
     document.body.style.cssText='opacity:0;transition:opacity 0.18s ease;pointer-events:none;';
-    setTimeout(()=>window.location.href=href,180);
+    setTimeout(function(){window.location.href=href;},180);
   });
-  /* Fade in on page load */
-  document.body.style.opacity='0';
-  window.addEventListener('load',function(){
+  function doFadeIn(){
+    document.body.style.opacity='';
     document.body.style.transition='opacity 0.28s ease';
-    document.body.style.opacity='1';
-  });
+    requestAnimationFrame(function(){document.body.style.opacity='1';});
+  }
+  if(document.readyState==='complete'){doFadeIn();}
+  else{window.addEventListener('load',doFadeIn);}
 })();
 
 /* ── SSE visual indicator: show a "Live" dot next to topbar brand ─── */
