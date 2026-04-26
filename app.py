@@ -1991,6 +1991,52 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .toast.error{background:var(--red);animation:toastSlide 0.32s cubic-bezier(0.34,1.56,0.64,1),toastShake 0.45s cubic-bezier(0.36,0.07,0.19,0.97) 0.28s both;}
 .toast.success{background:var(--green);}
 
+
+/* ── Employee enhanced interactions ── */
+.order-card{transition:transform var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)),box-shadow var(--dur-sm,200ms);}
+.order-card:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(13,122,106,0.14);}
+
+/* ── Status select ── */
+.status-select:focus{box-shadow:0 0 0 3px rgba(13,122,106,0.18);outline:none;}
+
+/* ── Emp nav item active press ── */
+.emp-nav-item{transition:background var(--dur-sm,200ms),transform var(--dur-xs,120ms);}
+.emp-nav-item:active{transform:scale(0.96);}
+.emp-nav-item.active{position:relative;}
+.emp-nav-item.active::before{
+  content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;
+  background:var(--gold,#c8a84b);border-radius:0 3px 3px 0;
+}
+
+/* ── Sidebar toggle ── */
+.sidebar-toggle{transition:all var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
+.sidebar-toggle:hover{transform:scale(1.08);}
+
+/* ── Topbar logo ── */
+.logo-circle{transition:box-shadow var(--dur-sm,200ms);}
+.logo-circle:hover{box-shadow:0 0 0 3px var(--gold,#c8a84b);}
+
+/* ── Order table rows ── */
+#orders-tbody tr{transition:background .2s,box-shadow .2s;}
+#orders-tbody tr:hover{background:rgba(230,250,245,0.9);box-shadow:inset 3px 0 0 var(--teal,#0d7a6a);}
+
+/* ── Logout btn ── */
+.logout-btn{transition:all var(--dur-sm,200ms);}
+.logout-btn:hover{transform:scale(1.04);}
+
+/* ── Screen entrance ── */
+.screen.active{animation:g-fadeUp var(--dur-lg,480ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both !important;}
+
+/* ── Bottom nav active indicator ── */
+.nav-item.active .nav-icon{position:relative;}
+.nav-item.active .nav-icon::after{
+  content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--gold,#c8a84b);
+}
+
+/* ── Toast container ── */
+#toast-container{pointer-events:none;}
+
 .topbar{height:var(--topbar-h);background:var(--teal-dark);border-bottom:3px solid var(--teal-mid);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:0 2px 12px rgba(9,79,68,0.3);z-index:100;}
 .topbar-left{display:flex;align-items:center;gap:10px;}
 .logo-circle{width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;}
@@ -2002,6 +2048,203 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .clock-chip{background:rgba(255,255,255,0.1);border:1px solid rgba(200,168,75,0.4);color:var(--gold);padding:5px 13px;border-radius:20px;font-size:0.8rem;font-weight:800;white-space:nowrap;}
 .logout-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:800;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
 .logout-btn:hover{background:rgba(255,255,255,0.15);}
+
+
+/* ══ EMPLOYEE ANIM LIBRARY ══ */
+
+/* ── Timing tokens ─────────────────────────────────────────────────── */
+:root{/* emp vars merged */
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --ease-in-out:cubic-bezier(0.4,0,0.2,1);
+  --dur-xs:120ms; --dur-sm:200ms; --dur-md:320ms; --dur-lg:480ms;
+}
+
+/* ── Reusable entry classes ─────────────────────────────────────────── */
+@keyframes g-fadeIn      {from{opacity:0}to{opacity:1}}
+@keyframes g-fadeUp      {from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-fadeDown    {from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-fadeLeft    {from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes g-scaleIn     {from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+@keyframes g-scaleUp     {from{opacity:0;transform:scale(0.88) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes g-slideInLeft {from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes g-slideInUp   {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+.anim-fade-in      {animation:g-fadeIn  var(--dur-md) var(--ease-out) both}
+.anim-fade-up      {animation:g-fadeUp  var(--dur-md) var(--ease-out) both}
+.anim-fade-down    {animation:g-fadeDown var(--dur-md) var(--ease-out) both}
+.anim-scale-in     {animation:g-scaleIn var(--dur-md) var(--ease-spring) both}
+.anim-scale-up     {animation:g-scaleUp var(--dur-md) var(--ease-spring) both}
+.anim-slide-left   {animation:g-slideInLeft var(--dur-md) var(--ease-out) both}
+.anim-slide-up     {animation:g-slideInUp var(--dur-md) var(--ease-out) both}
+
+/* Stagger helpers */
+.d1{animation-delay:.04s}.d2{animation-delay:.08s}.d3{animation-delay:.12s}
+.d4{animation-delay:.16s}.d5{animation-delay:.20s}.d6{animation-delay:.24s}
+
+/* ── Page transition overlay ────────────────────────────────────────── */
+@keyframes g-pageReveal  {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-pageFade    {from{opacity:0}to{opacity:1}}
+.page-enter{animation:g-pageReveal var(--dur-lg) var(--ease-out) both}
+
+/* ── Skeleton loader ────────────────────────────────────────────────── */
+@keyframes g-shimmer{
+  0%{background-position:-600px 0}
+  100%{background-position:600px 0}
+}
+.skel{
+  background:linear-gradient(90deg,
+    rgba(0,0,0,0.05) 25%,
+    rgba(0,0,0,0.10) 50%,
+    rgba(0,0,0,0.05) 75%);
+  background-size:600px 100%;
+  animation:g-shimmer 1.5s infinite linear;
+  border-radius:8px;
+}
+.skel-text{height:14px;border-radius:5px;margin-bottom:8px;}
+.skel-text.wide{width:80%;}
+.skel-text.med {width:55%;}
+.skel-text.short{width:35%;}
+.skel-circle{border-radius:50%;width:40px;height:40px;}
+.skel-card{border-radius:12px;height:80px;}
+
+/* ── Ripple ─────────────────────────────────────────────────────────── */
+@keyframes g-ripple{to{transform:scale(4);opacity:0}}
+.ripple-host{position:relative;overflow:hidden;}
+.g-ripple-circle{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,0.3);
+  transform:scale(0);pointer-events:none;
+  animation:g-ripple 0.55s var(--ease-in-out);
+}
+
+/* ── Button states ──────────────────────────────────────────────────── */
+.btn-loading{opacity:.72;pointer-events:none;position:relative;}
+.btn-loading::after{
+  content:'';display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,0.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:g-spin .7s linear infinite;
+  vertical-align:middle;margin-left:8px;
+}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+
+.btn-success-flash{animation:g-btnSuccess .6s var(--ease-spring) both}
+@keyframes g-btnSuccess{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.08);filter:brightness(1.25)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+
+/* ── Error shake ────────────────────────────────────────────────────── */
+@keyframes g-shake{
+  0%,100%{transform:translateX(0)}
+  15%,45%,75%{transform:translateX(-8px)}
+  30%,60%,90%{transform:translateX(8px)}
+}
+.shake{animation:g-shake .42s var(--ease-in-out)}
+
+/* ── Input focus glow ───────────────────────────────────────────────── */
+@keyframes g-glowIn{from{box-shadow:0 0 0 0 var(--inp-focus,rgba(123,79,46,.15))}to{box-shadow:0 0 0 4px var(--inp-focus,rgba(123,79,46,.15))}}
+.inp-glow:focus{animation:g-glowIn var(--dur-sm) var(--ease-out) forwards}
+
+/* ── Highlight flash (SSE update) ───────────────────────────────────── */
+@keyframes g-highlight{
+  0%{background:rgba(255,200,50,0.22)}
+  100%{background:transparent}
+}
+.sse-flash{animation:g-highlight 1.2s var(--ease-out)}
+
+/* ── New-order pulse ring ────────────────────────────────────────────── */
+@keyframes g-newOrderRing{
+  0%{box-shadow:0 0 0 0 rgba(255,200,50,.55)}
+  70%{box-shadow:0 0 0 14px rgba(255,200,50,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,200,50,0)}
+}
+.new-order-ring{animation:g-newOrderRing 1.4s ease-out 3}
+
+/* ── Order enter / exit ─────────────────────────────────────────────── */
+@keyframes g-orderEnter{
+  from{opacity:0;transform:translateX(-22px) scaleY(.94)}
+  to  {opacity:1;transform:translateX(0)     scaleY(1)}
+}
+@keyframes g-orderExit{
+  from{opacity:1;transform:scaleY(1);max-height:200px}
+  to  {opacity:0;transform:scaleY(0);max-height:0;margin:0;padding:0}
+}
+.order-enter{animation:g-orderEnter var(--dur-md) var(--ease-spring) both}
+.order-exit {animation:g-orderExit  var(--dur-md) var(--ease-in-out) forwards}
+
+/* ── Card hover lift ─────────────────────────────────────────────────── */
+.hover-lift{transition:transform var(--dur-sm) var(--ease-spring),
+                        box-shadow var(--dur-sm) var(--ease-out);}
+.hover-lift:hover{transform:translateY(-4px) scale(1.01);}
+
+/* ── Progress bar (active orders) ───────────────────────────────────── */
+@keyframes g-progressPulse{
+  0%,100%{opacity:1}50%{opacity:.55}
+}
+.progress-active{animation:g-progressPulse 1.8s ease-in-out infinite}
+
+/* ── SSE indicator dot ───────────────────────────────────────────────── */
+@keyframes g-ssePulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.5);opacity:.6}
+}
+.sse-dot{
+  width:8px;height:8px;border-radius:50%;background:#22c55e;
+  display:inline-block;animation:g-ssePulse 1.8s ease-in-out infinite;
+}
+.sse-dot.warn{background:#f59e0b}
+.sse-dot.err {background:#ef4444;animation-duration:.9s}
+
+/* ── Floating action feedback ────────────────────────────────────────── */
+@keyframes g-floatUp{
+  0%{opacity:1;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(-40px)}
+}
+.float-feedback{
+  position:fixed;pointer-events:none;z-index:99999;
+  font-size:.78rem;font-weight:800;padding:6px 14px;
+  border-radius:20px;background:#22c55e;color:#fff;
+  animation:g-floatUp .8s var(--ease-out) forwards;
+}
+
+/* ── Notification badge pop ─────────────────────────────────────────── */
+@keyframes g-badgePop{
+  0%{transform:scale(0)}60%{transform:scale(1.35)}100%{transform:scale(1)}
+}
+.badge-pop{animation:g-badgePop .35s var(--ease-spring)}
+
+/* ── Typing dots (loading state) ────────────────────────────────────── */
+@keyframes g-typingDot{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.typing-dots span{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:currentColor;margin:0 2px;
+  animation:g-typingDot 1.2s infinite ease-in-out both;
+}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+
+/* ── Toast v2 ────────────────────────────────────────────────────────── */
+@keyframes g-toastIn {from{opacity:0;transform:translateY(-20px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes g-toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-16px) scale(.92)}}
+.g-toast{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 18px;border-radius:24px;
+  font-weight:700;font-size:.82rem;
+  box-shadow:0 8px 28px rgba(0,0,0,.22);
+  backdrop-filter:blur(8px);pointer-events:none;
+  animation:g-toastIn .32s var(--ease-spring) both;
+  min-width:200px;text-align:left;
+  border:1px solid rgba(255,255,255,.15);
+}
+.g-toast.out{animation:g-toastOut .22s var(--ease-in-out) forwards}
+.g-toast-icon{font-size:1rem;flex-shrink:0}
+.g-toast.success{background:rgba(21,128,61,.92);color:#fff}
+.g-toast.error  {background:rgba(185,28,28,.92);color:#fff;animation:g-toastIn .32s var(--ease-spring),g-shake .42s var(--ease-in-out) .28s}
+.g-toast.info   {background:rgba(30,58,138,.88);color:#fff}
+.g-toast.warn   {background:rgba(180,83,9,.92) ;color:#fff}
 
 /* ── SIDEBAR TOGGLE (mobile only) ── */
 .sidebar-toggle{background:rgba(255,255,255,0.08);border:1.5px solid rgba(200,168,75,0.4);color:var(--gold);width:40px;height:40px;border-radius:12px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;flex-shrink:0;transition:all 0.22s;position:relative;}
@@ -2683,6 +2926,206 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 #kds-tbody tr:nth-child(2){animation-delay:0.05s;}
 #kds-tbody tr:nth-child(3){animation-delay:0.1s;}
 #kds-tbody tr:hover{background:rgba(13,122,106,0.04);transform:translateX(2px);}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   9599 PREMIUM ANIMATION LIBRARY  v3.0
+   Shared across Admin, Employee & Storefront templates.
+══════════════════════════════════════════════════════════════════════ */
+
+/* ── Timing tokens ─────────────────────────────────────────────────── */
+:root{
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --ease-in-out:cubic-bezier(0.4,0,0.2,1);
+  --dur-xs:120ms; --dur-sm:200ms; --dur-md:320ms; --dur-lg:480ms;
+}
+
+/* ── Reusable entry classes ─────────────────────────────────────────── */
+@keyframes g-fadeIn      {from{opacity:0}to{opacity:1}}
+@keyframes g-fadeUp      {from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-fadeDown    {from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-fadeLeft    {from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes g-scaleIn     {from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+@keyframes g-scaleUp     {from{opacity:0;transform:scale(0.88) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes g-slideInLeft {from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes g-slideInUp   {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+.anim-fade-in      {animation:g-fadeIn  var(--dur-md) var(--ease-out) both}
+.anim-fade-up      {animation:g-fadeUp  var(--dur-md) var(--ease-out) both}
+.anim-fade-down    {animation:g-fadeDown var(--dur-md) var(--ease-out) both}
+.anim-scale-in     {animation:g-scaleIn var(--dur-md) var(--ease-spring) both}
+.anim-scale-up     {animation:g-scaleUp var(--dur-md) var(--ease-spring) both}
+.anim-slide-left   {animation:g-slideInLeft var(--dur-md) var(--ease-out) both}
+.anim-slide-up     {animation:g-slideInUp var(--dur-md) var(--ease-out) both}
+
+/* Stagger helpers */
+.d1{animation-delay:.04s}.d2{animation-delay:.08s}.d3{animation-delay:.12s}
+.d4{animation-delay:.16s}.d5{animation-delay:.20s}.d6{animation-delay:.24s}
+
+/* ── Page transition overlay ────────────────────────────────────────── */
+@keyframes g-pageReveal  {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-pageFade    {from{opacity:0}to{opacity:1}}
+.page-enter{animation:g-pageReveal var(--dur-lg) var(--ease-out) both}
+
+/* ── Skeleton loader ────────────────────────────────────────────────── */
+@keyframes g-shimmer{
+  0%{background-position:-600px 0}
+  100%{background-position:600px 0}
+}
+.skel{
+  background:linear-gradient(90deg,
+    rgba(0,0,0,0.05) 25%,
+    rgba(0,0,0,0.10) 50%,
+    rgba(0,0,0,0.05) 75%);
+  background-size:600px 100%;
+  animation:g-shimmer 1.5s infinite linear;
+  border-radius:8px;
+}
+.skel-text{height:14px;border-radius:5px;margin-bottom:8px;}
+.skel-text.wide{width:80%;}
+.skel-text.med {width:55%;}
+.skel-text.short{width:35%;}
+.skel-circle{border-radius:50%;width:40px;height:40px;}
+.skel-card{border-radius:12px;height:80px;}
+
+/* ── Ripple ─────────────────────────────────────────────────────────── */
+@keyframes g-ripple{to{transform:scale(4);opacity:0}}
+.ripple-host{position:relative;overflow:hidden;}
+.g-ripple-circle{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,0.3);
+  transform:scale(0);pointer-events:none;
+  animation:g-ripple 0.55s var(--ease-in-out);
+}
+
+/* ── Button states ──────────────────────────────────────────────────── */
+.btn-loading{opacity:.72;pointer-events:none;position:relative;}
+.btn-loading::after{
+  content:'';display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,0.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:g-spin .7s linear infinite;
+  vertical-align:middle;margin-left:8px;
+}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+
+.btn-success-flash{animation:g-btnSuccess .6s var(--ease-spring) both}
+@keyframes g-btnSuccess{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.08);filter:brightness(1.25)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+
+/* ── Error shake ────────────────────────────────────────────────────── */
+@keyframes g-shake{
+  0%,100%{transform:translateX(0)}
+  15%,45%,75%{transform:translateX(-8px)}
+  30%,60%,90%{transform:translateX(8px)}
+}
+.shake{animation:g-shake .42s var(--ease-in-out)}
+
+/* ── Input focus glow ───────────────────────────────────────────────── */
+@keyframes g-glowIn{from{box-shadow:0 0 0 0 var(--inp-focus,rgba(123,79,46,.15))}to{box-shadow:0 0 0 4px var(--inp-focus,rgba(123,79,46,.15))}}
+.inp-glow:focus{animation:g-glowIn var(--dur-sm) var(--ease-out) forwards}
+
+/* ── Highlight flash (SSE update) ───────────────────────────────────── */
+@keyframes g-highlight{
+  0%{background:rgba(255,200,50,0.22)}
+  100%{background:transparent}
+}
+.sse-flash{animation:g-highlight 1.2s var(--ease-out)}
+
+/* ── New-order pulse ring ────────────────────────────────────────────── */
+@keyframes g-newOrderRing{
+  0%{box-shadow:0 0 0 0 rgba(255,200,50,.55)}
+  70%{box-shadow:0 0 0 14px rgba(255,200,50,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,200,50,0)}
+}
+.new-order-ring{animation:g-newOrderRing 1.4s ease-out 3}
+
+/* ── Order enter / exit ─────────────────────────────────────────────── */
+@keyframes g-orderEnter{
+  from{opacity:0;transform:translateX(-22px) scaleY(.94)}
+  to  {opacity:1;transform:translateX(0)     scaleY(1)}
+}
+@keyframes g-orderExit{
+  from{opacity:1;transform:scaleY(1);max-height:200px}
+  to  {opacity:0;transform:scaleY(0);max-height:0;margin:0;padding:0}
+}
+.order-enter{animation:g-orderEnter var(--dur-md) var(--ease-spring) both}
+.order-exit {animation:g-orderExit  var(--dur-md) var(--ease-in-out) forwards}
+
+/* ── Card hover lift ─────────────────────────────────────────────────── */
+.hover-lift{transition:transform var(--dur-sm) var(--ease-spring),
+                        box-shadow var(--dur-sm) var(--ease-out);}
+.hover-lift:hover{transform:translateY(-4px) scale(1.01);}
+
+/* ── Progress bar (active orders) ───────────────────────────────────── */
+@keyframes g-progressPulse{
+  0%,100%{opacity:1}50%{opacity:.55}
+}
+.progress-active{animation:g-progressPulse 1.8s ease-in-out infinite}
+
+/* ── SSE indicator dot ───────────────────────────────────────────────── */
+@keyframes g-ssePulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.5);opacity:.6}
+}
+.sse-dot{
+  width:8px;height:8px;border-radius:50%;background:#22c55e;
+  display:inline-block;animation:g-ssePulse 1.8s ease-in-out infinite;
+}
+.sse-dot.warn{background:#f59e0b}
+.sse-dot.err {background:#ef4444;animation-duration:.9s}
+
+/* ── Floating action feedback ────────────────────────────────────────── */
+@keyframes g-floatUp{
+  0%{opacity:1;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(-40px)}
+}
+.float-feedback{
+  position:fixed;pointer-events:none;z-index:99999;
+  font-size:.78rem;font-weight:800;padding:6px 14px;
+  border-radius:20px;background:#22c55e;color:#fff;
+  animation:g-floatUp .8s var(--ease-out) forwards;
+}
+
+/* ── Notification badge pop ─────────────────────────────────────────── */
+@keyframes g-badgePop{
+  0%{transform:scale(0)}60%{transform:scale(1.35)}100%{transform:scale(1)}
+}
+.badge-pop{animation:g-badgePop .35s var(--ease-spring)}
+
+/* ── Typing dots (loading state) ────────────────────────────────────── */
+@keyframes g-typingDot{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.typing-dots span{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:currentColor;margin:0 2px;
+  animation:g-typingDot 1.2s infinite ease-in-out both;
+}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+
+/* ── Toast v2 ────────────────────────────────────────────────────────── */
+@keyframes g-toastIn {from{opacity:0;transform:translateY(-20px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes g-toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-16px) scale(.92)}}
+.g-toast{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 18px;border-radius:24px;
+  font-weight:700;font-size:.82rem;
+  box-shadow:0 8px 28px rgba(0,0,0,.22);
+  backdrop-filter:blur(8px);pointer-events:none;
+  animation:g-toastIn .32s var(--ease-spring) both;
+  min-width:200px;text-align:left;
+  border:1px solid rgba(255,255,255,.15);
+}
+.g-toast.out{animation:g-toastOut .22s var(--ease-in-out) forwards}
+.g-toast-icon{font-size:1rem;flex-shrink:0}
+.g-toast.success{background:rgba(21,128,61,.92);color:#fff}
+.g-toast.error  {background:rgba(185,28,28,.92);color:#fff;animation:g-toastIn .32s var(--ease-spring),g-shake .42s var(--ease-in-out) .28s}
+.g-toast.info   {background:rgba(30,58,138,.88);color:#fff}
+.g-toast.warn   {background:rgba(180,83,9,.92) ;color:#fff}
 
 /* ══ SCROLLBAR ══ */
 ::-webkit-scrollbar{width:4px;height:4px;}
@@ -3538,6 +3981,8 @@ function renderOrders(){
         if(prevStatus[id] && prevStatus[id]!==currentStatus){
           const pulseColor=statusPulseColor[currentStatus]||'rgba(13,122,106,0.45)';
           row.style.setProperty('--q-pulse-color',pulseColor);
+          row.classList.add('sse-flash');
+          row.addEventListener('animationend',()=>row.classList.remove('sse-flash'),{once:true});
           row.classList.add('kds-row-status');
           row.addEventListener('animationend',()=>{
             row.classList.remove('kds-row-status');
@@ -4125,6 +4570,7 @@ async function checkout(){
       document.getElementById('customer-name').value='';
     }else{
       showToast(data.error||'Order failed','error');
+      if(typeof shakeEl==='function')shakeEl(document.querySelector('.checkout-btn,.btn-checkout'));
       btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';
     }
   }catch(e){
@@ -4185,14 +4631,234 @@ function openReceiptWindow(r){
   if(w){w.document.write(html);w.document.close();}
 }
 
+
+/* ══ STOREFRONT GLOBAL JS UTILS ══ */
+
+/* ── Ripple ─────────────────────────────────────────────────────────── */
+(function initRipple(){
+  document.addEventListener('pointerdown',function(e){
+    const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="admin-nav-item"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"],[class*="dash-qa-btn"]');
+    if(!el)return;
+    const r=document.createElement('span');
+    r.className='g-ripple-circle';
+    const rect=el.getBoundingClientRect();
+    const size=Math.max(rect.width,rect.height)*2;
+    r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
+    el.appendChild(r);
+    r.addEventListener('animationend',()=>r.remove(),{once:true});
+  });
+})();
+
+/* ── Enhanced Toast ─────────────────────────────────────────────────── */
+(function(){
+  const ICONS={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  window._showPremiumToast=function(msg,type='success',duration=3200){
+    let container=document.getElementById('toast-container');
+    if(!container){container=document.createElement('div');container.id='toast-container';container.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';document.body.appendChild(container);}
+    const t=document.createElement('div');
+    t.className='g-toast '+type;
+    t.innerHTML=`<span class="g-toast-icon">${ICONS[type]||'💬'}</span><span>${msg}</span>`;
+    container.appendChild(t);
+    setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),240);},duration);
+    return t;
+  };
+  /* Upgrade legacy showToast calls */
+  const _orig=window.showToast;
+  window.showToast=function(msg,type){
+    window._showPremiumToast(msg,type||'info');
+    if(_orig)try{_orig(msg,type);}catch(e){}
+  };
+})();
+
+/* ── Float feedback (click → "+1 ☕" style) ────────────────────────── */
+window.floatFeedback=function(msg,x,y,color){
+  const el=document.createElement('div');
+  el.className='float-feedback';
+  el.textContent=msg;
+  if(color)el.style.background=color;
+  el.style.left=(x||window.innerWidth/2)+'px';
+  el.style.top=(y||window.innerHeight/2)+'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=>el.remove(),{once:true});
+};
+
+/* ── Button loading state ───────────────────────────────────────────── */
+window.btnLoad=function(btn,text){
+  if(!btn)return;
+  btn._origHTML=btn.innerHTML;
+  btn._origDisabled=btn.disabled;
+  btn.disabled=true;
+  btn.classList.add('btn-loading');
+  if(text)btn.innerHTML=text;
+};
+window.btnDone=function(btn,successText,flash){
+  if(!btn)return;
+  btn.disabled=btn._origDisabled||false;
+  btn.classList.remove('btn-loading');
+  if(flash){btn.classList.add('btn-success-flash');setTimeout(()=>btn.classList.remove('btn-success-flash'),700);}
+  setTimeout(()=>{if(btn._origHTML)btn.innerHTML=btn._origHTML;},successText?1200:0);
+  if(successText)btn.innerHTML=successText;
+};
+
+/* ── Input glow hook ─────────────────────────────────────────────────── */
+(function(){
+  document.addEventListener('focusin',function(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+      e.target.classList.add('inp-glow');
+    }
+  });
+})();
+
+/* ── Shake helper ───────────────────────────────────────────────────── */
+window.shakeEl=function(el){
+  if(!el)return;
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true});
+};
+
+/* ── Skeleton builder ───────────────────────────────────────────────── */
+window.makeSkeleton=function(rows,cardMode){
+  if(cardMode)return`<div class="skel skel-card" style="margin:8px 0"></div>`.repeat(rows||3);
+  return Array.from({length:rows||3},(_,i)=>`<div class="skel skel-text ${i%3===0?'wide':i%3===1?'med':'short'}" style="margin:8px 0"></div>`).join('');
+};
+
+/* ── Animate counter ────────────────────────────────────────────────── */
+window.premiumCount=function(el,target,prefix,isCurrency,duration){
+  if(!el)return;
+  const dur=duration||900,steps=40,interval=dur/steps;
+  let i=0;
+  const tick=setInterval(()=>{
+    i++;
+    const v=Math.round(target*(i/steps));
+    el.textContent=prefix+(isCurrency?v.toLocaleString('en-PH',{minimumFractionDigits:0}):(v||0));
+    if(i>=steps){
+      el.textContent=prefix+(isCurrency?target.toFixed(2):(target||0));
+      clearInterval(tick);
+      el.classList.add('anim-scale-in');
+      setTimeout(()=>el.classList.remove('anim-scale-in'),350);
+    }
+  },interval);
+};
+
+/* ── SSE status dot manager ──────────────────────────────────────────── */
+window.sseStatus=function(dotId,state){
+  const d=document.getElementById(dotId);
+  if(!d)return;
+  d.className='sse-dot'+(state==='ok'?'':' '+(state||'warn'));
+};
+
+/* ── Order list FLIP helper ──────────────────────────────────────────── */
+window.animNewRows=function(tbody,newIdSet){
+  if(!tbody||!newIdSet)return;
+  tbody.querySelectorAll('tr[data-order-id]').forEach(function(row){
+    if(newIdSet.has(row.dataset.orderId)){
+      row.classList.add('order-enter','new-order-ring');
+      row.addEventListener('animationend',function h(){row.classList.remove('order-enter','new-order-ring');row.removeEventListener('animationend',h);},{once:true});
+    }
+  });
+};
+
+/* ── Page transition on link click ───────────────────────────────────── */
+(function(){
+  document.addEventListener('click',function(e){
+    const a=e.target.closest('a[href]:not([href^="#"]):not([href^="javascript"]):not([target])');
+    if(!a||a.getAttribute('href').startsWith('mailto'))return;
+    const href=a.getAttribute('href');
+    if(!href||href==='#')return;
+    e.preventDefault();
+    document.body.style.cssText='opacity:0;transition:opacity 0.18s ease;pointer-events:none;';
+    setTimeout(()=>window.location.href=href,180);
+  });
+  /* Fade in on page load */
+  document.body.style.opacity='0';
+  window.addEventListener('load',function(){
+    document.body.style.transition='opacity 0.28s ease';
+    document.body.style.opacity='1';
+  });
+})();
+
+/* ── SSE visual indicator: show a "Live" dot next to topbar brand ─── */
+(function(){
+  const brand=document.querySelector('.brand,.topbar-logo .brand');
+  if(!brand)return;
+  const dot=document.createElement('span');
+  dot.id='global-sse-dot';
+  dot.className='sse-dot';
+  dot.title='Real-time updates active';
+  dot.style.cssText='margin-left:6px;vertical-align:middle;';
+  brand.parentNode.insertBefore(dot,brand.nextSibling);
+})();
+
+/* ── Upgrade animateCount in admin to use premiumCount ─────────────── */
+(function(){
+  const _orig=window.animateCount;
+  window.animateCount=function(id,prefix,target,isCurrency){
+    const el=document.getElementById(id);
+    if(!el)return;
+    window.premiumCount(el,target,prefix,isCurrency);
+    if(_orig)_orig(id,prefix,target,isCurrency);
+  };
+})();
+
+
 setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();}},5000);
 setInterval(()=>empFetch('/api/employee/ping'),60000);
 setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
 fetchOrders();
 fetchStockAlerts(); // pre-load badge count on startup
 
+
+/* ══ EMPLOYEE GLOBAL JS UTILS ══ */
+(function(){
+  /* Ripple */
+  document.addEventListener('pointerdown',function(e){
+    var el=e.target.closest('.ripple-host,.logout-btn,.nav-item,.emp-nav-item,.tbl-btn,.btn-primary,.btn-secondary');
+    if(!el)return;
+    var r=document.createElement('span');r.className='g-ripple-circle';
+    var rect=el.getBoundingClientRect(),size=Math.max(rect.width,rect.height)*2;
+    r.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-rect.left-size/2)+'px;top:'+(e.clientY-rect.top-size/2)+'px;';
+    el.style.position='relative';el.style.overflow='hidden';
+    el.appendChild(r);r.addEventListener('animationend',function(){r.remove();},{once:true});
+  });
+  /* Shake */
+  window.shakeEl=window.shakeEl||function(el){if(!el)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true});};
+  /* Premium count */
+  window.premiumCount=window.premiumCount||function(el,target,prefix,isCurrency,duration){if(!el)return;var dur=duration||900,steps=40,interval=dur/steps,i=0;var tick=setInterval(function(){i++;var v=Math.round(target*(i/steps));el.textContent=prefix+(isCurrency?v.toLocaleString('en-PH',{minimumFractionDigits:0}):(v||0));if(i>=steps){el.textContent=prefix+(isCurrency?target.toFixed(2):(target||0));clearInterval(tick);}},interval);};
+  /* SSE dot */
+  window.sseStatus=window.sseStatus||function(dotId,state){var d=document.getElementById(dotId);if(!d)return;d.className='sse-dot'+(state==='ok'?'':' '+(state||'warn'));};
+  /* Skeleton */
+  window.makeSkeleton=window.makeSkeleton||function(rows){return Array.from({length:rows||3},function(_,i){return '<div class="skel skel-text '+(i%3===0?'wide':i%3===1?'med':'short')+'" style="margin:8px 0"></div>';}).join('');};
+  /* Float feedback */
+  window.floatFeedback=window.floatFeedback||function(msg,x,y,color){var el=document.createElement('div');el.className='float-feedback';el.textContent=msg;if(color)el.style.background=color;el.style.left=(x||window.innerWidth/2)+'px';el.style.top=(y||window.innerHeight/2)+'px';document.body.appendChild(el);el.addEventListener('animationend',function(){el.remove();},{once:true});};
+  /* Upgrade showToast */
+  var ICONS={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  var _orig=window.showToast;
+  window.showToast=function(msg,type){
+    var container=document.getElementById('toast-container');
+    if(!container){container=document.createElement('div');container.id='toast-container';container.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';document.body.appendChild(container);}
+    var t=document.createElement('div');t.className='g-toast '+(type||'info');
+    t.innerHTML='<span class="g-toast-icon">'+(ICONS[type||'info']||'💬')+'</span><span>'+msg+'</span>';
+    container.appendChild(t);
+    setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove();},240);},3200);
+    if(_orig)try{_orig(msg,type);}catch(e){}
+  };
+  /* SSE live dot in topbar */
+  var brand=document.querySelector('.brand');
+  if(brand&&!document.getElementById('global-sse-dot')){
+    var dot=document.createElement('span');dot.id='global-sse-dot';dot.className='sse-dot';dot.title='Live updates';dot.style.cssText='margin-left:6px;vertical-align:middle;';
+    brand.parentNode.insertBefore(dot,brand.nextSibling);
+  }
+  /* Page fade-in */
+  document.body.style.opacity='0';
+  window.addEventListener('load',function(){document.body.style.transition='opacity 0.28s ease';document.body.style.opacity='1';});
+})();
+
 // ── Employee SSE — real-time stock updates from admin ──
 (function connectEmpSSE(){
+  /* Update the global SSE dot */
+  function _sseSetDot(state){if(typeof sseStatus==='function')sseStatus('global-sse-dot',state);}
   let _empSrc=null,_empRetry=null;
   function connect(){
     if(_empSrc){try{_empSrc.close();}catch(e){}}
@@ -4212,7 +4878,7 @@ fetchStockAlerts(); // pre-load badge count on startup
         if(typeof showToast==='function') showToast(msg,'error');
       }catch(_){}
     });
-    _empSrc.onerror=()=>{ try{_empSrc.close();}catch(e){} _empSrc=null; if(!_empRetry)_empRetry=setTimeout(connect,5000); };
+    _empSrc.onerror=()=>{ try{_empSrc.close();}catch(e){} _empSrc=null; if(typeof sseStatus==='function')sseStatus('global-sse-dot','err'); if(!_empRetry)_empRetry=setTimeout(()=>{if(typeof sseStatus==='function')sseStatus('global-sse-dot','warn');connect();},5000); };
   }
   connect();
 })();
@@ -4630,7 +5296,50 @@ STOREFRONT_HTML = """
         .menu-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 20px; }
         .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 0; padding-bottom: 0; scrollbar-width: none; }
         .categories::-webkit-scrollbar { display: none; }
-        .cat-btn { padding: 6px 16px; border-radius: 50px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-dark); font-weight: 700; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.22s var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)); display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        
+/* ── Storefront enhanced UI ── */
+.card{animation:g-scaleIn var(--dur-md,320ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;}
+.card:nth-child(1){animation-delay:.03s}.card:nth-child(2){animation-delay:.06s}
+.card:nth-child(3){animation-delay:.09s}.card:nth-child(4){animation-delay:.12s}
+.card:nth-child(5){animation-delay:.15s}.card:nth-child(6){animation-delay:.18s}
+.card:nth-child(n+7){animation-delay:.21s}
+
+/* ── Cart item enter ── */
+.cart-item,.order-item-row{animation:g-slideInLeft var(--dur-md,320ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;}
+
+/* ── Modal sheet entrance ── */
+.sidebar.sheet-open{animation:g-fadeLeft var(--dur-md,320ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both;}
+
+/* ── Category pill ── */
+.cat-btn{transition:all var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
+.cat-btn:hover{transform:translateY(-2px) scale(1.04);}
+.cat-btn.active{transform:scale(1.08);}
+
+/* ── Add to cart btn ── */
+.add-to-cart,.btn-add{transition:transform var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)),box-shadow var(--dur-sm,200ms);}
+.add-to-cart:hover,.btn-add:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(44,26,18,0.18);}
+.add-to-cart:active,.btn-add:active{transform:scale(0.94);}
+
+/* ── Modal bottom sheet ── */
+@keyframes sf-sheetUp{from{transform:translateY(100%);opacity:.6}to{transform:translateY(0);opacity:1}}
+.modal-sheet,.item-sheet,.order-sheet{animation:sf-sheetUp var(--dur-lg,480ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;}
+
+/* ── Search bar focus ── */
+.menu-search-input:focus{border-color:var(--gold,#cd9a5b);box-shadow:0 0 0 3px rgba(205,154,91,.18);outline:none;}
+
+/* ── Checkout button pulse when cart has items ── */
+@keyframes sf-checkoutPulse{0%,100%{box-shadow:0 4px 16px rgba(44,26,18,0.2)}50%{box-shadow:0 4px 24px rgba(44,26,18,0.35)}}
+.sticky-checkout:not(:disabled),.btn-checkout:not(:disabled){animation:sf-checkoutPulse 2.8s ease-in-out infinite;}
+
+/* ── Order success screen ── */
+.success-screen,.order-confirm-screen{animation:g-scaleIn var(--dur-lg,480ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;}
+
+/* ── Promo ticker ── */
+.promo-ticker{position:relative;}
+.promo-ticker::after{content:'';position:absolute;right:0;top:0;bottom:0;width:40px;
+  background:linear-gradient(to right,transparent,#1a110d);}
+
+.cat-btn { padding: 6px 16px; border-radius: 50px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-dark); font-weight: 700; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.22s var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)); display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .cat-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(44,26,18,0.1); }
         .cat-btn:active { transform: scale(0.94); }
         .cat-btn.active { background: var(--text-dark); color: var(--gold); border-color: var(--text-dark); transform: scale(1.06); box-shadow: 0 4px 14px rgba(44,26,18,0.18); }
@@ -4641,7 +5350,204 @@ STOREFRONT_HTML = """
         .menu-search-input:focus { border-color: var(--gold); }
 
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-        .card { background: var(--card-bg); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(44, 26, 18, 0.05); cursor: pointer; transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s ease, border-color 0.15s; border: 1px solid var(--border-color); position: relative; display: flex; flex-direction: column; }
+        
+/* ══ STOREFRONT ANIM LIBRARY ══ */
+
+/* ── Timing tokens ─────────────────────────────────────────────────── */
+:root{/* sf vars merged */
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --ease-in-out:cubic-bezier(0.4,0,0.2,1);
+  --dur-xs:120ms; --dur-sm:200ms; --dur-md:320ms; --dur-lg:480ms;
+}
+
+/* ── Reusable entry classes ─────────────────────────────────────────── */
+@keyframes g-fadeIn      {from{opacity:0}to{opacity:1}}
+@keyframes g-fadeUp      {from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-fadeDown    {from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-fadeLeft    {from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes g-scaleIn     {from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+@keyframes g-scaleUp     {from{opacity:0;transform:scale(0.88) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes g-slideInLeft {from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes g-slideInUp   {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+.anim-fade-in      {animation:g-fadeIn  var(--dur-md) var(--ease-out) both}
+.anim-fade-up      {animation:g-fadeUp  var(--dur-md) var(--ease-out) both}
+.anim-fade-down    {animation:g-fadeDown var(--dur-md) var(--ease-out) both}
+.anim-scale-in     {animation:g-scaleIn var(--dur-md) var(--ease-spring) both}
+.anim-scale-up     {animation:g-scaleUp var(--dur-md) var(--ease-spring) both}
+.anim-slide-left   {animation:g-slideInLeft var(--dur-md) var(--ease-out) both}
+.anim-slide-up     {animation:g-slideInUp var(--dur-md) var(--ease-out) both}
+
+/* Stagger helpers */
+.d1{animation-delay:.04s}.d2{animation-delay:.08s}.d3{animation-delay:.12s}
+.d4{animation-delay:.16s}.d5{animation-delay:.20s}.d6{animation-delay:.24s}
+
+/* ── Page transition overlay ────────────────────────────────────────── */
+@keyframes g-pageReveal  {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes g-pageFade    {from{opacity:0}to{opacity:1}}
+.page-enter{animation:g-pageReveal var(--dur-lg) var(--ease-out) both}
+
+/* ── Skeleton loader ────────────────────────────────────────────────── */
+@keyframes g-shimmer{
+  0%{background-position:-600px 0}
+  100%{background-position:600px 0}
+}
+.skel{
+  background:linear-gradient(90deg,
+    rgba(0,0,0,0.05) 25%,
+    rgba(0,0,0,0.10) 50%,
+    rgba(0,0,0,0.05) 75%);
+  background-size:600px 100%;
+  animation:g-shimmer 1.5s infinite linear;
+  border-radius:8px;
+}
+.skel-text{height:14px;border-radius:5px;margin-bottom:8px;}
+.skel-text.wide{width:80%;}
+.skel-text.med {width:55%;}
+.skel-text.short{width:35%;}
+.skel-circle{border-radius:50%;width:40px;height:40px;}
+.skel-card{border-radius:12px;height:80px;}
+
+/* ── Ripple ─────────────────────────────────────────────────────────── */
+@keyframes g-ripple{to{transform:scale(4);opacity:0}}
+.ripple-host{position:relative;overflow:hidden;}
+.g-ripple-circle{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,0.3);
+  transform:scale(0);pointer-events:none;
+  animation:g-ripple 0.55s var(--ease-in-out);
+}
+
+/* ── Button states ──────────────────────────────────────────────────── */
+.btn-loading{opacity:.72;pointer-events:none;position:relative;}
+.btn-loading::after{
+  content:'';display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,0.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:g-spin .7s linear infinite;
+  vertical-align:middle;margin-left:8px;
+}
+@keyframes g-spin{to{transform:rotate(360deg)}}
+
+.btn-success-flash{animation:g-btnSuccess .6s var(--ease-spring) both}
+@keyframes g-btnSuccess{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.08);filter:brightness(1.25)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+
+/* ── Error shake ────────────────────────────────────────────────────── */
+@keyframes g-shake{
+  0%,100%{transform:translateX(0)}
+  15%,45%,75%{transform:translateX(-8px)}
+  30%,60%,90%{transform:translateX(8px)}
+}
+.shake{animation:g-shake .42s var(--ease-in-out)}
+
+/* ── Input focus glow ───────────────────────────────────────────────── */
+@keyframes g-glowIn{from{box-shadow:0 0 0 0 var(--inp-focus,rgba(123,79,46,.15))}to{box-shadow:0 0 0 4px var(--inp-focus,rgba(123,79,46,.15))}}
+.inp-glow:focus{animation:g-glowIn var(--dur-sm) var(--ease-out) forwards}
+
+/* ── Highlight flash (SSE update) ───────────────────────────────────── */
+@keyframes g-highlight{
+  0%{background:rgba(255,200,50,0.22)}
+  100%{background:transparent}
+}
+.sse-flash{animation:g-highlight 1.2s var(--ease-out)}
+
+/* ── New-order pulse ring ────────────────────────────────────────────── */
+@keyframes g-newOrderRing{
+  0%{box-shadow:0 0 0 0 rgba(255,200,50,.55)}
+  70%{box-shadow:0 0 0 14px rgba(255,200,50,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,200,50,0)}
+}
+.new-order-ring{animation:g-newOrderRing 1.4s ease-out 3}
+
+/* ── Order enter / exit ─────────────────────────────────────────────── */
+@keyframes g-orderEnter{
+  from{opacity:0;transform:translateX(-22px) scaleY(.94)}
+  to  {opacity:1;transform:translateX(0)     scaleY(1)}
+}
+@keyframes g-orderExit{
+  from{opacity:1;transform:scaleY(1);max-height:200px}
+  to  {opacity:0;transform:scaleY(0);max-height:0;margin:0;padding:0}
+}
+.order-enter{animation:g-orderEnter var(--dur-md) var(--ease-spring) both}
+.order-exit {animation:g-orderExit  var(--dur-md) var(--ease-in-out) forwards}
+
+/* ── Card hover lift ─────────────────────────────────────────────────── */
+.hover-lift{transition:transform var(--dur-sm) var(--ease-spring),
+                        box-shadow var(--dur-sm) var(--ease-out);}
+.hover-lift:hover{transform:translateY(-4px) scale(1.01);}
+
+/* ── Progress bar (active orders) ───────────────────────────────────── */
+@keyframes g-progressPulse{
+  0%,100%{opacity:1}50%{opacity:.55}
+}
+.progress-active{animation:g-progressPulse 1.8s ease-in-out infinite}
+
+/* ── SSE indicator dot ───────────────────────────────────────────────── */
+@keyframes g-ssePulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.5);opacity:.6}
+}
+.sse-dot{
+  width:8px;height:8px;border-radius:50%;background:#22c55e;
+  display:inline-block;animation:g-ssePulse 1.8s ease-in-out infinite;
+}
+.sse-dot.warn{background:#f59e0b}
+.sse-dot.err {background:#ef4444;animation-duration:.9s}
+
+/* ── Floating action feedback ────────────────────────────────────────── */
+@keyframes g-floatUp{
+  0%{opacity:1;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(-40px)}
+}
+.float-feedback{
+  position:fixed;pointer-events:none;z-index:99999;
+  font-size:.78rem;font-weight:800;padding:6px 14px;
+  border-radius:20px;background:#22c55e;color:#fff;
+  animation:g-floatUp .8s var(--ease-out) forwards;
+}
+
+/* ── Notification badge pop ─────────────────────────────────────────── */
+@keyframes g-badgePop{
+  0%{transform:scale(0)}60%{transform:scale(1.35)}100%{transform:scale(1)}
+}
+.badge-pop{animation:g-badgePop .35s var(--ease-spring)}
+
+/* ── Typing dots (loading state) ────────────────────────────────────── */
+@keyframes g-typingDot{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.typing-dots span{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:currentColor;margin:0 2px;
+  animation:g-typingDot 1.2s infinite ease-in-out both;
+}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+
+/* ── Toast v2 ────────────────────────────────────────────────────────── */
+@keyframes g-toastIn {from{opacity:0;transform:translateY(-20px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes g-toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-16px) scale(.92)}}
+.g-toast{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 18px;border-radius:24px;
+  font-weight:700;font-size:.82rem;
+  box-shadow:0 8px 28px rgba(0,0,0,.22);
+  backdrop-filter:blur(8px);pointer-events:none;
+  animation:g-toastIn .32s var(--ease-spring) both;
+  min-width:200px;text-align:left;
+  border:1px solid rgba(255,255,255,.15);
+}
+.g-toast.out{animation:g-toastOut .22s var(--ease-in-out) forwards}
+.g-toast-icon{font-size:1rem;flex-shrink:0}
+.g-toast.success{background:rgba(21,128,61,.92);color:#fff}
+.g-toast.error  {background:rgba(185,28,28,.92);color:#fff;animation:g-toastIn .32s var(--ease-spring),g-shake .42s var(--ease-in-out) .28s}
+.g-toast.info   {background:rgba(30,58,138,.88);color:#fff}
+.g-toast.warn   {background:rgba(180,83,9,.92) ;color:#fff}
+
+.card { background: var(--card-bg); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(44, 26, 18, 0.05); cursor: pointer; transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s ease, border-color 0.15s; border: 1px solid var(--border-color); position: relative; display: flex; flex-direction: column; }
         .card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 14px 36px rgba(44, 26, 18, 0.13); border-color: var(--gold); }
         .card:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(44,26,18,0.06); transition-duration: 0.08s; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(44, 26, 18, 0.1); }
@@ -9454,6 +10360,76 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 @keyframes adminHighlight{0%{background:rgba(123,79,46,0.14);}100%{background:transparent;}}
 @keyframes loCardIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 
+
+/* ── Lo-card enhanced hover ── */
+.lo-card{cursor:pointer;transition:transform var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)),box-shadow var(--dur-sm,200ms) ease;}
+.lo-card:hover{transform:translateY(-5px) scale(1.012);box-shadow:0 16px 44px rgba(61,36,16,0.18);}
+.lo-card:active{transform:scale(0.97);transition-duration:80ms;}
+
+/* ── Status bar animated fill ── */
+.lo-card-bar{height:4px;border-radius:4px 4px 0 0;transition:opacity .3s;}
+.lo-card-bar.waiting  {background:linear-gradient(90deg,#f57c00,#ffb74d);animation:g-progressPulse 2s ease-in-out infinite;}
+.lo-card-bar.preparing{background:linear-gradient(90deg,#1565c0,#64b5f6);animation:g-progressPulse 1.5s ease-in-out infinite;}
+.lo-card-bar.ready    {background:linear-gradient(90deg,#2e7d32,#66bb6a);}
+.lo-card-bar.completed{background:linear-gradient(90deg,#6a1b9a,#ab47bc);}
+.lo-card-bar.cancelled{background:linear-gradient(90deg,#b71c1c,#ef5350);}
+.lo-card-bar.late     {background:linear-gradient(90deg,#4a148c,#7b1fa2);animation:g-progressPulse 0.9s ease-in-out infinite;}
+
+/* ── KPI card micro-interactions ── */
+.dash-kpi{cursor:default;transition:transform var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)),box-shadow var(--dur-sm,200ms) ease;}
+.dash-kpi:hover{transform:translateY(-5px) scale(1.025);box-shadow:0 14px 40px rgba(61,36,16,0.2);}
+.dash-kpi:active{transform:scale(0.97);}
+
+/* ── Topbar brand SSE dot ── */
+#global-sse-dot{transition:background .5s;}
+
+/* ── Order detail modal smoother ── */
+.adm-modal{will-change:transform,opacity;}
+
+/* ── Table rows ── */
+#kds-tbody tr{transition:background .25s,box-shadow .2s;}
+#kds-tbody tr:hover{background:rgba(240,237,228,0.85);box-shadow:inset 3px 0 0 var(--tan,#c4a882);}
+
+/* ── Nav item ripple host ── */
+.admin-nav-item{transition:background var(--dur-sm,200ms) ease,transform var(--dur-xs,120ms) ease;}
+.admin-nav-item:active{transform:scale(0.96);}
+
+/* ── Inventory table rows ── */
+#inv-tbody tr{transition:background .2s,transform .2s;}
+#inv-tbody tr:hover{background:rgba(240,237,228,0.9);transform:translateX(3px);}
+
+/* ── Status select upgrade ── */
+.status-badge,.status-select{transition:opacity .2s,box-shadow .2s;}
+.status-select:focus{box-shadow:0 0 0 3px rgba(123,79,46,0.18);outline:none;}
+
+/* ── Quick action buttons ── */
+.dash-qa-btn{transition:transform var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)),box-shadow var(--dur-sm,200ms) ease,background var(--dur-sm,200ms);}
+.dash-qa-btn:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 10px 28px rgba(61,36,16,0.2);}
+.dash-qa-btn:active{transform:scale(0.95);}
+
+/* ── Notification panel entrance ── */
+.notif-panel[style*="flex"]{animation:g-fadeDown var(--dur-md,320ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;}
+
+/* ── Modal open ── */
+.adm-modal-overlay.open .adm-modal{animation:modalIn .38s var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;}
+
+/* ── Finance tabs ── */
+.fin-tab-pill,.period-pill{transition:all var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
+.fin-tab-pill:hover,.period-pill:hover{transform:translateY(-2px);}
+.fin-tab-pill.active,.period-pill.active{transform:scale(1.06);}
+
+/* ── Audit log rows ── */
+.audit-row{transition:background .2s;}
+.audit-row:hover{background:rgba(240,237,228,0.6);}
+
+/* ── Settings card ── */
+.settings-section{transition:box-shadow var(--dur-sm,200ms),transform var(--dur-sm,200ms);}
+.settings-section:hover{box-shadow:0 8px 28px rgba(61,36,16,0.13);transform:translateY(-2px);}
+
+/* ── LO stats chips ── */
+.lo-stat-chip{transition:transform var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)),box-shadow var(--dur-sm,200ms);}
+.lo-stat-chip:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(61,36,16,0.14);}
+
 /* ══ SCREEN TRANSITIONS ══ */
 .screen.active{animation:adminScreenIn 0.32s cubic-bezier(0.16,1,0.3,1) both;}
 
@@ -10066,7 +11042,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-cards-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:10px 14px 20px;}
 @media(min-width:600px){.lo-cards-grid{grid-template-columns:1fr 1fr;}}
 @media(min-width:1100px){.lo-cards-grid{grid-template-columns:1fr 1fr 1fr;}}
-.lo-card{background:var(--white);border-radius:16px;border:1.5px solid var(--cream-dark);box-shadow:0 3px 16px rgba(61,36,16,0.07);overflow:hidden;transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,border-color 0.18s;animation:loCardIn 0.35s cubic-bezier(0.16,1,0.3,1) both;cursor:pointer;}
+.lo-card{background:var(--white);border-radius:16px;border:1.5px solid var(--cream-dark);animation:loCardIn 0.36s var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1)) both;box-shadow:0 3px 16px rgba(61,36,16,0.07);overflow:hidden;transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.22s,border-color 0.18s;animation:loCardIn 0.35s cubic-bezier(0.16,1,0.3,1) both;cursor:pointer;}
 .lo-card:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 14px 36px rgba(61,36,16,0.16);border-color:var(--tan);}
 .lo-card:active{transform:scale(0.98);transition-duration:0.1s;}
 .lo-card-bar{height:4px;animation:empStatusBarGrow 0.45s cubic-bezier(0.16,1,0.3,1) both;}
@@ -11830,7 +12806,26 @@ function playBeep(){try{var ctx=new(window.AudioContext||window.webkitAudioConte
 // Distinct ding-dong double-bell for incoming permission requests
 function toggleNotif(){const p=document.getElementById('notif-panel');p.style.display=p.style.display==='flex'?'none':'flex';}
 function clearNotifs(){adminNotifs=[];renderNotifUI();document.getElementById('notif-panel').style.display='none';}
-function addNotif(code,name,total){adminNotifs.unshift({code,name,total,time:new Date().toLocaleTimeString()});if(adminNotifs.length>20)adminNotifs.pop();renderNotifUI();playBeep();showToast(`New order from ${name} (${code})!`,'success');}
+function addNotif(code,name,total){
+  adminNotifs.unshift({code,name,total,time:new Date().toLocaleTimeString()});
+  if(adminNotifs.length>20)adminNotifs.pop();
+  renderNotifUI();playBeep();
+  showToast(`🔔 New order from ${name} (${code})!`,'success');
+  /* Flash the new-order banner */
+  (function(){
+    let banner=document.getElementById('new-order-banner');
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='new-order-banner';
+      banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99998;padding:10px 20px;text-align:center;font-weight:800;font-size:.85rem;pointer-events:none;background:linear-gradient(90deg,#2e7d32,#43a047);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.25);transition:opacity .3s;';
+      document.body.appendChild(banner);
+    }
+    banner.innerHTML='<span style="font-size:1.1rem;">🔔</span> NEW ORDER — <b>#'+code+'</b> &ensp;·&ensp; <b>'+name+'</b> &ensp;·&ensp; ₱'+Number(total).toFixed(2)+'<span style="margin-left:12px;opacity:.7;font-size:.78rem;font-weight:600;">Click order to view</span>';
+    banner.style.opacity='1';
+    banner.classList.add('anim-fade-down');
+    setTimeout(function(){banner.style.opacity='0';setTimeout(function(){banner.classList.remove('anim-fade-down');},350);},4500);
+  })();
+}
 function renderNotifUI(){
   const badge=document.getElementById('nbadge'),body=document.getElementById('notif-body');
   if(adminNotifs.length>0){badge.style.display='flex';badge.innerText=adminNotifs.length;
@@ -11842,6 +12837,9 @@ function renderNotifUI(){
 async function fetchOrders(){
   const tbody=document.getElementById('kds-tbody');
   if(!tbody) return;
+  if(!tbody.querySelector('tr[data-order-id]')){
+    tbody.innerHTML='<tr><td colspan="7" style="padding:0"><div style="padding:12px 16px;">'+window.makeSkeleton(3)+'</div></td></tr>';
+  }
   try{
     const res=await apiFetch('/api/orders?_t='+Date.now());
     if(!res||!res.ok){tbody.innerHTML='<tr><td colspan="7" class="error-state">⚠️ DB Error</td></tr>';return;}
@@ -11850,6 +12848,8 @@ async function fetchOrders(){
     if(!firstLoad){data.orders.forEach(o=>{if(!lastOrderIds.has(o.id))addNotif(o.code,o.name,o.total);});}
     lastOrderIds=cur;firstLoad=false;tbody.innerHTML='';
     if(!data.orders.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);font-weight:600;">No active orders</td></tr>';return;}
+    const _adminNewIds=new Set();
+    if(!firstLoad){data.orders.forEach(o=>{if(!lastOrderIds.has(o.id))_adminNewIds.add(String(o.id));});}
     data.orders.forEach(o=>{
       let iH=o.items.map(i=>`<div style="margin-bottom:3px;"><b>${escapeHTML(i.foundation)}</b> (${escapeHTML(i.size)})<br><span style="font-size:0.7rem;color:var(--muted);">${escapeHTML(i.sweetener)} | ${escapeHTML(i.ice)}${i.addons?' | +'+escapeHTML(i.addons):''}</span></div>`).join('');
       let items;
@@ -11864,6 +12864,24 @@ async function fetchOrders(){
       </select>`;
       tbody.innerHTML+=`<tr><td><b style="color:var(--brown-dark);">${escapeHTML(o.code)}</b></td><td>${escapeHTML(o.source)}</td><td><b>${escapeHTML(o.name)}</b></td><td>${escapeHTML(o.pickup_time)}</td><td style="color:var(--brown);font-weight:800;">₱${o.total.toFixed(2)}</td><td>${items}</td><td>${sel}</td></tr>`;
     });
+  // Animate newly appeared rows
+  requestAnimationFrame(()=>{
+    if(typeof _adminNewIds!=='undefined'){
+      tbody.querySelectorAll('tr').forEach(function(row){
+        if(_adminNewIds.has(row.children[0]&&row.querySelector('b')&&row.querySelector('b').textContent)){return;}
+        // Use a simpler approach — flash all rows on first new-order detection
+      });
+      if(_adminNewIds.size>0){
+        const newRows=tbody.querySelectorAll('tr');
+        newRows.forEach(function(row,i){
+          if(i<_adminNewIds.size){
+            row.classList.add('sse-flash','order-enter');
+            row.addEventListener('animationend',function(){row.classList.remove('sse-flash','order-enter');},{once:true});
+          }
+        });
+      }
+    }
+  });
   }catch(e){tbody.innerHTML='<tr><td colspan="7" class="error-state">⚠️ Network Error</td></tr>';}
 }
 async function updateStatus(id,status){await apiFetch(`/api/orders/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});showToast('Status updated','success');fetchOrders();}
@@ -12888,6 +13906,18 @@ async function fetchLiveOrders(){
     _loOrders=orders;
     renderLoCards();
     renderLoStats();
+  // Animate brand-new cards
+  requestAnimationFrame(()=>{
+    if(typeof _loNewIds!=='undefined'&&_loNewIds.size){
+      document.querySelectorAll('#lo-cards-grid .lo-card').forEach(function(card){
+        const oid=card.getAttribute('onclick')||'';
+        // Cards are divs — add enter class universally then clean up
+        card.classList.add('order-enter');
+        if(_loNewIds.size>0)card.classList.add('new-order-ring');
+        card.addEventListener('animationend',function(){card.classList.remove('order-enter','new-order-ring');},{once:true});
+      });
+    }
+  });
   }catch(e){}
 }
 
@@ -12918,6 +13948,7 @@ function renderLoCards(){
   }
   const statusBarClass={'Waiting Confirmation':'waiting','Preparing Order':'preparing','Ready for Pick-up':'ready','Completed':'completed','Cancelled':'cancelled','Pending Staff Approval':'late'};
   const statusLabels={'Waiting Confirmation':'⏳ Waiting','Preparing Order':'🔥 Preparing','Ready for Pick-up':'✅ Ready','Completed':'🏁 Done','Cancelled':'❌ Cancelled','Pending Staff Approval':'🔒 Pending Approval'};
+  const _loNewIds=new Set(orders.filter(o=>!_loKnown.has(o.id)&&_loKnown.size>0).map(o=>String(o.id)));
   grid.innerHTML=orders.map((o,idx)=>{
     const isOnline=o.source==='Online'||o.source==='online';
     const barCls=statusBarClass[o.status]||'waiting';
@@ -13704,6 +14735,181 @@ async function unblockIP(id) {
     if (r && r.ok) { showToast('IP unblocked ✓','success'); loadBlacklist(); }
   } catch(e) {}
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════
+   9599 PREMIUM JS UTILITY LAYER  v3.0
+   Vanilla-only.  Works with existing Flask SSE & fetch calls.
+════════════════════════════════════════════════════════════════════════ */
+
+/* ── Ripple ─────────────────────────────────────────────────────────── */
+(function initRipple(){
+  document.addEventListener('pointerdown',function(e){
+    const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="admin-nav-item"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"],[class*="dash-qa-btn"]');
+    if(!el)return;
+    const r=document.createElement('span');
+    r.className='g-ripple-circle';
+    const rect=el.getBoundingClientRect();
+    const size=Math.max(rect.width,rect.height)*2;
+    r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
+    el.appendChild(r);
+    r.addEventListener('animationend',()=>r.remove(),{once:true});
+  });
+})();
+
+/* ── Enhanced Toast ─────────────────────────────────────────────────── */
+(function(){
+  const ICONS={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  window._showPremiumToast=function(msg,type='success',duration=3200){
+    let container=document.getElementById('toast-container');
+    if(!container){container=document.createElement('div');container.id='toast-container';container.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';document.body.appendChild(container);}
+    const t=document.createElement('div');
+    t.className='g-toast '+type;
+    t.innerHTML=`<span class="g-toast-icon">${ICONS[type]||'💬'}</span><span>${msg}</span>`;
+    container.appendChild(t);
+    setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),240);},duration);
+    return t;
+  };
+  /* Upgrade legacy showToast calls */
+  const _orig=window.showToast;
+  window.showToast=function(msg,type){
+    window._showPremiumToast(msg,type||'info');
+    if(_orig)try{_orig(msg,type);}catch(e){}
+  };
+})();
+
+/* ── Float feedback (click → "+1 ☕" style) ────────────────────────── */
+window.floatFeedback=function(msg,x,y,color){
+  const el=document.createElement('div');
+  el.className='float-feedback';
+  el.textContent=msg;
+  if(color)el.style.background=color;
+  el.style.left=(x||window.innerWidth/2)+'px';
+  el.style.top=(y||window.innerHeight/2)+'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=>el.remove(),{once:true});
+};
+
+/* ── Button loading state ───────────────────────────────────────────── */
+window.btnLoad=function(btn,text){
+  if(!btn)return;
+  btn._origHTML=btn.innerHTML;
+  btn._origDisabled=btn.disabled;
+  btn.disabled=true;
+  btn.classList.add('btn-loading');
+  if(text)btn.innerHTML=text;
+};
+window.btnDone=function(btn,successText,flash){
+  if(!btn)return;
+  btn.disabled=btn._origDisabled||false;
+  btn.classList.remove('btn-loading');
+  if(flash){btn.classList.add('btn-success-flash');setTimeout(()=>btn.classList.remove('btn-success-flash'),700);}
+  setTimeout(()=>{if(btn._origHTML)btn.innerHTML=btn._origHTML;},successText?1200:0);
+  if(successText)btn.innerHTML=successText;
+};
+
+/* ── Input glow hook ─────────────────────────────────────────────────── */
+(function(){
+  document.addEventListener('focusin',function(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+      e.target.classList.add('inp-glow');
+    }
+  });
+})();
+
+/* ── Shake helper ───────────────────────────────────────────────────── */
+window.shakeEl=function(el){
+  if(!el)return;
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true});
+};
+
+/* ── Skeleton builder ───────────────────────────────────────────────── */
+window.makeSkeleton=function(rows,cardMode){
+  if(cardMode)return`<div class="skel skel-card" style="margin:8px 0"></div>`.repeat(rows||3);
+  return Array.from({length:rows||3},(_,i)=>`<div class="skel skel-text ${i%3===0?'wide':i%3===1?'med':'short'}" style="margin:8px 0"></div>`).join('');
+};
+
+/* ── Animate counter ────────────────────────────────────────────────── */
+window.premiumCount=function(el,target,prefix,isCurrency,duration){
+  if(!el)return;
+  const dur=duration||900,steps=40,interval=dur/steps;
+  let i=0;
+  const tick=setInterval(()=>{
+    i++;
+    const v=Math.round(target*(i/steps));
+    el.textContent=prefix+(isCurrency?v.toLocaleString('en-PH',{minimumFractionDigits:0}):(v||0));
+    if(i>=steps){
+      el.textContent=prefix+(isCurrency?target.toFixed(2):(target||0));
+      clearInterval(tick);
+      el.classList.add('anim-scale-in');
+      setTimeout(()=>el.classList.remove('anim-scale-in'),350);
+    }
+  },interval);
+};
+
+/* ── SSE status dot manager ──────────────────────────────────────────── */
+window.sseStatus=function(dotId,state){
+  const d=document.getElementById(dotId);
+  if(!d)return;
+  d.className='sse-dot'+(state==='ok'?'':' '+(state||'warn'));
+};
+
+/* ── Order list FLIP helper ──────────────────────────────────────────── */
+window.animNewRows=function(tbody,newIdSet){
+  if(!tbody||!newIdSet)return;
+  tbody.querySelectorAll('tr[data-order-id]').forEach(function(row){
+    if(newIdSet.has(row.dataset.orderId)){
+      row.classList.add('order-enter','new-order-ring');
+      row.addEventListener('animationend',function h(){row.classList.remove('order-enter','new-order-ring');row.removeEventListener('animationend',h);},{once:true});
+    }
+  });
+};
+
+/* ── Page transition on link click ───────────────────────────────────── */
+(function(){
+  document.addEventListener('click',function(e){
+    const a=e.target.closest('a[href]:not([href^="#"]):not([href^="javascript"]):not([target])');
+    if(!a||a.getAttribute('href').startsWith('mailto'))return;
+    const href=a.getAttribute('href');
+    if(!href||href==='#')return;
+    e.preventDefault();
+    document.body.style.cssText='opacity:0;transition:opacity 0.18s ease;pointer-events:none;';
+    setTimeout(()=>window.location.href=href,180);
+  });
+  /* Fade in on page load */
+  document.body.style.opacity='0';
+  window.addEventListener('load',function(){
+    document.body.style.transition='opacity 0.28s ease';
+    document.body.style.opacity='1';
+  });
+})();
+
+/* ── SSE visual indicator: show a "Live" dot next to topbar brand ─── */
+(function(){
+  const brand=document.querySelector('.brand,.topbar-logo .brand');
+  if(!brand)return;
+  const dot=document.createElement('span');
+  dot.id='global-sse-dot';
+  dot.className='sse-dot';
+  dot.title='Real-time updates active';
+  dot.style.cssText='margin-left:6px;vertical-align:middle;';
+  brand.parentNode.insertBefore(dot,brand.nextSibling);
+})();
+
+/* ── Upgrade animateCount in admin to use premiumCount ─────────────── */
+(function(){
+  const _orig=window.animateCount;
+  window.animateCount=function(id,prefix,target,isCurrency){
+    const el=document.getElementById(id);
+    if(!el)return;
+    window.premiumCount(el,target,prefix,isCurrency);
+    if(_orig)_orig(id,prefix,target,isCurrency);
+  };
+})();
+
 </script>
 </body>
 </html>
