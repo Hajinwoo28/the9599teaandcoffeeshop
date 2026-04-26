@@ -10555,12 +10555,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── TOPBAR ── */
 .topbar{height:var(--topbar-h);background:var(--brown-dark);border-bottom:3px solid var(--brown);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:0 2px 12px rgba(61,36,16,0.3);z-index:100;}
-.topbar-logo{display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;}
-.logo-circle{width:36px;height:36px;border-radius:50%;border:2px solid var(--tan);overflow:hidden;flex-shrink:0;background:var(--cream);display:flex;align-items:center;justify-content:center;}
+.topbar-logo{display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:nowrap;flex-shrink:0;}
+.logo-circle{width:48px;height:48px;border-radius:50%;border:2.5px solid var(--tan);overflow:hidden;flex-shrink:0;background:var(--cream);display:flex;align-items:center;justify-content:center;}
 .logo-circle img{width:100%;height:100%;object-fit:cover;}
-.logo-circle .lf{font-size:1rem;}
-.brand{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:var(--cream);line-height:1.1;}
-.brand-sub{font-size:0.6rem;color:var(--tan);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.logo-circle .lf{font-size:1.2rem;}
+.brand-wrap{display:flex;flex-direction:column;justify-content:center;flex-shrink:0;line-height:1;}
+.brand{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:900;color:var(--cream);white-space:nowrap;line-height:1.2;}
+.brand-sub{font-size:0.65rem;color:var(--tan);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;margin-top:3px;}
 .admin-pill{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.3);color:var(--tan);font-size:0.65rem;font-weight:800;padding:3px 8px;border-radius:14px;letter-spacing:0.3px;opacity:0.85;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .topbar-right{display:flex;align-items:center;gap:9px;position:relative;flex-shrink:0;}
 .clock-chip{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.3);color:var(--tan);padding:3px 8px;border-radius:14px;font-size:0.65rem;font-weight:800;white-space:nowrap;letter-spacing:0.3px;opacity:0.85;}
@@ -10671,8 +10672,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   /* Hide the role-pill from the topbar on mobile — it's visible inside the drawer */
   .topbar-logo .admin-drawer-role-pill{display:none !important;}
   /* Prevent brand text from wrapping and squeezing topbar-right */
-  .topbar-logo .brand{font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}
-  .topbar-logo .brand-sub{display:none;}
+  .topbar-logo .brand{font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
+  .topbar-logo .brand-sub{font-size:0.6rem;letter-spacing:1.2px;}
   /* tables: constrain height on mobile so the page stays navigable */
   .tbl-wrap{max-height:55vh;}
   /* on mobile tables scroll horizontally; give them a safe min-width */
@@ -11145,7 +11146,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
       <span class="lf" style="display:none;">☕</span>
     </div>
-    <div>
+    <div class="brand-wrap">
       <div class="brand">9599 Tea &amp; Coffee</div>
       <div class="brand-sub">Parne Na!</div>
     </div>
@@ -15688,6 +15689,8 @@ def admin_login():
 
 @app.route('/logout')
 def admin_logout():
+    session.pop('is_admin', None)
+    session.pop('admin_id', None)
     # Clear the active-session record so the login page shows the normal
     # PIN form instead of the "session active on another device" screen.
     try:
@@ -15699,14 +15702,8 @@ def admin_logout():
     except Exception:
         try: db.session.rollback()
         except Exception: pass
-    log_audit("Admin Logout", "Admin locked — session ended")
-    session.clear()   # wipe entire session, not just admin keys
-    response = redirect(url_for('admin_login'))
-    # Prevent browser from caching the admin panel after logout
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    log_audit("Admin Logout", "Admin logged out")
+    return redirect(url_for('admin_login'))
 
 @app.route('/admin', methods=['GET'])
 def admin_dashboard():
