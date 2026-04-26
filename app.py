@@ -10555,7 +10555,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── TOPBAR ── */
 .topbar{height:var(--topbar-h);background:var(--brown-dark);border-bottom:3px solid var(--brown);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:0 2px 12px rgba(61,36,16,0.3);z-index:100;}
-.topbar-logo{display:flex;align-items:center;gap:10px;}
+.topbar-logo{display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;}
 .logo-circle{width:36px;height:36px;border-radius:50%;border:2px solid var(--tan);overflow:hidden;flex-shrink:0;background:var(--cream);display:flex;align-items:center;justify-content:center;}
 .logo-circle img{width:100%;height:100%;object-fit:cover;}
 .logo-circle .lf{font-size:1rem;}
@@ -10574,7 +10574,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── SCREENS ── */
 /* Use position:fixed instead of flex:1 so Edge always has a concrete height */
-.screens{position:fixed;top:var(--topbar-h);left:0;right:0;bottom:0;overflow:hidden;}
+.screens{position:fixed;top:var(--topbar-h);left:0;right:0;bottom:0;overflow:hidden;z-index:5;}
 .screen{position:absolute;top:0;right:0;bottom:0;left:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 16px;}
 /* ensure table wrappers can always scroll horizontally */
 .screen.active{display:block;}
@@ -10610,13 +10610,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── DESKTOP PERMANENT SIDEBAR LAYOUT ── */
 @media(min-width:768px){
-  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:none;top:var(--topbar-h);height:calc(100% - var(--topbar-h));}
+  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:none;top:var(--topbar-h);height:calc(100% - var(--topbar-h));z-index:50;}
   .admin-nav-drawer::after{display:none;}
   .topbar{position:fixed;top:0;left:0;right:0;z-index:200;}
-  .screens{position:fixed;top:var(--topbar-h);left:248px;right:0;bottom:0;overflow:hidden;}
+  .screens{position:fixed;top:var(--topbar-h);left:248px;right:0;bottom:0;overflow:hidden;z-index:5;}
   .screen{overflow-y:auto;overflow-x:hidden;}
   /* Extended screens (analytics, promos etc) must also sit to the right of the sidebar */
-  #screens-ext{left:248px !important;top:var(--topbar-h) !important;}
+  #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
   .admin-drawer-header{display:none !important;}
@@ -10668,7 +10668,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .admin-hamburger-btn{display:flex;}
   .admin-drawer-close{display:flex !important;}
   .topbar{position:relative;}
-  .topbar-logo .admin-drawer-role-pill{display:none;}
+  /* Hide the role-pill from the topbar on mobile — it's visible inside the drawer */
+  .topbar-logo .admin-drawer-role-pill{display:none !important;}
+  /* Prevent brand text from wrapping and squeezing topbar-right */
+  .topbar-logo .brand{font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}
+  .topbar-logo .brand-sub{display:none;}
   /* tables: constrain height on mobile so the page stays navigable */
   .tbl-wrap{max-height:55vh;}
   /* on mobile tables scroll horizontally; give them a safe min-width */
@@ -10701,8 +10705,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);}
 
 /* Admin pill in header */
-.admin-drawer-role-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:5px;padding:2px 6px;width:fit-content;flex-shrink:0;}
-.topbar-logo{overflow:hidden;}
+.admin-drawer-role-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);border-radius:5px;padding:2px 6px;width:fit-content;}
 .admin-drawer-role-dot{width:4px;height:4px;border-radius:50%;background:#4CAF50;box-shadow:0 0 5px rgba(76,175,80,0.7);flex-shrink:0;animation:adminDotPulse 2.5s infinite;}
 @keyframes adminDotPulse{0%,100%{opacity:1;box-shadow:0 0 4px rgba(76,175,80,0.7);}50%{opacity:0.7;box-shadow:0 0 8px rgba(76,175,80,0.9);}}
 .admin-drawer-role-info{flex:1;min-width:0;}
@@ -11838,7 +11841,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 </div><!-- /screens -->
 
 <!-- ══ NEW FEATURE SCREENS ══ -->
-<div class="screens" id="screens-ext" style="position:fixed;inset:0;top:var(--topbar-h);overflow:hidden;display:none;left:0;z-index:5;">
+<div class="screens" id="screens-ext" style="position:fixed;inset:0;top:var(--topbar-h);overflow:hidden;display:none;z-index:5;">
+ens-wrap">
 
   <!-- ANALYTICS SCREEN -->
   <div id="s-analytics" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
@@ -12436,6 +12440,9 @@ function openAllSettingsDrops(){
 /* ── Unified screen router (core + extended screens) ── */
 var _extScreens = ['analytics','promos','announce','waste','security','fraud','ratings','checklist'];
 function goScreen(name, btn){
+  /* 0 — Ensure the main screens container is always visible (never hidden) */
+  var mainScreens = document.querySelector('.screens:not(#screens-ext)');
+  if(mainScreens){ mainScreens.style.display=''; mainScreens.style.visibility=''; }
   /* 1 — Hide every screen in BOTH containers */
   document.querySelectorAll('.screen').forEach(function(s){
     s.classList.remove('active');
@@ -12445,15 +12452,15 @@ function goScreen(name, btn){
   document.querySelectorAll('.admin-nav-item').forEach(function(b){
     b.classList.remove('active');
   });
-  /* 3 — Hide / show the ext-screens wrapper */
+  /* 3 — Hide the ext-screens wrapper */
   var extWrap = document.getElementById('screens-ext');
-  if(extWrap) extWrap.style.display = 'none';
+  if(extWrap){ extWrap.style.display = 'none'; }
 
   if(_extScreens.indexOf(name) !== -1){
     /* ── Extended screen ── */
-    if(extWrap) extWrap.style.display = 'block';
+    if(extWrap){ extWrap.style.display = 'block'; extWrap.style.zIndex = '5'; }
     var el = document.getElementById('s-' + name);
-    if(el) el.style.display = 'flex';
+    if(el){ el.style.display = 'flex'; el.classList.add('active'); }
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'analytics'){ anSetPreset(7, document.getElementById('an-pill-7')); loadBestSellers('today',document.getElementById('bsp-today')); loadSalesChart(7,document.getElementById('pp-7')); loadLowStock(); }
