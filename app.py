@@ -1979,7 +1979,7 @@ EMPLOYEE_HTML = """
   --text:#0A2925; --muted:#557570;
   --red:#D32F2F; --green:#2E7D32; --orange:#E65100; --blue:#1565C0;
   --shadow:0 4px 20px rgba(13,122,106,0.1);
-  --radius:14px; --nav-h:68px; --topbar-h:54px;
+  --radius:14px; --nav-h:68px; --topbar-h:44px;
 }
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
@@ -2039,9 +2039,9 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
 .topbar{height:var(--topbar-h);background:var(--teal-dark);border-bottom:3px solid var(--teal-mid);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:0 2px 12px rgba(9,79,68,0.3);z-index:100;}
 .topbar-left{display:flex;align-items:center;gap:10px;}
-.logo-circle{width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;}
+.logo-circle{width:30px;height:30px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;}
 .logo-circle img{width:100%;height:100%;object-fit:cover;}
-.brand{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#fff;line-height:1.1;}
+.brand{font-family:'Playfair Display',serif;font-size:0.85rem;font-weight:900;color:#fff;line-height:1.1;}
 .brand-sub{font-size:0.6rem;color:var(--gold);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
 .emp-pill{background:rgba(200,168,75,0.2);border:1px solid var(--gold);color:var(--gold);font-size:0.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:4px;}
 .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
