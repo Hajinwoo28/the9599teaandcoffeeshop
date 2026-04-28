@@ -10611,7 +10611,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── DESKTOP PERMANENT SIDEBAR LAYOUT ── */
 @media(min-width:768px){
-  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:none;top:var(--topbar-h);height:calc(100% - var(--topbar-h));z-index:50;}
+  .admin-nav-drawer{transform:translateX(0) !important;box-shadow:none;border-right:none;top:var(--topbar-h);height:calc(100% - var(--topbar-h));z-index:50;overflow:visible;}
   .admin-nav-drawer::after{display:none;}
   .topbar{position:fixed;top:0;left:0;right:0;z-index:200;}
   .screens{position:fixed;top:var(--topbar-h);left:248px;right:0;bottom:0;overflow:hidden;z-index:5;}
@@ -10622,6 +10622,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .admin-drawer-close{display:none !important;}
   .admin-drawer-header{display:flex;}
   .admin-nav-backdrop{display:none !important;}
+  .topbar-logo{display:none !important;}
   /* Page header: tighter on desktop since there's plenty of room */
   .page-header{padding:11px 16px 18px !important;}
   .page-header h2{font-size:1.05rem !important;}
@@ -12813,6 +12814,7 @@ function toggleAdminMenu(){
   else{dd.classList.add('open');backdrop.classList.add('open');btn.classList.add('open');}
 }
 function closeAdminMenu(){
+  if(window.innerWidth >= 768) return; /* permanent sidebar on desktop — never close */
   document.getElementById('admin-nav-dropdown').classList.remove('open');
   document.getElementById('admin-nav-backdrop').classList.remove('open');
   const btn=document.getElementById('admin-hamburger');
