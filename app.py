@@ -10620,11 +10620,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
-  .admin-drawer-header{display:flex !important;}
+  .admin-drawer-header{display:none !important;}
   .admin-nav-backdrop{display:none !important;}
   .topbar-logo{display:flex !important;}
-  .topbar{left:248px !important;}
-  .admin-nav-drawer{top:0 !important;height:100% !important;}
+  .topbar{left:0 !important;}
+  .admin-nav-drawer{top:var(--topbar-h) !important;height:calc(100% - var(--topbar-h)) !important;}
   /* Page header: tighter on desktop since there's plenty of room */
   .page-header{padding:11px 16px 18px !important;}
   .page-header h2{font-size:1.05rem !important;}
@@ -11184,15 +11184,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 <!-- ══ ADMIN SIDE DRAWER ══ -->
 <nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
-  <div class="admin-drawer-header">
-    <div class="admin-drawer-logo" style="justify-content:center;width:100%;">
-      <div class="admin-drawer-logo-ring">
-        <div class="admin-drawer-logo-circle">
-          <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="admin-drawer-header" style="display:none !important;"></div>
 
   <div class="admin-drawer-nav">
     <button class="admin-nav-item active" id="nb-dashboard" onclick="goScreen('dashboard',this);closeAdminMenu()">
