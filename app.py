@@ -10620,7 +10620,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
-  .admin-drawer-header{display:none !important;}
+  .admin-drawer-header{display:flex;}
   .admin-nav-backdrop{display:none !important;}
   /* Page header: tighter on desktop since there's plenty of room */
   .page-header{padding:11px 16px 18px !important;}
@@ -11184,7 +11184,18 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 <!-- ══ ADMIN SIDE DRAWER ══ -->
 <nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
-  <div class="admin-drawer-header" style="justify-content:flex-end;">
+  <div class="admin-drawer-header">
+    <div class="admin-drawer-logo">
+      <div class="admin-drawer-logo-ring">
+        <div class="admin-drawer-logo-circle">
+          <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
+        </div>
+      </div>
+      <div>
+        <div class="admin-drawer-brand-name">9599 Tea &amp; Coffee</div>
+        <div class="admin-drawer-brand-sub">Parne Na!</div>
+      </div>
+    </div>
     <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
   </div>
 
