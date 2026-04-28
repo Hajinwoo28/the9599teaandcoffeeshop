@@ -10673,6 +10673,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .topbar{position:relative;}
   /* Hide the role-pill from the topbar on mobile — it's visible inside the drawer */
   .topbar-logo .admin-drawer-role-pill{display:none !important;}
+  .admin-topbar-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.12);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:800;color:var(--tan);letter-spacing:0.3px;white-space:nowrap;}
   /* Prevent brand text from wrapping and squeezing topbar-right */
   .topbar-logo .brand{font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
   .topbar-logo .brand-sub{font-size:0.6rem;letter-spacing:1.2px;}
@@ -11152,12 +11153,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="brand">9599 Tea &amp; Coffee</div>
       <div class="brand-sub">Parne Na!</div>
     </div>
-    <div class="admin-drawer-role-pill" style="margin-left:8px;margin-bottom:0;">
-      <div class="admin-drawer-role-dot"></div>
-      <div class="admin-drawer-role-info">
-        <div class="admin-drawer-role-title">Administrator</div>
-        <div class="admin-drawer-role-sub">Full access granted</div>
-      </div>
+    <div class="admin-topbar-chip" style="margin-left:8px;">
+      <i class="fas fa-shield-alt"></i> Admin
     </div>
   </div>
   <div class="topbar-right">
