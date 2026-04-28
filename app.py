@@ -10563,7 +10563,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .brand{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:900;color:var(--cream);white-space:nowrap;line-height:1.2;}
 .brand-sub{font-size:0.65rem;color:var(--tan);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;margin-top:3px;}
 .admin-pill{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.3);color:var(--tan);font-size:0.65rem;font-weight:800;padding:3px 8px;border-radius:14px;letter-spacing:0.3px;opacity:0.85;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
-.topbar-right{display:flex;align-items:center;gap:9px;position:relative;flex-shrink:0;}
+.topbar-right{display:flex;align-items:center;gap:9px;position:relative;flex-shrink:0;margin-left:auto;}
 .clock-chip{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.3);color:var(--tan);padding:3px 8px;border-radius:14px;font-size:0.65rem;font-weight:800;white-space:nowrap;letter-spacing:0.3px;opacity:0.85;}
 .notif-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(196,168,130,0.35);color:var(--tan);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;font-size:0.9rem;flex-shrink:0;transition:background 0.15s;}
 .notif-btn:hover{background:rgba(196,168,130,0.2);}
@@ -10620,9 +10620,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
-  .admin-drawer-header{display:flex;}
+  .admin-drawer-header{display:none !important;}
   .admin-nav-backdrop{display:none !important;}
-  .topbar-logo{display:none !important;}
+  .topbar-logo{display:flex !important;}
+  .topbar{left:248px !important;}
   /* Page header: tighter on desktop since there's plenty of room */
   .page-header{padding:11px 16px 18px !important;}
   .page-header h2{font-size:1.05rem !important;}
