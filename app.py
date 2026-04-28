@@ -10556,7 +10556,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ── TOPBAR ── */
 .topbar{height:var(--topbar-h);background:var(--brown-dark);border-bottom:3px solid var(--brown);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:0 2px 12px rgba(61,36,16,0.3);z-index:100;}
 .topbar-logo{display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:nowrap;flex-shrink:0;}
-.logo-circle{width:48px;height:48px;border-radius:50%;border:2.5px solid var(--tan);overflow:hidden;flex-shrink:0;background:var(--cream);display:flex;align-items:center;justify-content:center;}
+.logo-circle{width:34px;height:34px;border-radius:50%;border:2px solid var(--tan);overflow:hidden;flex-shrink:0;background:var(--cream);display:flex;align-items:center;justify-content:center;}
 .logo-circle img{width:100%;height:100%;object-fit:cover;}
 .logo-circle .lf{font-size:1.2rem;}
 .brand-wrap{display:flex;flex-direction:column;justify-content:center;flex-shrink:0;line-height:1;}
@@ -10620,10 +10620,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
-  .admin-drawer-header{display:none !important;}
+  .admin-drawer-header{display:flex !important;}
   .admin-nav-backdrop{display:none !important;}
   .topbar-logo{display:flex !important;}
   .topbar{left:248px !important;}
+  .admin-nav-drawer{top:0 !important;height:100% !important;}
   /* Page header: tighter on desktop since there's plenty of room */
   .page-header{padding:11px 16px 18px !important;}
   .page-header h2{font-size:1.05rem !important;}
@@ -10673,7 +10674,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .topbar{position:relative;}
   /* Hide the role-pill from the topbar on mobile — it's visible inside the drawer */
   .topbar-logo .admin-drawer-role-pill{display:none !important;}
-  .admin-topbar-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.12);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:800;color:var(--tan);letter-spacing:0.3px;white-space:nowrap;}
+  .admin-topbar-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.12);border:1.5px solid rgba(196,168,130,0.5);border-radius:20px;padding:5px 12px;font-size:0.75rem;font-weight:800;color:var(--tan);letter-spacing:0.3px;white-space:nowrap;}
   /* Prevent brand text from wrapping and squeezing topbar-right */
   .topbar-logo .brand{font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
   .topbar-logo .brand-sub{font-size:0.6rem;letter-spacing:1.2px;}
@@ -10698,9 +10699,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   /* admin table columns: hide less important cols on tiny screens */
   .kds-table .hide-xs{display:none;}
 }
-.admin-drawer-header{padding:14px 14px 10px;border-bottom:1px solid rgba(196,168,130,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;}
+.admin-drawer-header{padding:0 14px;height:var(--topbar-h);border-bottom:3px solid var(--brown);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;background:linear-gradient(135deg,#2A1505 0%,var(--brown-dark) 50%,#3D2410 100%);}
 .admin-drawer-logo{display:flex;align-items:center;gap:12px;}
-.admin-drawer-logo-ring{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,rgba(196,168,130,0.4) 0%,rgba(196,168,130,0.1) 100%);padding:2px;flex-shrink:0;box-shadow:0 0 14px rgba(196,168,130,0.2),inset 0 0 6px rgba(196,168,130,0.1);}
+.admin-drawer-logo-ring{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,rgba(196,168,130,0.4) 0%,rgba(196,168,130,0.1) 100%);padding:2px;flex-shrink:0;box-shadow:0 0 14px rgba(196,168,130,0.2),inset 0 0 6px rgba(196,168,130,0.1);}
 .admin-drawer-logo-circle{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--cream);display:flex;align-items:center;justify-content:center;}
 .admin-drawer-logo-circle img{width:100%;height:100%;object-fit:cover;}
 .admin-drawer-brand-name{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:var(--cream);line-height:1.2;letter-spacing:0.2px;}
@@ -11184,18 +11185,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 <!-- ══ ADMIN SIDE DRAWER ══ -->
 <nav class="admin-nav-drawer" id="admin-nav-dropdown" aria-label="Admin navigation">
   <div class="admin-drawer-header">
-    <div class="admin-drawer-logo">
+    <div class="admin-drawer-logo" style="justify-content:center;width:100%;">
       <div class="admin-drawer-logo-ring">
         <div class="admin-drawer-logo-circle">
           <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
         </div>
       </div>
-      <div>
-        <div class="admin-drawer-brand-name">9599 Tea &amp; Coffee</div>
-        <div class="admin-drawer-brand-sub">Parne Na!</div>
-      </div>
     </div>
-    <button class="admin-drawer-close" onclick="closeAdminMenu()" aria-label="Close menu"><i class="fas fa-times"></i></button>
   </div>
 
   <div class="admin-drawer-nav">
