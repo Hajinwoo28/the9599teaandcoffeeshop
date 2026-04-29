@@ -2043,7 +2043,6 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .logo-circle img{width:100%;height:100%;object-fit:cover;}
 .brand{font-family:'Playfair Display',serif;font-size:0.85rem;font-weight:900;color:#fff;line-height:1.1;}
 .brand-sub{font-size:0.6rem;color:var(--gold);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
-.emp-pill{background:rgba(200,168,75,0.2);border:1px solid var(--gold);color:var(--gold);font-size:0.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:4px;}
 .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .clock-chip{background:rgba(255,255,255,0.1);border:1px solid rgba(200,168,75,0.4);color:var(--gold);padding:5px 13px;border-radius:20px;font-size:0.8rem;font-weight:800;white-space:nowrap;}
 .logout-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:800;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;}
@@ -3218,7 +3217,6 @@ function playEmpBeep(){
       <div class="brand">9599 Tea &amp; Coffee</div>
       <div class="brand-sub">Employee Station</div>
     </div>
-    <div class="emp-pill" style="margin-left:4px;"><i class="fas fa-user-tie"></i> Staff</div>
   </div>
   <div class="topbar-right">
     <div id="clock" class="clock-chip">00:00 AM</div>
