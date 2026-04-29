@@ -3209,7 +3209,7 @@ function playEmpBeep(){
 </script>
 
 <header class="topbar">
-  <div class="topbar-right">
+  <div class="topbar-right" style="margin-left:auto;">
     <div id="clock" class="clock-chip">00:00 AM</div>
     <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()" title="Notifications">
       <i class="fas fa-bell"></i>
