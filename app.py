@@ -4778,17 +4778,8 @@ window.animNewRows=function(tbody,newIdSet){
   else{window.addEventListener('load',doFadeIn);}
 })();
 
-/* ── SSE live dot — appended inside the brand text span, not after ── */
-(function(){
-  var brand=document.querySelector('.brand');
-  if(!brand||document.getElementById('global-sse-dot'))return;
-  var dot=document.createElement('span');
-  dot.id='global-sse-dot';
-  dot.className='sse-dot';
-  dot.title='Live updates active';
-  dot.style.cssText='margin-left:5px;vertical-align:middle;display:inline-block;';
-  brand.appendChild(dot);
-})();
+
+
 
 /* ── Upgrade animateCount in admin to use premiumCount ─────────────── */
 (function(){
