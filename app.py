@@ -3209,15 +3209,6 @@ function playEmpBeep(){
 </script>
 
 <header class="topbar">
-  <div class="topbar-left">
-    <div class="logo-circle">
-      <img src="/static/images/9599.jpg" alt="9599" onerror="this.style.display='none';">
-    </div>
-    <div>
-      <div class="brand">9599 Tea &amp; Coffee</div>
-      <div class="brand-sub">Employee Station</div>
-    </div>
-  </div>
   <div class="topbar-right">
     <div id="clock" class="clock-chip">00:00 AM</div>
     <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()" title="Notifications">
