@@ -151,6 +151,12 @@ def add_header(response):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '-1'
 
+    # Security headers applied to all responses
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+
     # Apply a Content Security Policy on the employee dashboard to suppress
     # chrome-extension://invalid/ injection errors and block unexpected origins.
     if request.path in ('/employee', '/employee/login'):
@@ -1967,6 +1973,9 @@ EMPLOYEE_HTML = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="9599 Tea & Coffee — Employee Station. Manage orders, inventory, and daily operations.">
+<meta name="theme-color" content="#094F44">
+<meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
 <title>Employee Station | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
@@ -2354,11 +2363,11 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
   background:transparent;
   color:rgba(255,255,255,0.5);
   cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;
-  transition:all 0.22s cubic-bezier(0.4,0,0.2,1);
-  text-decoration:none;position:relative;overflow:hidden;
+  transition:background 0.22s ease,border-color 0.22s ease,color 0.22s ease,box-shadow 0.22s ease;
+  text-decoration:none;position:relative;clip-path:inset(0 round 8px);
 }
 .drawer-nav-item::before,.emp-nav-item::before{
-  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  content:'';position:absolute;left:0;top:20%;
   width:3px;height:0;border-radius:0 3px 3px 0;
   background:var(--gold);transition:height 0.22s ease;
 }
@@ -2806,7 +2815,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 .kds-row-status { animation:queueStatusPulse 0.55s ease-out; }
 
 /* ══ RIPPLE ON EMP BUTTONS ══ */
-.btn-action,.drawer-nav-item,.emp-status-btn{position:relative;overflow:hidden;}
+.btn-action,.emp-status-btn{position:relative;overflow:hidden;}
 .emp-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:empRippleExpand 0.5s linear;pointer-events:none;}
 
 /* ══ ENHANCED TOPBAR ══ */
@@ -4602,7 +4611,7 @@ function openReceiptWindow(r){
   table{width:100%;border-collapse:collapse;}th{text-align:left;padding:6px 8px;border-bottom:1px solid #333;font-weight:bold;}th.right{text-align:right;}
   .total-section td{padding:6px 8px;font-weight:bold;}.footer{text-align:center;font-size:0.9rem;margin-top:18px;color:#333;}.footer .est{font-size:0.78rem;color:#888;margin-top:4px;}
   @media print{@page{margin:10mm;size:auto;}body{padding:0;}tr{page-break-inside:avoid;}}<\/style><\/head>
-  <body><div class="header-section"><img src="/static/images/9599.jpg" class="logo-img" onerror="this.style.display='none'">
+  <body><div class="header-section"><img src="/static/images/9599.jpg" class="logo-img" alt="9599 Tea &amp; Coffee logo" onerror="this.style.display='none'">
   <div class="shop-name">9599 Tea &amp; Coffee<\/div><div class="shop-tagline">Parne Na!<\/div>
   <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\/div>
   <div class="shop-meta">BIR TIN: 322-845-268-00000<\/div><\/div>
@@ -5142,18 +5151,18 @@ async function submitChecklist() {
   annBtn.className = 'drawer-nav-item';
   annBtn.id = 'enav-announcements';
   annBtn.onclick = () => { openEmpAnnPanel(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
-  annBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-bullhorn"></i></div><div class="nav-label-wrap"><span class="nav-label">Announcements</span><span class="nav-sub">Staff bulletins</span></div><span id="emp-ann-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.6rem;font-weight:900;align-items:center;justify-content:center;border:2px solid #082E28;margin-left:auto;flex-shrink:0;"></span>`;
+  annBtn.innerHTML = `<div class="drawer-nav-icon"><i class="fas fa-bullhorn"></i></div><div class="drawer-nav-text"><span class="drawer-nav-label">Announcements</span><span class="drawer-nav-desc">Staff bulletins</span></div><span id="emp-ann-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.6rem;font-weight:900;align-items:center;justify-content:center;border:2px solid #082E28;margin-left:auto;flex-shrink:0;"></span>`;
   nav.appendChild(annBtn);
 
   const wasteBtn = document.createElement('button');
   wasteBtn.className = 'drawer-nav-item';
   wasteBtn.onclick = () => { openWasteModal(); document.querySelector('.emp-nav-drawer').classList.remove('open'); document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open'); };
-  wasteBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-trash-alt"></i></div><div class="nav-label-wrap"><span class="nav-label">Log Waste</span><span class="nav-sub">Track ingredient waste</span></div>`;
+  wasteBtn.innerHTML = `<div class="drawer-nav-icon"><i class="fas fa-trash-alt"></i></div><div class="drawer-nav-text"><span class="drawer-nav-label">Log Waste</span><span class="drawer-nav-desc">Track ingredient waste</span></div>`;
   nav.appendChild(wasteBtn);
 
   const checkBtn = document.createElement('button');
   checkBtn.className = 'drawer-nav-item';
-  checkBtn.innerHTML = `<div class="nav-icon-wrap"><i class="fas fa-clipboard-check"></i></div><div class="nav-label-wrap"><span class="nav-label">Daily Checklist</span><span class="nav-sub">Opening / Closing</span></div>`;
+  checkBtn.innerHTML = `<div class="drawer-nav-icon"><i class="fas fa-clipboard-check"></i></div><div class="drawer-nav-text"><span class="drawer-nav-label">Daily Checklist</span><span class="drawer-nav-desc">Opening / Closing</span></div>`;
   checkBtn.onclick = () => {
     document.querySelector('.emp-nav-drawer').classList.remove('open');
     document.querySelector('.nav-backdrop')&&document.querySelector('.nav-backdrop').classList.remove('open');
@@ -6021,7 +6030,7 @@ function playGrantedSound() {
 <div id="login-gatekeeper" class="gate-wrapper">
     <div class="gate-card">
         <div style="width:70px; height:70px; border-radius:50%; border:2px solid var(--gold); display:flex; justify-content:center; align-items:center; margin: 0 auto 15px;">
-            <img src="/static/images/9599.jpg" style="width:60px; height:60px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none'">
+            <img src="/static/images/9599.jpg" style="width:60px; height:60px; border-radius:50%; object-fit:cover;" alt="9599 Tea &amp; Coffee logo" onerror="this.style.display='none'">
         </div>
         <h1 style="color:var(--text-dark); font-family:'Playfair Display',serif; font-size:2rem; line-height:1.1;">9599 Tea & Coffee</h1>
         <p style="font-family:'Playfair Display',serif; color:var(--gold); letter-spacing:3px; font-size:0.8rem; font-weight:900; margin-bottom: 24px;">PARNE NA!</p>
@@ -9206,7 +9215,7 @@ function playGrantedSound() {
         </style></head>
         <body>
         <div class="header-section">
-            <img src="/static/images/9599.jpg" class="logo-img" onerror="this.style.display='none'">
+            <img src="/static/images/9599.jpg" class="logo-img" alt="9599 Tea &amp; Coffee logo" onerror="this.style.display='none'">
             <div class="shop-name">9599 Tea &amp; Coffee</div>
             <div class="shop-tagline">Parne Na!</div>
             <div class="shop-meta">📍 Brgy. Poblacion, San Antonio, Quezon, Philippines</div>
@@ -10092,7 +10101,7 @@ function playGrantedSound() {
 <script>
 /* ── Ripple Effect on all buttons ── */
 document.addEventListener('click',function(e){
-  const t=e.target.closest('.btn-action,.drawer-nav-item,.opt-btn,.btn-modal-add,.btn-modal-cancel,.emp-modal-btn,.emp-status-btn');
+  const t=e.target.closest('.btn-action,.opt-btn,.btn-modal-add,.btn-modal-cancel,.emp-modal-btn,.emp-status-btn');
   if(!t)return;
   const r=document.createElement('span');r.className='emp-ripple';
   const rect=t.getBoundingClientRect(),size=Math.max(rect.width,rect.height);
@@ -10285,8 +10294,11 @@ ADMIN_HTML = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="9599 Tea & Coffee — Admin Panel. Manage inventory, orders, staff, and analytics.">
+<meta name="theme-color" content="#3D2410">
+<meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
-<title>9599 Admin Panel</title>
+<title>9599 Admin Panel | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
@@ -12271,7 +12283,20 @@ ens-wrap">
   </div>
 </div>
 
-<!-- ══ ORDER DETAIL MODAL ══ -->
+<!-- ══ PRODUCT LAUNCH TRAILER MODAL ══ -->
+<div id="trailer-overlay" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="position:relative;width:min(380px,94vw);">
+    <canvas id="trailer-canvas" width="1080" height="1080" style="width:100%;border-radius:18px;box-shadow:0 0 80px rgba(196,168,130,0.3);display:block;"></canvas>
+    <div id="trailer-status" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#c4a882;font-size:0.72rem;font-weight:800;letter-spacing:1px;padding:4px 14px;border-radius:20px;white-space:nowrap;"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+    <button id="trailer-download-btn" onclick="trailerDownload()" style="display:none;padding:11px 22px;background:linear-gradient(135deg,#c4a882,#d4b060);color:#2A1505;border:none;border-radius:10px;font-weight:900;font-size:0.88rem;cursor:pointer;font-family:'Nunito',sans-serif;"><i class="fas fa-download" style="margin-right:6px;"></i>Download Trailer</button>
+    <button onclick="trailerReplay()" style="padding:11px 22px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:10px;font-weight:800;font-size:0.88rem;cursor:pointer;font-family:'Nunito',sans-serif;"><i class="fas fa-redo" style="margin-right:6px;"></i>Replay</button>
+    <button onclick="closeTrailer()" style="padding:11px 22px;background:rgba(192,57,43,0.15);color:#e57373;border:1px solid rgba(192,57,43,0.25);border-radius:10px;font-weight:800;font-size:0.88rem;cursor:pointer;font-family:'Nunito',sans-serif;"><i class="fas fa-times" style="margin-right:6px;"></i>Close</button>
+  </div>
+</div>
+
+
 <div class="adm-modal-overlay" id="ord-detail-overlay">
   <div class="adm-modal ord-detail-modal" id="ord-detail-box">
     <button class="adm-modal-close" onclick="closeOrdDetail()"><i class="fas fa-times"></i></button>
@@ -13382,13 +13407,358 @@ function openMenuModal(id=null,name='',price='',cat='',letter='',oos=false){
 }
 async function saveMenuItem(e){
   e.preventDefault();
-  const payload={name:document.getElementById('menu-name').value.trim(),price:parseFloat(document.getElementById('menu-price').value),category:document.getElementById('menu-category').value,letter:document.getElementById('menu-letter').value,is_out_of_stock:document.getElementById('menu-oos').checked};
+  const isNew = !editMenuId;
+  const itemName = document.getElementById('menu-name').value.trim();
+  const itemPrice = parseFloat(document.getElementById('menu-price').value);
+  const itemCategory = document.getElementById('menu-category').value;
+  const payload={name:itemName,price:itemPrice,category:itemCategory,letter:document.getElementById('menu-letter').value,is_out_of_stock:document.getElementById('menu-oos').checked};
   const url=editMenuId?`/api/menu/${editMenuId}`:'/api/menu',method=editMenuId?'PUT':'POST';
   try{const r=await apiFetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  if(r&&r.ok){showToast('Saved','success');closeModal('menu-modal');fetchMenu();}
+  if(r&&r.ok){
+    showToast('Saved','success');
+    closeModal('menu-modal');
+    fetchMenu();
+    if(isNew) launchProductTrailer({name:itemName, price:itemPrice, category:itemCategory});
+  }
   else{const d=await r.json();showToast(d.error||'Error saving item','error');}
   }catch(e){showToast('Error','error');}
 }
+
+/* ══════════════════════════════════════════════════════
+   PRODUCT LAUNCH TRAILER ENGINE
+   Canvas-based cinematic reveal + Anthropic promo copy
+   Records to WebM via MediaRecorder for download
+══════════════════════════════════════════════════════ */
+let _trailerBlob = null;
+let _trailerItem = null;
+let _trailerRAF = null;
+
+function closeTrailer(){
+  const ov = document.getElementById('trailer-overlay');
+  ov.style.display = 'none';
+  if(_trailerRAF){ cancelAnimationFrame(_trailerRAF); _trailerRAF=null; }
+}
+
+function trailerDownload(){
+  if(!_trailerBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(_trailerBlob);
+  a.download = `${(_trailerItem?.name||'product').replace(/\s+/g,'_')}_trailer.webm`;
+  a.click();
+}
+
+function trailerReplay(){
+  if(_trailerItem) launchProductTrailer(_trailerItem);
+}
+
+async function launchProductTrailer(item){
+  _trailerItem = item;
+  _trailerBlob = null;
+  document.getElementById('trailer-download-btn').style.display = 'none';
+  document.getElementById('trailer-status').textContent = '✦ Generating promo copy…';
+  const ov = document.getElementById('trailer-overlay');
+  ov.style.display = 'flex';
+  if(_trailerRAF){ cancelAnimationFrame(_trailerRAF); _trailerRAF=null; }
+
+  // Fetch promo copy from Anthropic API
+  let tagline = '', description = '', callToAction = '';
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:300,
+        messages:[{role:'user',content:`You are a marketing copywriter for 9599 Tea & Coffee, a premium Filipino milk tea shop. A new menu item just launched. Write a product launch trailer script with:
+1. "tagline": a punchy 4-8 word launch tagline in ALL CAPS (no quotes)
+2. "description": one exciting sentence (max 12 words) about the drink's appeal
+3. "callToAction": 3 words max, exciting call to action (e.g. "Try It Now")
+
+Item: ${item.name}
+Category: ${item.category}
+Price: ₱${item.price}
+
+Respond ONLY with valid JSON: {"tagline":"...","description":"...","callToAction":"..."}`}]
+      })
+    });
+    const data = await resp.json();
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    tagline = parsed.tagline || item.name.toUpperCase();
+    description = parsed.description || `Now available at 9599 Tea & Coffee.`;
+    callToAction = parsed.callToAction || 'Order Now';
+  }catch(err){
+    tagline = item.name.toUpperCase();
+    description = `Now available at 9599 Tea & Coffee!`;
+    callToAction = 'Order Now';
+  }
+
+  document.getElementById('trailer-status').textContent = '✦ Rendering trailer…';
+
+  const canvas = document.getElementById('trailer-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // MediaRecorder setup
+  let chunks = [];
+  let recorder = null;
+  try{
+    const stream = canvas.captureStream(30);
+    recorder = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp9'});
+    recorder.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
+    recorder.onstop = () => {
+      _trailerBlob = new Blob(chunks, {type:'video/webm'});
+      document.getElementById('trailer-download-btn').style.display = 'inline-block';
+    };
+    recorder.start(100);
+  }catch(e){ recorder = null; }
+
+  // ── Scene timeline ──────────────────────────────────
+  // 0-60f  : black flash + logo burst
+  // 60-150f: background particle field builds
+  // 150-240f: item name SLAMS in
+  // 240-320f: tagline slides up
+  // 320-400f: description fades in
+  // 400-460f: price badge drop
+  // 460-520f: call to action pulse
+  // 520-580f: outro golden vignette
+  // 580-620f: hold then stop recorder
+
+  const TOTAL = 620;
+  let frame = 0;
+
+  // Particle pool
+  const particles = Array.from({length:60},()=>({
+    x: Math.random()*W, y: Math.random()*H,
+    vx:(Math.random()-0.5)*1.2, vy:(Math.random()-0.5)*1.2,
+    r: 2+Math.random()*4, a: Math.random()
+  }));
+
+  function ease(t,p=2){ return t<0.5 ? Math.pow(2*t,p)/2 : 1-Math.pow(2*(1-t),p)/2; }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+
+  // Accent colour gradient stops
+  const GOLD='#C4A882', DARK='#2A1505', CREAM='#F0EDE4', DEEPBROWN='#3D2410';
+
+  function drawFrame(){
+    ctx.clearRect(0,0,W,H);
+    const f = frame;
+
+    // ── Background ──────────────────────────────
+    const bgGrad = ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,W*0.8);
+    bgGrad.addColorStop(0,'#1a0a02');
+    bgGrad.addColorStop(1,'#050200');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0,0,W,H);
+
+    // Particle field (starts fading in at frame 60)
+    if(f>40){
+      const pAlpha = clamp((f-40)/80,0,1);
+      particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+        if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(196,168,130,${pAlpha*p.a*0.35})`;
+        ctx.fill();
+      });
+    }
+
+    // ── Scene 1: White flash ─────────────────────
+    if(f<30){
+      const flashA = f<15 ? f/15 : (30-f)/15;
+      ctx.fillStyle=`rgba(255,255,255,${flashA*0.9})`;
+      ctx.fillRect(0,0,W,H);
+    }
+
+    // ── Horizontal gold rule lines ───────────────
+    if(f>50){
+      const lineA = clamp((f-50)/40,0,1);
+      [H*0.12, H*0.88].forEach(y=>{
+        const g=ctx.createLinearGradient(0,y,W,y);
+        g.addColorStop(0,'rgba(196,168,130,0)');
+        g.addColorStop(0.5,`rgba(196,168,130,${lineA*0.6})`);
+        g.addColorStop(1,'rgba(196,168,130,0)');
+        ctx.strokeStyle=g; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+      });
+    }
+
+    // ── Logo mark (top centre) ───────────────────
+    if(f>70){
+      const logoA = clamp((f-70)/40,0,1);
+      ctx.save();
+      ctx.globalAlpha = logoA;
+      ctx.font=`900 ${Math.round(W*0.045)}px 'Nunito',sans-serif`;
+      ctx.fillStyle=GOLD;
+      ctx.textAlign='center';
+      ctx.fillText('9599 TEA & COFFEE', W/2, H*0.1);
+      ctx.font=`700 ${Math.round(W*0.022)}px 'Nunito',sans-serif`;
+      ctx.fillStyle='rgba(196,168,130,0.55)';
+      ctx.fillText('PARNE NA!', W/2, H*0.13);
+      ctx.restore();
+    }
+
+    // ── NEW ITEM badge ───────────────────────────
+    if(f>90){
+      const badgeA = clamp((f-90)/30,0,1);
+      const badgeScale = ease(badgeA);
+      ctx.save();
+      ctx.globalAlpha = badgeA;
+      ctx.translate(W/2, H*0.22);
+      ctx.scale(badgeScale, badgeScale);
+      const bW=260, bH=44;
+      const bGrad=ctx.createLinearGradient(-bW/2,0,bW/2,0);
+      bGrad.addColorStop(0,'#7B4F2E'); bGrad.addColorStop(1,'#C4A882');
+      ctx.beginPath();
+      ctx.roundRect(-bW/2,-bH/2,bW,bH,bH/2);
+      ctx.fillStyle=bGrad; ctx.fill();
+      ctx.font=`900 ${Math.round(W*0.028)}px 'Nunito',sans-serif`;
+      ctx.fillStyle='#fff';
+      ctx.textAlign='center';
+      ctx.fillText('✦  NEW LAUNCH  ✦', 0, 10);
+      ctx.restore();
+    }
+
+    // ── Item name SLAM ───────────────────────────
+    if(f>150){
+      const t = clamp((f-150)/60,0,1);
+      const e1 = ease(t,3);
+      // overshoot bounce
+      const sc = f<175 ? lerp(1.4,1,ease(clamp((f-150)/25,0,1),4)) : 1;
+      ctx.save();
+      ctx.translate(W/2, H*0.46);
+      ctx.scale(sc,sc);
+      // Word-wrap long names
+      const words = item.name.split(' ');
+      const lines=[]; let cur='';
+      const maxW = W*0.82;
+      const testCtx=ctx;
+      testCtx.font=`900 ${Math.round(W*0.11)}px 'Nunito',sans-serif`;
+      words.forEach(w=>{
+        const tw=testCtx.measureText(cur+(cur?' ':'')+w).width;
+        if(tw>maxW && cur){lines.push(cur);cur=w;}else{cur+=(cur?' ':'')+w;}
+      });
+      if(cur)lines.push(cur);
+      const lineH=W*0.115;
+      lines.forEach((ln,i)=>{
+        const yOff=(i-(lines.length-1)/2)*lineH;
+        // Shadow
+        ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=20; ctx.shadowOffsetY=6;
+        ctx.font=`900 ${Math.round(W*0.11)}px 'Nunito',sans-serif`;
+        const nameGrad=ctx.createLinearGradient(-200,yOff-80,200,yOff+20);
+        nameGrad.addColorStop(0,'#FDFAF5'); nameGrad.addColorStop(1,GOLD);
+        ctx.fillStyle=nameGrad;
+        ctx.textAlign='center';
+        ctx.globalAlpha=e1;
+        ctx.fillText(ln, 0, yOff);
+      });
+      ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+      ctx.restore();
+    }
+
+    // ── Tagline slide up ─────────────────────────
+    if(f>240){
+      const t=clamp((f-240)/50,0,1);
+      const yOff=lerp(40,0,ease(t));
+      ctx.save();
+      ctx.globalAlpha=ease(t);
+      ctx.translate(W/2, H*0.63+yOff);
+      ctx.font=`800 italic ${Math.round(W*0.038)}px 'Nunito',sans-serif`;
+      ctx.fillStyle=GOLD;
+      ctx.textAlign='center';
+      ctx.fillText(tagline, 0, 0);
+      ctx.restore();
+    }
+
+    // ── Description ──────────────────────────────
+    if(f>310){
+      const t=clamp((f-310)/60,0,1);
+      ctx.save();
+      ctx.globalAlpha=ease(t);
+      ctx.font=`600 ${Math.round(W*0.028)}px 'Nunito',sans-serif`;
+      ctx.fillStyle='rgba(253,250,245,0.75)';
+      ctx.textAlign='center';
+      // word-wrap
+      const words2=description.split(' '); let lines2=[],cur2='';
+      words2.forEach(w=>{
+        const tw=ctx.measureText(cur2+(cur2?' ':'')+w).width;
+        if(tw>W*0.78&&cur2){lines2.push(cur2);cur2=w;}else{cur2+=(cur2?' ':'')+w;}
+      });
+      if(cur2)lines2.push(cur2);
+      lines2.forEach((ln,i)=>ctx.fillText(ln, W/2, H*0.72+i*W*0.032));
+      ctx.restore();
+    }
+
+    // ── Price badge drop ─────────────────────────
+    if(f>390){
+      const t=clamp((f-390)/45,0,1);
+      const yOff=lerp(-30,0,ease(t,3));
+      ctx.save();
+      ctx.translate(W/2, H*0.81+yOff);
+      ctx.globalAlpha=ease(t);
+      const bW=200,bH=52;
+      ctx.beginPath();
+      ctx.roundRect(-bW/2,-bH/2,bW,bH,bH/2);
+      ctx.fillStyle='rgba(196,168,130,0.15)';
+      ctx.strokeStyle=GOLD; ctx.lineWidth=2;
+      ctx.fill(); ctx.stroke();
+      ctx.font=`900 ${Math.round(W*0.055)}px 'Nunito',sans-serif`;
+      ctx.fillStyle=CREAM;
+      ctx.textAlign='center';
+      ctx.fillText(`₱${item.price.toFixed(2)}`, 0, 17);
+      ctx.restore();
+    }
+
+    // ── Call to action pulse ─────────────────────
+    if(f>450){
+      const t=clamp((f-450)/40,0,1);
+      const pulse=0.04*Math.sin((f-450)*0.2);
+      ctx.save();
+      ctx.translate(W/2, H*0.91);
+      ctx.globalAlpha=ease(t);
+      ctx.scale(1+pulse,1+pulse);
+      ctx.font=`900 ${Math.round(W*0.042)}px 'Nunito',sans-serif`;
+      // Glow
+      ctx.shadowColor=GOLD; ctx.shadowBlur=18;
+      ctx.fillStyle=GOLD;
+      ctx.textAlign='center';
+      ctx.fillText(`— ${callToAction} —`, 0, 0);
+      ctx.shadowBlur=0;
+      ctx.restore();
+    }
+
+    // ── Outro golden vignette ────────────────────
+    if(f>520){
+      const vig=clamp((f-520)/80,0,1);
+      const vg=ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.75);
+      vg.addColorStop(0,`rgba(196,168,130,0)`);
+      vg.addColorStop(1,`rgba(196,168,130,${vig*0.18})`);
+      ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+    }
+
+    // Fade to black at end
+    if(f>580){
+      const fa=clamp((f-580)/40,0,1);
+      ctx.fillStyle=`rgba(0,0,0,${fa})`;
+      ctx.fillRect(0,0,W,H);
+    }
+
+    frame++;
+    if(frame <= TOTAL){
+      _trailerRAF = requestAnimationFrame(drawFrame);
+    } else {
+      if(recorder && recorder.state!=='inactive') recorder.stop();
+      document.getElementById('trailer-status').textContent = '✦ Trailer ready';
+    }
+  }
+
+  drawFrame();
+}
+
 async function toggleOOS(id,state){
   try{const item=(await(await apiFetch('/api/menu')).json()).find(m=>m.id===id);if(!item)return;const r=await apiFetch(`/api/menu/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...item,is_out_of_stock:state})});if(r&&r.ok){showToast(state?'Marked OOS':'Marked In Stock','success');fetchMenu();};}catch(e){showToast('Error','error');}
 }
@@ -15227,6 +15597,29 @@ def handle_exception(exc):
         back = f'/?token={token}' if token else '/'
         return _customer_error_page(back)
     return jsonify({"error": "Unexpected error", "message": str(exc)}), 500
+
+
+@app.errorhandler(404)
+def handle_404(exc):
+    """Return a clean JSON 404 for API routes; redirect everything else."""
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Endpoint not found", "path": request.path}), 404
+    if _is_customer_route(request.path):
+        token = request.args.get('token', '')
+        back = f'/?token={token}' if token else '/'
+        return _customer_error_page(back)
+    # Admin / employee: redirect to login
+    return '''<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page Not Found — 9599 Tea &amp; Coffee</title>
+<style>body{margin:0;font-family:'Nunito',sans-serif;background:#1a0d04;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}
+.box{padding:40px 32px;}.icon{font-size:3rem;margin-bottom:16px;}.title{font-size:1.6rem;font-weight:900;margin-bottom:8px;}
+.sub{color:rgba(255,255,255,0.55);font-size:0.9rem;margin-bottom:24px;}
+a{display:inline-block;padding:10px 24px;background:#c4a882;color:#1a0d04;border-radius:8px;font-weight:800;text-decoration:none;font-size:0.9rem;}</style>
+</head><body><div class="box"><div class="icon">☕</div>
+<div class="title">Page Not Found</div>
+<div class="sub">The page you're looking for doesn't exist.</div>
+<a href="/">Go Home</a></div></body></html>''', 404
 
 
 @app.route('/api/auth/google', methods=['POST'])
