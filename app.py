@@ -10723,7 +10723,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-nav::-webkit-scrollbar{width:3px;}
 .admin-drawer-nav::-webkit-scrollbar-thumb{background:rgba(196,168,130,0.3);border-radius:3px;}
 .admin-nav-item{width:100%;display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:8px;border:1px solid transparent;background:transparent;color:rgba(255,255,255,0.78);cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:background 0.25s cubic-bezier(0.34,1.56,0.64,1),border-color 0.25s cubic-bezier(0.34,1.56,0.64,1),color 0.25s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.25s cubic-bezier(0.34,1.56,0.64,1),transform 0.25s cubic-bezier(0.34,1.56,0.64,1),opacity 0.15s ease;position:relative;overflow:hidden;-webkit-backface-visibility:hidden;backface-visibility:hidden;}
-.admin-nav-item::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;border-radius:0 3px 3px 0;background:var(--tan);transition:height 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+.admin-nav-item::before{content:'';position:absolute;left:0;top:0;bottom:0;margin:auto 0;width:3px;height:0;border-radius:0 3px 3px 0;background:var(--tan);transition:height 0.25s cubic-bezier(0.34,1.56,0.64,1);}
 .admin-nav-item:hover:not(.active){background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.9);border-color:rgba(255,255,255,0.08);}
 .admin-nav-item.active{background:linear-gradient(135deg,rgba(196,168,130,0.14) 0%,rgba(196,168,130,0.06) 100%);border-color:rgba(196,168,130,0.3);color:#fff;box-shadow:0 4px 20px rgba(196,168,130,0.08),inset 0 1px 0 rgba(196,168,130,0.1);}
 .admin-nav-item.active::before{height:60%;}
