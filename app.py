@@ -11308,7 +11308,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <button class="admin-drawer-action" onclick="closeAdminMenu();location.reload()">
       <i class="fas fa-sync-alt"></i> Reload
     </button>
-    <button class="admin-drawer-action danger" onclick="showAdmModal('danger','Lock Admin Panel','You will be logged out and returned to the login page. Lock the panel?','window.location.href=\'/logout\'')">
+    <button class="admin-drawer-action danger" onclick="adminLock()">
       <i class="fas fa-lock"></i> Lock
     </button>
     </div>
@@ -12809,6 +12809,11 @@ function closeAdminMenu(){
   document.getElementById('admin-nav-backdrop').classList.remove('open');
   const btn=document.getElementById('admin-hamburger');
   if(btn)btn.classList.remove('open');
+}
+
+function adminLock(){
+  showAdmModal('danger','Lock Admin Panel','You will be logged out and returned to the login page.',
+    'window.location.href="/logout"');
 }
 
 /* ══ HELPERS ══ */
