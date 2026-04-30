@@ -11308,9 +11308,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <button class="admin-drawer-action" onclick="closeAdminMenu();location.reload()">
       <i class="fas fa-sync-alt"></i> Reload
     </button>
-    <a href="/logout" class="admin-drawer-action danger">
+    <button class="admin-drawer-action danger" onclick="showAdmModal('danger','Lock Admin Panel','You will be logged out and returned to the login page. Lock the panel?','window.location.href=\'/logout\'')">
       <i class="fas fa-lock"></i> Lock
-    </a>
+    </button>
     </div>
   </div>
 </nav>
@@ -16060,8 +16060,9 @@ def admin_login():
 
 @app.route('/logout')
 def admin_logout():
-    session.pop('is_admin', None)
-    session.pop('admin_id', None)
+    # Clear entire session (not just individual keys) so the login
+    # page's "is_admin" check never bounces the user back to the dashboard.
+    session.clear()
     # Clear the active-session record so the login page shows the normal
     # PIN form instead of the "session active on another device" screen.
     try:
@@ -16073,7 +16074,7 @@ def admin_logout():
     except Exception:
         try: db.session.rollback()
         except Exception: pass
-    log_audit("Admin Logout", "Admin logged out")
+    log_audit("Admin Logout", "Admin locked and logged out")
     return redirect(url_for('admin_login'))
 
 @app.route('/admin', methods=['GET'])
