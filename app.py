@@ -20472,6 +20472,484 @@ _ORIGINAL_FORCE_MIGRATE = None   # patched at startup via with_appcontext
 # 11. APPLICATION RUNNER
 # ==========================================
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FORECASTING SHEET BRIDGE  —  9599 Tea & Coffee → NexusOps Forecasting Sheet
+# ══════════════════════════════════════════════════════════════════════════════
+# These endpoints feed live coffee-shop data directly into the Forecasting
+# Sheet's Predictive Analytics module.
+#
+# Auth: Every endpoint requires a valid admin session  OR  the request must
+#       carry the header  X-Forecast-Key: <FORECAST_API_KEY>  (set in .env).
+#
+# Available datasets (CSV export):
+#   GET /api/forecasting/sales_trend      — daily revenue, orders, avg_order
+#   GET /api/forecasting/product_demand   — per-product orders & revenue
+#   GET /api/forecasting/hourly_demand    — hour × day-of-week order matrix
+#   GET /api/forecasting/inventory        — ingredient stock & waste
+#   GET /api/forecasting/customer_value   — customer repeat/value profile
+#   GET /api/forecasting/expenses         — expense log
+#   GET /api/forecasting/meta             — dataset catalogue (JSON)
+# ══════════════════════════════════════════════════════════════════════════════
+
+import csv as _csv
+import io  as _io
+
+# ── API key for cross-app access (set FORECAST_API_KEY in .env) ───────────────
+_FORECAST_KEY = os.environ.get('FORECAST_API_KEY', 'forecast-9599-nexusops').strip()
+
+def _forecast_auth():
+    """Allow if admin session OR correct X-Forecast-Key header."""
+    if session.get('is_admin'):
+        return True
+    key = request.headers.get('X-Forecast-Key', '').strip()
+    return key == _FORECAST_KEY
+
+def _csv_response(rows: list, filename: str):
+    """Turn a list-of-dicts into a streaming CSV Response."""
+    if not rows:
+        return Response("no_data\n", mimetype='text/csv',
+                        headers={'Content-Disposition': f'attachment;filename={filename}'})
+    buf = _io.StringIO()
+    writer = _csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        buf.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': f'attachment;filename={filename}',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'X-Forecast-Key',
+        }
+    )
+
+def _json_or_csv(rows: list, filename: str):
+    """Return JSON or CSV depending on ?format= query param."""
+    fmt = request.args.get('format', 'csv').lower()
+    if fmt == 'json':
+        return jsonify(rows)
+    return _csv_response(rows, filename)
+
+
+# ── 1. DAILY SALES TREND ──────────────────────────────────────────────────────
+@app.route('/api/forecasting/sales_trend', methods=['GET'])
+def forecast_sales_trend():
+    """
+    Daily aggregated sales for the last N days (default 90).
+    Columns: date, day_of_week, revenue, orders, avg_order_value,
+             online_orders, walkin_orders, cancelled_orders
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        days   = min(int(request.args.get('days', 90)), 365)
+        ph_now = get_ph_time()
+        cutoff = ph_now - timedelta(days=days)
+
+        # Fetch all reservations in window
+        all_res = Reservation.query.filter(
+            Reservation.created_at >= cutoff
+        ).order_by(Reservation.created_at.asc()).all()
+
+        # Group by date
+        from collections import defaultdict
+        by_date = defaultdict(lambda: {
+            'revenue': 0.0, 'orders': 0, 'online': 0,
+            'walkin': 0, 'cancelled': 0, 'total_value': 0.0
+        })
+
+        day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
+        for r in all_res:
+            d = r.created_at.strftime('%Y-%m-%d')
+            entry = by_date[d]
+            if r.status == 'Completed':
+                entry['revenue']    += r.total_investment or 0.0
+                entry['orders']     += 1
+                entry['total_value']+= r.total_investment or 0.0
+                src = (r.order_source or '').lower()
+                if 'online' in src:
+                    entry['online'] += 1
+                else:
+                    entry['walkin'] += 1
+            elif r.status == 'Cancelled':
+                entry['cancelled']  += 1
+
+        rows = []
+        current = cutoff.date()
+        end     = ph_now.date()
+        while current <= end:
+            ds    = current.strftime('%Y-%m-%d')
+            e     = by_date.get(ds, {})
+            n_ord = e.get('orders', 0)
+            rows.append({
+                'date':             ds,
+                'day_of_week':      day_names[current.weekday()],
+                'day_num':          current.weekday(),           # 0=Mon
+                'week_number':      current.isocalendar()[1],
+                'month':            current.month,
+                'revenue':          round(e.get('revenue', 0.0), 2),
+                'orders':           n_ord,
+                'avg_order_value':  round(e.get('total_value', 0.0) / n_ord, 2) if n_ord else 0.0,
+                'online_orders':    e.get('online', 0),
+                'walkin_orders':    e.get('walkin', 0),
+                'cancelled_orders': e.get('cancelled', 0),
+            })
+            current += timedelta(days=1)
+
+        return _json_or_csv(rows, 'coffee_sales_trend.csv')
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── 2. PRODUCT DEMAND ────────────────────────────────────────────────────────
+@app.route('/api/forecasting/product_demand', methods=['GET'])
+def forecast_product_demand():
+    """
+    Per-product daily order counts & revenue.
+    Columns: date, product_name, cup_size, orders, revenue, avg_price
+    Useful for predicting which drinks will sell on a given day.
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        days   = min(int(request.args.get('days', 90)), 365)
+        ph_now = get_ph_time()
+        cutoff = ph_now - timedelta(days=days)
+
+        completed = Reservation.query.filter(
+            Reservation.created_at >= cutoff,
+            Reservation.status == 'Completed'
+        ).all()
+
+        from collections import defaultdict
+        by_product = defaultdict(lambda: defaultdict(lambda: {
+            'orders': 0, 'revenue': 0.0
+        }))
+
+        for r in completed:
+            date_str = r.created_at.strftime('%Y-%m-%d')
+            for inf in r.infusions:
+                key = (inf.foundation or 'Unknown', inf.cup_size or 'Unknown')
+                by_product[date_str][key]['orders']  += 1
+                by_product[date_str][key]['revenue'] += inf.item_total or 0.0
+
+        rows = []
+        for date_str in sorted(by_product.keys()):
+            for (product, size), data in by_product[date_str].items():
+                n = data['orders']
+                rows.append({
+                    'date':        date_str,
+                    'product_name':product,
+                    'cup_size':    size,
+                    'orders':      n,
+                    'revenue':     round(data['revenue'], 2),
+                    'avg_price':   round(data['revenue'] / n, 2) if n else 0.0,
+                })
+
+        return _json_or_csv(rows, 'coffee_product_demand.csv')
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── 3. HOURLY DEMAND ─────────────────────────────────────────────────────────
+@app.route('/api/forecasting/hourly_demand', methods=['GET'])
+def forecast_hourly_demand():
+    """
+    Hour-of-day × day-of-week demand matrix.
+    Columns: date, day_of_week, hour, orders, revenue
+    Great for predicting peak-hour staffing needs.
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        days   = min(int(request.args.get('days', 90)), 365)
+        ph_now = get_ph_time()
+        cutoff = ph_now - timedelta(days=days)
+
+        completed = Reservation.query.filter(
+            Reservation.created_at >= cutoff,
+            Reservation.status == 'Completed'
+        ).all()
+
+        from collections import defaultdict
+        day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        by_slot   = defaultdict(lambda: {'orders': 0, 'revenue': 0.0})
+
+        for r in completed:
+            key = (
+                r.created_at.strftime('%Y-%m-%d'),
+                day_names[r.created_at.weekday()],
+                r.created_at.hour,
+            )
+            by_slot[key]['orders']  += 1
+            by_slot[key]['revenue'] += r.total_investment or 0.0
+
+        rows = [
+            {
+                'date':        k[0],
+                'day_of_week': k[1],
+                'day_num':     ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].index(k[1]),
+                'hour':        k[2],
+                'orders':      v['orders'],
+                'revenue':     round(v['revenue'], 2),
+            }
+            for k, v in sorted(by_slot.items())
+        ]
+
+        return _json_or_csv(rows, 'coffee_hourly_demand.csv')
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── 4. INVENTORY & WASTE ─────────────────────────────────────────────────────
+@app.route('/api/forecasting/inventory', methods=['GET'])
+def forecast_inventory():
+    """
+    Daily waste log joined with current stock levels.
+    Columns: date, ingredient_name, unit, waste_qty, reason, current_stock
+    Useful for predicting ingredient consumption and reorder points.
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        days   = min(int(request.args.get('days', 90)), 365)
+        ph_now = get_ph_time()
+        cutoff = ph_now - timedelta(days=days)
+
+        wastes = WasteLog.query.filter(
+            WasteLog.created_at >= cutoff
+        ).order_by(WasteLog.created_at.asc()).all()
+
+        # Build ingredient stock lookup
+        stock_map = {}
+        try:
+            for ing in Ingredient.query.all():
+                stock_map[ing.name] = {'stock': ing.stock, 'unit': ing.unit}
+        except Exception:
+            pass
+
+        rows = []
+        for w in wastes:
+            ing_info = stock_map.get(w.ingredient_name, {})
+            rows.append({
+                'date':             w.created_at.strftime('%Y-%m-%d'),
+                'hour':             w.created_at.hour,
+                'ingredient_name':  w.ingredient_name or '',
+                'unit':             w.unit or ing_info.get('unit', ''),
+                'waste_qty':        w.quantity or 0.0,
+                'reason':           w.reason or '',
+                'logged_by':        w.logged_by or '',
+                'current_stock':    ing_info.get('stock', 0.0),
+            })
+
+        return _json_or_csv(rows, 'coffee_inventory_waste.csv')
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── 5. CUSTOMER VALUE ────────────────────────────────────────────────────────
+@app.route('/api/forecasting/customer_value', methods=['GET'])
+def forecast_customer_value():
+    """
+    Customer-level lifetime value and behaviour summary.
+    Columns: order_month, source, total_customers, total_orders,
+             total_revenue, avg_order_value, repeat_rate
+    Useful for predicting customer lifetime value and churn risk.
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        days   = min(int(request.args.get('days', 180)), 730)
+        ph_now = get_ph_time()
+        cutoff = ph_now - timedelta(days=days)
+
+        completed = Reservation.query.filter(
+            Reservation.created_at >= cutoff,
+            Reservation.status == 'Completed'
+        ).all()
+
+        from collections import defaultdict
+        # Group by month × source
+        by_month_src = defaultdict(lambda: {
+            'customers': set(), 'orders': 0, 'revenue': 0.0
+        })
+
+        for r in completed:
+            key = (r.created_at.strftime('%Y-%m'), r.order_source or 'Unknown')
+            by_month_src[key]['customers'].add((r.patron_email or r.patron_name or '').lower())
+            by_month_src[key]['orders']  += 1
+            by_month_src[key]['revenue'] += r.total_investment or 0.0
+
+        # Customer repeat counts
+        rep_map = {}
+        try:
+            for rep in CustomerReputation.query.all():
+                rep_map[rep.identifier] = rep.total_orders or 0
+        except Exception:
+            pass
+
+        rows = []
+        for (month, src), d in sorted(by_month_src.items()):
+            n_cust  = len(d['customers'])
+            n_ord   = d['orders']
+            rev     = d['revenue']
+            repeat  = sum(1 for e in d['customers'] if rep_map.get(e, 0) > 1)
+            rows.append({
+                'order_month':      month,
+                'source':           src,
+                'total_customers':  n_cust,
+                'total_orders':     n_ord,
+                'total_revenue':    round(rev, 2),
+                'avg_order_value':  round(rev / n_ord, 2) if n_ord else 0.0,
+                'repeat_customers': repeat,
+                'repeat_rate_pct':  round(repeat / n_cust * 100, 1) if n_cust else 0.0,
+            })
+
+        return _json_or_csv(rows, 'coffee_customer_value.csv')
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── 6. EXPENSES ──────────────────────────────────────────────────────────────
+@app.route('/api/forecasting/expenses', methods=['GET'])
+def forecast_expenses():
+    """
+    Full expense log for profit/loss forecasting.
+    Columns: date, month, description, amount
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        days   = min(int(request.args.get('days', 180)), 730)
+        ph_now = get_ph_time()
+        cutoff = ph_now - timedelta(days=days)
+
+        exps = Expense.query.filter(
+            Expense.created_at >= cutoff
+        ).order_by(Expense.created_at.asc()).all()
+
+        rows = [{
+            'date':        e.created_at.strftime('%Y-%m-%d'),
+            'month':       e.created_at.strftime('%Y-%m'),
+            'description': e.description or '',
+            'amount':      round(e.amount or 0.0, 2),
+        } for e in exps]
+
+        return _json_or_csv(rows, 'coffee_expenses.csv')
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── 7. DATASET CATALOGUE ─────────────────────────────────────────────────────
+@app.route('/api/forecasting/meta', methods=['GET'])
+def forecast_meta():
+    """
+    Returns the catalogue of available datasets so the Forecasting Sheet
+    can dynamically list what data it can pull.
+    """
+    if not _forecast_auth():
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        ph_now  = get_ph_time()
+        oldest  = Reservation.query.order_by(Reservation.created_at.asc()).first()
+        newest  = Reservation.query.filter_by(status='Completed').order_by(Reservation.created_at.desc()).first()
+        n_comp  = Reservation.query.filter_by(status='Completed').count()
+        n_all   = Reservation.query.count()
+        n_waste = WasteLog.query.count()
+        n_exp   = Expense.query.count()
+        n_items = Infusion.query.count()
+
+        return jsonify({
+            "shop_name":     "9599 Tea & Coffee",
+            "generated_at":  ph_now.strftime('%Y-%m-%d %H:%M:%S PHT'),
+            "total_orders":  n_all,
+            "completed_orders": n_comp,
+            "first_order":   oldest.created_at.strftime('%Y-%m-%d') if oldest and oldest.created_at else None,
+            "last_order":    newest.created_at.strftime('%Y-%m-%d') if newest and newest.created_at else None,
+            "datasets": [
+                {
+                    "id":       "sales_trend",
+                    "name":     "Daily Sales Trend",
+                    "endpoint": "/api/forecasting/sales_trend",
+                    "rows_est": n_comp,
+                    "icon":     "📈",
+                    "description": "Daily revenue, order count, avg order value, and source breakdown",
+                    "best_for":    "Revenue forecasting · Demand prediction",
+                    "target_suggestions":  ["revenue", "orders"],
+                    "feature_suggestions": ["day_num", "week_number", "month", "online_orders", "walkin_orders"],
+                },
+                {
+                    "id":       "product_demand",
+                    "name":     "Product Demand",
+                    "endpoint": "/api/forecasting/product_demand",
+                    "rows_est": n_items,
+                    "icon":     "🧋",
+                    "description": "Per-drink daily order counts and revenue by cup size",
+                    "best_for":    "Menu optimisation · Stock planning",
+                    "target_suggestions":  ["orders", "revenue"],
+                    "feature_suggestions": ["day_num", "avg_price"],
+                },
+                {
+                    "id":       "hourly_demand",
+                    "name":     "Hourly Demand",
+                    "endpoint": "/api/forecasting/hourly_demand",
+                    "rows_est": n_comp,
+                    "icon":     "⏰",
+                    "description": "Orders and revenue by hour of day and day of week",
+                    "best_for":    "Staffing · Peak-hour prep",
+                    "target_suggestions":  ["orders", "revenue"],
+                    "feature_suggestions": ["hour", "day_num"],
+                },
+                {
+                    "id":       "inventory",
+                    "name":     "Inventory & Waste",
+                    "endpoint": "/api/forecasting/inventory",
+                    "rows_est": n_waste,
+                    "icon":     "📦",
+                    "description": "Ingredient waste logs with current stock levels",
+                    "best_for":    "Waste reduction · Reorder point prediction",
+                    "target_suggestions":  ["waste_qty", "current_stock"],
+                    "feature_suggestions": ["hour", "current_stock"],
+                },
+                {
+                    "id":       "customer_value",
+                    "name":     "Customer Value",
+                    "endpoint": "/api/forecasting/customer_value",
+                    "rows_est": n_comp // 4 or 1,
+                    "icon":     "👥",
+                    "description": "Monthly customer counts, revenue, and repeat-purchase rate",
+                    "best_for":    "Loyalty · Revenue per customer · Churn prediction",
+                    "target_suggestions":  ["total_revenue", "repeat_rate_pct"],
+                    "feature_suggestions": ["total_customers", "total_orders", "avg_order_value"],
+                },
+                {
+                    "id":       "expenses",
+                    "name":     "Expense Log",
+                    "endpoint": "/api/forecasting/expenses",
+                    "rows_est": n_exp,
+                    "icon":     "💸",
+                    "description": "All expense entries for profit/loss modelling",
+                    "best_for":    "Cost forecasting · Profit prediction",
+                    "target_suggestions":  ["amount"],
+                    "feature_suggestions": ["month"],
+                },
+            ],
+        })
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
+
+
+# ── CORS preflight for cross-origin Forecasting Sheet requests ────────────────
+@app.after_request
+def _forecast_cors(response):
+    if request.path.startswith('/api/forecasting/'):
+        response.headers['Access-Control-Allow-Origin']  = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'X-Forecast-Key, Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    return response
 if __name__ == '__main__':
     if os.environ.get('RENDER') or os.environ.get('DYNO'):
         port = int(os.environ.get('PORT', 5000))
