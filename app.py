@@ -10702,7 +10702,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   /* Tables fill available vertical space */
   .tbl-wrap{max-height:calc(100vh - var(--topbar-h) - 160px);}
   .section .tbl-wrap,.screen-inner .tbl-wrap{max-height:calc(100vh - var(--topbar-h) - 200px);}
-  .fin-content-scroll .tbl-wrap{margin:0 14px;max-height:calc(100vh - var(--topbar-h) - 240px);}
+  .fin-content-scroll .tbl-wrap{margin:0 14px;max-height:calc(100vh - var(--topbar-h) - 180px);}
   /* kds table: no forced min-width on desktop - fills available width */
   .kds-table{min-width:0;width:100%;table-layout:auto;}
   .kds-table th,.kds-table td{font-size:0.75rem;padding:7px 10px;}
@@ -10813,10 +10813,22 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
-#s-finance{position:absolute;inset:0;}/* Must be absolute (like all .screen elements) — position:relative broke the flex-fill height, causing the dark nav-drawer to bleed through on the Expenses tab */
-#s-finance.active{display:flex;flex-direction:column;overflow:hidden;height:100%;}
-.fin-sticky-top{flex-shrink:0;background:var(--cream);}
-.fin-content-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:16px;background:var(--cream);min-height:0;/* min-height:0 is required in flex children that need to scroll */}
+#s-finance{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;}
+#s-finance.active{display:block;}
+/* Sticky header — stats + tab pills stay pinned as user scrolls content */
+.fin-sticky-top{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:var(--cream);
+  /* Prevent sub-pixel bleed showing the dark screen background behind the header */
+  box-shadow:0 2px 8px rgba(61,36,16,0.08);
+}
+.fin-content-scroll{
+  background:var(--cream);
+  padding-bottom:24px;
+  /* No flex tricks needed — normal block flow under the sticky header */
+}
 
 /* ── SETTINGS DROPDOWN ROWS ── */
 .settings-drop-item{border-bottom:1px solid var(--cream-dark);}
@@ -17134,27 +17146,43 @@ def get_flagged_orders():
     """Return all currently flagged / pending-confirmation orders."""
     if not session.get('is_admin') and not session.get('is_employee'):
         return jsonify({"error": "Unauthorized"}), 403
-    metas = OrderMeta.query.filter(
-        db.or_(OrderMeta.is_flagged == True, OrderMeta.requires_staff_confirmation == True)
-    ).order_by(OrderMeta.created_at.desc()).limit(50).all()
-    results = []
-    for m in metas:
-        order = Reservation.query.get(m.reservation_id)
-        if not order: continue
-        results.append({
-            'order_id': order.id, 'code': order.reservation_code,
-            'name': order.patron_name, 'email': order.patron_email or '',
-            'total': order.total_investment, 'status': order.status,
-            'is_flagged': m.is_flagged, 'flag_reason': m.flag_reason,
-            'requires_staff_confirmation': m.requires_staff_confirmation,
-            'staff_confirmed': m.staff_confirmed,
-            'prepayment_required': m.prepayment_required,
-            'prepayment_amount': m.prepayment_amount,
-            'prepayment_collected': m.prepayment_collected,
-            'has_pickup_photo': m.has_pickup_photo,
-            'created_at': order.created_at.strftime('%b %d %I:%M %p') if order.created_at else '',
-        })
-    return jsonify(results)
+    try:
+        _ensure_schema()   # guarantee order_meta columns exist before querying
+        metas = OrderMeta.query.filter(
+            db.or_(OrderMeta.is_flagged == True, OrderMeta.requires_staff_confirmation == True)
+        ).order_by(OrderMeta.created_at.desc()).limit(50).all()
+        results = []
+        for m in metas:
+            order = Reservation.query.get(m.reservation_id)
+            if not order: continue
+            results.append({
+                'order_id':   order.id,
+                'code':       order.reservation_code,
+                'name':       order.patron_name,
+                'email':      order.patron_email or '',
+                'total':      order.total_investment,
+                'status':     order.status,
+                'is_flagged': bool(m.is_flagged),
+                'flag_reason': m.flag_reason or '',
+                'requires_staff_confirmation': bool(m.requires_staff_confirmation),
+                'staff_confirmed':   bool(m.staff_confirmed),
+                'prepayment_required': bool(m.prepayment_required),
+                'prepayment_amount':   float(m.prepayment_amount or 0),
+                'prepayment_collected': bool(m.prepayment_collected),
+                'has_pickup_photo': bool(getattr(m, 'has_pickup_photo', False)),
+                'created_at': order.created_at.strftime('%b %d %I:%M %p') if order.created_at else '',
+            })
+        return jsonify(results)
+    except Exception as e:
+        app.logger.error(f"/api/fraud/flagged_orders error: {e}")
+        # Self-heal: attempt schema repair then return empty list so the UI doesn't crash
+        try:
+            _schema_ok_bak = globals().get('_schema_ok', True)
+            globals()['_schema_ok'] = False
+            _ensure_schema()
+        except Exception:
+            pass
+        return jsonify([])   # return empty list — safer than a 500
 
 @app.route('/api/backup', methods=['GET'])
 def backup_data():
@@ -18590,6 +18618,21 @@ def _ensure_schema():
 
     # customer_reputations — cancel_count added in this release
     all_ok &= _add_col("customer_reputations", "cancel_count", "INTEGER DEFAULT 0")
+
+    # order_meta — all extended columns (table created by db.create_all; columns may be missing on old DBs)
+    all_ok &= _add_col("order_meta", "is_flagged",                  "BOOLEAN NOT NULL DEFAULT 0",     "BOOLEAN NOT NULL DEFAULT FALSE")
+    all_ok &= _add_col("order_meta", "flag_reason",                 "VARCHAR(300) DEFAULT ''")
+    all_ok &= _add_col("order_meta", "requires_staff_confirmation",  "BOOLEAN NOT NULL DEFAULT 0",     "BOOLEAN NOT NULL DEFAULT FALSE")
+    all_ok &= _add_col("order_meta", "staff_confirmed",              "BOOLEAN NOT NULL DEFAULT 0",     "BOOLEAN NOT NULL DEFAULT FALSE")
+    all_ok &= _add_col("order_meta", "prepayment_required",         "BOOLEAN NOT NULL DEFAULT 0",     "BOOLEAN NOT NULL DEFAULT FALSE")
+    all_ok &= _add_col("order_meta", "prepayment_amount",           "DOUBLE PRECISION DEFAULT 0.0",   "DOUBLE PRECISION DEFAULT 0.0")
+    all_ok &= _add_col("order_meta", "prepayment_collected",        "BOOLEAN NOT NULL DEFAULT 0",     "BOOLEAN NOT NULL DEFAULT FALSE")
+    all_ok &= _add_col("order_meta", "has_pickup_photo",            "BOOLEAN NOT NULL DEFAULT 0",     "BOOLEAN NOT NULL DEFAULT FALSE")
+    all_ok &= _add_col("order_meta", "prev_status",                 "VARCHAR(50)  DEFAULT ''")
+    all_ok &= _add_col("order_meta", "paymongo_source_id",          "VARCHAR(100) DEFAULT ''")
+
+    # reservations — partial_amount_paid added later
+    all_ok &= _add_col("reservations", "partial_amount_paid", "DOUBLE PRECISION DEFAULT 0.0")
 
     if all_ok:
         _schema_ok = True   # stop checking once every column is confirmed
