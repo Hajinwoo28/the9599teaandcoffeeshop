@@ -10813,26 +10813,22 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
-#s-finance{position:absolute;inset:0;overflow:hidden;display:none;}
-#s-finance.active{display:flex;flex-direction:row;align-items:stretch;}
-/* Left panel — fixed-width sidebar with stats + tab pills */
+#s-finance{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;}
+#s-finance.active{display:block;}
+/* Left panel — prevent it from shrinking/growing when tab content changes */
 .fin-sticky-top{
-  width:270px;
-  min-width:270px;
-  flex-shrink:0;
-  position:relative;
-  overflow-y:auto;
-  overflow-x:hidden;
+  position:sticky;
+  top:0;
   z-index:20;
+  flex-shrink:0;
+  flex-grow:0;
   background:var(--cream);
-  box-shadow:2px 0 8px rgba(61,36,16,0.08);
+  box-shadow:0 2px 8px rgba(61,36,16,0.08);
 }
-/* Right panel — fills remaining space with its own scroll */
+/* Right panel — always fill the remaining width */
 .fin-content-scroll{
   flex:1;
   min-width:0;
-  overflow-y:auto;
-  overflow-x:hidden;
   background:var(--cream);
   padding-bottom:24px;
 }
