@@ -4651,8 +4651,8 @@ function openReceiptWindow(r){
   document.addEventListener('pointerdown',function(e){
     const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"]');
     if(!el)return;
-    // Admin quick-action buttons use a separate ripple handler with cleanup guards.
-    if(el.classList && el.classList.contains('dash-qa-btn')) return;
+    // Admin quick-action buttons and finance tab pills use a dedicated ripple handler.
+    if(el.classList && (el.classList.contains('dash-qa-btn') || el.classList.contains('fin-tab-pill'))) return;
     const r=document.createElement('span');
     r.className='g-ripple-circle';
     const rect=el.getBoundingClientRect();
@@ -13236,19 +13236,22 @@ async function saveInventory(){
 
 /* ══ FINANCE TABS ══ */
 function finTab(name,btn){
+  var financeRoot=document.getElementById('s-finance');
+  if(!financeRoot)return;
   /* Hide every pane with both class removal AND explicit inline style so no
      CSS specificity conflict can leave a pane visible and cause the dark
      nav-drawer background to bleed through behind the Finance content area. */
-  document.querySelectorAll('.fin-tabpane').forEach(function(p){
+  financeRoot.querySelectorAll('.fin-tabpane').forEach(function(p){
     p.classList.remove('active');
     p.style.display='none';
   });
-  document.querySelectorAll('.fin-tab-pill').forEach(function(b){b.classList.remove('active');});
+  financeRoot.querySelectorAll('.fin-tab-pill').forEach(function(b){b.classList.remove('active');});
   var el=document.getElementById('fin-'+name);
   if(el){el.classList.add('active');el.style.display='block';}
   if(btn)btn.classList.add('active');
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
   if(name==='expenses'){fetchFinance();}
+  if(name==='today'){fetchCustomerLogs();}
 }
 
 /* ══ FINANCE ══ */
@@ -15222,8 +15225,8 @@ async function unblockIP(id) {
   document.addEventListener('pointerdown',function(e){
     const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"]');
     if(!el)return;
-    // Admin quick-action buttons use a separate ripple handler with cleanup guards.
-    if(el.classList && el.classList.contains('dash-qa-btn')) return;
+    // Admin quick-action buttons and finance tab pills use a dedicated ripple handler.
+    if(el.classList && (el.classList.contains('dash-qa-btn') || el.classList.contains('fin-tab-pill'))) return;
     const r=document.createElement('span');
     r.className='g-ripple-circle';
     const rect=el.getBoundingClientRect();
