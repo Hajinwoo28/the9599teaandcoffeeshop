@@ -10813,21 +10813,28 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
-#s-finance{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;}
-#s-finance.active{display:block;}
+#s-finance{position:absolute;inset:0;overflow:hidden;display:none;}
+#s-finance.active{display:flex;flex-direction:row;align-items:stretch;}
 /* Sticky header — stats + tab pills stay pinned as user scrolls content */
 .fin-sticky-top{
+  width:270px;
+  min-width:270px;
+  flex-shrink:0;
   position:sticky;
   top:0;
+  height:100%;
+  overflow-y:auto;
   z-index:20;
   background:var(--cream);
-  /* Prevent sub-pixel bleed showing the dark screen background behind the header */
-  box-shadow:0 2px 8px rgba(61,36,16,0.08);
+  box-shadow:2px 0 8px rgba(61,36,16,0.08);
 }
 .fin-content-scroll{
+  flex:1;
+  min-width:0;
+  overflow-y:auto;
+  overflow-x:hidden;
   background:var(--cream);
   padding-bottom:24px;
-  /* No flex tricks needed — normal block flow under the sticky header */
 }
 
 /* ── SETTINGS DROPDOWN ROWS ── */
@@ -11160,6 +11167,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .lo-stat{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:11px;padding:10px 8px;text-align:center;}
 /* ── Live Orders: frozen header + scrollable body ── */
 .lo-screen-flex{flex-direction:column;overflow:hidden !important;}
+.screen.lo-screen-flex.active{display:flex !important;}
 .lo-frozen-header{flex-shrink:0;background:var(--bg);z-index:10;}
 .lo-cards-scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
 .lo-cards-scroll::-webkit-scrollbar{width:4px;}
@@ -12560,7 +12568,7 @@ function goScreen(name, btn){
     var scr = document.getElementById('s-' + name);
     if(!scr){ console.warn('goScreen: element not found → s-' + name); return; }
     scr.classList.add('active');
-    scr.style.display = (name === 'finance' || name === 'audit' || name === 'liveorders') ? 'flex' : 'block';
+    /* display is now driven entirely by CSS (.active classes) — no inline override needed */
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'inventory')  fetchInventory();
