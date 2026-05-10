@@ -14208,13 +14208,17 @@ fetchInventory();
 document.addEventListener('click',function(e){
   const target=e.target.closest('.btn-primary,.btn-secondary,.inv-tab,.fin-tab-pill,.period-pill,.dash-qa-btn');
   if(!target)return;
+  /* Remove any leftover ripple spans first (prevents buildup when animationend is skipped) */
+  target.querySelectorAll('.ripple-circle').forEach(function(old){old.remove();});
   const r=document.createElement('span');
   r.className='ripple-circle';
   const rect=target.getBoundingClientRect();
   const size=Math.max(rect.width,rect.height);
   r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
   target.appendChild(r);
-  r.addEventListener('animationend',()=>r.remove());
+  r.addEventListener('animationend',function(){r.remove();});
+  /* Safety net: remove ripple after 600ms even if animationend never fires (e.g. parent hidden) */
+  setTimeout(function(){if(r.parentNode)r.remove();},600);
 });
 
 /* ══ ENHANCED MODAL SYSTEM ══ */
