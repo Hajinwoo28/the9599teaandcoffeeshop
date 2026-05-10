@@ -10815,19 +10815,19 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
 #s-finance{position:absolute;inset:0;overflow:hidden;display:none;}
 #s-finance.active{display:flex;flex-direction:row;align-items:stretch;}
-/* Sticky header — stats + tab pills stay pinned as user scrolls content */
+/* Left panel — fixed-width sidebar with stats + tab pills */
 .fin-sticky-top{
   width:270px;
   min-width:270px;
   flex-shrink:0;
-  position:sticky;
-  top:0;
-  height:100%;
+  position:relative;
   overflow-y:auto;
+  overflow-x:hidden;
   z-index:20;
   background:var(--cream);
   box-shadow:2px 0 8px rgba(61,36,16,0.08);
 }
+/* Right panel — fills remaining space with its own scroll */
 .fin-content-scroll{
   flex:1;
   min-width:0;
