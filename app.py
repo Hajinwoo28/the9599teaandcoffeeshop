@@ -4649,8 +4649,10 @@ function openReceiptWindow(r){
 /* ── Ripple ─────────────────────────────────────────────────────────── */
 (function initRipple(){
   document.addEventListener('pointerdown',function(e){
-    const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"],[class*="dash-qa-btn"]');
+    const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"]');
     if(!el)return;
+    // Admin quick-action buttons use a separate ripple handler with cleanup guards.
+    if(el.classList && el.classList.contains('dash-qa-btn')) return;
     const r=document.createElement('span');
     r.className='g-ripple-circle';
     const rect=el.getBoundingClientRect();
@@ -4658,6 +4660,8 @@ function openReceiptWindow(r){
     r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
     el.appendChild(r);
     r.addEventListener('animationend',()=>r.remove(),{once:true});
+    // Fallback cleanup when animationend is skipped (hidden/tab switch).
+    setTimeout(()=>{ if(r.parentNode) r.remove(); },700);
   });
 })();
 
@@ -15216,8 +15220,10 @@ async function unblockIP(id) {
 /* ── Ripple ─────────────────────────────────────────────────────────── */
 (function initRipple(){
   document.addEventListener('pointerdown',function(e){
-    const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"],[class*="dash-qa-btn"]');
+    const el=e.target.closest('.ripple-host,[class*="btn-primary"],[class*="btn-secondary"],[class*="cat-btn"],[class*="lo-filter-pill"],[class*="inv-tab"],[class*="fin-tab-pill"],[class*="period-pill"]');
     if(!el)return;
+    // Admin quick-action buttons use a separate ripple handler with cleanup guards.
+    if(el.classList && el.classList.contains('dash-qa-btn')) return;
     const r=document.createElement('span');
     r.className='g-ripple-circle';
     const rect=el.getBoundingClientRect();
@@ -15225,6 +15231,8 @@ async function unblockIP(id) {
     r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
     el.appendChild(r);
     r.addEventListener('animationend',()=>r.remove(),{once:true});
+    // Fallback cleanup when animationend is skipped (hidden/tab switch).
+    setTimeout(()=>{ if(r.parentNode) r.remove(); },700);
   });
 })();
 
