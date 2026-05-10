@@ -10814,8 +10814,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
 #s-finance{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;}
-#s-finance.active{display:block;}
-/* Left panel — prevent it from shrinking/growing when tab content changes */
+#s-finance.active{display:block;align-items:flex-start;}
+/* Left panel — natural width, never shrinks/grows when tab content changes */
 .fin-sticky-top{
   position:sticky;
   top:0;
@@ -10825,10 +10825,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   background:var(--cream);
   box-shadow:0 2px 8px rgba(61,36,16,0.08);
 }
-/* Right panel — always fill the remaining width */
+/* Right panel — always fill the remaining width and screen height */
 .fin-content-scroll{
   flex:1;
   min-width:0;
+  min-height:calc(100vh - 56px);
   background:var(--cream);
   padding-bottom:24px;
 }
@@ -12565,6 +12566,7 @@ function goScreen(name, btn){
     if(!scr){ console.warn('goScreen: element not found → s-' + name); return; }
     scr.classList.add('active');
     scr.style.display = (name === 'finance' || name === 'audit' || name === 'liveorders') ? 'flex' : 'block';
+    if(name === 'finance'){ scr.style.alignItems = 'flex-start'; }
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'inventory')  fetchInventory();
