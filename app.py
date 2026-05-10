@@ -10814,23 +10814,20 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
 #s-finance{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;}
-#s-finance.active{display:flex;align-items:flex-start;}
-/* Left panel — natural width, never shrinks/grows when tab content changes */
+/* Force single-column block layout regardless of any JS flex override */
+#s-finance.active{display:block !important;}
+/* Sticky header strip — full width, contains stats + tab pills */
 .fin-sticky-top{
   position:sticky;
   top:0;
   z-index:20;
-  flex-shrink:0;
-  flex-grow:0;
-  align-self:flex-start;
+  width:100%;
   background:var(--cream);
   box-shadow:0 2px 8px rgba(61,36,16,0.08);
 }
-/* Right panel — always fill the remaining width and screen height */
+/* Tab content area — full width, sits below the sticky strip */
 .fin-content-scroll{
-  flex:1;
-  min-width:0;
-  min-height:calc(100vh - 56px);
+  width:100%;
   background:var(--cream);
   padding-bottom:24px;
 }
@@ -12566,8 +12563,7 @@ function goScreen(name, btn){
     var scr = document.getElementById('s-' + name);
     if(!scr){ console.warn('goScreen: element not found → s-' + name); return; }
     scr.classList.add('active');
-    scr.style.display = (name === 'finance' || name === 'audit' || name === 'liveorders') ? 'flex' : 'block';
-    if(name === 'finance'){ scr.style.alignItems = 'flex-start'; }
+    scr.style.display = (name === 'audit' || name === 'liveorders') ? 'flex' : 'block';
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'inventory')  fetchInventory();
