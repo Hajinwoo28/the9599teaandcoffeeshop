@@ -88,6 +88,19 @@ HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
 # Submissions faster than this are rejected as bots.
 BOT_MIN_FORM_SECONDS = 3
 
+# ── PayMongo GCash Payment Gateway ────────────────────────────────────────────
+# Sign up free at https://dashboard.paymongo.com
+# Set PAYMONGO_SECRET_KEY in your .env or Render/Vercel environment variables.
+# Also set PAYMONGO_PUBLIC_KEY (used in webhook verification).
+# Your store's public URL — used to build GCash redirect & webhook URLs.
+PAYMONGO_SECRET_KEY  = os.environ.get('PAYMONGO_SECRET_KEY', '').strip()
+PAYMONGO_PUBLIC_KEY  = os.environ.get('PAYMONGO_PUBLIC_KEY', '').strip()
+PAYMONGO_API_BASE    = 'https://api.paymongo.com/v1'
+# The URL PayMongo will redirect the customer to after GCash payment.
+# Must be a publicly accessible URL (not localhost) in production.
+STORE_PUBLIC_URL     = os.environ.get('STORE_PUBLIC_URL', '').strip().rstrip('/')
+# ──────────────────────────────────────────────────────────────────────────────
+
 # Developer portal secret — set DEV_SECRET in env for production.
 DEV_SECRET = os.environ.get('DEV_SECRET', 'dev-9599-local').strip()
 if len(DEV_SECRET) < 8:
@@ -687,6 +700,7 @@ class OrderMeta(db.Model):
     prepayment_collected = db.Column(db.Boolean, default=False)
     has_pickup_photo = db.Column(db.Boolean, default=False)
     prev_status = db.Column(db.String(50), nullable=True, default='')   # tracks last status for no-show detection
+    paymongo_source_id = db.Column(db.String(100), nullable=True, default='')  # PayMongo GCash source ID
     created_at = db.Column(db.DateTime, default=get_ph_time)
 
 class OrderPickupPhoto(db.Model):
@@ -6814,7 +6828,7 @@ function playGrantedSound() {
                     📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
                 <button onclick="openGCashApp('gcash')" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#1a6fe8,#1552c4); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all 0.2s; letter-spacing:0.3px;">
-                    💙 Open GCash to Send Payment
+                    💙 Pay with GCash
                 </button>
             </div>
         </div>
@@ -7679,7 +7693,6 @@ function playGrantedSound() {
             const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
             if (wallet === 'maya') {
-                // Try app scheme; OS opens Maya if installed, fallback to web
                 window.location.href = (isAndroid || isIOS) ? 'maya://' : 'https://www.maya.ph/';
                 setTimeout(function() {
                     if (document.visibilityState !== 'hidden')
@@ -7694,18 +7707,66 @@ function playGrantedSound() {
                 }, 2000);
 
             } else {
-                // GCash (default + partial)
-                // ── PRIMARY: Show QR modal immediately so customer always
-                //    sees something right away — no dead 2-second wait.
-                //    QR scanning is the standard GCash payment method in PH
-                //    and works 100% regardless of browser, OS, or network type.
-                showGCashQR(amount);
+                // GCash — try the real PayMongo checkout link first.
+                // If PayMongo is configured the backend returns a payments.gcash.com URL.
+                // If not configured (dev mode) it falls back to the static QR modal.
+                if (window._gcashOrderId && amount) {
+                    _openPaymongoGCash(amount, window._gcashOrderId, window._gcashOrderCode || '');
+                } else {
+                    // No order context yet — just show QR (e.g. called from Update Payment)
+                    showGCashQR(amount);
+                    if (isAndroid) {
+                        setTimeout(function() {
+                            window.location.href = 'intent://#Intent'
+                                + ';action=android.intent.action.MAIN'
+                                + ';category=android.intent.category.LAUNCHER'
+                                + ';package=com.globe.gcash.android'
+                                + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
+                                + ';end';
+                        }, 300);
+                    } else if (isIOS) {
+                        setTimeout(function() { window.location.href = 'gcash://'; }, 300);
+                    }
+                }
+            }
+        } catch(e) {
+            console.error('openGCashApp error:', e);
+            showGCashQR('');
+        }
+    }
 
-                // ── SECONDARY: Also try to launch the GCash app in parallel.
-                //    Uses window.location.href (preserves the user gesture),
-                //    which works on Chrome Android even on HTTP/local-IP pages.
-                //    If the app is installed it will open; if not, the QR modal
-                //    is already visible so the customer can just scan instead.
+    /**
+     * Call the PayMongo backend to generate a real GCash checkout URL,
+     * then redirect the customer to payments.gcash.com.
+     * Falls back gracefully to the QR modal if PayMongo is not configured.
+     */
+    async function _openPaymongoGCash(amount, orderId, orderCode) {
+        const btn = document.querySelector('[onclick*="openGCashApp"]') || document.getElementById('pickup-confirm-btn');
+        const origLabel = btn ? btn.innerHTML : '';
+        if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating payment link…'; btn.disabled = true; }
+
+        try {
+            const resp = await fetch('/api/gcash/create_link', {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({
+                    amount:      parseFloat(amount),
+                    order_id:    orderId,
+                    order_code:  orderCode,
+                    description: 'Milk Tea Order ' + (orderCode || '')
+                })
+            });
+            const data = await resp.json();
+
+            if (data.checkout_url) {
+                // ── Real PayMongo link — redirect to payments.gcash.com ──
+                window.location.href = data.checkout_url;
+            } else if (data.error === 'paymongo_not_configured') {
+                // ── PayMongo not set up yet — fall back to QR modal ──────
+                if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
+                showGCashQR(amount);
+                const isAndroid = /android/i.test(navigator.userAgent);
+                const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
                 if (isAndroid) {
                     setTimeout(function() {
                         window.location.href = 'intent://#Intent'
@@ -7714,16 +7775,19 @@ function playGrantedSound() {
                             + ';package=com.globe.gcash.android'
                             + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
                             + ';end';
-                    }, 300); // slight delay so QR modal renders first
-                } else if (isIOS) {
-                    setTimeout(function() {
-                        window.location.href = 'gcash://';
                     }, 300);
+                } else if (isIOS) {
+                    setTimeout(function() { window.location.href = 'gcash://'; }, 300);
                 }
+            } else {
+                if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
+                showToast('Could not create GCash payment link. Please try again.', 'error');
+                showGCashQR(amount);
             }
         } catch(e) {
-            console.error('openGCashApp error:', e);
-            showGCashQR('');  // Last-resort fallback: always show QR
+            console.error('_openPaymongoGCash error:', e);
+            if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
+            showGCashQR(amount);
         }
     }
 
@@ -9075,6 +9139,10 @@ function playGrantedSound() {
             if(res.ok) {
                 const code = data.reservation_code;
                 document.getElementById('display-code').innerText = code;
+
+                // Store order context for the PayMongo GCash button
+                window._gcashOrderId   = data.reservation_id || '';
+                window._gcashOrderCode = code;
 
                 // Build receipt preview
                 const name = document.getElementById('customer-name').value;
@@ -10745,10 +10813,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
-#s-finance{position:relative;}
-#s-finance.active{display:flex;flex-direction:column;overflow:hidden;}
-.fin-sticky-top{flex-shrink:0;}
-.fin-content-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:16px;}
+#s-finance{position:absolute;inset:0;}/* Must be absolute (like all .screen elements) — position:relative broke the flex-fill height, causing the dark nav-drawer to bleed through on the Expenses tab */
+#s-finance.active{display:flex;flex-direction:column;overflow:hidden;height:100%;}
+.fin-sticky-top{flex-shrink:0;background:var(--cream);}
+.fin-content-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:16px;background:var(--cream);min-height:0;/* min-height:0 is required in flex children that need to scroll */}
 
 /* ── SETTINGS DROPDOWN ROWS ── */
 .settings-drop-item{border-bottom:1px solid var(--cream-dark);}
@@ -10992,8 +11060,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-tab-bar{display:flex;gap:0;margin:0 14px 14px;background:var(--cream-dark);border-radius:12px;padding:4px;}
 .fin-tab{flex:1;border:none;background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;padding:9px 6px;border-radius:9px;cursor:pointer;transition:all 0.18s;letter-spacing:0.2px;}
 .fin-tab.active{background:var(--brown-dark);color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.25);}
-.fin-tabpane{display:none;}
-.fin-tabpane.active{display:block;}
+.fin-tabpane{display:none !important;}
+.fin-tabpane.active{display:block !important;}
+.fin-content-scroll .fin-tabpane.active{display:block !important;width:100%;}
 
 /* ── INVENTORY TABS ── */
 .inv-tab-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
@@ -13146,9 +13215,16 @@ async function saveInventory(){
 
 /* ══ FINANCE TABS ══ */
 function finTab(name,btn){
-  document.querySelectorAll('.fin-tabpane').forEach(p=>{p.classList.remove('active');});
-  document.querySelectorAll('.fin-tab-pill').forEach(b=>{b.classList.remove('active');});
-  const el=document.getElementById('fin-'+name);if(el)el.classList.add('active');
+  /* Hide every pane with both class removal AND explicit inline style so no
+     CSS specificity conflict can leave a pane visible and cause the dark
+     nav-drawer background to bleed through behind the Finance content area. */
+  document.querySelectorAll('.fin-tabpane').forEach(function(p){
+    p.classList.remove('active');
+    p.style.display='none';
+  });
+  document.querySelectorAll('.fin-tab-pill').forEach(function(b){b.classList.remove('active');});
+  var el=document.getElementById('fin-'+name);
+  if(el){el.classList.add('active');el.style.display='block';}
   if(btn)btn.classList.add('active');
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
   if(name==='expenses'){fetchFinance();}
@@ -16759,6 +16835,7 @@ def reserve_blend():
         resp = {
             "status": "success",
             "reservation_code": new_res.reservation_code,
+            "reservation_id":   new_res.id,
             "flags": flags,
         }
         if 'large_order' in flags:
@@ -20310,6 +20387,9 @@ def dev_force_migrate():
     # audit_logs ip_address column (new — tracks device IP per event)
     run_alter("audit_logs", "ip_address", "VARCHAR(60) DEFAULT ''")
 
+    # order_meta PayMongo GCash integration column
+    run_alter("order_meta", "paymongo_source_id", "VARCHAR(100) DEFAULT ''")
+
     # checklist_completions table is created by db.create_all() below
 
     # Also run create_all for any missing tables
@@ -20336,6 +20416,10 @@ def dev_env():
         ("ADMIN_PIN", os.environ.get('ADMIN_PIN')),
         ("DEV_KEY", os.environ.get('DEV_KEY')),
         ("GOOGLE_CLIENT_ID", os.environ.get('GOOGLE_CLIENT_ID')),
+        ("PAYMONGO_SECRET_KEY",  os.environ.get('PAYMONGO_SECRET_KEY')),
+        ("PAYMONGO_PUBLIC_KEY",  os.environ.get('PAYMONGO_PUBLIC_KEY')),
+        ("PAYMONGO_WEBHOOK_SECRET", os.environ.get('PAYMONGO_WEBHOOK_SECRET')),
+        ("STORE_PUBLIC_URL",     os.environ.get('STORE_PUBLIC_URL')),
         ("SMS_GATEWAY_URL",         os.environ.get('SMS_GATEWAY_URL')),
         ("SMS_GATEWAY_USER",        os.environ.get('SMS_GATEWAY_USER')),
         ("SMS_GATEWAY_PASS",        os.environ.get('SMS_GATEWAY_PASS')),
@@ -20469,487 +20553,325 @@ _ORIGINAL_FORCE_MIGRATE = None   # patched at startup via with_appcontext
 
 
 # ==========================================
+# 10b. PAYMONGO GCASH PAYMENT ROUTES
+# ==========================================
+
+def _paymongo_auth():
+    """Return base64-encoded Basic-Auth header value for PayMongo."""
+    import base64
+    key = PAYMONGO_SECRET_KEY or ''
+    return 'Basic ' + base64.b64encode((key + ':').encode()).decode()
+
+
+@app.route('/api/gcash/create_link', methods=['POST'])
+def gcash_create_link():
+    """
+    Create a PayMongo GCash payment source and return the checkout URL.
+    Called by the frontend just after the order is created; the customer is
+    then redirected to payments.gcash.com to complete the payment.
+
+    Expected JSON body:
+        { "amount": 96.69, "order_id": 42, "order_code": "ORD-XXXX", "description": "Milk Tea Order" }
+    Returns:
+        { "checkout_url": "https://payments.gcash.com/...", "source_id": "src_..." }
+    """
+    if not PAYMONGO_SECRET_KEY:
+        # Fallback: if PayMongo is not configured, tell the frontend to show the QR modal
+        return jsonify({"error": "paymongo_not_configured", "message":
+            "Set PAYMONGO_SECRET_KEY in your environment variables to enable GCash checkout."}), 503
+
+    data      = request.get_json(force=True) or {}
+    amount    = float(data.get('amount', 0))
+    order_id  = data.get('order_id')
+    order_code= data.get('order_code', '')
+    desc      = data.get('description', 'Milk Tea Order')
+
+    if amount <= 0:
+        return jsonify({"error": "invalid_amount"}), 400
+
+    # Build return / failure URLs
+    base_url    = STORE_PUBLIC_URL or request.host_url.rstrip('/')
+    success_url = f"{base_url}/payment/gcash/return?status=success&order_id={order_id}&code={order_code}"
+    failed_url  = f"{base_url}/payment/gcash/return?status=failed&order_id={order_id}&code={order_code}"
+
+    payload = {
+        "data": {
+            "attributes": {
+                "amount":      int(round(amount * 100)),  # PayMongo uses centavos
+                "currency":    "PHP",
+                "type":        "gcash",
+                "description": desc,
+                "redirect": {
+                    "success": success_url,
+                    "failed":  failed_url
+                }
+            }
+        }
+    }
+
+    try:
+        resp = requests.post(
+            f"{PAYMONGO_API_BASE}/sources",
+            json=payload,
+            headers={
+                "Authorization": _paymongo_auth(),
+                "Content-Type":  "application/json"
+            },
+            timeout=15
+        )
+        resp.raise_for_status()
+        result      = resp.json()
+        source_data = result['data']
+        source_id   = source_data['id']
+        checkout_url= source_data['attributes']['redirect']['checkout_url']
+
+        # Persist the source_id on the order so the webhook can match it
+        if order_id:
+            try:
+                order = Reservation.query.get(int(order_id))
+                if order:
+                    # Reuse the user_agent field for now as a metadata store
+                    # (In production, add a dedicated `paymongo_source_id` column)
+                    meta = OrderMeta.query.filter_by(reservation_id=order.id).first()
+                    if not meta:
+                        meta = OrderMeta(reservation_id=order.id)
+                        db.session.add(meta)
+                    meta.paymongo_source_id = source_id
+                    db.session.commit()
+            except Exception:
+                pass  # Non-fatal; webhook will still work by amount matching
+
+        return jsonify({"checkout_url": checkout_url, "source_id": source_id})
+
+    except requests.HTTPError as e:
+        err_body = {}
+        try:
+            err_body = e.response.json()
+        except Exception:
+            pass
+        app.logger.error(f"PayMongo create_source error: {e} — {err_body}")
+        return jsonify({"error": "paymongo_error", "detail": str(err_body)}), 502
+    except Exception as e:
+        app.logger.error(f"PayMongo create_source unexpected: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/gcash/webhook', methods=['POST'])
+def gcash_webhook():
+    """
+    PayMongo webhook endpoint.
+    Register this URL in your PayMongo dashboard under Webhooks:
+        POST  <your-store-url>/api/gcash/webhook
+    Events handled: source.chargeable → charge the source → mark order paid.
+    """
+    import hmac, hashlib
+
+    raw_body = request.get_data()
+
+    # ── Optional signature verification ──────────────────────────────────────
+    webhook_secret = os.environ.get('PAYMONGO_WEBHOOK_SECRET', '').strip()
+    if webhook_secret:
+        sig_header = request.headers.get('Paymongo-Signature', '')
+        # PayMongo signature format: "t=<timestamp>,te=<hmac>,li=<hmac>"
+        te_part = next((p for p in sig_header.split(',') if p.startswith('te=')), '')
+        if te_part:
+            received_sig = te_part[3:]
+            expected_sig = hmac.new(
+                webhook_secret.encode(), raw_body, hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(received_sig, expected_sig):
+                return jsonify({"error": "invalid_signature"}), 401
+
+    try:
+        event = request.get_json(force=True)
+        event_type = event['data']['attributes']['type']
+        evt_data   = event['data']['attributes']['data']
+
+        if event_type == 'source.chargeable':
+            source_id  = evt_data['id']
+            amount_ctv = evt_data['attributes']['amount']   # centavos
+            amount_php = amount_ctv / 100
+
+            # ── Charge the source ─────────────────────────────────────────
+            charge_payload = {
+                "data": {
+                    "attributes": {
+                        "amount":      amount_ctv,
+                        "currency":    "PHP",
+                        "description": "Milk Tea Order",
+                        "source": {"id": source_id, "type": "source"}
+                    }
+                }
+            }
+            c_resp = requests.post(
+                f"{PAYMONGO_API_BASE}/payments",
+                json=charge_payload,
+                headers={
+                    "Authorization": _paymongo_auth(),
+                    "Content-Type":  "application/json"
+                },
+                timeout=15
+            )
+            c_resp.raise_for_status()
+            charge   = c_resp.json()['data']
+            ref_no   = charge['id']  # PayMongo payment ID as reference
+
+            # ── Find the matching order and mark paid ─────────────────────
+            try:
+                # First try by stored source_id on OrderMeta
+                meta = None
+                if hasattr(OrderMeta, 'paymongo_source_id'):
+                    meta = OrderMeta.query.filter_by(paymongo_source_id=source_id).first()
+                if meta:
+                    order = Reservation.query.get(meta.reservation_id)
+                else:
+                    # Fallback: find most recent GCash order with matching amount
+                    order = (Reservation.query
+                             .filter_by(is_paid=False)
+                             .filter(Reservation.total_investment == amount_php)
+                             .order_by(Reservation.id.desc())
+                             .first())
+
+                if order and not order.is_paid:
+                    order.is_paid = True
+                    db.session.commit()
+                    push_event('order_status', {'id': order.id, 'status': 'Paid via GCash', 'ref': ref_no})
+                    log_audit("GCash Payment Confirmed",
+                              f"Order {order.reservation_code} — ₱{amount_php:.2f} — ref {ref_no}")
+            except Exception as ex:
+                app.logger.error(f"Webhook mark-paid error: {ex}")
+
+    except Exception as e:
+        app.logger.error(f"Webhook processing error: {e}")
+
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route('/payment/gcash/return')
+def gcash_return():
+    """
+    PayMongo redirects the customer here after GCash payment succeeds or fails.
+    Renders a minimal landing page that posts a message to the opener/parent
+    window so the POS SPA can react, then redirects back to the store.
+    """
+    status     = request.args.get('status', 'failed')
+    order_id   = request.args.get('order_id', '')
+    order_code = request.args.get('code', '')
+
+    if status == 'success':
+        # Optimistically mark the order paid here too (webhook is the source of truth,
+        # but this gives instant feedback if the customer returns before the webhook fires)
+        if order_id:
+            try:
+                order = Reservation.query.get(int(order_id))
+                if order and not order.is_paid:
+                    order.is_paid = True
+                    db.session.commit()
+            except Exception:
+                pass
+
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Successful</title>
+  <style>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+          background:linear-gradient(135deg,#1a6fe8 0%,#1552c4 100%);
+          min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+    .card{{background:#fff;border-radius:24px;padding:40px 32px;max-width:380px;
+           width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2)}}
+    .icon{{width:72px;height:72px;background:#1a6fe8;border-radius:50%;
+           display:flex;align-items:center;justify-content:center;margin:0 auto 20px}}
+    .icon svg{{width:36px;height:36px;fill:none;stroke:#fff;stroke-width:3;
+               stroke-linecap:round;stroke-linejoin:round}}
+    h1{{font-size:1.4rem;font-weight:900;color:#0f172a;margin-bottom:8px}}
+    p{{font-size:0.88rem;color:#64748b;line-height:1.6;margin-bottom:6px}}
+    .code{{font-size:1.1rem;font-weight:900;color:#1a6fe8;letter-spacing:1px;
+           background:#eff6ff;padding:10px 20px;border-radius:12px;
+           display:inline-block;margin:12px 0}}
+    .badge{{display:inline-flex;align-items:center;gap:6px;background:#dcfce7;
+            color:#166534;font-weight:700;font-size:0.78rem;padding:6px 14px;
+            border-radius:999px;margin-bottom:20px}}
+    .btn{{display:block;width:100%;padding:14px;border-radius:14px;border:none;
+          background:linear-gradient(135deg,#1a6fe8,#1552c4);color:#fff;
+          font-weight:900;font-size:1rem;cursor:pointer;text-decoration:none;
+          margin-top:8px}}
+    .countdown{{font-size:0.78rem;color:#94a3b8;margin-top:12px}}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <div class="badge">✓ Paid and linked via GCash</div>
+  <h1>Payment Successful!</h1>
+  <p>Your order has been confirmed.</p>
+  <div class="code">{order_code or 'Order Placed'}</div>
+  <p style="font-size:0.78rem;color:#94a3b8;">Show this code when you pick up your order.</p>
+  <a class="btn" href="/">🏠 Back to Store</a>
+  <p class="countdown" id="cd">Redirecting in <span id="s">5</span>s…</p>
+</div>
+<script>
+  // Notify parent window (if open in a popup / iframe)
+  try {{ window.opener && window.opener.postMessage({{type:'gcash_paid',code:'{order_code}'}}, '*'); }} catch(e){{}}
+  // Countdown redirect
+  let n=5;
+  const t=setInterval(()=>{{
+    document.getElementById('s').textContent=--n;
+    if(n<=0){{clearInterval(t);window.location.href='/';}}
+  }},1000);
+</script>
+</body>
+</html>"""
+        return html, 200, {'Content-Type': 'text/html'}
+
+    else:
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Failed</title>
+  <style>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+          background:#f1f5f9;min-height:100vh;display:flex;
+          align-items:center;justify-content:center;padding:20px}}
+    .card{{background:#fff;border-radius:24px;padding:40px 32px;max-width:380px;
+           width:100%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.08)}}
+    .icon{{width:72px;height:72px;background:#fee2e2;border-radius:50%;
+           display:flex;align-items:center;justify-content:center;margin:0 auto 20px}}
+    .icon svg{{width:36px;height:36px;fill:none;stroke:#dc2626;stroke-width:3;
+               stroke-linecap:round}}
+    h1{{font-size:1.3rem;font-weight:900;color:#0f172a;margin-bottom:8px}}
+    p{{font-size:0.88rem;color:#64748b;margin-bottom:20px}}
+    .btn{{display:block;width:100%;padding:14px;border-radius:14px;border:none;
+          background:linear-gradient(135deg,#1a6fe8,#1552c4);color:#fff;
+          font-weight:900;font-size:1rem;cursor:pointer;text-decoration:none}}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </div>
+  <h1>Payment Cancelled</h1>
+  <p>Your GCash payment was not completed. Your order has not been charged.</p>
+  <a class="btn" href="/">↩ Try Again</a>
+</div>
+</body>
+</html>"""
+        return html, 200, {'Content-Type': 'text/html'}
+
+
+# ==========================================
 # 11. APPLICATION RUNNER
 # ==========================================
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# FORECASTING SHEET BRIDGE  —  9599 Tea & Coffee → NexusOps Forecasting Sheet
-# ══════════════════════════════════════════════════════════════════════════════
-# These endpoints feed live coffee-shop data directly into the Forecasting
-# Sheet's Predictive Analytics module.
-#
-# Auth: Every endpoint requires a valid admin session  OR  the request must
-#       carry the header  X-Forecast-Key: <FORECAST_API_KEY>  (set in .env).
-#
-# Available datasets (CSV export):
-#   GET /api/forecasting/sales_trend      — daily revenue, orders, avg_order
-#   GET /api/forecasting/product_demand   — per-product orders & revenue
-#   GET /api/forecasting/hourly_demand    — hour × day-of-week order matrix
-#   GET /api/forecasting/inventory        — ingredient stock & waste
-#   GET /api/forecasting/customer_value   — customer repeat/value profile
-#   GET /api/forecasting/expenses         — expense log
-#   GET /api/forecasting/meta             — dataset catalogue (JSON)
-# ══════════════════════════════════════════════════════════════════════════════
-
-import csv as _csv
-import io  as _io
-
-# ── API key for cross-app access (set FORECAST_API_KEY in .env) ───────────────
-_FORECAST_KEY = os.environ.get('FORECAST_API_KEY', 'forecast-9599-nexusops').strip()
-
-def _forecast_auth():
-    """Allow if admin session OR correct X-Forecast-Key header."""
-    if session.get('is_admin'):
-        return True
-    key = request.headers.get('X-Forecast-Key', '').strip()
-    return key == _FORECAST_KEY
-
-def _csv_response(rows: list, filename: str):
-    """Turn a list-of-dicts into a streaming CSV Response."""
-    if not rows:
-        return Response("no_data\n", mimetype='text/csv',
-                        headers={'Content-Disposition': f'attachment;filename={filename}'})
-    buf = _io.StringIO()
-    writer = _csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
-    writer.writeheader()
-    writer.writerows(rows)
-    return Response(
-        buf.getvalue(),
-        mimetype='text/csv',
-        headers={
-            'Content-Disposition': f'attachment;filename={filename}',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'X-Forecast-Key',
-        }
-    )
-
-def _json_or_csv(rows: list, filename: str):
-    """Return JSON or CSV depending on ?format= query param."""
-    fmt = request.args.get('format', 'csv').lower()
-    if fmt == 'json':
-        return jsonify(rows)
-    return _csv_response(rows, filename)
-
-
-# ── 1. DAILY SALES TREND ──────────────────────────────────────────────────────
-@app.route('/api/forecasting/sales_trend', methods=['GET'])
-def forecast_sales_trend():
-    """
-    Daily aggregated sales for the last N days (default 90).
-    Columns: date, day_of_week, revenue, orders, avg_order_value,
-             online_orders, walkin_orders, cancelled_orders
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-    try:
-        days   = min(int(request.args.get('days', 90)), 365)
-        ph_now = get_ph_time()
-        cutoff = ph_now - timedelta(days=days)
-
-        # Fetch all reservations in window
-        all_res = Reservation.query.filter(
-            Reservation.created_at >= cutoff
-        ).order_by(Reservation.created_at.asc()).all()
-
-        # Group by date
-        from collections import defaultdict
-        by_date = defaultdict(lambda: {
-            'revenue': 0.0, 'orders': 0, 'online': 0,
-            'walkin': 0, 'cancelled': 0, 'total_value': 0.0
-        })
-
-        day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-
-        for r in all_res:
-            d = r.created_at.strftime('%Y-%m-%d')
-            entry = by_date[d]
-            if r.status == 'Completed':
-                entry['revenue']    += r.total_investment or 0.0
-                entry['orders']     += 1
-                entry['total_value']+= r.total_investment or 0.0
-                src = (r.order_source or '').lower()
-                if 'online' in src:
-                    entry['online'] += 1
-                else:
-                    entry['walkin'] += 1
-            elif r.status == 'Cancelled':
-                entry['cancelled']  += 1
-
-        rows = []
-        current = cutoff.date()
-        end     = ph_now.date()
-        while current <= end:
-            ds    = current.strftime('%Y-%m-%d')
-            e     = by_date.get(ds, {})
-            n_ord = e.get('orders', 0)
-            rows.append({
-                'date':             ds,
-                'day_of_week':      day_names[current.weekday()],
-                'day_num':          current.weekday(),           # 0=Mon
-                'week_number':      current.isocalendar()[1],
-                'month':            current.month,
-                'revenue':          round(e.get('revenue', 0.0), 2),
-                'orders':           n_ord,
-                'avg_order_value':  round(e.get('total_value', 0.0) / n_ord, 2) if n_ord else 0.0,
-                'online_orders':    e.get('online', 0),
-                'walkin_orders':    e.get('walkin', 0),
-                'cancelled_orders': e.get('cancelled', 0),
-            })
-            current += timedelta(days=1)
-
-        return _json_or_csv(rows, 'coffee_sales_trend.csv')
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── 2. PRODUCT DEMAND ────────────────────────────────────────────────────────
-@app.route('/api/forecasting/product_demand', methods=['GET'])
-def forecast_product_demand():
-    """
-    Per-product daily order counts & revenue.
-    Columns: date, product_name, cup_size, orders, revenue, avg_price
-    Useful for predicting which drinks will sell on a given day.
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-    try:
-        days   = min(int(request.args.get('days', 90)), 365)
-        ph_now = get_ph_time()
-        cutoff = ph_now - timedelta(days=days)
-
-        completed = Reservation.query.filter(
-            Reservation.created_at >= cutoff,
-            Reservation.status == 'Completed'
-        ).all()
-
-        from collections import defaultdict
-        by_product = defaultdict(lambda: defaultdict(lambda: {
-            'orders': 0, 'revenue': 0.0
-        }))
-
-        for r in completed:
-            date_str = r.created_at.strftime('%Y-%m-%d')
-            for inf in r.infusions:
-                key = (inf.foundation or 'Unknown', inf.cup_size or 'Unknown')
-                by_product[date_str][key]['orders']  += 1
-                by_product[date_str][key]['revenue'] += inf.item_total or 0.0
-
-        rows = []
-        for date_str in sorted(by_product.keys()):
-            for (product, size), data in by_product[date_str].items():
-                n = data['orders']
-                rows.append({
-                    'date':        date_str,
-                    'product_name':product,
-                    'cup_size':    size,
-                    'orders':      n,
-                    'revenue':     round(data['revenue'], 2),
-                    'avg_price':   round(data['revenue'] / n, 2) if n else 0.0,
-                })
-
-        return _json_or_csv(rows, 'coffee_product_demand.csv')
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── 3. HOURLY DEMAND ─────────────────────────────────────────────────────────
-@app.route('/api/forecasting/hourly_demand', methods=['GET'])
-def forecast_hourly_demand():
-    """
-    Hour-of-day × day-of-week demand matrix.
-    Columns: date, day_of_week, hour, orders, revenue
-    Great for predicting peak-hour staffing needs.
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-    try:
-        days   = min(int(request.args.get('days', 90)), 365)
-        ph_now = get_ph_time()
-        cutoff = ph_now - timedelta(days=days)
-
-        completed = Reservation.query.filter(
-            Reservation.created_at >= cutoff,
-            Reservation.status == 'Completed'
-        ).all()
-
-        from collections import defaultdict
-        day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-        by_slot   = defaultdict(lambda: {'orders': 0, 'revenue': 0.0})
-
-        for r in completed:
-            key = (
-                r.created_at.strftime('%Y-%m-%d'),
-                day_names[r.created_at.weekday()],
-                r.created_at.hour,
-            )
-            by_slot[key]['orders']  += 1
-            by_slot[key]['revenue'] += r.total_investment or 0.0
-
-        rows = [
-            {
-                'date':        k[0],
-                'day_of_week': k[1],
-                'day_num':     ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].index(k[1]),
-                'hour':        k[2],
-                'orders':      v['orders'],
-                'revenue':     round(v['revenue'], 2),
-            }
-            for k, v in sorted(by_slot.items())
-        ]
-
-        return _json_or_csv(rows, 'coffee_hourly_demand.csv')
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── 4. INVENTORY & WASTE ─────────────────────────────────────────────────────
-@app.route('/api/forecasting/inventory', methods=['GET'])
-def forecast_inventory():
-    """
-    Daily waste log joined with current stock levels.
-    Columns: date, ingredient_name, unit, waste_qty, reason, current_stock
-    Useful for predicting ingredient consumption and reorder points.
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-    try:
-        days   = min(int(request.args.get('days', 90)), 365)
-        ph_now = get_ph_time()
-        cutoff = ph_now - timedelta(days=days)
-
-        wastes = WasteLog.query.filter(
-            WasteLog.created_at >= cutoff
-        ).order_by(WasteLog.created_at.asc()).all()
-
-        # Build ingredient stock lookup
-        stock_map = {}
-        try:
-            for ing in Ingredient.query.all():
-                stock_map[ing.name] = {'stock': ing.stock, 'unit': ing.unit}
-        except Exception:
-            pass
-
-        rows = []
-        for w in wastes:
-            ing_info = stock_map.get(w.ingredient_name, {})
-            rows.append({
-                'date':             w.created_at.strftime('%Y-%m-%d'),
-                'hour':             w.created_at.hour,
-                'ingredient_name':  w.ingredient_name or '',
-                'unit':             w.unit or ing_info.get('unit', ''),
-                'waste_qty':        w.quantity or 0.0,
-                'reason':           w.reason or '',
-                'logged_by':        w.logged_by or '',
-                'current_stock':    ing_info.get('stock', 0.0),
-            })
-
-        return _json_or_csv(rows, 'coffee_inventory_waste.csv')
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── 5. CUSTOMER VALUE ────────────────────────────────────────────────────────
-@app.route('/api/forecasting/customer_value', methods=['GET'])
-def forecast_customer_value():
-    """
-    Customer-level lifetime value and behaviour summary.
-    Columns: order_month, source, total_customers, total_orders,
-             total_revenue, avg_order_value, repeat_rate
-    Useful for predicting customer lifetime value and churn risk.
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-    try:
-        days   = min(int(request.args.get('days', 180)), 730)
-        ph_now = get_ph_time()
-        cutoff = ph_now - timedelta(days=days)
-
-        completed = Reservation.query.filter(
-            Reservation.created_at >= cutoff,
-            Reservation.status == 'Completed'
-        ).all()
-
-        from collections import defaultdict
-        # Group by month × source
-        by_month_src = defaultdict(lambda: {
-            'customers': set(), 'orders': 0, 'revenue': 0.0
-        })
-
-        for r in completed:
-            key = (r.created_at.strftime('%Y-%m'), r.order_source or 'Unknown')
-            by_month_src[key]['customers'].add((r.patron_email or r.patron_name or '').lower())
-            by_month_src[key]['orders']  += 1
-            by_month_src[key]['revenue'] += r.total_investment or 0.0
-
-        # Customer repeat counts
-        rep_map = {}
-        try:
-            for rep in CustomerReputation.query.all():
-                rep_map[rep.identifier] = rep.total_orders or 0
-        except Exception:
-            pass
-
-        rows = []
-        for (month, src), d in sorted(by_month_src.items()):
-            n_cust  = len(d['customers'])
-            n_ord   = d['orders']
-            rev     = d['revenue']
-            repeat  = sum(1 for e in d['customers'] if rep_map.get(e, 0) > 1)
-            rows.append({
-                'order_month':      month,
-                'source':           src,
-                'total_customers':  n_cust,
-                'total_orders':     n_ord,
-                'total_revenue':    round(rev, 2),
-                'avg_order_value':  round(rev / n_ord, 2) if n_ord else 0.0,
-                'repeat_customers': repeat,
-                'repeat_rate_pct':  round(repeat / n_cust * 100, 1) if n_cust else 0.0,
-            })
-
-        return _json_or_csv(rows, 'coffee_customer_value.csv')
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── 6. EXPENSES ──────────────────────────────────────────────────────────────
-@app.route('/api/forecasting/expenses', methods=['GET'])
-def forecast_expenses():
-    """
-    Full expense log for profit/loss forecasting.
-    Columns: date, month, description, amount
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-    try:
-        days   = min(int(request.args.get('days', 180)), 730)
-        ph_now = get_ph_time()
-        cutoff = ph_now - timedelta(days=days)
-
-        exps = Expense.query.filter(
-            Expense.created_at >= cutoff
-        ).order_by(Expense.created_at.asc()).all()
-
-        rows = [{
-            'date':        e.created_at.strftime('%Y-%m-%d'),
-            'month':       e.created_at.strftime('%Y-%m'),
-            'description': e.description or '',
-            'amount':      round(e.amount or 0.0, 2),
-        } for e in exps]
-
-        return _json_or_csv(rows, 'coffee_expenses.csv')
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── 7. DATASET CATALOGUE ─────────────────────────────────────────────────────
-@app.route('/api/forecasting/meta', methods=['GET'])
-def forecast_meta():
-    """
-    Returns the catalogue of available datasets so the Forecasting Sheet
-    can dynamically list what data it can pull.
-    """
-    if not _forecast_auth():
-        return jsonify({"error": "Unauthorized"}), 403
-
-    try:
-        ph_now  = get_ph_time()
-        oldest  = Reservation.query.order_by(Reservation.created_at.asc()).first()
-        newest  = Reservation.query.filter_by(status='Completed').order_by(Reservation.created_at.desc()).first()
-        n_comp  = Reservation.query.filter_by(status='Completed').count()
-        n_all   = Reservation.query.count()
-        n_waste = WasteLog.query.count()
-        n_exp   = Expense.query.count()
-        n_items = Infusion.query.count()
-
-        return jsonify({
-            "shop_name":     "9599 Tea & Coffee",
-            "generated_at":  ph_now.strftime('%Y-%m-%d %H:%M:%S PHT'),
-            "total_orders":  n_all,
-            "completed_orders": n_comp,
-            "first_order":   oldest.created_at.strftime('%Y-%m-%d') if oldest and oldest.created_at else None,
-            "last_order":    newest.created_at.strftime('%Y-%m-%d') if newest and newest.created_at else None,
-            "datasets": [
-                {
-                    "id":       "sales_trend",
-                    "name":     "Daily Sales Trend",
-                    "endpoint": "/api/forecasting/sales_trend",
-                    "rows_est": n_comp,
-                    "icon":     "📈",
-                    "description": "Daily revenue, order count, avg order value, and source breakdown",
-                    "best_for":    "Revenue forecasting · Demand prediction",
-                    "target_suggestions":  ["revenue", "orders"],
-                    "feature_suggestions": ["day_num", "week_number", "month", "online_orders", "walkin_orders"],
-                },
-                {
-                    "id":       "product_demand",
-                    "name":     "Product Demand",
-                    "endpoint": "/api/forecasting/product_demand",
-                    "rows_est": n_items,
-                    "icon":     "🧋",
-                    "description": "Per-drink daily order counts and revenue by cup size",
-                    "best_for":    "Menu optimisation · Stock planning",
-                    "target_suggestions":  ["orders", "revenue"],
-                    "feature_suggestions": ["day_num", "avg_price"],
-                },
-                {
-                    "id":       "hourly_demand",
-                    "name":     "Hourly Demand",
-                    "endpoint": "/api/forecasting/hourly_demand",
-                    "rows_est": n_comp,
-                    "icon":     "⏰",
-                    "description": "Orders and revenue by hour of day and day of week",
-                    "best_for":    "Staffing · Peak-hour prep",
-                    "target_suggestions":  ["orders", "revenue"],
-                    "feature_suggestions": ["hour", "day_num"],
-                },
-                {
-                    "id":       "inventory",
-                    "name":     "Inventory & Waste",
-                    "endpoint": "/api/forecasting/inventory",
-                    "rows_est": n_waste,
-                    "icon":     "📦",
-                    "description": "Ingredient waste logs with current stock levels",
-                    "best_for":    "Waste reduction · Reorder point prediction",
-                    "target_suggestions":  ["waste_qty", "current_stock"],
-                    "feature_suggestions": ["hour", "current_stock"],
-                },
-                {
-                    "id":       "customer_value",
-                    "name":     "Customer Value",
-                    "endpoint": "/api/forecasting/customer_value",
-                    "rows_est": n_comp // 4 or 1,
-                    "icon":     "👥",
-                    "description": "Monthly customer counts, revenue, and repeat-purchase rate",
-                    "best_for":    "Loyalty · Revenue per customer · Churn prediction",
-                    "target_suggestions":  ["total_revenue", "repeat_rate_pct"],
-                    "feature_suggestions": ["total_customers", "total_orders", "avg_order_value"],
-                },
-                {
-                    "id":       "expenses",
-                    "name":     "Expense Log",
-                    "endpoint": "/api/forecasting/expenses",
-                    "rows_est": n_exp,
-                    "icon":     "💸",
-                    "description": "All expense entries for profit/loss modelling",
-                    "best_for":    "Cost forecasting · Profit prediction",
-                    "target_suggestions":  ["amount"],
-                    "feature_suggestions": ["month"],
-                },
-            ],
-        })
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-
-# ── CORS preflight for cross-origin Forecasting Sheet requests ────────────────
-@app.after_request
-def _forecast_cors(response):
-    if request.path.startswith('/api/forecasting/'):
-        response.headers['Access-Control-Allow-Origin']  = '*'
-        response.headers['Access-Control-Allow-Headers'] = 'X-Forecast-Key, Content-Type'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    return response
 if __name__ == '__main__':
     if os.environ.get('RENDER') or os.environ.get('DYNO'):
         port = int(os.environ.get('PORT', 5000))
