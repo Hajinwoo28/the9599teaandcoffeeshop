@@ -10478,7 +10478,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ── Finance tabs ── */
 .fin-tab-pill,.period-pill{transition:all var(--dur-sm,200ms) var(--ease-spring,cubic-bezier(0.34,1.56,0.64,1));}
 .fin-tab-pill:hover,.period-pill:hover{transform:translateY(-2px);}
-.fin-tab-pill.active,.period-pill.active{transform:scale(1.06);}
+.fin-tab-pill.active,.period-pill.active{}
 
 /* ── Audit log rows ── */
 .audit-row{transition:background .2s;}
@@ -10808,8 +10808,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .admin-drawer-action.danger:hover{background:rgba(192,57,43,0.2);color:#fff;border-color:rgba(192,57,43,0.45);}
 
 /* ── FINANCE SECTION NAV (Tab Pills) ── */
-.fin-tab-nav{display:flex;gap:5px;padding:5px 12px 5px;background:var(--white);border-bottom:1px solid var(--cream-dark);}
-.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:5px 8px;border-radius:9px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+.fin-tab-nav{display:flex;gap:5px;padding:5px 12px 5px;background:var(--white);border-bottom:1px solid var(--cream-dark);overflow:hidden;}
+.fin-tab-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:5px 8px;border-radius:9px;border:1.5px solid var(--cream-dark);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:background 0.18s ease,color 0.18s ease,border-color 0.18s ease,box-shadow 0.18s ease;white-space:nowrap;}
 .fin-tab-pill i{font-size:0.78rem;}
 .fin-tab-pill:hover:not(.active){background:var(--cream);border-color:var(--tan);color:var(--brown);}
 .fin-tab-pill.active{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 100%);border-color:transparent;color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.2);}
@@ -12534,6 +12534,8 @@ function goScreen(name, btn){
   document.querySelectorAll('.screen').forEach(function(s){
     s.classList.remove('active');
     s.style.display = 'none';
+    /* Reset QA animation flag when leaving dashboard so it re-plays on next entry */
+    if(s.id === 's-dashboard') delete s.dataset.qaAnimated;
   });
   /* 2 — Deactivate nav pills */
   document.querySelectorAll('.admin-nav-item').forEach(function(b){
@@ -14252,15 +14254,21 @@ function closeAdmModal(){
 
 /* ══ DASHBOARD DATA LOADER ══ */
 async function loadDashboard(){
-  // Re-trigger stagger animation on every open
+  // Re-trigger stagger animation on KPIs each time (they're small and fast)
   document.querySelectorAll('.dash-kpi').forEach((el,i)=>{
     el.style.animation='none'; el.offsetWidth;
     el.style.animation=`adminKpiIn 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i*0.07}s both`;
   });
-  document.querySelectorAll('.dash-qa-btn').forEach((el,i)=>{
-    el.style.animation='none'; el.offsetWidth;
-    el.style.animation=`adminQaBtnIn 0.4s cubic-bezier(0.34,1.56,0.64,1) ${0.05+i*0.055}s both`;
-  });
+  // Only animate Quick Action buttons on first open (not on 15-second auto-refresh)
+  // to prevent a ~300ms flash where all buttons become opacity:0
+  const qaButtons = document.querySelectorAll('.dash-qa-btn');
+  if(!document.getElementById('s-dashboard').dataset.qaAnimated){
+    qaButtons.forEach((el,i)=>{
+      el.style.animation='none'; el.offsetWidth;
+      el.style.animation=`adminQaBtnIn 0.4s cubic-bezier(0.34,1.56,0.64,1) ${0.05+i*0.055}s both`;
+    });
+    document.getElementById('s-dashboard').dataset.qaAnimated='1';
+  }
   try{
     const [finRes,ordRes,invRes]=await Promise.all([
       apiFetch('/api/finance/daily'),
