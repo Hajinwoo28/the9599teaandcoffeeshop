@@ -10535,7 +10535,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ══ QUICK ACTIONS ══ */
 .dash-section-title{font-size:0.72rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:14px 14px 8px;}
 .dash-qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px 0;}
-.dash-qa-btn{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:13px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1);font-family:'Nunito',sans-serif;text-align:center;}
+.dash-qa-btn{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:13px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1);font-family:'Nunito',sans-serif;text-align:center;position:relative;overflow:hidden;}
 .dash-qa-btn:hover{border-color:var(--tan);background:var(--cream);transform:translateY(-4px) scale(1.04);box-shadow:0 10px 26px rgba(61,36,16,0.14);}
 .dash-qa-btn:active{transform:scale(0.95);}
 .dash-qa-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;}
@@ -14258,6 +14258,9 @@ function closeAdmModal(){
 
 /* ══ DASHBOARD DATA LOADER ══ */
 async function loadDashboard(){
+  /* Clean up any orphaned ripple spans inside QA buttons (they pile up when
+     the dashboard is hidden before animationend fires) */
+  document.querySelectorAll('.dash-qa-btn .ripple-circle').forEach(function(r){r.remove();});
   // Re-trigger stagger animation on KPIs each time (they're small and fast)
   document.querySelectorAll('.dash-kpi').forEach((el,i)=>{
     el.style.animation='none'; el.offsetWidth;
