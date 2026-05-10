@@ -12568,7 +12568,7 @@ function goScreen(name, btn){
     var scr = document.getElementById('s-' + name);
     if(!scr){ console.warn('goScreen: element not found → s-' + name); return; }
     scr.classList.add('active');
-    /* display is now driven entirely by CSS (.active classes) — no inline override needed */
+    scr.style.display = (name === 'finance' || name === 'audit' || name === 'liveorders') ? 'flex' : 'block';
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'inventory')  fetchInventory();
