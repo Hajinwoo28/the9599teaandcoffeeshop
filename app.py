@@ -1456,7 +1456,7 @@ document.getElementById('loginForm').addEventListener('submit', function(){
     ctx.clearRect(0,0,W,H);
     bubbles.forEach(function(b){
       ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
-      ctx.strokeStyle=b.color.replace(/[\d.]+\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
+      ctx.strokeStyle=b.color.replace(/[\\d.]+\\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
       ctx.fillStyle=b.color;ctx.fill();
       ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,Math.PI*2);
       ctx.fillStyle='rgba(255,255,255,0.28)';ctx.fill();
@@ -1710,7 +1710,7 @@ document.getElementById('empForm').addEventListener('submit', function(){
     ctx.clearRect(0,0,W,H);
     bubbles.forEach(function(b){
       ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
-      ctx.strokeStyle=b.color.replace(/[\d.]+\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
+      ctx.strokeStyle=b.color.replace(/[\\d.]+\\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
       ctx.fillStyle=b.color;ctx.fill();
       ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,Math.PI*2);
       ctx.fillStyle='rgba(255,255,255,0.28)';ctx.fill();
@@ -1963,7 +1963,7 @@ document.getElementById('takeoverForm').addEventListener('submit', function(){
     ctx.clearRect(0,0,W,H);
     bubbles.forEach(function(b){
       ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
-      ctx.strokeStyle=b.color.replace(/[\d.]+\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
+      ctx.strokeStyle=b.color.replace(/[\\d.]+\\)$/,'0.2)');ctx.lineWidth=1.2;ctx.stroke();
       ctx.fillStyle=b.color;ctx.fill();
       ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,Math.PI*2);
       ctx.fillStyle='rgba(255,255,255,0.28)';ctx.fill();
@@ -4624,21 +4624,21 @@ function openReceiptWindow(r){
   .divider-solid{border:none;border-top:1px solid #333;margin:10px 0;}.divider-dash{border:none;border-top:1px dashed #999;margin:10px 0;}
   table{width:100%;border-collapse:collapse;}th{text-align:left;padding:6px 8px;border-bottom:1px solid #333;font-weight:bold;}th.right{text-align:right;}
   .total-section td{padding:6px 8px;font-weight:bold;}.footer{text-align:center;font-size:0.9rem;margin-top:18px;color:#333;}.footer .est{font-size:0.78rem;color:#888;margin-top:4px;}
-  @media print{@page{margin:10mm;size:auto;}body{padding:0;}tr{page-break-inside:avoid;}}<\/style><\/head>
+  @media print{@page{margin:10mm;size:auto;}body{padding:0;}tr{page-break-inside:avoid;}}<\\/style><\\/head>
   <body><div class="header-section"><img src="/static/images/9599.jpg" class="logo-img" alt="9599 Tea &amp; Coffee logo" onerror="this.style.display='none'">
-  <div class="shop-name">9599 Tea &amp; Coffee<\/div><div class="shop-tagline">Parne Na!<\/div>
-  <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\/div>
-  <div class="shop-meta">BIR TIN: 322-845-268-00000<\/div><\/div>
-  <hr class="divider-solid"><div class="center" style="font-size:1rem;font-weight:bold;letter-spacing:1px;">OFFICIAL RECEIPT<\/div>
-  <div class="center" style="font-size:0.88rem;color:#555;margin-top:4px;">Date: ${dateStr} &nbsp;|&nbsp; Time: ${timeStr}<\/div>
-  <hr class="divider-solid"><div style="font-size:1rem;margin-bottom:4px;"><b>Order #:<\/b> ${r.code}<\/div>
-  <div style="font-size:1rem;margin-bottom:4px;"><b>Customer:<\/b> ${r.name}<\/div>
-  <div style="font-size:1rem;margin-bottom:6px;"><b>Pick-up:<\/b> ${r.pickup||'Walk-In'}<\/div>
-  <hr class="divider-solid"><table><thead><tr><th>Item<\/th><th class="right">Amount<\/th><\/tr><\/thead><tbody>${rows}<\/tbody><\/table>
-  <hr class="divider-dash"><table class="total-section"><tr><td style="text-align:left;">Total Items: ${totalQty}<\/td><td style="text-align:right;">&#8369;${r.total.toFixed(2)}<\/td><\/tr><\/table>
-  <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\/div><\/div>
-  ${'<\u0073cript>'}window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}${'<\/\u0073cript>'}
-  <\/body><\/html>`;
+  <div class="shop-name">9599 Tea &amp; Coffee<\\/div><div class="shop-tagline">Parne Na!<\\/div>
+  <div class="shop-meta">&#128205; Brgy. Poblacion, San Antonio, Quezon, Philippines<\\/div>
+  <div class="shop-meta">BIR TIN: 322-845-268-00000<\\/div><\\/div>
+  <hr class="divider-solid"><div class="center" style="font-size:1rem;font-weight:bold;letter-spacing:1px;">OFFICIAL RECEIPT<\\/div>
+  <div class="center" style="font-size:0.88rem;color:#555;margin-top:4px;">Date: ${dateStr} &nbsp;|&nbsp; Time: ${timeStr}<\\/div>
+  <hr class="divider-solid"><div style="font-size:1rem;margin-bottom:4px;"><b>Order #:<\\/b> ${r.code}<\\/div>
+  <div style="font-size:1rem;margin-bottom:4px;"><b>Customer:<\\/b> ${r.name}<\\/div>
+  <div style="font-size:1rem;margin-bottom:6px;"><b>Pick-up:<\\/b> ${r.pickup||'Walk-In'}<\\/div>
+  <hr class="divider-solid"><table><thead><tr><th>Item<\\/th><th class="right">Amount<\\/th><\\/tr><\\/thead><tbody>${rows}<\\/tbody><\\/table>
+  <hr class="divider-dash"><table class="total-section"><tr><td style="text-align:left;">Total Items: ${totalQty}<\\/td><td style="text-align:right;">&#8369;${r.total.toFixed(2)}<\\/td><\\/tr><\\/table>
+  <hr class="divider-dash"><div class="footer">Thank you for ordering!<br>9599 Tea &amp; Coffee Shop<div class="est">Est. ${new Date().getFullYear()} &nbsp;&middot;&nbsp; This serves as your official receipt.<\\/div><\\/div>
+  ${'<\u0073cript>'}window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},300);}${'<\\/\u0073cript>'}
+  <\\/body><\\/html>`;
   const w=window.open('','_blank','width=700,height='+Math.min(screen.height-80,1100));
   if(w){w.document.write(html);w.document.close();}
 }
@@ -6287,7 +6287,7 @@ function playGrantedSound() {
         const lng   = document.getElementById('gate-lng').value.trim();
 
         if (!name)  { showGateError('Please enter your full name.'); return; }
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
             showGateError('Please enter a valid email address.'); return;
         }
         if (!phone) { showGateError('Please enter your phone number.'); return; }
@@ -8191,7 +8191,7 @@ function playGrantedSound() {
 
         if (item.name === 'French Fries' || item.name.startsWith('French Fries (')) {
             // Restore fries flavor from name
-            const flavorMatch = item.name.match(/\((.+)\)/);
+            const flavorMatch = item.name.match(/\\((.+)\\)/);
             const flavor = flavorMatch ? flavorMatch[1] : 'Sour Cream';
             const radio = document.querySelector(`input[name="fries_flavor"][value="${flavor}"]`);
             if (radio) radio.checked = true;
@@ -8881,7 +8881,7 @@ function playGrantedSound() {
             el.value = '';
             el.classList.remove('filled', 'error', 'verified');
             el.oninput = function() {
-                const v = this.value.replace(/\D/g, '');
+                const v = this.value.replace(/\\D/g, '');
                 this.value = v ? v[0] : '';
                 this.classList.toggle('filled', !!this.value);
                 this.classList.remove('error');
@@ -8898,7 +8898,7 @@ function playGrantedSound() {
             };
             el.onpaste = function(e) {
                 e.preventDefault();
-                const t = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+                const t = (e.clipboardData || window.clipboardData).getData('text').replace(/\\D/g, '');
                 t.split('').slice(0, 6).forEach((c, i) => {
                     if (digits[i]) { digits[i].value = c; digits[i].classList.add('filled'); digits[i].classList.remove('error'); }
                 });
@@ -9012,7 +9012,7 @@ function playGrantedSound() {
         const email   = (document.getElementById('otp-email-input').value || '').trim();
         const statusEl = document.getElementById('otp-email-status');
         const btn     = document.getElementById('otp-email-send-btn');
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
             statusEl.style.color = '#dc2626';
             statusEl.textContent = '⚠️ Please enter a valid email address.';
             return;
@@ -9064,7 +9064,7 @@ function playGrantedSound() {
         const phone = document.getElementById('otp-phone-display').value.trim();
         const digits = Array.from(document.querySelectorAll('.otp-digit'));
         const code = digits.map(d => d.value).join('');
-        if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+        if (!code || code.length !== 6 || !/^\\d{6}$/.test(code)) {
             digits.forEach(d => d.classList.add('error'));
             setTimeout(() => digits.forEach(d => d.classList.remove('error')), 600);
             otpSetStatus('Please enter all 6 digits.', 'red');
@@ -9349,7 +9349,7 @@ function playGrantedSound() {
             9599 Tea &amp; Coffee Shop
             <div class="est">Est. ${new Date().getFullYear()} &nbsp;·&nbsp; This serves as your official receipt.</div>
         </div>
-        ${'<\u0073cript>'}window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }${'<\/\u0073cript>'}
+        ${'<\u0073cript>'}window.onload=()=>{ setTimeout(()=>{ window.print(); window.onafterprint=()=>window.close(); }, 300); }${'<\\/\u0073cript>'}
         </body></html>`;
 
         const w = window.open('', '_blank', 'width=700,height='+Math.min(screen.height-80,1100));
@@ -13579,7 +13579,7 @@ function trailerDownload(){
   if(!_trailerBlob) return;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(_trailerBlob);
-  a.download = `${(_trailerItem?.name||'product').replace(/\s+/g,'_')}_trailer.webm`;
+  a.download = `${(_trailerItem?.name||'product').replace(/\\s+/g,'_')}_trailer.webm`;
   a.click();
 }
 
@@ -15180,7 +15180,7 @@ async function loadAttempts() {
         const ua = a.ua || '';
         let device = '—';
         if (ua) {
-          let os = ua.match(/\(([^)]+)\)/)?.[1]?.split(';')[0]?.trim() || '';
+          let os = ua.match(/\\(([^)]+)\\)/)?.[1]?.split(';')[0]?.trim() || '';
           let browser = '';
           if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
           else if (ua.includes('Firefox')) browser = 'Firefox';
@@ -16773,8 +16773,9 @@ def _send_otp_email(to_email: str, subject: str, html_body: str) -> tuple:
     return True, ''   # dev only — check terminal for the code
 
 
-
-
+# ── Customer order submission ─────────────────────────────────────────────────
+@app.route('/reserve', methods=['POST'])
+@limiter.limit("10 per minute")
 def reserve_blend():
     data = request.json
     email  = data.get('email', '')
