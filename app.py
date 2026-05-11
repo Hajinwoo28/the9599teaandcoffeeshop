@@ -6777,37 +6777,67 @@ function playGrantedSound() {
         <div style="margin:14px 0 10px;">
             <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Payment Method</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                <!-- GCash -->
+
+                <!-- ══════════════════════════════════════════════════════════
+                     TEMPORARY — DEMO / PRESENTATION MODE
+                     Online payment buttons (GCash, Maya, PayPal, Partial)
+                     are hidden so the demo focuses on the order flow from
+                     customer → employee site.  Re-enable by uncommenting the
+                     buttons below and removing the "coming soon" notice.
+                ══════════════════════════════════════════════════════════ -->
+
+                <!-- GCash — temporarily disabled for demo
                 <button id="pay-btn-gcash" onclick="setPaymentMethod('gcash')"
                         style="padding:10px 8px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
                     💙 GCash
                 </button>
-                <!-- Maya -->
+                -->
+
+                <!-- Maya — temporarily disabled for demo
                 <button id="pay-btn-maya" onclick="setPaymentMethod('maya')"
                         style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
                     💚 Maya
                 </button>
-                <!-- Cash -->
+                -->
+
+                <!-- Cash — ACTIVE (only available method during demo) -->
                 <button id="pay-btn-cash" onclick="setPaymentMethod('cash')"
-                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
-                    💵 Cash
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #8B5E3C; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(139,94,60,0.3); grid-column:1/-1;">
+                    💵 Cash on Pickup
                 </button>
-                <!-- PayPal -->
+
+                <!-- PayPal — temporarily disabled for demo
                 <button id="pay-btn-paypal" onclick="setPaymentMethod('paypal')"
                         style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
                     🅿️ PayPal
                 </button>
-                <!-- Partial -->
+                -->
+
+                <!-- Partial — temporarily disabled for demo
                 <button id="pay-btn-partial" onclick="setPaymentMethod('partial')"
                         style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
                     🔀 Partial
                 </button>
+                -->
+
             </div>
+
+            <!-- Coming-soon notice — remove once online payments are live -->
+            <div style="margin-top:10px; padding:8px 12px; border-radius:10px; background:#fffbeb; border:1.5px solid #fcd34d; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1rem;">🚧</span>
+                <span style="font-size:0.72rem; color:#92400e; font-weight:700; line-height:1.4;">
+                    Online payments (GCash, Maya, PayPal) are coming soon!<br>
+                    <span style="font-weight:600; color:#b45309;">For now, please pay cash upon pickup.</span>
+                </span>
+            </div>
+            <!-- ── End coming-soon notice ── -->
+
         </div>
         <!-- ── End Payment Method Selector ── -->
 
         <!-- ── GCash Payment Block ── -->
-        <div id="gcash-payment-block" style="margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(37,99,235,0.15); border:2px solid #2563eb; transition:all 0.3s;">
+        <!-- TEMP: gcash-payment-block hidden by default while online payments are disabled for demo -->
+        <div id="gcash-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(37,99,235,0.15); border:2px solid #2563eb; transition:all 0.3s;">
             <div style="background:linear-gradient(135deg,#1a6fe8,#1552c4); padding:12px 16px; display:flex; align-items:center; gap:10px;">
                 <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">💙</div>
                 <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">GCash</span>
@@ -6903,7 +6933,8 @@ function playGrantedSound() {
         <!-- ── End PayPal Block ── -->
 
         <!-- ── Cash on Pickup Block ── -->
-        <div id="cash-payment-block" style="display:none; margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(92,51,23,0.12); border:2px solid #8B5E3C; transition:all 0.3s;">
+        <!-- TEMP: cash-payment-block shown by default while online payments are disabled for demo -->
+        <div id="cash-payment-block" style="margin:0 0 10px; border-radius:16px; overflow:hidden; box-shadow:0 4px 18px rgba(92,51,23,0.12); border:2px solid #8B5E3C; transition:all 0.3s;">
             <div style="background:linear-gradient(135deg,#8B5E3C,#5C3317); padding:12px 16px; display:flex; align-items:center; gap:10px;">
                 <div style="background:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0;">💵</div>
                 <span style="color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.5px;">Cash on Pickup</span>
@@ -7658,7 +7689,7 @@ function playGrantedSound() {
         if(!silent) saveCartToSession();
     }
 
-    let paymentMethod  = 'gcash'; // default
+    let paymentMethod  = 'cash'; // default — TEMP: changed to cash while online payments are disabled for demo
     let partialWallet  = 'gcash'; // e-wallet used for partial payment
     let partialAmount  = 0;       // amount sent online in partial mode
 
@@ -8467,8 +8498,8 @@ function playGrantedSound() {
         // Reset partial block
         _resetPartialBlock();
         setPartialWallet('gcash');   // default e-wallet inside partial
-        // Reset to GCash on every open
-        setPaymentMethod('gcash');
+        // TEMP: default to cash while online payments are disabled for demo (change back to 'gcash' when live)
+        setPaymentMethod('cash');
     }
 
     function closePickupModal() {
