@@ -7558,12 +7558,23 @@ function playGrantedSound() {
     });
 
     function onWaterTempChange(val) {
-        const iceSection = document.getElementById('ice-level-section');
-        if (val === 'Hot') {
-            iceSection.style.display = 'none';
-        } else {
-            iceSection.style.display = '';
-            document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
+        const iceSection   = document.getElementById('ice-level-section');
+        const addonSection = document.getElementById('addon-section');
+        const isHot = val === 'Hot';
+
+        // Ice level: hidden when Hot
+        iceSection.style.display = isHot ? 'none' : '';
+        if (!isHot) {
+            document.querySelectorAll('input[name="ice_level"]').forEach(r => r.checked = r.value === 'Normal Ice');
+        }
+
+        // Add-ons: only available on Cold for Cappuccino & Iced Americano
+        if (addonSection) {
+            addonSection.style.display = isHot ? 'none' : '';
+            // Uncheck all add-ons when switching to Hot so they don't sneak into the order
+            if (isHot) {
+                document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
+            }
         }
     }
 
@@ -8021,9 +8032,15 @@ function playGrantedSound() {
         const showWT = ['Iced Americano','Cappuccino'].includes(name);
         document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
         document.getElementById('water-temp-select').value = 'Cold';
-        // Default: Cold = ice shown; Hot = ice hidden
+        // Default temp = Cold: ice visible, add-ons visible
+        // (onWaterTempChange handles toggling when user switches to Hot)
         document.getElementById('ice-level-section').style.display = '';
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
+        // For water-temp items, ensure add-ons start visible (Cold default)
+        if (showWT) {
+            const _as = document.getElementById('addon-section');
+            if (_as && showAddons) _as.style.display = '';
+        }
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
         // Hide Track Order FAB while modal is open
@@ -15777,7 +15794,7 @@ a{display:inline-block;padding:10px 24px;background:#c4a882;color:#1a0d04;border
 
 @app.route('/api/auth/google', methods=['POST'])
 def google_auth():
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     token = data.get('token')
     if not token: return jsonify({"error": "No token provided"}), 400
     try:
@@ -15796,7 +15813,7 @@ def google_auth():
 @app.route('/api/auth/manual', methods=['POST'])
 def manual_auth():
     """Manual sign-in: name + email + optional phone + required location + hCaptcha token."""
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     name  = (data.get('name') or '').strip()
     email = (data.get('email') or '').strip()
     phone = (data.get('phone') or '').strip()
@@ -16371,7 +16388,7 @@ def employee_ping():
 @app.route('/api/generate_link', methods=['POST'])
 def generate_link():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     pin = data.get('pin')
     if not master_pin_matches(pin):
         err = "PIN must be exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN"
@@ -16402,7 +16419,7 @@ def handle_schedule():
             })
         return jsonify(result)
     elif request.method == 'POST':
-        data = request.json
+        data = request.get_json(force=True, silent=True) or {}
         for d in data:
             dow = d['day']
             if dow not in range(7):
@@ -16442,7 +16459,7 @@ def handle_closed_days():
         days = ClosedDay.query.all()
         return jsonify({"dates": [d.date_str for d in days]})
     elif request.method == 'POST':
-        date_str = request.json.get('date', '')
+        date_str = (request.get_json(force=True, silent=True) or {}).get('date', '')
         if not date_str: return jsonify({"error": "Missing date"}), 400
         existing = ClosedDay.query.filter_by(date_str=date_str).first()
         if not existing:
@@ -16452,7 +16469,7 @@ def handle_closed_days():
             push_customer_event('schedule_update', {'reason': 'day_closed', 'date': date_str})
         return jsonify({"status": "success"})
     elif request.method == 'DELETE':
-        date_str = request.json.get('date', '')
+        date_str = (request.get_json(force=True, silent=True) or {}).get('date', '')
         existing = ClosedDay.query.filter_by(date_str=date_str).first()
         if existing:
             db.session.delete(existing)
@@ -16481,7 +16498,7 @@ def handle_menu():
         return jsonify([{"id": i.id, "name": i.name, "price": i.price, "letter": i.letter, "category": i.category, "stock": 0 if i.is_out_of_stock else 50, "is_out_of_stock": i.is_out_of_stock} for i in unique_items])
     if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     if request.method == 'POST':
-        data = request.json
+        data = request.get_json(force=True, silent=True) or {}
         existing = MenuItem.query.filter(db.func.lower(MenuItem.name) == data['name'].strip().lower()).first()
         if existing:
             return jsonify({"status": "error", "error": f"'{data['name']}' already exists in the menu."}), 409
@@ -16496,7 +16513,7 @@ def handle_menu_item(item_id):
     if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     item = MenuItem.query.get_or_404(item_id)
     if request.method == 'PUT':
-        data = request.json
+        data = request.get_json(force=True, silent=True) or {}
         item.name = data['name']
         item.price = float(data['price'])
         item.letter = data['letter'][:2].upper()
@@ -16519,7 +16536,7 @@ def handle_inventory():
         ings = Ingredient.query.order_by(Ingredient.category, Ingredient.name).all()
         return jsonify([{"id": i.id, "name": i.name, "unit": i.unit, "stock": i.stock, "category": i.category} for i in ings])
     elif request.method == 'PUT':
-        for item_data in request.json:
+        for item_data in (request.get_json(force=True, silent=True) or []):
             ing = Ingredient.query.get(item_data['id'])
             if ing: ing.stock = float(item_data['stock'])
         db.session.commit()
@@ -16777,18 +16794,22 @@ def _send_otp_email(to_email: str, subject: str, html_body: str) -> tuple:
 @app.route('/reserve', methods=['POST'])
 @limiter.limit("10 per minute")
 def reserve_blend():
-    data = request.json
-    email  = data.get('email', '')
-    phone  = data.get('phone', '')
-    name   = data.get('name', '')
-    total  = float(data.get('total', 0))
+    # Use get_json(silent=True) — request.json raises AttributeError if the body
+    # is missing or Content-Type is wrong; this safely returns {} instead.
+    data  = request.get_json(force=True, silent=True) or {}
+    email = data.get('email', '')
+    phone = data.get('phone', '')
+    name  = data.get('name', '')
+    total = float(data.get('total', 0) or 0)
 
     # ── OTP gate: phone must have been verified this session ──────────────────
     # On Vercel (serverless), each request may hit a different instance so the
     # session cookie set during OTP verify might not be present here. We accept
-    # the verified phone from the session OR fall back to trusting the client
-    # (the phone was already verified on the OTP step; double-block here just
-    # causes false 403s for legitimate customers on Vercel).
+    # the verified phone from the session OR fall back to a DB lookup.
+    # The DB fallback uses a 30-minute window (not the 5-min OTP send window)
+    # so customers who spend time filling the form are not incorrectly blocked.
+    OTP_ORDER_WINDOW_SEC = 1800  # 30 min grace from verification to submission
+
     verified_phone = session.get('otp_verified_phone', '')
     if verified_phone:
         # Session available — validate phone matches
@@ -16798,16 +16819,19 @@ def reserve_blend():
                 "message": "Verified phone does not match. Please re-verify your current phone number."
             }), 403
     else:
-        # Session not available (Vercel serverless) — check if this phone has a
-        # recently verified OTP record in the database as a second source of truth
+        # Session not available (Vercel serverless) — check DB for a recently
+        # verified OTP record as a second source of truth
         if phone:
             norm_phone = _normalize_ph_number(phone)
             recent_otp = (PhoneOTP.query
                           .filter_by(phone=norm_phone, verified=True)
                           .order_by(PhoneOTP.created_at.desc())
                           .first())
-            if not recent_otp or recent_otp.is_expired():
-                # No recent verified OTP found — require re-verification
+            otp_too_old = (
+                recent_otp is None or
+                (get_ph_time() - recent_otp.created_at).total_seconds() > OTP_ORDER_WINDOW_SEC
+            )
+            if otp_too_old:
                 return jsonify({
                     "status": "otp_required",
                     "message": "Please verify your phone number before placing an order."
@@ -16987,7 +17011,7 @@ def get_permission_requests():
 def grant_permission(req_id):
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     pr = PermissionRequest.query.get_or_404(req_id)
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     reply = (data.get('reply_message') or '').strip()
     pr.granted = True
     pr.employee_reply = reply
@@ -17009,7 +17033,7 @@ def fraud_blocklist():
             'reason': b.reason or '', 'added_by': b.added_by or 'Admin',
             'created_at': b.created_at.strftime('%b %d, %Y %I:%M %p')
         } for b in items])
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     bt   = data.get('type', '').strip().lower()
     val  = (data.get('value') or '').strip()
     reason = (data.get('reason') or '').strip()
@@ -17053,7 +17077,7 @@ def fraud_reputations():
 def update_reputation(rep_id):
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
     rep = CustomerReputation.query.get_or_404(rep_id)
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     if 'is_watchlist'        in data: rep.is_watchlist        = bool(data['is_watchlist'])
     if 'requires_prepayment' in data: rep.requires_prepayment = bool(data['requires_prepayment'])
     if 'is_blocked'          in data: rep.is_blocked          = bool(data['is_blocked'])
@@ -17103,7 +17127,7 @@ def flag_order(order_id):
     if not session.get('is_admin') and not session.get('is_employee'):
         return jsonify({"error": "Unauthorized"}), 403
     order = Reservation.query.get_or_404(order_id)
-    data  = request.json or {}
+    data  = request.get_json(force=True, silent=True) or {}
     reason = (data.get('reason') or 'watchlist').strip()
 
     VALID_REASONS = ('watchlist', 'suspicious_pattern', 'large_order', 'prepayment_required')
@@ -17188,7 +17212,7 @@ def pickup_photo(order_id):
         return jsonify({"exists": True, "photo": photo.photo_data, "taken_by": photo.taken_by,
                         "created_at": photo.created_at.strftime('%b %d, %Y %I:%M %p')})
     # POST
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     photo_b64 = data.get('photo', '')
     taken_by  = data.get('taken_by', 'Staff')
     if not photo_b64:
@@ -17284,7 +17308,7 @@ def backup_data():
 @app.route('/api/restore', methods=['POST'])
 def restore_data():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     if not data or data.get('backup_version') != '1.0':
         return jsonify({"error": "Invalid backup file"}), 400
     try:
@@ -17329,7 +17353,7 @@ def customer_order_status():
 @app.route('/api/customer/update_order', methods=['POST'])
 def customer_update_order():
     """Append new items to an existing order (customer-facing, permission-gated)."""
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     code           = data.get('code', '').strip().upper()
     items          = data.get('items', [])
     payment_method = data.get('payment_method', '').strip() or 'gcash'
@@ -17405,7 +17429,7 @@ def create_item_query(order_id):
     if not session.get('is_admin') and not session.get('is_employee'):
         return jsonify({"error": "Unauthorized"}), 403
     order = Reservation.query.get_or_404(order_id)
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     unavailable = data.get('unavailable_items', [])
     reason = data.get('reason', 'Out of Stock')
     if not unavailable:
@@ -17446,7 +17470,7 @@ def decide_item_query(query_id):
     q = ItemAvailabilityQuery.query.get_or_404(query_id)
     if q.customer_decision is not None:
         return jsonify({"error": "Already decided"}), 400
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     decision = data.get('decision')
     if decision not in ('proceed', 'cancel'):
         return jsonify({"error": "Invalid decision"}), 400
@@ -17533,8 +17557,9 @@ def customer_order_detail():
 def update_order_status(order_id):
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     order = Reservation.query.get_or_404(order_id)
-    new_status = request.json.get('status', 'Completed')
-    cancel_reason = request.json.get('cancel_reason', '').strip()
+    _rj = request.get_json(force=True, silent=True) or {}
+    new_status = _rj.get('status', 'Completed')
+    cancel_reason = _rj.get('cancel_reason', '').strip()
     prev_status = order.status
     order.status = new_status
     if new_status == 'Cancelled':
@@ -17799,7 +17824,7 @@ def admin_manual_order():
         }), 403
     # ── End store hours guard ────────────────────────────────────────────
 
-    data = request.json
+    data = request.get_json(force=True, silent=True) or {}
     customer_name = data.get('customer_name', 'Walk-In')
     try:
         res = Reservation(patron_name=customer_name, patron_email="walkin@local", total_investment=data['total'], pickup_time="Walk-In", status="Waiting Confirmation", order_source="Manual/Walk-In", patron_address="Walk-In")
@@ -17948,7 +17973,8 @@ def order_history():
 @app.route('/api/expenses', methods=['POST'])
 def add_expense():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
-    db.session.add(Expense(description=request.json['description'], amount=float(request.json['amount'])))
+    _ej = request.get_json(force=True, silent=True) or {}
+    db.session.add(Expense(description=_ej.get('description',''), amount=float(_ej.get('amount', 0) or 0)))
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -18036,7 +18062,7 @@ def security_get_blacklist():
 def security_add_blacklist():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     ip = (data.get('ip') or '').strip()
     reason = (data.get('reason') or 'Manually blocked by admin').strip()[:300]
     if not ip:
@@ -18100,7 +18126,7 @@ def promos_list():
 def promos_create():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     code = (data.get('code') or '').strip().upper()
     if not code:
         return jsonify({"error": "Code is required"}), 400
@@ -18135,7 +18161,7 @@ def promos_update(pid):
     p = PromoCode.query.get(pid)
     if not p:
         return jsonify({"error": "Not found"}), 404
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     if 'is_active' in data:
         p.is_active = bool(data['is_active'])
     if 'description' in data:
@@ -18166,7 +18192,7 @@ def promos_delete(pid):
 @app.route('/api/promo/validate', methods=['POST'])
 def promo_validate():
     """Customer-facing promo code validation. No auth required."""
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     code = (data.get('code') or '').strip().upper()
     order_total = float(data.get('order_total', 0))
     if not code:
@@ -18209,7 +18235,7 @@ def announcements_list():
 def announcements_create():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     title = (data.get('title') or '').strip()[:120]
     msg = (data.get('message') or '').strip()
     if not title or not msg:
@@ -18266,7 +18292,7 @@ def waste_list():
 def waste_log():
     if not session.get('is_employee'):
         return jsonify({"error": "Unauthorized"}), 403
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     name = (data.get('ingredient') or '').strip()
     qty = float(data.get('quantity', 0))
     unit = (data.get('unit') or 'units').strip()
@@ -18352,7 +18378,7 @@ def checklist_get():
 def checklist_add():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     task = (data.get('task') or '').strip()[:150]
     ctype = data.get('type', 'opening')
     if not task:
