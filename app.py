@@ -4425,7 +4425,31 @@ function openCustomize(menuId){
   });
   const allowedEmpAddons=(isFruitSoda||isMatcha)?['Nata']:null;
   [{id:'eaddon-pearls',name:'Pearls'},{id:'eaddon-nata',name:'Nata'},{id:'eaddon-coffee-jelly',name:'Coffee Jelly'}].forEach(({id,name})=>{const el=document.getElementById(id);if(el)el.style.display=(allowedEmpAddons&&!allowedEmpAddons.includes(name))?'none':'';});
+  applyTemperatureRules();
   document.getElementById('customize-modal').classList.add('show');
+}
+
+function applyTemperatureRules(){
+  const tempControl=document.getElementById('opt-water-temp');
+  if(!tempControl || tempControl.style.display==='none') return;
+  const isHot=currentOpts.waterTemp==='Hot';
+  const lblIce=document.getElementById('lbl-ice');
+  const optIce=document.getElementById('opt-ice');
+  const lblAddons=document.getElementById('lbl-addons');
+  const optAddons=document.getElementById('opt-addons');
+  if(lblIce) lblIce.style.display=isHot?'none':'';
+  if(optIce) optIce.style.display=isHot?'none':'';
+  if(lblAddons) lblAddons.style.display=isHot?'none':'';
+  if(optAddons) optAddons.style.display=isHot?'none':'';
+  if(isHot){
+    currentOpts.ice='N/A';
+    currentOpts.addons=[];
+    document.querySelectorAll('#opt-addons .opt-btn').forEach(b=>b.classList.remove('selected'));
+    if(optIce) optIce.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('selected'));
+  } else {
+    if(currentOpts.ice==='N/A') currentOpts.ice='Normal Ice';
+    if(optIce) optIce.querySelectorAll('.opt-btn').forEach(b=>{b.classList.toggle('selected',b.textContent.includes(currentOpts.ice));});
+  }
 }
 
 function selOpt(key,val,btn){
@@ -4434,17 +4458,7 @@ function selOpt(key,val,btn){
   row.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
   if(key==='waterTemp'){
-    const isHot=val==='Hot';
-    const lblIce=document.getElementById('lbl-ice');
-    const optIce=document.getElementById('opt-ice');
-    if(lblIce) lblIce.style.display=isHot?'none':'';
-    if(optIce) optIce.style.display=isHot?'none':'';
-    if(isHot){currentOpts.ice='N/A';}
-    else{
-      // Restore default ice selection when switching back to Cold
-      currentOpts.ice='Normal Ice';
-      if(optIce) optIce.querySelectorAll('.opt-btn').forEach(b=>{b.classList.toggle('selected',b.textContent.includes('Normal'));});
-    }
+    applyTemperatureRules();
   }
 }
 
@@ -4597,6 +4611,7 @@ function editCartItem(id){
   });
   const allowedEmpAddons=(isFruitSoda||isMatcha)?['Nata']:null;
   [{id:'eaddon-pearls',name:'Pearls'},{id:'eaddon-nata',name:'Nata'},{id:'eaddon-coffee-jelly',name:'Coffee Jelly'}].forEach(({id,name})=>{const el=document.getElementById(id);if(el)el.style.display=(allowedEmpAddons&&!allowedEmpAddons.includes(name))?'none':'';});
+  applyTemperatureRules();
   // Change the Add button to Save
   const addBtn=document.querySelector('#customize-modal .btn-modal-add');
   if(addBtn){addBtn.innerHTML='<i class="fas fa-save"></i> Save';addBtn.onclick=saveEditedCartItem;}
@@ -7650,7 +7665,11 @@ function playGrantedSound() {
 
         // Add-ons: only available on Cold for Cappuccino & Iced Americano
         if (addonSection) {
-            addonSection.style.display = isHot ? 'none' : '';
+            if (addonSection.dataset.tempEnabled === 'false') {
+                addonSection.style.display = 'none';
+            } else {
+                addonSection.style.display = isHot ? 'none' : '';
+            }
             // Uncheck all add-ons when switching to Hot so they don't sneak into the order
             if (isHot) {
                 document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
@@ -8101,8 +8120,11 @@ function playGrantedSound() {
         document.getElementById('size-price-16').innerText = '₱' + sizePrice16;
         document.getElementById('size-price-22').innerText = '₱' + sizePrice22;
         document.getElementById('size-row-section').style.display = '';
-        document.getElementById('sugar-section').style.display = showSugar ? '' : 'none';
-        document.getElementById('addon-section').style.display = showAddons ? '' : 'none';
+        const addonSection = document.getElementById('addon-section');
+        if (addonSection) {
+            addonSection.style.display = showAddons ? '' : 'none';
+            addonSection.dataset.tempEnabled = showAddons ? 'true' : 'false';
+        }
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
         const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
         Object.entries(addonVisMap).forEach(([val,id])=>{const el=document.getElementById(id);if(el)el.style.display=(allowedAddons&&!allowedAddons.includes(val))?'none':'';});
@@ -8115,6 +8137,7 @@ function playGrantedSound() {
         // Default temp = Cold: ice visible, add-ons visible
         // (onWaterTempChange handles toggling when user switches to Hot)
         document.getElementById('ice-level-section').style.display = '';
+        if (showWT) onWaterTempChange(document.getElementById('water-temp-select').value);
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         // For water-temp items, ensure add-ons start visible (Cold default)
         if (showWT) {
