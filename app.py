@@ -7667,7 +7667,15 @@ function playGrantedSound() {
         if (addonSection) {
             const tempEnabled = addonSection.dataset.tempEnabled !== 'false';
             const shouldShow = !isHot && tempEnabled;
-            addonSection.style.display = shouldShow ? '' : 'none';
+            if (shouldShow) {
+                addonSection.style.display = '';
+                addonSection.style.visibility = 'visible';
+                addonSection.removeAttribute('hidden');
+            } else {
+                addonSection.style.display = 'none';
+                addonSection.style.visibility = 'hidden';
+                addonSection.setAttribute('hidden', '');
+            }
             addonSection.querySelectorAll('.addon-checkbox').forEach(cb => {
                 cb.disabled = !shouldShow;
                 if (!shouldShow) cb.checked = false;
