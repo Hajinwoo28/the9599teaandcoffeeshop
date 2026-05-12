@@ -198,7 +198,83 @@ def add_header(response):
         response.headers['Content-Security-Policy'] = csp
         response.headers['X-Content-Type-Options'] = 'nosniff'
 
+    # HSTS — instruct browsers to always use HTTPS for 1 year (production only)
+    if request.is_secure:
+        response.headers.setdefault(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains'
+        )
+
     return response
+
+# ──────────────────────────────────────────────────────────────────────────────
+# In-memory menu cache — avoids a full DB scan on every storefront page load.
+# Invalidated whenever a menu item is added, edited, or deleted.
+# TTL: 5 minutes as a safety net for serverless cold-starts.
+# ──────────────────────────────────────────────────────────────────────────────
+import time as _time
+
+_menu_cache: dict = {"data": None, "ts": 0.0}
+_MENU_CACHE_TTL = 300  # seconds
+
+
+def _invalidate_menu_cache() -> None:
+    """Call after any menu mutation to force a fresh DB read on next request."""
+    _menu_cache["data"] = None
+    _menu_cache["ts"] = 0.0
+
+
+def _get_cached_menu() -> list:
+    """Return the cached menu list, refreshing from DB when stale."""
+    now = _time.monotonic()
+    if _menu_cache["data"] is None or (now - _menu_cache["ts"]) > _MENU_CACHE_TTL:
+        items = MenuItem.query.order_by(
+            MenuItem.category, MenuItem.name, MenuItem.id.desc()
+        ).all()
+        seen, unique = set(), []
+        for i in items:
+            key = i.name.strip().lower()
+            if key not in seen:
+                seen.add(key)
+                unique.append(i)
+        _menu_cache["data"] = [
+            {
+                "id": i.id,
+                "name": i.name,
+                "price": i.price,
+                "letter": i.letter,
+                "category": i.category,
+                "stock": 0 if i.is_out_of_stock else 50,
+                "is_out_of_stock": i.is_out_of_stock,
+            }
+            for i in unique
+        ]
+        _menu_cache["ts"] = now
+    return _menu_cache["data"]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Expired-OTP cleanup — runs at most once per hour to keep the table lean.
+# ──────────────────────────────────────────────────────────────────────────────
+_last_otp_cleanup: float = 0.0
+_OTP_CLEANUP_INTERVAL = 3600  # 1 hour between cleanup passes
+
+
+def _maybe_cleanup_expired_otps() -> None:
+    """Delete OTP rows older than 24 h (keeps recent history for debugging)."""
+    global _last_otp_cleanup
+    now = _time.monotonic()
+    if (now - _last_otp_cleanup) < _OTP_CLEANUP_INTERVAL:
+        return
+    _last_otp_cleanup = now
+    try:
+        import datetime as _dt
+        cutoff = get_ph_time() - _dt.timedelta(hours=24)
+        PhoneOTP.query.filter(PhoneOTP.created_at < cutoff).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 # ==========================================
 # 2. CLOUD & LOCAL CONFIGURATION
@@ -10283,11 +10359,43 @@ function flashOrderRow(id){
 /* ── Keyboard shortcuts ── */
 document.addEventListener('keydown',function(e){
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
-  if(e.key==='Escape'){closeEmpModal();closeEmpOrdDetail();}
+  if(e.key==='Escape'){closeEmpModal();closeEmpOrdDetail();_closeShortcutHelp();}
   if(e.key==='1')goScreen&&goScreen('online');
   if(e.key==='2')goScreen&&goScreen('pos');
   if(e.key==='3')goScreen&&goScreen('stock');
+  if(e.key==='?')_toggleShortcutHelp();
 });
+
+/* ── Keyboard shortcut help overlay ── */
+(function(){
+  const HTML=`
+    <div id="emp-kb-overlay" onclick="_closeShortcutHelp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:center;justify-content:center;">
+      <div onclick="event.stopPropagation()" style="background:#1e1b18;border-radius:18px;padding:28px 32px;min-width:280px;box-shadow:0 8px 40px rgba(0,0,0,.6);color:#f5f0eb;">
+        <div style="font-size:1rem;font-weight:800;margin-bottom:16px;color:#d4a96a;letter-spacing:.5px;">⌨️ Keyboard Shortcuts</div>
+        <div style="display:grid;gap:8px;font-size:0.82rem;">
+          <div style="display:flex;justify-content:space-between;gap:24px;"><span>Live Orders</span><kbd style="background:#333;border-radius:6px;padding:2px 8px;font-family:monospace;color:#d4a96a;">1</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:24px;"><span>POS / Quick Order</span><kbd style="background:#333;border-radius:6px;padding:2px 8px;font-family:monospace;color:#d4a96a;">2</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:24px;"><span>Stock Alerts</span><kbd style="background:#333;border-radius:6px;padding:2px 8px;font-family:monospace;color:#d4a96a;">3</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:24px;"><span>Close modal / overlay</span><kbd style="background:#333;border-radius:6px;padding:2px 8px;font-family:monospace;color:#d4a96a;">Esc</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:24px;"><span>Show this help</span><kbd style="background:#333;border-radius:6px;padding:2px 8px;font-family:monospace;color:#d4a96a;">?</kbd></div>
+        </div>
+        <div style="margin-top:18px;font-size:0.7rem;color:#888;text-align:center;">Click anywhere outside to dismiss &bull; Press Esc</div>
+      </div>
+    </div>`;
+  document.addEventListener('DOMContentLoaded',function(){
+    document.body.insertAdjacentHTML('beforeend',HTML);
+  });
+})();
+function _toggleShortcutHelp(){
+  const el=document.getElementById('emp-kb-overlay');
+  if(!el)return;
+  const visible=el.style.display==='flex';
+  el.style.display=visible?'none':'flex';
+}
+function _closeShortcutHelp(){
+  const el=document.getElementById('emp-kb-overlay');
+  if(el)el.style.display='none';
+}
 
 /* ── Enhanced screen transition ── */
 function updateNavActive(name){
@@ -12621,7 +12729,7 @@ function goScreen(name, btn){
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'inventory')  fetchInventory();
-    if(name === 'finance'){   fetchFinance(); fetchCustomerLogs(); finTab('today', document.getElementById('ftab-today')); }
+    if(name === 'finance'){   finTab('today', document.getElementById('ftab-today')); }
     if(name === 'settings'){  fetchSchedule(); fetchMenu(); fetchClosedDays(); openAllSettingsDrops(); }
     if(name === 'audit'){     auditPage = 1; fetchAuditLogs(); }
     if(name === 'dashboard')  loadDashboard();
@@ -13286,20 +13394,30 @@ async function saveInventory(){
 function finTab(name,btn){
   var financeRoot=document.getElementById('s-finance');
   if(!financeRoot)return;
-  /* Hide every pane with both class removal AND explicit inline style so no
-     CSS specificity conflict can leave a pane visible and cause the dark
-     nav-drawer background to bleed through behind the Finance content area. */
+
+  // Hide all panes (both class + inline style to beat any CSS specificity)
   financeRoot.querySelectorAll('.fin-tabpane').forEach(function(p){
     p.classList.remove('active');
     p.style.display='none';
   });
   financeRoot.querySelectorAll('.fin-tab-pill').forEach(function(b){b.classList.remove('active');});
+
+  // Show the selected pane
   var el=document.getElementById('fin-'+name);
   if(el){el.classList.add('active');el.style.display='block';}
   if(btn)btn.classList.add('active');
+
+  // Always scroll back to top of the finance screen on every tab switch
+  financeRoot.scrollTop=0;
+
+  // Always refresh stats summary (sys-total / net-profit / exp-total) so they
+  // are never stale regardless of which tab the user clicks
+  fetchFinance();
+
+  // Load tab-specific data
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
-  if(name==='expenses'){fetchFinance();}
   if(name==='today'){fetchCustomerLogs();}
+  // 'expenses' data is already covered by fetchFinance() above
 }
 
 /* ══ FINANCE ══ */
@@ -13319,6 +13437,7 @@ async function addExpense(){
 }
 async function fetchCustomerLogs(){
   const tbody=document.getElementById('cust-tbody');
+  if(!tbody)return; // today tab not visible yet
   try{const r=await apiFetch('/api/customer_logs');if(!r||!r.ok){tbody.innerHTML='<tr><td colspan="8" class="error-state">DB Error</td></tr>';return;}
   const data=await r.json();
   tbody.innerHTML=data.length?data.map(l=>{
@@ -13437,12 +13556,16 @@ function ohDebounce(){clearTimeout(ohDebTimer);ohDebTimer=setTimeout(()=>loadOrd
 function ohChangePage(dir){ohPage+=dir;if(ohPage<1)ohPage=1;loadOrderHistory(ohPage);}
 async function loadOrderHistory(page){
   ohPage=page;
-  const q=document.getElementById('oh-search').value.trim();
-  const status=document.getElementById('oh-status').value;
+  // Guard: elements may not exist if the Orders tab hasn't been shown yet
+  const searchEl=document.getElementById('oh-search');
+  const statusEl=document.getElementById('oh-status');
   const tbody=document.getElementById('oh-tbody');
   const info=document.getElementById('oh-page-info');
   const prevBtn=document.getElementById('oh-prev');
   const nextBtn=document.getElementById('oh-next');
+  if(!tbody)return; // tab pane not in DOM yet
+  const q=(searchEl?searchEl.value:'').trim();
+  const status=statusEl?statusEl.value:'';
   tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
   try{
     const r=await apiFetch(`/api/orders/history?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page}`);
@@ -14384,8 +14507,43 @@ document.addEventListener('keydown',function(e){
   const map={'1':'dashboard','2':'inventory','3':'finance','4':'liveorders','5':'settings','6':'audit'};
   const screenIds={'dashboard':'nb-dashboard','inventory':'nb-inventory','finance':'nb-finance','liveorders':'nb-liveorders','settings':'nb-settings','audit':'nb-audit'};
   if(map[e.key]){goScreen(map[e.key],document.getElementById(screenIds[map[e.key]]));}
-  if(e.key==='Escape'){closeAdmModal();closeOrdDetail();closeAddIngModal();}
+  if(e.key==='Escape'){closeAdmModal();closeOrdDetail();closeAddIngModal();_admCloseKbHelp();}
+  if(e.key==='?')_admToggleKbHelp();
 });
+
+/* ── Admin keyboard shortcut help overlay ── */
+(function(){
+  const HTML=`
+    <div id="adm-kb-overlay" onclick="_admCloseKbHelp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+      <div onclick="event.stopPropagation()" style="background:#1c1917;border-radius:18px;padding:28px 36px;min-width:300px;box-shadow:0 8px 48px rgba(0,0,0,.7);color:#f5f0eb;">
+        <div style="font-size:1rem;font-weight:800;margin-bottom:18px;color:#d4a96a;">⌨️ Keyboard Shortcuts</div>
+        <div style="display:grid;gap:10px;font-size:0.82rem;">
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Dashboard</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">1</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Inventory</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">2</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Finance</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">3</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Live Orders</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">4</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Settings</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">5</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Audit Log</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">6</kbd></div>
+          <div style="height:1px;background:#333;margin:4px 0;"></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Close modal / overlay</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">Esc</kbd></div>
+          <div style="display:flex;justify-content:space-between;gap:32px;"><span>Show this help</span><kbd style="background:#2e2b27;border-radius:6px;padding:2px 10px;font-family:monospace;color:#d4a96a;">?</kbd></div>
+        </div>
+        <div style="margin-top:20px;font-size:0.7rem;color:#666;text-align:center;">Click anywhere outside to dismiss</div>
+      </div>
+    </div>`;
+  document.addEventListener('DOMContentLoaded',function(){
+    document.body.insertAdjacentHTML('beforeend',HTML);
+  });
+})();
+function _admToggleKbHelp(){
+  const el=document.getElementById('adm-kb-overlay');
+  if(!el)return;
+  el.style.display=el.style.display==='flex'?'none':'flex';
+}
+function _admCloseKbHelp(){
+  const el=document.getElementById('adm-kb-overlay');
+  if(el)el.style.display='none';
+}
 
 /* ══ INIT: load dashboard data immediately since it is the default screen ══ */
 (function initAdminPanel(){
@@ -16486,16 +16644,8 @@ def store_status_api():
 @app.route('/api/menu', methods=['GET', 'POST'])
 def handle_menu():
     if request.method == 'GET':
-        items = MenuItem.query.order_by(MenuItem.category, MenuItem.name, MenuItem.id.desc()).all()
-        # Deduplicate by name — keep the first (highest id) occurrence
-        seen_names = set()
-        unique_items = []
-        for i in items:
-            key = i.name.strip().lower()
-            if key not in seen_names:
-                seen_names.add(key)
-                unique_items.append(i)
-        return jsonify([{"id": i.id, "name": i.name, "price": i.price, "letter": i.letter, "category": i.category, "stock": 0 if i.is_out_of_stock else 50, "is_out_of_stock": i.is_out_of_stock} for i in unique_items])
+        # Use the in-memory cache so repeated menu loads don't hit the DB every time
+        return jsonify(_get_cached_menu())
     if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     if request.method == 'POST':
         data = request.get_json(force=True, silent=True) or {}
@@ -16505,6 +16655,7 @@ def handle_menu():
         new_item = MenuItem(name=data['name'].strip(), price=float(data['price']), letter=data['letter'][:2].upper(), category=data['category'], is_out_of_stock=bool(data.get('is_out_of_stock', False)))
         db.session.add(new_item)
         db.session.commit()
+        _invalidate_menu_cache()
         push_customer_event('menu_update', {'reason': 'item_added', 'name': data['name'].strip()})
         return jsonify({"status": "success"})
 
@@ -16520,12 +16671,14 @@ def handle_menu_item(item_id):
         item.category = data['category']
         item.is_out_of_stock = bool(data.get('is_out_of_stock', False))
         db.session.commit()
+        _invalidate_menu_cache()
         push_customer_event('menu_update', {'reason': 'item_edited', 'name': item.name, 'out_of_stock': item.is_out_of_stock})
         return jsonify({"status": "success"})
     elif request.method == 'DELETE':
         name = item.name
         db.session.delete(item)
         db.session.commit()
+        _invalidate_menu_cache()
         push_customer_event('menu_update', {'reason': 'item_deleted', 'name': name})
         return jsonify({"status": "success"})
 
@@ -16841,6 +16994,49 @@ def reserve_blend():
                 "status": "otp_required",
                 "message": "Please verify your phone number before placing an order."
             }), 403
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # ── Run OTP table cleanup (background, at most once/hour) ────────────────
+    _maybe_cleanup_expired_otps()
+
+    # ── Comprehensive input validation ───────────────────────────────────────
+    import re as _re
+    _errors = []
+
+    if not name or not name.strip():
+        _errors.append("Full name is required.")
+    elif len(name.strip()) < 2:
+        _errors.append("Please enter your full name (at least 2 characters).")
+
+    if not email or not email.strip():
+        _errors.append("Email address is required.")
+    elif not _re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email.strip()):
+        _errors.append("Please enter a valid email address.")
+
+    if not phone or not phone.strip():
+        _errors.append("Phone number is required.")
+    elif len(_re.sub(r'\D', '', phone)) < 10:
+        _errors.append("Please enter a valid Philippine phone number.")
+
+    if total <= 0:
+        _errors.append("Order total must be greater than ₱0.")
+    elif total > 50000:
+        _errors.append("Order total exceeds the allowed limit. Please contact us for large orders.")
+
+    items = data.get('items', [])
+    if not items or not isinstance(items, list) or len(items) == 0:
+        _errors.append("Your cart is empty. Please add items before placing an order.")
+
+    pickup_time = (data.get('pickup_time') or '').strip()
+    if not pickup_time:
+        _errors.append("Please select a pickup time.")
+
+    if _errors:
+        return jsonify({
+            "status": "validation_error",
+            "message": _errors[0],          # first error for the toast
+            "errors":  _errors              # all errors for programmatic use
+        }), 400
     # ─────────────────────────────────────────────────────────────────────────
 
     # ── Behavioral limit gate ─────────────────────────────────────────────
