@@ -8328,11 +8328,12 @@ function playGrantedSound() {
             const _iceVal = item.ice || 'Normal Ice'; document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value===_iceVal);
             if (item.waterTemp) {
                 document.getElementById('water-temp-select').value = item.waterTemp;
-                document.getElementById('water-temp-select').dispatchEvent(new Event('change'));
+                onWaterTempChange(item.waterTemp);
             }
             // Restore add-ons
+            const currentTemp = document.getElementById('water-temp-select').value;
             document.querySelectorAll('.addon-checkbox').forEach(cb => {
-                cb.checked = item.addons && item.addons.includes(cb.value);
+                cb.checked = (currentTemp !== 'Hot') && item.addons && item.addons.includes(cb.value);
             });
             // Change button label to Update
             const confirmBtn = document.getElementById('size-modal-confirm-btn');
