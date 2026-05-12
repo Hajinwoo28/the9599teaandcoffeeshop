@@ -501,7 +501,7 @@ def push_employee_event(event_type, data=None):
             _emp_sse_subscribers.remove(q)
 
 def push_event(event_type, data=None):
-    """Broadcast an SSE event to every connected admin client and mirror to customers."""
+    """Broadcast an SSE event to every connected admin client and mirror to customers and employees."""
     msg = f"event: {event_type}\\ndata: {json.dumps(data or {})}\\n\\n"
     with _sse_lock:
         dead = []
@@ -513,6 +513,7 @@ def push_event(event_type, data=None):
         for q in dead:
             _sse_subscribers.remove(q)
     push_customer_event(event_type, data)
+    push_employee_event(event_type, data)
 
 
 class Reservation(db.Model):
@@ -4954,6 +4955,9 @@ fetchStockAlerts(); // pre-load badge count on startup
     _empSrc.addEventListener('stock_update',()=>{
       fetchStockAlerts();
       if(typeof showToast==='function') showToast('📦 Stock levels updated by admin','info');
+    });
+    ['order_new','order_status','order_updated'].forEach(ev=>{
+      _empSrc.addEventListener(ev,()=>{ if(typeof fetchOrders==='function') fetchOrders(); });
     });
     // System error from customer → show alert toast on employee station
     _empSrc.addEventListener('system_error',(e)=>{
