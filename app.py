@@ -8140,11 +8140,6 @@ function playGrantedSound() {
         document.getElementById('ice-level-section').style.display = '';
         if (showWT) onWaterTempChange(document.getElementById('water-temp-select').value);
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
-        // For water-temp items, ensure add-ons start visible (Cold default)
-        if (showWT) {
-            const _as = document.getElementById('addon-section');
-            if (_as && showAddons) _as.style.display = '';
-        }
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
         // Hide Track Order FAB while modal is open
