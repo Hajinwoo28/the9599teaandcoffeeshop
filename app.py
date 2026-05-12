@@ -7665,11 +7665,13 @@ function playGrantedSound() {
 
         // Add-ons: only available on Cold for Cappuccino & Iced Americano
         if (addonSection) {
-            if (addonSection.dataset.tempEnabled === 'false') {
-                addonSection.style.display = 'none';
-            } else {
-                addonSection.style.display = isHot ? 'none' : '';
-            }
+            const tempEnabled = addonSection.dataset.tempEnabled !== 'false';
+            const shouldShow = !isHot && tempEnabled;
+            addonSection.style.display = shouldShow ? '' : 'none';
+            addonSection.querySelectorAll('.addon-label').forEach(label => {
+                label.style.display = shouldShow ? '' : 'none';
+            });
+
             // Uncheck all add-ons when switching to Hot so they don't sneak into the order
             if (isHot) {
                 document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
