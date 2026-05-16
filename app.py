@@ -168,7 +168,7 @@ def add_header(response):
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)')
 
     # Apply a Content Security Policy on the employee dashboard to suppress
     # chrome-extension://invalid/ injection errors and block unexpected origins.
@@ -6302,11 +6302,11 @@ function playGrantedSound() {
     async function _gateIpFallback() {
         _gateSetStatus('📡 GPS unavailable — trying approximate location via IP…', '#FF8F00');
         try {
-            const res  = await fetch('https://ip-api.com/json?fields=status,lat,lon,city,regionName,country', { cache: 'no-store' });
+            const res  = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
             const data = await res.json();
-            if (data.status === 'success' && data.lat && data.lon) {
-                _gateSetCoords(data.lat, data.lon);
-                const addr = await _gateReverseGeocode(data.lat, data.lon);
+            if (data.latitude && data.longitude) {
+                _gateSetCoords(data.latitude, data.longitude);
+                const addr = await _gateReverseGeocode(data.latitude, data.longitude);
                 _gateShowAddr(addr, false);
             } else { throw new Error('no data'); }
         } catch(e) {
