@@ -168,7 +168,7 @@ def add_header(response):
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(*)')
 
     # Apply a Content Security Policy on the employee dashboard to suppress
     # chrome-extension://invalid/ injection errors and block unexpected origins.
