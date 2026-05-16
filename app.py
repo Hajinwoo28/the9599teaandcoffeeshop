@@ -5879,9 +5879,9 @@ STOREFRONT_HTML = """
         .addon-label input { width: 18px; height: 18px; accent-color: var(--gold); }
         .addon-label input[type="checkbox"]:checked + span { color: var(--gold); }
         .addon-label input[type="radio"]:checked + span { color: var(--gold); }
-        /* Smooth collapse/expand for the add-ons block */
-        #addon-section { overflow: hidden; max-height: 300px; opacity: 1; transition: max-height 0.3s ease, opacity 0.25s ease; }
-        #addon-section.addon-collapsed { max-height: 0; opacity: 0; pointer-events: none; }
+        /* Fade-in animation when add-ons section is revealed (Cold selected) */
+        @keyframes addonFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        #addon-section.addon-reveal { animation: addonFadeIn 0.22s ease forwards; }
 
         .modal-actions { display: flex; gap: 12px; margin-top: 30px; }
         .qty-selector { display: flex; align-items: center; justify-content: center; gap: 0; margin: 18px 0 4px; background: var(--gold-light); border-radius: 50px; border: 1.5px solid var(--border-color); width: fit-content; margin-left: auto; margin-right: auto; }
@@ -7666,13 +7666,28 @@ function playGrantedSound() {
             document.querySelectorAll('input[name="ice_level"]').forEach(r => r.checked = r.value === 'Normal Ice');
         }
 
-        // Add-ons: only available for Cold drinks.
-        // Uses .addon-collapsed CSS class for a smooth max-height/opacity transition.
+        // Add-ons: hidden for Hot, visible for Cold.
+        // Direct style.display is most reliable; data-visible lets confirmAddToCart
+        // know whether to collect add-on values without inspecting computed styles.
         if (addonSection) {
             const tempEnabled = addonSection.dataset.tempEnabled !== 'false';
             const shouldShow  = !isHot && tempEnabled;
-            addonSection.classList.toggle('addon-collapsed', !shouldShow);
+
+            // Clear any stale inline visibility / hidden attributes from old code paths
+            addonSection.style.removeProperty('visibility');
+            addonSection.removeAttribute('hidden');
+
+            if (shouldShow) {
+                addonSection.style.display = '';
+                addonSection.classList.add('addon-reveal');
+                // Remove the animation class after it plays so it re-triggers next time
+                setTimeout(() => addonSection.classList.remove('addon-reveal'), 250);
+            } else {
+                addonSection.style.display = 'none';
+                addonSection.classList.remove('addon-reveal');
+            }
             addonSection.dataset.visible = shouldShow ? 'true' : 'false';
+
             addonSection.querySelectorAll('.addon-checkbox').forEach(cb => {
                 cb.disabled = !shouldShow;
                 if (!shouldShow) cb.checked = false;
@@ -8126,13 +8141,20 @@ function playGrantedSound() {
         const addonSection = document.getElementById('addon-section');
         if (addonSection) {
             addonSection.dataset.tempEnabled = showAddons ? 'true' : 'false';
-            // For temp-aware drinks (Cappuccino, Iced Americano), always start collapsed —
-            // onWaterTempChange('Cold') called below will expand them if Cold is selected.
-            // For all other drinks, show/hide is driven solely by the showAddons flag.
+            // Remove stale class/attributes that may linger from previous renders
+            addonSection.classList.remove('addon-collapsed');
+            addonSection.style.removeProperty('visibility');
+            addonSection.removeAttribute('hidden');
             const tempAware = ['Iced Americano', 'Cappuccino'].includes(name);
-            const startCollapsed = !showAddons || tempAware;
-            addonSection.classList.toggle('addon-collapsed', startCollapsed);
-            addonSection.dataset.visible = startCollapsed ? 'false' : 'true';
+            if (tempAware) {
+                // Start hidden for temp-aware drinks; onWaterTempChange('Cold') below
+                // will immediately show them once the default temperature is applied.
+                addonSection.style.display = 'none';
+                addonSection.dataset.visible = 'false';
+            } else {
+                addonSection.style.display = showAddons ? '' : 'none';
+                addonSection.dataset.visible = showAddons ? 'true' : 'false';
+            }
         }
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
         const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
