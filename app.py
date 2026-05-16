@@ -7666,12 +7666,12 @@ function playGrantedSound() {
             document.querySelectorAll('input[name="ice_level"]').forEach(r => r.checked = r.value === 'Normal Ice');
         }
 
-        // Add-ons: hidden for Hot, visible for Cold.
-        // Direct style.display is most reliable; data-visible lets confirmAddToCart
-        // know whether to collect add-on values without inspecting computed styles.
+        // Add-ons: always hidden when Hot, shown when Cold (if the item supports add-ons).
+        // When Hot is selected, ice and add-ons don't apply to hot drinks.
         if (addonSection) {
             const tempEnabled = addonSection.dataset.tempEnabled !== 'false';
-            const shouldShow  = !isHot && tempEnabled;
+            // Hot drinks never show add-ons; Cold drinks show add-ons only if the item supports them.
+            const shouldShow = !isHot && tempEnabled;
 
             // Clear any stale inline visibility / hidden attributes from old code paths
             addonSection.style.removeProperty('visibility');
@@ -7688,6 +7688,7 @@ function playGrantedSound() {
             }
             addonSection.dataset.visible = shouldShow ? 'true' : 'false';
 
+            // Uncheck and disable all add-on checkboxes when hidden
             addonSection.querySelectorAll('.addon-checkbox').forEach(cb => {
                 cb.disabled = !shouldShow;
                 if (!shouldShow) cb.checked = false;
@@ -8159,14 +8160,18 @@ function playGrantedSound() {
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
         const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
         Object.entries(addonVisMap).forEach(([val,id])=>{const el=document.getElementById(id);if(el)el.style.display=(allowedAddons&&!allowedAddons.includes(val))?'none':'';});
+        // Show or hide Sugar Level based on item type
+        const sugarEl = document.getElementById('sugar-section');
+        if (sugarEl) sugarEl.style.display = showSugar ? '' : 'none';
         document.getElementById('sugar-level-select').value = '100% Sugar';
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         document.getElementById('size-qty').innerText = '1';
         const showWT = ['Iced Americano','Cappuccino'].includes(name);
         document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
         document.getElementById('water-temp-select').value = 'Cold';
-        // onWaterTempChange sets add-on visibility; always call it for temp-aware drinks
-        // so the add-on section reflects the Cold default immediately on open.
+        // For temp-aware drinks (Cappuccino, Iced Americano):
+        // Always reset to Cold default and let onWaterTempChange control both
+        // ice-level AND add-on visibility so Hot/Cold toggling always works correctly.
         document.getElementById('ice-level-section').style.display = '';
         if (showWT) onWaterTempChange('Cold');
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
