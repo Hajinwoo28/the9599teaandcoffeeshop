@@ -5879,6 +5879,9 @@ STOREFRONT_HTML = """
         .addon-label input { width: 18px; height: 18px; accent-color: var(--gold); }
         .addon-label input[type="checkbox"]:checked + span { color: var(--gold); }
         .addon-label input[type="radio"]:checked + span { color: var(--gold); }
+        /* Smooth collapse/expand for the add-ons block */
+        #addon-section { overflow: hidden; max-height: 300px; opacity: 1; transition: max-height 0.3s ease, opacity 0.25s ease; }
+        #addon-section.addon-collapsed { max-height: 0; opacity: 0; pointer-events: none; }
 
         .modal-actions { display: flex; gap: 12px; margin-top: 30px; }
         .qty-selector { display: flex; align-items: center; justify-content: center; gap: 0; margin: 18px 0 4px; background: var(--gold-light); border-radius: 50px; border: 1.5px solid var(--border-color); width: fit-content; margin-left: auto; margin-right: auto; }
@@ -7657,31 +7660,22 @@ function playGrantedSound() {
         const addonSection = document.getElementById('addon-section');
         const isHot = val === 'Hot';
 
-        // Ice level: hidden when Hot
+        // Ice level: hidden when Hot, reset to Normal Ice when switching to Cold
         iceSection.style.display = isHot ? 'none' : '';
         if (!isHot) {
             document.querySelectorAll('input[name="ice_level"]').forEach(r => r.checked = r.value === 'Normal Ice');
         }
 
-        // Add-ons: only available on Cold for Cappuccino & Iced Americano
+        // Add-ons: only available for Cold drinks.
+        // Uses .addon-collapsed CSS class for a smooth max-height/opacity transition.
         if (addonSection) {
             const tempEnabled = addonSection.dataset.tempEnabled !== 'false';
-            const shouldShow = !isHot && tempEnabled;
-            if (shouldShow) {
-                addonSection.style.display = '';
-                addonSection.style.visibility = 'visible';
-                addonSection.removeAttribute('hidden');
-            } else {
-                addonSection.style.display = 'none';
-                addonSection.style.visibility = 'hidden';
-                addonSection.setAttribute('hidden', '');
-            }
+            const shouldShow  = !isHot && tempEnabled;
+            addonSection.classList.toggle('addon-collapsed', !shouldShow);
+            addonSection.dataset.visible = shouldShow ? 'true' : 'false';
             addonSection.querySelectorAll('.addon-checkbox').forEach(cb => {
                 cb.disabled = !shouldShow;
                 if (!shouldShow) cb.checked = false;
-            });
-            addonSection.querySelectorAll('.addon-label').forEach(label => {
-                label.style.display = shouldShow ? '' : 'none';
             });
         }
     }
@@ -8131,8 +8125,14 @@ function playGrantedSound() {
         document.getElementById('size-row-section').style.display = '';
         const addonSection = document.getElementById('addon-section');
         if (addonSection) {
-            addonSection.style.display = showAddons ? '' : 'none';
             addonSection.dataset.tempEnabled = showAddons ? 'true' : 'false';
+            // For temp-aware drinks (Cappuccino, Iced Americano), always start collapsed —
+            // onWaterTempChange('Cold') called below will expand them if Cold is selected.
+            // For all other drinks, show/hide is driven solely by the showAddons flag.
+            const tempAware = ['Iced Americano', 'Cappuccino'].includes(name);
+            const startCollapsed = !showAddons || tempAware;
+            addonSection.classList.toggle('addon-collapsed', startCollapsed);
+            addonSection.dataset.visible = startCollapsed ? 'false' : 'true';
         }
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
         const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
@@ -8143,10 +8143,10 @@ function playGrantedSound() {
         const showWT = ['Iced Americano','Cappuccino'].includes(name);
         document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
         document.getElementById('water-temp-select').value = 'Cold';
-        // Default temp = Cold: ice visible, add-ons visible
-        // (onWaterTempChange handles toggling when user switches to Hot)
+        // onWaterTempChange sets add-on visibility; always call it for temp-aware drinks
+        // so the add-on section reflects the Cold default immediately on open.
         document.getElementById('ice-level-section').style.display = '';
-        if (showWT) onWaterTempChange(document.getElementById('water-temp-select').value);
+        if (showWT) onWaterTempChange('Cold');
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
@@ -8203,7 +8203,7 @@ function playGrantedSound() {
     function confirmAddToCart() {
         let addons = []; let cost = 0;
         const addonSection = document.getElementById('addon-section');
-        if (addonSection.style.display !== 'none') {
+        if (addonSection && addonSection.dataset.visible !== 'false') {
             document.querySelectorAll('.addon-checkbox').forEach(cb => {
                 if(cb.checked) { addons.push(cb.value); cost += 10; }
             });
