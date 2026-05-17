@@ -1051,8 +1051,12 @@ def send_otp_sms(phone: str, code: str) -> tuple:
             )
 
             local_format_env = os.environ.get('SMS_GATEWAY_LOCAL_FORMAT', '').strip()
+            force_local = local_format_env.lower() not in ('0', 'false', 'no') if local_format_env else True
             if is_cloud:
-                phone_number = international
+                # PH carriers (Globe/Smart/TNT) reject E.164 via Android SMS API →
+                # RESULT_ERROR_GENERIC_FAILURE. Use local format (09xx) by default.
+                # To force E.164 on cloud relay, set SMS_GATEWAY_LOCAL_FORMAT=0.
+                phone_number = _to_local_ph_number(international) if force_local else international
             elif local_format_env in ('0', 'false', 'no'):
                 phone_number = international
             else:
