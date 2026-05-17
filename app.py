@@ -5879,9 +5879,6 @@ STOREFRONT_HTML = """
         .addon-label input { width: 18px; height: 18px; accent-color: var(--gold); }
         .addon-label input[type="checkbox"]:checked + span { color: var(--gold); }
         .addon-label input[type="radio"]:checked + span { color: var(--gold); }
-        /* Fade-in animation when add-ons section is revealed (Cold selected) */
-        @keyframes addonFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-        #addon-section.addon-reveal { animation: addonFadeIn 0.22s ease forwards; }
 
         .modal-actions { display: flex; gap: 12px; margin-top: 30px; }
         .qty-selector { display: flex; align-items: center; justify-content: center; gap: 0; margin: 18px 0 4px; background: var(--gold-light); border-radius: 50px; border: 1.5px solid var(--border-color); width: fit-content; margin-left: auto; margin-right: auto; }
@@ -7173,7 +7170,7 @@ function playGrantedSound() {
             </div>
         </div>
 
-        <div id="addon-section">
+        <div id="addon-section" style="display:none;">
             <span class="modal-section-label">Add-ons</span>
             <div class="addon-grid">
                 <label class="addon-label" id="addon-nata"><input type="checkbox" class="addon-checkbox" value="Nata"> <span>🟡 Nata (+₱10)</span></label>
@@ -7660,35 +7657,17 @@ function playGrantedSound() {
         const addonSection = document.getElementById('addon-section');
         const isHot = val === 'Hot';
 
-        // Ice level: hidden when Hot, reset to Normal Ice when switching to Cold
+        // Ice level: hidden when Hot
         iceSection.style.display = isHot ? 'none' : '';
         if (!isHot) {
             document.querySelectorAll('input[name="ice_level"]').forEach(r => r.checked = r.value === 'Normal Ice');
         }
 
-        // Add-ons: always hidden when Hot, shown when Cold (if the item supports add-ons).
-        // When Hot is selected, ice and add-ons don't apply to hot drinks.
+        // Add-ons: only show when Cold
         if (addonSection) {
             const tempEnabled = addonSection.dataset.tempEnabled !== 'false';
-            // Hot drinks never show add-ons; Cold drinks show add-ons only if the item supports them.
             const shouldShow = !isHot && tempEnabled;
-
-            // Clear any stale inline visibility / hidden attributes from old code paths
-            addonSection.style.removeProperty('visibility');
-            addonSection.removeAttribute('hidden');
-
-            if (shouldShow) {
-                addonSection.style.display = '';
-                addonSection.classList.add('addon-reveal');
-                // Remove the animation class after it plays so it re-triggers next time
-                setTimeout(() => addonSection.classList.remove('addon-reveal'), 250);
-            } else {
-                addonSection.style.display = 'none';
-                addonSection.classList.remove('addon-reveal');
-            }
-            addonSection.dataset.visible = shouldShow ? 'true' : 'false';
-
-            // Uncheck and disable all add-on checkboxes when hidden
+            addonSection.style.display = shouldShow ? '' : 'none';
             addonSection.querySelectorAll('.addon-checkbox').forEach(cb => {
                 cb.disabled = !shouldShow;
                 if (!shouldShow) cb.checked = false;
@@ -8141,39 +8120,22 @@ function playGrantedSound() {
         document.getElementById('size-row-section').style.display = '';
         const addonSection = document.getElementById('addon-section');
         if (addonSection) {
+            addonSection.style.display = showAddons ? '' : 'none';
             addonSection.dataset.tempEnabled = showAddons ? 'true' : 'false';
-            // Remove stale class/attributes that may linger from previous renders
-            addonSection.classList.remove('addon-collapsed');
-            addonSection.style.removeProperty('visibility');
-            addonSection.removeAttribute('hidden');
-            const tempAware = ['Iced Americano', 'Cappuccino'].includes(name);
-            if (tempAware) {
-                // Start hidden for temp-aware drinks; onWaterTempChange('Cold') below
-                // will immediately show them once the default temperature is applied.
-                addonSection.style.display = 'none';
-                addonSection.dataset.visible = 'false';
-            } else {
-                addonSection.style.display = showAddons ? '' : 'none';
-                addonSection.dataset.visible = showAddons ? 'true' : 'false';
-            }
         }
         document.querySelectorAll('.addon-checkbox').forEach(cb => cb.checked = false);
         const addonVisMap = {Nata:'addon-nata',Pearl:'addon-pearl','Coffee Jelly':'addon-coffee-jelly'};
         Object.entries(addonVisMap).forEach(([val,id])=>{const el=document.getElementById(id);if(el)el.style.display=(allowedAddons&&!allowedAddons.includes(val))?'none':'';});
-        // Show or hide Sugar Level based on item type
-        const sugarEl = document.getElementById('sugar-section');
-        if (sugarEl) sugarEl.style.display = showSugar ? '' : 'none';
         document.getElementById('sugar-level-select').value = '100% Sugar';
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         document.getElementById('size-qty').innerText = '1';
         const showWT = ['Iced Americano','Cappuccino'].includes(name);
         document.getElementById('water-temp-section').style.display = showWT ? '' : 'none';
         document.getElementById('water-temp-select').value = 'Cold';
-        // For temp-aware drinks (Cappuccino, Iced Americano):
-        // Always reset to Cold default and let onWaterTempChange control both
-        // ice-level AND add-on visibility so Hot/Cold toggling always works correctly.
+        // Default temp = Cold: ice visible, add-ons visible
+        // (onWaterTempChange handles toggling when user switches to Hot)
         document.getElementById('ice-level-section').style.display = '';
-        if (showWT) onWaterTempChange('Cold');
+        if (showWT) onWaterTempChange(document.getElementById('water-temp-select').value);
         document.querySelectorAll('input[name="ice_level"]').forEach(r=>r.checked=r.value==='Normal Ice');
         selectSize('16 oz');
         document.getElementById('size-modal').style.display = 'flex';
@@ -8230,7 +8192,7 @@ function playGrantedSound() {
     function confirmAddToCart() {
         let addons = []; let cost = 0;
         const addonSection = document.getElementById('addon-section');
-        if (addonSection && addonSection.dataset.visible !== 'false') {
+        if (addonSection.style.display !== 'none') {
             document.querySelectorAll('.addon-checkbox').forEach(cb => {
                 if(cb.checked) { addons.push(cb.value); cost += 10; }
             });
