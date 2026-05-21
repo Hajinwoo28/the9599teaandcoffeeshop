@@ -6950,8 +6950,11 @@ function playGrantedSound() {
                     📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
                 <button onclick="openGCashApp('gcash')" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#1a6fe8,#1552c4); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all 0.2s; letter-spacing:0.3px;">
-                    💙 Pay with GCash
+                    💙 Open GCash to Pay
                 </button>
+                <p style="margin:8px 0 0; font-size:0.7rem; color:#64748b; font-weight:600; text-align:center; line-height:1.4;">
+                    Tap <strong>Confirm &amp; Place Order</strong> below first — GCash will open automatically after.
+                </p>
             </div>
         </div>
         <!-- ── End GCash Block ── -->
@@ -7848,8 +7851,11 @@ function playGrantedSound() {
                 // If not configured (dev mode) it falls back to the static QR modal.
                 if (window._gcashOrderId && amount) {
                     _openPaymongoGCash(amount, window._gcashOrderId, window._gcashOrderCode || '');
+                } else if (amount && !window._gcashOrderId) {
+                    // Order not yet placed — tell user to confirm order first
+                    showToast('Please tap \"Confirm & Place Order\" first. GCash payment will open automatically after.', 'info');
                 } else {
-                    // No order context yet — just show QR (e.g. called from Update Payment)
+                    // No amount — just show QR (e.g. called from Update Payment)
                     showGCashQR(amount);
                     if (isAndroid) {
                         setTimeout(function() {
