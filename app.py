@@ -6877,15 +6877,15 @@ function playGrantedSound() {
             <div style="font-size:0.68rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Payment Method</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
 
-                <!-- GCash — ACTIVE -->
+                <!-- GCash — LIVE -->
                 <button id="pay-btn-gcash" onclick="setPaymentMethod('gcash')"
-                        style="padding:10px 8px; border-radius:12px; border:2px solid #2563eb; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(37,99,235,0.3);">
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
                     💙 GCash
                 </button>
 
-                <!-- Cash on Pickup — ACTIVE -->
+                <!-- Cash on Pickup — LIVE -->
                 <button id="pay-btn-cash" onclick="setPaymentMethod('cash')"
-                        style="padding:10px 8px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; color:#64748b; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                        style="padding:10px 8px; border-radius:12px; border:2px solid #8B5E3C; background:linear-gradient(135deg,#8B5E3C,#5C3317); color:#fff; font-weight:800; font-size:0.78rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; box-shadow:0 3px 10px rgba(139,94,60,0.3);">
                     💵 Cash on Pickup
                 </button>
 
@@ -6912,7 +6912,7 @@ function playGrantedSound() {
 
             </div>
 
-            <!-- Info notice — Maya & PayPal coming soon -->
+            <!-- Maya & PayPal coming soon notice -->
             <div style="margin-top:10px; padding:8px 12px; border-radius:10px; background:#fffbeb; border:1.5px solid #fcd34d; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:1rem;">🚧</span>
                 <span style="font-size:0.72rem; color:#92400e; font-weight:700; line-height:1.4;">
@@ -6949,12 +6949,9 @@ function playGrantedSound() {
                 <p style="margin:0 0 10px; font-size:0.74rem; color:#2563eb; font-weight:700; text-align:center; line-height:1.5;">
                     📋 Include your <strong>full name</strong> as the GCash note.<br>Send the <strong>exact amount</strong> shown above.
                 </p>
-                <button onclick="openGCashApp('gcash')" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#1a6fe8,#1552c4); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all 0.2s; letter-spacing:0.3px;">
-                    💙 Open GCash to Pay
+                <button id="gcash-pay-btn" onclick="showGCashQRFromBlock()" style="width:100%; padding:11px 14px; border-radius:12px; border:none; background:linear-gradient(135deg,#1a6fe8,#1552c4); color:#fff; font-weight:900; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all 0.2s; letter-spacing:0.3px;">
+                    💙 Pay with GCash
                 </button>
-                <p style="margin:8px 0 0; font-size:0.7rem; color:#64748b; font-weight:600; text-align:center; line-height:1.4;">
-                    Tap <strong>Confirm &amp; Place Order</strong> below first — GCash will open automatically after.
-                </p>
             </div>
         </div>
         <!-- ── End GCash Block ── -->
@@ -7846,29 +7843,13 @@ function playGrantedSound() {
                 }, 2000);
 
             } else {
-                // GCash — try the real PayMongo checkout link first.
-                // If PayMongo is configured the backend returns a payments.gcash.com URL.
-                // If not configured (dev mode) it falls back to the static QR modal.
+                // GCash — show QR modal (never navigate away — that kills the session).
+                // If PayMongo is configured, _openPaymongoGCash opens checkout in a NEW TAB
+                // while the QR modal stays visible as a fallback.
                 if (window._gcashOrderId && amount) {
                     _openPaymongoGCash(amount, window._gcashOrderId, window._gcashOrderCode || '');
-                } else if (amount && !window._gcashOrderId) {
-                    // Order not yet placed — tell user to confirm order first
-                    showToast('Please tap \"Confirm & Place Order\" first. GCash payment will open automatically after.', 'info');
                 } else {
-                    // No amount — just show QR (e.g. called from Update Payment)
                     showGCashQR(amount);
-                    if (isAndroid) {
-                        setTimeout(function() {
-                            window.location.href = 'intent://#Intent'
-                                + ';action=android.intent.action.MAIN'
-                                + ';category=android.intent.category.LAUNCHER'
-                                + ';package=com.globe.gcash.android'
-                                + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
-                                + ';end';
-                        }, 300);
-                    } else if (isIOS) {
-                        setTimeout(function() { window.location.href = 'gcash://'; }, 300);
-                    }
                 }
             }
         } catch(e) {
@@ -7883,9 +7864,10 @@ function playGrantedSound() {
      * Falls back gracefully to the QR modal if PayMongo is not configured.
      */
     async function _openPaymongoGCash(amount, orderId, orderCode) {
-        const btn = document.querySelector('[onclick*="openGCashApp"]') || document.getElementById('pickup-confirm-btn');
-        const origLabel = btn ? btn.innerHTML : '';
-        if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating payment link…'; btn.disabled = true; }
+        // Show spinner on the "Pay with GCash" button inside the GCash block (not the confirm btn)
+        const payBtn = document.querySelector('#gcash-payment-block button') || null;
+        const origLabel = payBtn ? payBtn.innerHTML : '';
+        if (payBtn) { payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating link…'; payBtn.disabled = true; }
 
         try {
             const resp = await fetch('/api/gcash/create_link', {
@@ -7900,35 +7882,20 @@ function playGrantedSound() {
             });
             const data = await resp.json();
 
+            if (payBtn) { payBtn.innerHTML = origLabel; payBtn.disabled = false; }
+
             if (data.checkout_url) {
-                // ── Real PayMongo link — redirect to payments.gcash.com ──
-                window.location.href = data.checkout_url;
-            } else if (data.error === 'paymongo_not_configured') {
-                // ── PayMongo not set up yet — fall back to QR modal ──────
-                if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
+                // Open the PayMongo/GCash checkout in a NEW TAB so the customer
+                // never loses the receipt page. Also show QR as a fallback.
+                window.open(data.checkout_url, '_blank', 'noopener');
                 showGCashQR(amount);
-                const isAndroid = /android/i.test(navigator.userAgent);
-                const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
-                if (isAndroid) {
-                    setTimeout(function() {
-                        window.location.href = 'intent://#Intent'
-                            + ';action=android.intent.action.MAIN'
-                            + ';category=android.intent.category.LAUNCHER'
-                            + ';package=com.globe.gcash.android'
-                            + ';S.browser_fallback_url=' + encodeURIComponent('https://www.gcash.com/')
-                            + ';end';
-                    }, 300);
-                } else if (isIOS) {
-                    setTimeout(function() { window.location.href = 'gcash://'; }, 300);
-                }
             } else {
-                if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
-                showToast('Could not create GCash payment link. Please try again.', 'error');
+                // PayMongo not configured or error — show QR modal
                 showGCashQR(amount);
             }
         } catch(e) {
             console.error('_openPaymongoGCash error:', e);
-            if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
+            if (payBtn) { payBtn.innerHTML = origLabel; payBtn.disabled = false; }
             showGCashQR(amount);
         }
     }
@@ -7959,6 +7926,24 @@ function playGrantedSound() {
     function closeGCashQR() {
         const modal = document.getElementById('gcash-qr-modal');
         if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+    }
+
+    /**
+     * Called by the "Pay with GCash" button inside the GCash payment block.
+     * Reads the live amount from the block's display element so it always works
+     * whether the customer clicked before or after placing the order.
+     */
+    function showGCashQRFromBlock() {
+        const amtEl  = document.getElementById('gcash-amount-display');
+        const amount = amtEl ? parseFloat(amtEl.textContent.replace(/[^0-9.]/g, '')) : 0;
+        const amtStr = (amount > 0) ? amount.toFixed(2) : '';
+
+        // If an order was already placed, try PayMongo (opens new tab) + show QR fallback
+        if (window._gcashOrderId && amtStr) {
+            _openPaymongoGCash(amtStr, window._gcashOrderId, window._gcashOrderCode || '');
+        } else {
+            showGCashQR(amtStr);
+        }
     }
 
     /** Update the partial wallet open button label. */
@@ -8611,7 +8596,7 @@ function playGrantedSound() {
         // Reset partial block
         _resetPartialBlock();
         setPartialWallet('gcash');   // default e-wallet inside partial
-        // Default to cash on pickup when opening the modal
+        // Default to cash; customer can switch to GCash to get a QR
         setPaymentMethod('cash');
     }
 
@@ -9328,16 +9313,17 @@ function playGrantedSound() {
 
                 document.getElementById('success-modal').style.display = 'flex';
 
-                // ── GCash QR: auto-open after order is placed ─────────────
+                // ── Auto-show GCash QR after order is placed ──────────────
                 if (paymentMethod === 'gcash') {
+                    const _amt = payload.total.toFixed(2);
+                    // Keep the gcash-amount-display in sync (cart is now cleared)
+                    const _gcashEl = document.getElementById('gcash-amount-display');
+                    if (_gcashEl) _gcashEl.textContent = '₱' + _amt;
                     setTimeout(function() {
-                        const gcashAmtEl = document.getElementById('gcash-amount-display');
-                        const orderTotal = cart.reduce((s,i)=>s+i.price, 0);
-                        if (gcashAmtEl) gcashAmtEl.textContent = '₱' + orderTotal.toFixed(2);
-                        if (window._gcashOrderId && orderTotal) {
-                            _openPaymongoGCash(orderTotal.toFixed(2), window._gcashOrderId, window._gcashOrderCode || '');
+                        if (window._gcashOrderId) {
+                            _openPaymongoGCash(_amt, window._gcashOrderId, window._gcashOrderCode || '');
                         } else {
-                            showGCashQR(orderTotal.toFixed(2));
+                            showGCashQR(_amt);
                         }
                     }, 450);
                 }
