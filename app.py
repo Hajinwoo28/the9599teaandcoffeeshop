@@ -1844,18 +1844,18 @@ LOCKED_HTML = """
 {% endif %}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;}
+html{height:100%;}
 body{
   font-family:'DM Sans',sans-serif;
   background:radial-gradient(ellipse at 30% 10%,var(--bg-c) 0%,var(--bg-b) 40%,var(--bg-a) 100%);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:100vh;padding:24px;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-height:100vh;padding:32px 16px 48px;overflow-y:auto;overflow-x:hidden;
 }
 canvas#bubbleCanvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
 body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   opacity:0.35;}
-.wrap{position:relative;z-index:2;width:100%;max-width:420px;}
+.wrap{position:relative;z-index:2;width:100%;max-width:440px;margin:auto;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
@@ -1974,7 +1974,25 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;
 .captcha-box.verified .captcha-pending-msg{display:none;}
 .captcha-box.verified .captcha-verified-badge{display:flex;}
 /* Override hCaptcha iframe bg so it blends on dark cards */
-.h-captcha iframe{border-radius:10px !important;}
+.h-captcha{width:100%;overflow:hidden;border-radius:10px;}
+.h-captcha iframe{border-radius:10px !important;max-width:100% !important;}
+
+/* ── Mobile responsive ── */
+@media(max-width:480px){
+  body{padding:20px 12px 40px;}
+  .card{padding:22px 16px 20px;border-radius:18px;}
+  .warn-banner{padding:12px 13px;gap:10px;}
+  .warn-body strong{font-size:0.82rem;}
+  .warn-body span{font-size:0.74rem;}
+  .logo-area{margin-bottom:16px;}
+  .logo-small{width:52px;height:52px;}
+  .logo-area h1{font-size:1.18rem;}
+  h2{font-size:1.22rem;}
+  .inp{padding:13px;font-size:1.3rem;letter-spacing:10px;}
+  .btn{padding:13px;font-size:0.9rem;}
+  .captcha-box{padding:10px;}
+  .captcha-pending-msg{font-size:0.68rem;}
+}
 </style>
 </head>
 <body>
