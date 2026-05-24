@@ -1819,6 +1819,7 @@ LOCKED_HTML = """
 <title>Session Active | 9599 Tea &amp; Coffee</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 <style>
 {% if role=='Admin' %}
 :root{
@@ -1941,6 +1942,39 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;
 .btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.12);}
 .btn:active{transform:scale(0.97);}
 .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+/* ── hCaptcha wrapper ── */
+.captcha-wrap{
+  margin-bottom:16px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.captcha-label{
+  font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.35);
+  text-transform:uppercase;letter-spacing:1.5px;
+}
+.captcha-box{
+  background:rgba(255,255,255,0.04);border:1.5px solid var(--inp-border);
+  border-radius:14px;padding:12px;display:flex;align-items:center;justify-content:center;
+  transition:border-color 0.2s,box-shadow 0.2s;
+  min-height:78px;
+}
+.captcha-box.verified{
+  border-color:var(--accent-dim);
+  box-shadow:0 0 0 4px var(--inp-focus);
+}
+.captcha-pending-msg{
+  font-size:0.72rem;color:rgba(255,255,255,0.3);
+  display:flex;align-items:center;gap:6px;
+}
+.captcha-verified-badge{
+  display:none;align-items:center;gap:8px;
+  font-size:0.8rem;font-weight:700;color:var(--accent);
+}
+.captcha-verified-badge i{font-size:1rem;}
+.captcha-box.verified .captcha-pending-msg{display:none;}
+.captcha-box.verified .captcha-verified-badge{display:flex;}
+/* Override hCaptcha iframe bg so it blends on dark cards */
+.h-captcha iframe{border-radius:10px !important;}
 </style>
 </head>
 <body>
@@ -1991,8 +2025,29 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;
                pattern="[0-9]{5}" inputmode="numeric"
                autocomplete="one-time-code">
       </div>
-      <button type="submit" class="btn" id="takeoverBtn">
-        <i class="fas fa-arrow-right-to-bracket"></i> Take Over &amp; Sign In
+      <!-- ── Human Verification (hCaptcha) ──────────────────────────── -->
+      <div class="captcha-wrap">
+        <label class="captcha-label"><i class="fas fa-shield-halved"></i>&ensp;Human Verification Required</label>
+        <div class="captcha-box" id="captchaBox">
+          <span class="captcha-pending-msg">
+            <i class="fas fa-circle-notch fa-spin" style="color:var(--accent-dim);font-size:0.85rem;"></i>
+            &nbsp;Solve the challenge below to enable takeover
+          </span>
+          <span class="captcha-verified-badge">
+            <i class="fas fa-circle-check"></i>&nbsp;Verified — you&rsquo;re human!
+          </span>
+        </div>
+        <div class="h-captcha"
+             data-sitekey="{{ hcaptcha_site_key }}"
+             data-theme="dark"
+             data-callback="onHCaptchaSolved"
+             data-expired-callback="onHCaptchaExpired"
+             style="margin-top:6px;">
+        </div>
+      </div>
+
+      <button type="submit" class="btn" id="takeoverBtn" disabled>
+        <i class="fas fa-lock"></i>&ensp;Complete Verification First
       </button>
     </form>
   </div>
@@ -2017,10 +2072,28 @@ pinInput.addEventListener('input', function(){
     else d.classList.remove('filled');
   });
 });
-document.getElementById('takeoverForm').addEventListener('submit', function(){
+
+/* ── hCaptcha callbacks ─────────────────────────────────────────────── */
+function onHCaptchaSolved(token) {
+  var box = document.getElementById('captchaBox');
   var btn = document.getElementById('takeoverBtn');
+  box.classList.add('verified');
+  btn.disabled = false;
+  btn.innerHTML = "<i class='fas fa-arrow-right-to-bracket'></i>&ensp;Take Over &amp; Sign In";
+}
+function onHCaptchaExpired() {
+  var box = document.getElementById('captchaBox');
+  var btn = document.getElementById('takeoverBtn');
+  box.classList.remove('verified');
   btn.disabled = true;
-  btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Taking over…";
+  btn.innerHTML = "<i class='fas fa-lock'></i>&ensp;Complete Verification First";
+}
+
+document.getElementById('takeoverForm').addEventListener('submit', function(e){
+  var btn = document.getElementById('takeoverBtn');
+  if(btn.disabled){ e.preventDefault(); return; }
+  btn.disabled = true;
+  btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>&ensp;Verifying &amp; Taking over…";
 });
 </script>
 
@@ -16413,7 +16486,8 @@ def admin_login():
     # Show takeover page if another device is active and this isn't a forced POST
     if request.method == 'GET' and session_active:
         return render_template_string(LOCKED_HTML, role='Admin',
-                                       action_url=url_for('admin_login'), error=None)
+                                       action_url=url_for('admin_login'), error=None,
+                                       hcaptcha_site_key=HCAPTCHA_SITE_KEY)
 
     if request.method == 'POST':
         pin = request.form.get('pin')
@@ -16423,6 +16497,20 @@ def admin_login():
             log_audit("Security: Honeypot Triggered", f"Bot/scraper detected at {client_ip}")
             return render_template_string(LOGIN_HTML, error="Access Denied."), 403
         if master_pin_matches(pin):
+            # ── Human verification gate (only on takeover) ────────────────────
+            if force or session_active:
+                captcha_token = request.form.get('h-captcha-response', '').strip()
+                captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
+                if not captcha_ok:
+                    record_failed_attempt(client_ip, 'admin')
+                    log_audit("Security: Takeover Captcha Failed",
+                              f"Admin takeover from {client_ip} passed PIN but failed human verification")
+                    return render_template_string(
+                        LOCKED_HTML, role='Admin',
+                        action_url=url_for('admin_login'),
+                        error="Human verification failed. Please solve the CAPTCHA and try again.",
+                        hcaptcha_site_key=HCAPTCHA_SITE_KEY
+                    )
             session.permanent = True
             session['is_admin'] = True
             session['admin_id'] = str(uuid.uuid4())
@@ -16445,7 +16533,8 @@ def admin_login():
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
         if force or session_active:
             return render_template_string(LOCKED_HTML, role='Admin',
-                                           action_url=url_for('admin_login'), error=error)
+                                           action_url=url_for('admin_login'), error=error,
+                                           hcaptcha_site_key=HCAPTCHA_SITE_KEY)
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route('/logout')
@@ -16487,6 +16576,7 @@ def admin_dashboard():
 def employee_login():
     if session.get('is_employee'): return redirect(url_for('employee_dashboard'))
     error = None
+    client_ip = get_client_ip()
     # ── Dev portal bypass — no PIN required ──────────────────────────────────
     if session.get('is_dev'):
         session.permanent = True
@@ -16518,11 +16608,26 @@ def employee_login():
 
     if request.method == 'GET' and session_active:
         return render_template_string(LOCKED_HTML, role='Employee',
-                                       action_url=url_for('employee_login'), error=None)
+                                       action_url=url_for('employee_login'), error=None,
+                                       hcaptcha_site_key=HCAPTCHA_SITE_KEY)
 
     if request.method == 'POST':
         pin = request.form.get('pin')
         if master_pin_matches(pin):
+            # ── Human verification gate (only on takeover) ────────────────────
+            if force or session_active:
+                captcha_token = request.form.get('h-captcha-response', '').strip()
+                captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
+                if not captcha_ok:
+                    record_failed_attempt(client_ip, 'employee')
+                    log_audit("Security: Takeover Captcha Failed",
+                              f"Employee takeover from {client_ip} passed PIN but failed human verification")
+                    return render_template_string(
+                        LOCKED_HTML, role='Employee',
+                        action_url=url_for('employee_login'),
+                        error="Human verification failed. Please solve the CAPTCHA and try again.",
+                        hcaptcha_site_key=HCAPTCHA_SITE_KEY
+                    )
             session.permanent = True
             session['is_employee'] = True
             session['employee_id'] = str(uuid.uuid4())
@@ -16543,7 +16648,8 @@ def employee_login():
         error = "Enter exactly 5 digits." if (pin is None or not re.fullmatch(r'\d{5}', str(pin).strip())) else "Invalid PIN. Access Denied."
         if force or session_active:
             return render_template_string(LOCKED_HTML, role='Employee',
-                                           action_url=url_for('employee_login'), error=error)
+                                           action_url=url_for('employee_login'), error=error,
+                                           hcaptcha_site_key=HCAPTCHA_SITE_KEY)
     return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
 
 @app.route('/employee/logout')
