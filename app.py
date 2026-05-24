@@ -1849,13 +1849,20 @@ body{
   font-family:'DM Sans',sans-serif;
   background:radial-gradient(ellipse at 30% 10%,var(--bg-c) 0%,var(--bg-b) 40%,var(--bg-a) 100%);
   display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-  min-height:100vh;padding:32px 16px 48px;overflow-y:auto;overflow-x:hidden;
+  min-height:100vh;
+  /* Safe area support for iPhone notch / Dynamic Island */
+  padding: max(32px, env(safe-area-inset-top))
+           max(16px, env(safe-area-inset-right))
+           max(48px, env(safe-area-inset-bottom))
+           max(16px, env(safe-area-inset-left));
+  overflow-y:auto;overflow-x:hidden;
 }
 canvas#bubbleCanvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
 body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   opacity:0.35;}
-.wrap{position:relative;z-index:2;width:100%;max-width:440px;margin:auto;}
+/* Fluid wrap: fills screen on mobile, capped at 480px on desktop */
+.wrap{position:relative;z-index:2;width:min(480px,100%);margin:auto;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
@@ -1977,21 +1984,71 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;
 .h-captcha{width:100%;overflow:hidden;border-radius:10px;}
 .h-captcha iframe{border-radius:10px !important;max-width:100% !important;}
 
-/* ── Mobile responsive ── */
+/* ══════════════════════════════════════════════
+   RESPONSIVE — Mobile-first, three breakpoints
+   ══════════════════════════════════════════════ */
+
+/* ── Tablet (481 – 768 px) ── */
+@media(min-width:481px) and (max-width:768px){
+  .wrap{width:min(460px,calc(100vw - 40px));}
+  .card{padding:26px 22px 22px;}
+}
+
+/* ── Standard Mobile (≤ 480 px) ── */
 @media(max-width:480px){
-  body{padding:20px 12px 40px;}
-  .card{padding:22px 16px 20px;border-radius:18px;}
-  .warn-banner{padding:12px 13px;gap:10px;}
-  .warn-body strong{font-size:0.82rem;}
-  .warn-body span{font-size:0.74rem;}
-  .logo-area{margin-bottom:16px;}
-  .logo-small{width:52px;height:52px;}
-  .logo-area h1{font-size:1.18rem;}
-  h2{font-size:1.22rem;}
-  .inp{padding:13px;font-size:1.3rem;letter-spacing:10px;}
-  .btn{padding:13px;font-size:0.9rem;}
-  .captcha-box{padding:10px;}
-  .captcha-pending-msg{font-size:0.68rem;}
+  body{
+    padding:
+      max(20px,env(safe-area-inset-top))
+      max(12px,env(safe-area-inset-right))
+      max(40px,env(safe-area-inset-bottom))
+      max(12px,env(safe-area-inset-left));
+  }
+  .wrap{width:100%;}
+  .card{padding:20px 16px 18px;border-radius:18px;}
+  .warn-banner{padding:11px 12px;gap:9px;}
+  .warn-icon{font-size:1.2rem;}
+  .warn-body strong{font-size:0.81rem;}
+  .warn-body span{font-size:0.73rem;}
+  .logo-area{margin-bottom:14px;}
+  .logo-small{width:50px;height:50px;}
+  .logo-area h1{font-size:1.15rem;}
+  .logo-area .tagline{font-size:0.6rem;}
+  h2{font-size:1.2rem;}
+  .sub{font-size:0.76rem;margin-bottom:14px;}
+  .inp{padding:13px 10px;font-size:1.3rem;letter-spacing:10px;}
+  .btn{padding:13px;font-size:0.88rem;}
+  .captcha-box{padding:10px;min-height:68px;}
+  .captcha-pending-msg{font-size:0.67rem;}
+  .captcha-label{font-size:0.62rem;}
+  /* hCaptcha widget — prevent horizontal overflow */
+  .h-captcha{overflow:hidden;}
+  .h-captcha>div,.h-captcha iframe{max-width:100% !important;width:100% !important;}
+}
+
+/* ── Small phones (≤ 360 px, e.g. Galaxy S8) ── */
+@media(max-width:360px){
+  .card{padding:16px 12px 16px;border-radius:14px;}
+  .logo-small{width:44px;height:44px;}
+  .logo-area h1{font-size:1rem;}
+  h2{font-size:1.08rem;}
+  .inp{font-size:1.1rem;letter-spacing:8px;padding:11px 8px;}
+  .pin-dots{gap:10px;}
+  .pin-dot{width:10px;height:10px;}
+  .btn{font-size:0.82rem;padding:11px;}
+  .warn-body strong{font-size:0.77rem;}
+  .warn-body span{font-size:0.68rem;}
+}
+
+/* ── Large Desktop (≥ 1024 px) ── */
+@media(min-width:1024px){
+  .wrap{max-width:500px;}
+  .card{padding:32px 30px 28px;border-radius:28px;}
+  .logo-area h1{font-size:1.5rem;}
+  h2{font-size:1.55rem;}
+  .inp{font-size:1.7rem;letter-spacing:14px;padding:17px;}
+  .pin-dots{gap:16px;}
+  .pin-dot{width:13px;height:13px;}
+  .btn{padding:16px;font-size:1rem;}
 }
 </style>
 </head>
