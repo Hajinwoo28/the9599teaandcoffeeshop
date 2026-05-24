@@ -6,7 +6,10 @@ import threading
 import json
 import io
 import queue
-import random 
+import random
+import hmac
+import hashlib
+import secrets
 import requests
 from flask import (
     Flask, 
@@ -71,6 +74,35 @@ def _check_captcha_config():
     print("="*55 + "\n")
 
 _check_captcha_config()
+
+# ── Startup security audit ────────────────────────────────────────────────────
+def _check_production_secrets():
+    """Warn loudly (and refuse on cloud) if default/weak secrets are detected."""
+    issues = []
+    if os.environ.get('SECRET_KEY', '') in ('', '9599isthesecretkey'):
+        issues.append("SECRET_KEY is unset or using the default value — set a strong random key!")
+    if (os.environ.get('ADMIN_PIN', '12345') or '12345').strip() == '12345':
+        issues.append("ADMIN_PIN is '12345' (default) — set a strong 5-digit PIN in your environment!")
+    if os.environ.get('LINK_SECRET', '') in ('', 'link-9599-store-permanent'):
+        issues.append("LINK_SECRET is unset or default — set it in your environment.")
+    if os.environ.get('DEV_SECRET', '') in ('', 'dev-9599-local'):
+        issues.append("DEV_SECRET is unset or default — set it in your environment.")
+
+    if issues:
+        print("\n" + "!"*60)
+        print("  ⚠  SECURITY WARNINGS — ACTION REQUIRED")
+        print("!"*60)
+        for msg in issues:
+            print(f"  • {msg}")
+        print("!"*60 + "\n")
+        # On cloud deployments, refuse to start with the default admin PIN
+        if _ON_CLOUD and any("ADMIN_PIN" in i for i in issues):
+            raise RuntimeError(
+                "FATAL: ADMIN_PIN is the default '12345' on a cloud deployment. "
+                "Set a strong ADMIN_PIN environment variable before deploying."
+            )
+
+_check_production_secrets()
 
 # ==========================================
 # 1. ADVANCED SECURITY CONFIGURATION
@@ -142,6 +174,19 @@ def master_pin_matches(submitted_pin):
     return check_password_hash(ADMIN_PIN_HASH, s)
 
 token_serializer = URLSafeTimedSerializer(app.secret_key)
+
+# ── OTP hashing helpers ───────────────────────────────────────────────────────
+# OTP codes are stored as HMAC-SHA256 hashes (never plaintext).
+# This prevents a DB dump from exposing live codes.
+_OTP_HMAC_KEY: bytes = (os.environ.get('OTP_HMAC_KEY') or app.secret_key).encode()
+
+def _hash_otp_code(code: str) -> str:
+    """Return a hex HMAC-SHA256 digest of the raw 6-digit OTP code."""
+    return hmac.new(_OTP_HMAC_KEY, code.encode(), hashlib.sha256).hexdigest()
+
+def _otp_codes_match(raw_input: str, stored_hash: str) -> bool:
+    """Timing-safe comparison between the entered code and the stored hash."""
+    return hmac.compare_digest(_hash_otp_code(raw_input), stored_hash)
 
 # ── Dedicated serializer for the customer ordering link ───────────────────────
 # Uses its own key so customer links stay valid even if SECRET_KEY rotates.
@@ -1432,6 +1477,7 @@ h2{
 .footer-link a{color:var(--gold-dim);text-decoration:none;font-weight:600;}
 .footer-link a:hover{color:var(--gold);}
 </style>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
 <body>
 <canvas id="bubbleCanvas"></canvas>
@@ -1477,6 +1523,9 @@ h2{
         <input type="password" name="pin" class="inp" id="pinInput"
                placeholder="" required autofocus maxlength="5" minlength="5"
                pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"></div>
       </div>
       <button type="submit" class="btn" id="submitBtn">
         <i class="fas fa-lock"></i> Login Securely
@@ -1693,6 +1742,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
 .footer-link a{color:var(--teal-dim);text-decoration:none;font-weight:600;}
 .footer-link a:hover{color:var(--teal);}
 </style>
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
 <body>
 <canvas id="bubbleCanvas"></canvas>
@@ -1723,6 +1773,9 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
     {% endif %}
 
     <form method="POST" id="empForm">
+      <input type="text" name="_email_confirm"
+             style="display:none;position:absolute;left:-9999px;"
+             tabindex="-1" autocomplete="off">
       <label class="lbl">Staff PIN</label>
       <div class="pin-wrap">
         <div class="pin-dots">
@@ -1735,6 +1788,9 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
         <input type="password" name="pin" class="inp" id="pinInput"
                placeholder="" required autofocus maxlength="5" minlength="5"
                pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"></div>
       </div>
       <button type="submit" class="btn" id="submitBtn">
         <i class="fas fa-arrow-right-to-bracket"></i> Sign In to Station
@@ -16740,20 +16796,24 @@ def admin_login():
             log_audit("Security: Honeypot Triggered", f"Bot/scraper detected at {client_ip}")
             return render_template_string(LOGIN_HTML, error="Access Denied."), 403
         if master_pin_matches(pin):
-            # ── Human verification gate (only on takeover) ────────────────────
-            if force or session_active:
-                captcha_token = request.form.get('h-captcha-response', '').strip()
-                captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
-                if not captcha_ok:
-                    record_failed_attempt(client_ip, 'admin')
-                    log_audit("Security: Takeover Captcha Failed",
-                              f"Admin takeover from {client_ip} passed PIN but failed human verification")
+            # ── Human verification gate — required on ALL logins ─────────────
+            captcha_token = request.form.get('h-captcha-response', '').strip()
+            captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
+            if not captcha_ok:
+                record_failed_attempt(client_ip, 'admin')
+                log_audit("Security: Login Captcha Failed",
+                          f"Admin login from {client_ip} passed PIN but failed human verification")
+                if force or session_active:
                     return render_template_string(
                         LOCKED_HTML, role='Admin',
                         action_url=url_for('admin_login'),
                         error="Human verification failed. Please solve the CAPTCHA and try again.",
                         hcaptcha_site_key=HCAPTCHA_SITE_KEY
                     )
+                return render_template_string(
+                    LOGIN_HTML,
+                    error="Human verification failed. Please solve the CAPTCHA and try again."
+                )
             session.permanent = True
             session['is_admin'] = True
             session['admin_id'] = str(uuid.uuid4())
@@ -16778,7 +16838,7 @@ def admin_login():
             return render_template_string(LOCKED_HTML, role='Admin',
                                            action_url=url_for('admin_login'), error=error,
                                            hcaptcha_site_key=HCAPTCHA_SITE_KEY)
-    return render_template_string(LOGIN_HTML, error=error)
+    return render_template_string(LOGIN_HTML, error=error, hcaptcha_site_key=HCAPTCHA_SITE_KEY)
 
 @app.route('/logout')
 def admin_logout():
@@ -16856,21 +16916,30 @@ def employee_login():
 
     if request.method == 'POST':
         pin = request.form.get('pin')
+        # Honeypot: bots fill hidden field — humans leave it blank
+        if request.form.get('_email_confirm', ''):
+            record_failed_attempt(client_ip, 'employee')
+            log_audit("Security: Honeypot Triggered", f"Bot/scraper detected at employee login from {client_ip}")
+            return render_template_string(EMPLOYEE_LOGIN_HTML, error="Access Denied."), 403
         if master_pin_matches(pin):
-            # ── Human verification gate (only on takeover) ────────────────────
-            if force or session_active:
-                captcha_token = request.form.get('h-captcha-response', '').strip()
-                captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
-                if not captcha_ok:
-                    record_failed_attempt(client_ip, 'employee')
-                    log_audit("Security: Takeover Captcha Failed",
-                              f"Employee takeover from {client_ip} passed PIN but failed human verification")
+            # ── Human verification gate — required on ALL logins ─────────────
+            captcha_token = request.form.get('h-captcha-response', '').strip()
+            captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
+            if not captcha_ok:
+                record_failed_attempt(client_ip, 'employee')
+                log_audit("Security: Employee Login Captcha Failed",
+                          f"Employee login from {client_ip} passed PIN but failed human verification")
+                if force or session_active:
                     return render_template_string(
                         LOCKED_HTML, role='Employee',
                         action_url=url_for('employee_login'),
                         error="Human verification failed. Please solve the CAPTCHA and try again.",
                         hcaptcha_site_key=HCAPTCHA_SITE_KEY
                     )
+                return render_template_string(
+                    EMPLOYEE_LOGIN_HTML,
+                    error="Human verification failed. Please solve the CAPTCHA and try again."
+                )
             session.permanent = True
             session['is_employee'] = True
             session['employee_id'] = str(uuid.uuid4())
@@ -16893,7 +16962,7 @@ def employee_login():
             return render_template_string(LOCKED_HTML, role='Employee',
                                            action_url=url_for('employee_login'), error=error,
                                            hcaptcha_site_key=HCAPTCHA_SITE_KEY)
-    return render_template_string(EMPLOYEE_LOGIN_HTML, error=error)
+    return render_template_string(EMPLOYEE_LOGIN_HTML, error=error, hcaptcha_site_key=HCAPTCHA_SITE_KEY)
 
 @app.route('/employee/logout')
 def employee_logout():
@@ -17135,8 +17204,10 @@ def otp_send():
     except Exception:
         db.session.rollback()
 
-    code = str(random.randint(100000, 999999))
-    otp  = PhoneOTP(phone=phone, code=code)
+    # Generate a cryptographically secure 6-digit code and store its HMAC hash
+    raw_code = str(secrets.randbelow(900000) + 100000)  # 100000–999999
+    code_hash = _hash_otp_code(raw_code)
+    otp = PhoneOTP(phone=phone, code=code_hash)  # stored as hash, never plaintext
     db.session.add(otp)
     try:
         db.session.commit()
@@ -17144,7 +17215,7 @@ def otp_send():
         db.session.rollback()
         return jsonify({"status": "error", "message": "Could not save OTP. Please try again."}), 500
 
-    ok, err = send_otp_sms(phone, code)
+    ok, err = send_otp_sms(phone, raw_code)
     if not ok:
         # Remove the saved OTP if SMS delivery failed
         try:
@@ -17203,7 +17274,8 @@ def otp_verify():
             db.session.rollback()
         return jsonify({"status": "error", "message": "Too many wrong attempts. Please request a new code."}), 429
 
-    if otp.code != code:
+    # Timing-safe comparison against the stored HMAC hash (prevents timing attacks)
+    if not _otp_codes_match(code, otp.code):
         otp.attempts += 1
         try:
             db.session.commit()
@@ -17250,15 +17322,22 @@ def otp_send_email():
                     .order_by(PhoneOTP.created_at.desc())
                     .first())
         if existing and not existing.is_expired():
-            code = existing.code
+            # Re-derive the plaintext code only for delivery — store remains hashed.
+            # Since we can't un-hash, we generate a fresh code and update the hash.
+            raw_code = str(secrets.randbelow(900000) + 100000)
+            existing.code = _hash_otp_code(raw_code)
+            existing.attempts = 0
+            db.session.commit()
+            code = raw_code
         else:
             # Invalidate old records and create a new one
             PhoneOTP.query.filter_by(phone=phone, verified=False).delete()
             db.session.commit()
-            code = str(random.randint(100000, 999999))
-            otp  = PhoneOTP(phone=phone, code=code)
+            raw_code = str(secrets.randbelow(900000) + 100000)
+            otp  = PhoneOTP(phone=phone, code=_hash_otp_code(raw_code))
             db.session.add(otp)
             db.session.commit()
+            code = raw_code
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": "Could not prepare verification code. Please try again."}), 500
@@ -17292,7 +17371,7 @@ def otp_send_email():
     </div>
     """
 
-    subject     = f"Your 9599 Tea & Coffee verification code: {code}"
+    subject     = "Your 9599 Tea & Coffee verification code"  # code is in the body only
     ok, err     = _send_otp_email(email, subject, html_body)
 
     if not ok:
@@ -17373,6 +17452,22 @@ def reserve_blend():
     # The DB fallback uses a 30-minute window (not the 5-min OTP send window)
     # so customers who spend time filling the form are not incorrectly blocked.
     OTP_ORDER_WINDOW_SEC = 1800  # 30 min grace from verification to submission
+
+    # ── Bot submission timing gate (same check as the storefront gate form) ───
+    opened_at_str = session.get('form_opened_at', '')
+    if opened_at_str:
+        try:
+            opened_at = datetime.fromisoformat(opened_at_str)
+            elapsed   = (datetime.utcnow() - opened_at).total_seconds()
+            if elapsed < BOT_MIN_FORM_SECONDS:
+                log_audit("Bot Speed Detected (/reserve)",
+                          f"Order submitted in {elapsed:.1f}s (min {BOT_MIN_FORM_SECONDS}s) from {get_client_ip()}")
+                return jsonify({
+                    "status": "error",
+                    "message": "Submission too fast. Please take a moment to review your order and try again."
+                }), 429
+        except Exception:
+            pass  # Malformed timestamp — allow through
 
     verified_phone = session.get('otp_verified_phone', '')
     if verified_phone:
@@ -17525,6 +17620,9 @@ def reserve_blend():
             'total': total,
             'flags': flags
         })
+
+        # Invalidate the OTP session token so it cannot be reused for another order
+        session.pop('otp_verified_phone', None)
 
         # Log suspicious patterns for audit trail
         if 'suspicious_pattern' in flags:
