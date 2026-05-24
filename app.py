@@ -1935,6 +1935,15 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   font-family:'DM Sans',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
 .inp:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px var(--inp-focus);}
 
+/* ── PIN field state feedback ── */
+@keyframes pinShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+.pin-checking .inp{border-color:rgba(255,220,120,0.4);animation:none;}
+.pin-valid    .inp{border-color:var(--accent-dim);box-shadow:0 0 0 3px var(--inp-focus);}
+.pin-invalid  .inp{border-color:rgba(255,80,80,0.55);box-shadow:0 0 0 3px rgba(255,80,80,0.12);animation:pinShake 0.38s ease;}
+.pin-checking .pin-dot{opacity:0.4;}
+.pin-valid    .pin-dot.filled{background:var(--accent);border-color:var(--accent);}
+.pin-invalid  .pin-dot.filled{background:#FF7070;border-color:#FF7070;box-shadow:0 0 8px rgba(255,80,80,0.4);}
+
 .btn{width:100%;background:linear-gradient(135deg,var(--btn-a),var(--btn-b));
   color:rgba(255,255,255,0.95);border:none;padding:10px;border-radius:10px;
   font-weight:700;font-size:0.78rem;cursor:pointer;
@@ -1950,39 +1959,67 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .btn:active{transform:scale(0.97);}
 .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 
-/* ── hCaptcha wrapper ── */
+/* ── hCaptcha — unified frame design ── */
 .captcha-wrap{
   margin-bottom:10px;
-  display:flex;flex-direction:column;gap:6px;
+  display:flex;flex-direction:column;gap:5px;
 }
 .captcha-label{
   font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.35);
   text-transform:uppercase;letter-spacing:1.5px;
+  display:flex;align-items:center;gap:4px;
 }
-.captcha-box{
-  background:rgba(255,255,255,0.04);border:1.5px solid var(--inp-border);
-  border-radius:10px;padding:8px;display:flex;align-items:center;justify-content:center;
-  transition:border-color 0.2s,box-shadow 0.2s;
-  min-height:56px;
+/* Single unified frame that wraps status + widget together */
+.captcha-frame{
+  position:relative;
+  border:1.5px solid var(--inp-border);
+  border-radius:10px;
+  overflow:hidden;
+  background:rgba(0,0,0,0.28);
+  transition:border-color 0.25s,box-shadow 0.25s;
 }
-.captcha-box.verified{
+.captcha-frame.verified{
   border-color:var(--accent-dim);
   box-shadow:0 0 0 3px var(--inp-focus);
 }
-.captcha-pending-msg{
-  font-size:0.62rem;color:rgba(255,255,255,0.3);
-  display:flex;align-items:center;gap:5px;
+/* Loading overlay — sits above the widget until captcha renders */
+.captcha-overlay{
+  position:absolute;inset:0;z-index:3;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  background:rgba(10,4,0,0.72);
+  font-size:0.62rem;color:rgba(255,255,255,0.35);
+  pointer-events:none;
+  transition:opacity 0.35s;
+  border-radius:10px;
 }
-.captcha-verified-badge{
+.captcha-overlay i{color:var(--accent-dim);}
+.captcha-frame.loaded .captcha-overlay{opacity:0;}
+/* The hCaptcha iframe container */
+.h-captcha{
+  width:100%;display:block;
+  /* Scale the 300px-wide widget to fill our narrower card */
+  transform-origin:top left;
+}
+.h-captcha iframe{
+  display:block !important;
+  border-radius:0 !important;
+  border:none !important;
+  max-width:100% !important;
+  width:100% !important;
+}
+/* Verified status bar — shown below frame after solve */
+.captcha-status-bar{
   display:none;align-items:center;gap:6px;
-  font-size:0.72rem;font-weight:700;color:var(--accent);
+  font-size:0.65rem;font-weight:700;color:var(--accent);
+  background:var(--pill-bg);border:1px solid var(--pill-border);
+  border-radius:8px;padding:6px 10px;
+  animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
-.captcha-verified-badge i{font-size:0.88rem;}
-.captcha-box.verified .captcha-pending-msg{display:none;}
-.captcha-box.verified .captcha-verified-badge{display:flex;}
-/* Override hCaptcha iframe bg so it blends on dark cards */
-.h-captcha{width:100%;overflow:hidden;border-radius:8px;}
-.h-captcha iframe{border-radius:8px !important;max-width:100% !important;}
+.captcha-status-bar i{font-size:0.8rem;}
+.captcha-frame.verified ~ .captcha-status-bar{display:flex;}
+/* Legacy selectors kept for JS compatibility */
+.captcha-box{display:none;}
+.captcha-pending-msg,.captcha-verified-badge{display:none;}
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — Mobile-first, four breakpoints
@@ -2022,9 +2059,8 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   .sub{font-size:0.63rem;margin-bottom:10px;}
   .inp{padding:10px 8px;font-size:1.05rem;letter-spacing:8px;}
   .btn{padding:10px;font-size:0.78rem;}
-  .captcha-box{padding:7px;min-height:50px;}
-  .captcha-pending-msg{font-size:0.6rem;}
-  .captcha-label{font-size:0.55rem;}
+  .captcha-frame{border-radius:8px;}
+  .captcha-overlay{font-size:0.58rem;border-radius:8px;}
   .h-captcha>div,.h-captcha iframe{max-width:100% !important;width:100% !important;}
 }
 
@@ -2106,23 +2142,28 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
       </div>
       <!-- ── Human Verification (hCaptcha) ──────────────────────────── -->
       <div class="captcha-wrap">
-        <label class="captcha-label"><i class="fas fa-shield-halved"></i>&ensp;Human Verification Required</label>
-        <div class="captcha-box" id="captchaBox">
-          <span class="captcha-pending-msg">
-            <i class="fas fa-circle-notch fa-spin" style="color:var(--accent-dim);font-size:0.85rem;"></i>
-            &nbsp;Solve the challenge below to enable takeover
-          </span>
-          <span class="captcha-verified-badge">
-            <i class="fas fa-circle-check"></i>&nbsp;Verified — you&rsquo;re human!
-          </span>
+        <label class="captcha-label">
+          <i class="fas fa-shield-halved"></i>&ensp;Human Verification Required
+        </label>
+        <!-- Unified frame: overlay + widget live together -->
+        <div class="captcha-frame" id="captchaBox">
+          <div class="captcha-overlay" id="captchaOverlay">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Loading verification…</span>
+          </div>
+          <div class="h-captcha"
+               data-sitekey="{{ hcaptcha_site_key }}"
+               data-theme="dark"
+               data-callback="onHCaptchaSolved"
+               data-expired-callback="onHCaptchaExpired">
+          </div>
         </div>
-        <div class="h-captcha"
-             data-sitekey="{{ hcaptcha_site_key }}"
-             data-theme="dark"
-             data-callback="onHCaptchaSolved"
-             data-expired-callback="onHCaptchaExpired"
-             style="margin-top:6px;">
+        <!-- Shown only after solved -->
+        <div class="captcha-status-bar" id="captchaStatusBar">
+          <i class="fas fa-circle-check"></i>&nbsp;Verified — you&rsquo;re human!
         </div>
+        <!-- kept for backward-compat JS refs -->
+        <div class="captcha-box" style="display:none;" id="_captchaBoxLegacy"></div>
       </div>
 
       <button type="submit" class="btn" id="takeoverBtn" disabled>
@@ -2140,37 +2181,145 @@ window._bubbleColors = [
   'rgba(62,207,173,0.07)','rgba(13,138,110,0.05)','rgba(220,255,248,0.04)'
   {% endif %}
 ];
+
+/* ── PIN dot display ─────────────────────────────────────────────── */
 var pinInput = document.getElementById('pinInput');
 var dots = [document.getElementById('d1'),document.getElementById('d2'),
             document.getElementById('d3'),document.getElementById('d4'),
             document.getElementById('d5')];
+
+/* ── State ───────────────────────────────────────────────────────── */
+var pinVerified  = false;   // true once server confirms PIN is correct
+var pinChecking  = false;   // debounce guard
+var captchaReady = false;   // true once hCaptcha widget loads
+
+/* ── Captcha section: hidden until PIN is verified ───────────────── */
+var captchaWrap  = document.querySelector('.captcha-wrap');
+var captchaFrame = document.getElementById('captchaBox');
+var captchaStatusBar = document.getElementById('captchaStatusBar');
+var pinErrEl    = document.getElementById('pinError');
+captchaWrap.style.display = 'none';
+
+/* ── PIN input handler ───────────────────────────────────────────── */
 pinInput.addEventListener('input', function(){
   var len = this.value.length;
   dots.forEach(function(d,i){
-    if(i<len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
+    if(i < len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
     else d.classList.remove('filled');
   });
+
+  /* Reset if user edits after a successful check */
+  if(pinVerified && len < 5){
+    pinVerified = false;
+    captchaWrap.style.display = 'none';
+    hidePinError();
+  }
+
+  /* Trigger PIN check once all 5 digits are typed */
+  if(len === 5 && !pinVerified && !pinChecking){
+    checkPin(this.value);
+  }
 });
 
-/* ── hCaptcha callbacks ─────────────────────────────────────────────── */
+/* ── Server PIN verification ─────────────────────────────────────── */
+function checkPin(pin){
+  pinChecking = true;
+  setPinState('checking');
+
+  fetch('/api/check-takeover-pin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pin: pin})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+  .then(function(res){
+    pinChecking = false;
+    if(res.ok && res.data.valid){
+      pinVerified = true;
+      setPinState('valid');
+      hidePinError();
+      revealCaptcha();
+    } else {
+      pinVerified = false;
+      setPinState('invalid');
+      showPinError(res.data.error || 'Incorrect PIN. Try again.');
+    }
+  })
+  .catch(function(){
+    pinChecking = false;
+    setPinState('');
+    showPinError('Connection error. Please try again.');
+  });
+}
+
+/* ── Visual PIN field states ─────────────────────────────────────── */
+function setPinState(state){
+  var wrap = document.querySelector('.pin-wrap');
+  var inp  = document.getElementById('pinInput');
+  wrap.classList.remove('pin-checking','pin-valid','pin-invalid');
+  if(state) wrap.classList.add('pin-' + state);
+}
+
+function showPinError(msg){
+  var el = document.getElementById('pinInlineErr');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'pinInlineErr';
+    el.style.cssText = 'font-size:0.62rem;color:#FF9090;display:flex;align-items:center;gap:5px;margin-top:5px;font-weight:600;';
+    document.querySelector('.pin-wrap').insertAdjacentElement('afterend', el);
+  }
+  el.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + msg;
+  el.style.display = 'flex';
+}
+
+function hidePinError(){
+  var el = document.getElementById('pinInlineErr');
+  if(el) el.style.display = 'none';
+}
+
+/* ── Reveal captcha after valid PIN ──────────────────────────────── */
+function revealCaptcha(){
+  captchaWrap.style.display = 'flex';
+  captchaWrap.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
+  /* Scroll the captcha into view smoothly */
+  setTimeout(function(){ captchaWrap.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 80);
+}
+
+/* ── hCaptcha callbacks ─────────────────────────────────────────── */
 function onHCaptchaSolved(token) {
-  var box = document.getElementById('captchaBox');
+  captchaReady = true;
   var btn = document.getElementById('takeoverBtn');
-  box.classList.add('verified');
+  if(captchaFrame) captchaFrame.classList.add('verified');
+  if(captchaStatusBar) captchaStatusBar.style.display = 'flex';
   btn.disabled = false;
   btn.innerHTML = "<i class='fas fa-arrow-right-to-bracket'></i>&ensp;Take Over &amp; Sign In";
 }
 function onHCaptchaExpired() {
-  var box = document.getElementById('captchaBox');
+  captchaReady = false;
   var btn = document.getElementById('takeoverBtn');
-  box.classList.remove('verified');
+  if(captchaFrame) captchaFrame.classList.remove('verified');
+  if(captchaStatusBar) captchaStatusBar.style.display = 'none';
   btn.disabled = true;
   btn.innerHTML = "<i class='fas fa-lock'></i>&ensp;Complete Verification First";
 }
 
+/* Remove loading overlay once hCaptcha iframe renders */
+(function(){
+  var frame = document.getElementById('captchaBox');
+  var overlay = document.getElementById('captchaOverlay');
+  if(!frame || !overlay) return;
+  var observer = new MutationObserver(function(){
+    var iframe = frame.querySelector('iframe');
+    if(iframe){ frame.classList.add('loaded'); observer.disconnect(); }
+  });
+  observer.observe(frame, {childList:true, subtree:true});
+  setTimeout(function(){ frame.classList.add('loaded'); }, 4000);
+})();
+
+/* ── Form submit guard ───────────────────────────────────────────── */
 document.getElementById('takeoverForm').addEventListener('submit', function(e){
   var btn = document.getElementById('takeoverBtn');
-  if(btn.disabled){ e.preventDefault(); return; }
+  if(btn.disabled || !pinVerified){ e.preventDefault(); return; }
   btn.disabled = true;
   btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>&ensp;Verifying &amp; Taking over…";
 });
@@ -16518,6 +16667,21 @@ def public_announcements():
         "priority": a.priority,
         "created_at": a.created_at.strftime('%b %d, %I:%M %p')
     } for a in rows])
+
+
+@app.route('/api/check-takeover-pin', methods=['POST'])
+@limiter.limit("8 per minute")
+def check_takeover_pin():
+    """Lightweight PIN check — returns JSON so the client can reveal captcha only on success."""
+    client_ip = get_client_ip()
+    if is_ip_blacklisted(client_ip):
+        return jsonify({'valid': False, 'error': 'Access denied.'}), 403
+    data = request.get_json(silent=True) or {}
+    pin  = str(data.get('pin', '')).strip()
+    if master_pin_matches(pin):
+        return jsonify({'valid': True})
+    record_failed_attempt(client_ip, 'admin')
+    return jsonify({'valid': False, 'error': 'Incorrect PIN.'}), 401
 
 
 @app.route('/login', methods=['GET', 'POST'])
