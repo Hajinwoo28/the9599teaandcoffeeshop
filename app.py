@@ -262,12 +262,13 @@ def add_header(response):
                 "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
                 "https://fonts.gstatic.com "
                 "https://use.fontawesome.com https://ka-f.fontawesome.com data:; "
-            "img-src 'self' data: blob: https:; "
+            "img-src 'self' data: blob: https: "
+                "https://*.hcaptcha.com; "
             "connect-src 'self' https://ka-f.fontawesome.com "
                 "https://vercel.live https://*.vercel.live wss://*.vercel.live "
-                "https://api.hcaptcha.com; "
+                "https://api.hcaptcha.com https://*.hcaptcha.com; "
             "frame-src 'self' https://vercel.live "
-                "https://newassets.hcaptcha.com; "
+                "https://newassets.hcaptcha.com https://*.hcaptcha.com; "
             "object-src 'none';"
         )
         response.headers['Content-Security-Policy'] = csp
@@ -17186,7 +17187,8 @@ def employee_login():
                     )
                 return render_template_string(
                     EMPLOYEE_LOGIN_HTML,
-                    error="Human verification failed. Please solve the CAPTCHA and try again."
+                    error="Human verification failed. Please solve the CAPTCHA and try again.",
+                    hcaptcha_site_key=HCAPTCHA_SITE_KEY
                 )
             session.permanent = True
             session['is_employee'] = True
