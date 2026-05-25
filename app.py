@@ -16456,6 +16456,7 @@ def storefront():
         close_time=status["cutoff_time"],   # cutoff = 1h before actual close
         actual_close_time=status["close_time"],
         google_client_id=GOOGLE_CLIENT_ID,
+        hcaptcha_site_key=HCAPTCHA_SITE_KEY,
     )
 
 # ── Customer-facing error page ────────────────────────────────────────────────
