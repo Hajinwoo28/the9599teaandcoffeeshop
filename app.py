@@ -1347,7 +1347,7 @@ body::before{
 .steam-wand span{
   position:absolute;bottom:0;display:block;
   width:2px;border-radius:2px;background:rgba(255,248,240,0.35);
-  animation:steamRise 2.4s ease-in infinite;
+  animation:steamRise 2.4s ease-in-out infinite;
 }
 .steam-wand span:nth-child(1){left:-7px;height:18px;animation-delay:0s;}
 .steam-wand span:nth-child(2){left:0px;height:24px;animation-delay:0.5s;}
@@ -1477,11 +1477,12 @@ h2{
 .login-captcha-wrap{
   position:relative;
   margin-bottom:14px;
-  background:linear-gradient(135deg,rgba(100,56,16,0.99) 0%,rgba(82,44,10,0.99) 100%);
-  border:1.5px solid rgba(200,140,70,0.35);
+  background:linear-gradient(145deg,rgba(110,60,16,0.99) 0%,rgba(78,40,8,0.99) 55%,rgba(58,28,5,0.99) 100%);
+  border:1.5px solid rgba(195,135,55,0.45);
   border-radius:12px;
   overflow:hidden;
-  box-shadow:0 2px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,140,70,0.08);
+  box-shadow:0 3px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(220,165,80,0.12), inset 0 -1px 0 rgba(0,0,0,0.3);
+  transition:border-color 0.3s, box-shadow 0.3s;
 }
 /* ── Coffee-toned right column with warm dot pattern ── */
 .login-captcha-wrap::before{
@@ -1528,14 +1529,16 @@ h2{
 .step2-title{font-size:0.8rem;font-weight:700;color:rgba(255,220,150,0.9);margin-bottom:2px;}
 .step2-sub{font-size:0.62rem;color:rgba(255,220,150,0.45);line-height:1.4;}
 .captcha-status-bar{
-  display:none;align-items:center;gap:6px;
+  display:none;align-items:center;gap:8px;
   font-size:0.65rem;font-weight:700;
-  color:rgba(205,152,72,1);
-  background:rgba(205,152,72,0.1);
-  border:1px solid rgba(205,152,72,0.3);
-  border-radius:8px;padding:7px 12px;margin-bottom:8px;
+  color:rgba(215,170,80,1);
+  background:linear-gradient(135deg,rgba(195,145,55,0.14),rgba(150,100,30,0.08));
+  border:1px solid rgba(200,150,60,0.38);
+  border-radius:8px;padding:8px 14px;margin-bottom:8px;
+  box-shadow:inset 0 1px 0 rgba(255,220,120,0.1);
+  animation:scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
 }
-.captcha-status-bar i{font-size:0.8rem;}
+.captcha-status-bar i{font-size:0.85rem;color:rgba(230,185,85,1);}
 @keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
 </style>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
@@ -1853,7 +1856,7 @@ body::before{
   background:var(--bg-b);align-items:center;justify-content:center;}
 .steam-wand{position:absolute;bottom:calc(100% - 2px);left:50%;}
 .steam-wand span{position:absolute;bottom:0;display:block;width:2px;border-radius:2px;
-  background:rgba(220,255,248,0.3);animation:steamRise 2.4s ease-in infinite;}
+  background:rgba(220,255,248,0.3);animation:steamRise 2.4s ease-in-out infinite;}
 .steam-wand span:nth-child(1){left:-7px;height:18px;animation-delay:0.2s;}
 .steam-wand span:nth-child(2){left:0px;height:25px;animation-delay:0.7s;}
 .steam-wand span:nth-child(3){left:7px;height:15px;animation-delay:1.3s;}
@@ -2200,22 +2203,27 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   display:flex;flex-direction:column;gap:8px;
 }
 .captcha-label{
-  font-size:0.58rem;font-weight:700;color:rgba(210,160,90,0.65);
+  font-size:0.58rem;font-weight:700;color:rgba(215,168,90,0.78);
   text-transform:uppercase;letter-spacing:1.5px;
-  display:flex;align-items:center;gap:4px;
+  display:flex;align-items:center;gap:5px;
 }
 .captcha-frame{
   position:relative;
-  border:1.5px solid rgba(180,115,45,0.42);
+  border:1.5px solid rgba(185,120,48,0.45);
   border-radius:12px;
   overflow:hidden;
-  background:linear-gradient(135deg,rgba(90,50,14,0.97) 0%,rgba(70,36,9,0.97) 100%);
-  box-shadow:0 2px 14px rgba(0,0,0,0.32), inset 0 1px 0 rgba(210,160,90,0.1);
-  transition:border-color 0.25s,box-shadow 0.25s;
+  background:linear-gradient(145deg,rgba(105,56,14,0.98) 0%,rgba(78,40,8,0.98) 55%,rgba(58,28,5,0.98) 100%);
+  box-shadow:0 3px 18px rgba(0,0,0,0.38), inset 0 1px 0 rgba(220,165,80,0.12), inset 0 -1px 0 rgba(0,0,0,0.3);
+  transition:border-color 0.3s, box-shadow 0.3s;
 }
 .captcha-frame.verified{
-  border-color:rgba(210,165,80,0.75);
-  box-shadow:0 0 0 3px rgba(210,165,80,0.14), 0 2px 14px rgba(0,0,0,0.28);
+  border-color:rgba(220,175,80,0.8);
+  box-shadow:0 0 0 3px rgba(220,175,80,0.16), 0 4px 20px rgba(130,75,15,0.35);
+  animation:verifiedGlow 0.5s ease-out;
+}
+@keyframes verifiedGlow{
+  0%{box-shadow:0 0 0 6px rgba(220,175,80,0.3), 0 4px 20px rgba(130,75,15,0.35);}
+  100%{box-shadow:0 0 0 3px rgba(220,175,80,0.16), 0 4px 20px rgba(130,75,15,0.35);}
 }
 /* ── Coffee-toned right column with warm dot pattern ── */
 .captcha-frame::before{
@@ -2262,32 +2270,35 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   width:100% !important;
 }
 .captcha-status-bar{
-  display:none;align-items:center;gap:6px;
+  display:none;align-items:center;gap:8px;
   font-size:0.65rem;font-weight:700;
-  color:rgba(195,145,65,1);
-  background:rgba(195,145,65,0.1);
-  border:1px solid rgba(195,145,65,0.28);
-  border-radius:8px;padding:7px 12px;
-  animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  color:rgba(215,170,80,1);
+  background:linear-gradient(135deg,rgba(195,145,55,0.14),rgba(150,100,30,0.08));
+  border:1px solid rgba(200,150,60,0.38);
+  border-radius:8px;padding:8px 14px;
+  box-shadow:inset 0 1px 0 rgba(255,220,120,0.1);
+  animation:scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
 }
-.captcha-status-bar i{font-size:0.8rem;}
+.captcha-status-bar i{font-size:0.85rem;color:rgba(230,185,85,1);}
 .captcha-frame.verified ~ .captcha-status-bar{display:flex;}
 .captcha-box{display:none;}
 .captcha-pending-msg,.captcha-verified-badge{display:none;}
 .step2-header{
   display:flex;align-items:center;gap:12px;
   background:rgba(195,145,65,0.07);
-  border:1px solid rgba(180,115,45,0.22);
+  border:1px solid rgba(185,120,48,0.25);
+  border-left:3px solid rgba(200,150,60,0.55);
   border-radius:10px;padding:12px 14px;margin-bottom:14px;
 }
 .step2-icon{
   width:36px;height:36px;flex-shrink:0;
-  background:rgba(195,145,65,0.13);border-radius:8px;
+  background:rgba(195,145,65,0.16);border-radius:8px;
   display:flex;align-items:center;justify-content:center;
-  color:rgba(200,150,70,0.9);font-size:0.9rem;
+  color:rgba(215,165,80,0.95);font-size:0.95rem;
+  box-shadow:inset 0 1px 0 rgba(255,220,120,0.15);
 }
-.step2-title{font-size:0.8rem;font-weight:700;color:rgba(240,210,150,0.92);margin-bottom:2px;}
-.step2-sub{font-size:0.62rem;color:rgba(210,170,100,0.48);line-height:1.4;}
+.step2-title{font-size:0.8rem;font-weight:700;color:rgba(248,220,155,0.95);margin-bottom:3px;letter-spacing:0.2px;}
+.step2-sub{font-size:0.62rem;color:rgba(215,175,105,0.58);line-height:1.45;}
 @keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
 
 /* ══════════════════════════════════════════════
@@ -2331,6 +2342,8 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   .captcha-frame{border-radius:8px;}
   .captcha-overlay{font-size:0.58rem;border-radius:8px;}
   .h-captcha>div,.h-captcha iframe{max-width:100% !important;width:100% !important;}
+  .step2-header{padding:10px 12px;}
+  .captcha-status-bar{padding:7px 10px;font-size:0.6rem;}
 }
 
 /* ── Small phones (≤ 360 px, e.g. Galaxy S8) ── */
