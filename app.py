@@ -1996,39 +1996,41 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 /* ── hCaptcha — unified frame design ── */
 .captcha-wrap{
   margin-bottom:10px;
-  display:flex;flex-direction:column;gap:5px;
+  display:flex;flex-direction:column;gap:8px;
 }
 .captcha-label{
-  font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.35);
+  font-size:0.58rem;font-weight:700;color:rgba(255,220,150,0.55);
   text-transform:uppercase;letter-spacing:1.5px;
   display:flex;align-items:center;gap:4px;
 }
 .captcha-frame{
   position:relative;
-  border:1.5px solid var(--inp-border);
-  border-radius:10px;
+  border:1.5px solid rgba(205,152,72,0.35);
+  border-radius:12px;
   overflow:hidden;
-  background:rgba(0,0,0,0.28);
+  background:linear-gradient(135deg,rgba(60,30,10,0.85) 0%,rgba(40,18,5,0.92) 100%);
+  box-shadow:0 2px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(205,152,72,0.08);
   transition:border-color 0.25s,box-shadow 0.25s;
 }
 .captcha-frame.verified{
-  border-color:var(--accent-dim);
-  box-shadow:0 0 0 3px var(--inp-focus);
+  border-color:rgba(205,152,72,0.7);
+  box-shadow:0 0 0 3px rgba(205,152,72,0.15), 0 2px 16px rgba(0,0,0,0.35);
 }
 .captcha-overlay{
   position:absolute;inset:0;z-index:3;
   display:flex;align-items:center;justify-content:center;gap:7px;
-  background:rgba(10,4,0,0.72);
-  font-size:0.62rem;color:rgba(255,255,255,0.35);
+  background:rgba(20,8,0,0.78);
+  font-size:0.62rem;color:rgba(255,220,150,0.45);
   pointer-events:none;
   transition:opacity 0.35s;
-  border-radius:10px;
+  border-radius:12px;
 }
-.captcha-overlay i{color:var(--accent-dim);}
+.captcha-overlay i{color:rgba(205,152,72,0.7);}
 .captcha-frame.loaded .captcha-overlay{opacity:0;}
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
+  filter:hue-rotate(5deg) brightness(0.92) saturate(0.85);
 }
 .h-captcha iframe{
   display:block !important;
@@ -2039,15 +2041,32 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 }
 .captcha-status-bar{
   display:none;align-items:center;gap:6px;
-  font-size:0.65rem;font-weight:700;color:var(--accent);
-  background:var(--pill-bg);border:1px solid var(--pill-border);
-  border-radius:8px;padding:6px 10px;
+  font-size:0.65rem;font-weight:700;
+  color:rgba(205,152,72,1);
+  background:rgba(205,152,72,0.1);
+  border:1px solid rgba(205,152,72,0.3);
+  border-radius:8px;padding:7px 12px;
   animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 .captcha-status-bar i{font-size:0.8rem;}
 .captcha-frame.verified ~ .captcha-status-bar{display:flex;}
 .captcha-box{display:none;}
 .captcha-pending-msg,.captcha-verified-badge{display:none;}
+.step2-header{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(205,152,72,0.08);
+  border:1px solid rgba(205,152,72,0.2);
+  border-radius:10px;padding:12px 14px;margin-bottom:14px;
+}
+.step2-icon{
+  width:36px;height:36px;flex-shrink:0;
+  background:rgba(205,152,72,0.15);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(205,152,72,0.9);font-size:0.9rem;
+}
+.step2-title{font-size:0.8rem;font-weight:700;color:rgba(255,220,150,0.9);margin-bottom:2px;}
+.step2-sub{font-size:0.62rem;color:rgba(255,220,150,0.45);line-height:1.4;}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — Mobile-first, four breakpoints
@@ -2152,8 +2171,8 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
     <div class="err"><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
     {% endif %}
 
-    <form method="POST" action="{{ action_url }}" id="takeoverForm">
-      <input type="hidden" name="force" value="1">
+    <!-- ── Step 1: PIN Entry ─────────────────────────────────────────── -->
+    <div id="stepPin">
       <label class="lbl">Master PIN (5 digits)</label>
       <div class="pin-wrap">
         <div class="pin-dots">
@@ -2163,12 +2182,27 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
           <div class="pin-dot" id="d4"></div>
           <div class="pin-dot" id="d5"></div>
         </div>
-        <input type="password" name="pin" class="inp" id="pinInput"
-               placeholder="" required autofocus maxlength="5" minlength="5"
+        <input type="password" class="inp" id="pinInput"
+               placeholder="" autofocus maxlength="5" minlength="5"
                pattern="[0-9]{5}" inputmode="numeric"
                autocomplete="one-time-code">
       </div>
-      <!-- ── Human Verification (hCaptcha) ──────────────────────────── -->
+      <button type="button" class="btn" id="verifyPinBtn" disabled>
+        <i class="fas fa-key"></i>&ensp;Verify PIN
+      </button>
+    </div>
+
+    <!-- ── Step 2: Human Verification ───────────────────────────────── -->
+    <form method="POST" action="{{ action_url }}" id="takeoverForm" style="display:none;">
+      <input type="hidden" name="force" value="1">
+      <input type="hidden" name="pin" id="hiddenPin">
+      <div class="step2-header">
+        <div class="step2-icon"><i class="fas fa-shield-halved"></i></div>
+        <div>
+          <div class="step2-title">Human Verification</div>
+          <div class="step2-sub">PIN confirmed — complete the captcha to proceed</div>
+        </div>
+      </div>
       <div class="captcha-wrap">
         <label class="captcha-label">
           <i class="fas fa-shield-halved"></i>&ensp;Human Verification Required
@@ -2186,11 +2220,10 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
           </div>
         </div>
         <div class="captcha-status-bar" id="captchaStatusBar">
-          <i class="fas fa-circle-check"></i>&nbsp;Verified — you&rsquo;re human!
+          <i class="fas fa-circle-check"></i>&nbsp;Verified — you’re human!
         </div>
         <div class="captcha-box" style="display:none;" id="_captchaBoxLegacy"></div>
       </div>
-
       <button type="submit" class="btn" id="takeoverBtn" disabled>
         <i class="fas fa-lock"></i>&ensp;Complete Verification First
       </button>
@@ -2207,42 +2240,40 @@ window._bubbleColors = [
   {% endif %}
 ];
 
-/* ── PIN dot display ─────────────────────────────────────────────── */
-var pinInput = document.getElementById('pinInput');
-var dots = [document.getElementById('d1'),document.getElementById('d2'),
-            document.getElementById('d3'),document.getElementById('d4'),
-            document.getElementById('d5')];
-
 /* ── State ───────────────────────────────────────────────────────── */
-var pinVerified  = false;   // true once server confirms PIN is correct
-var pinChecking  = false;   // debounce guard
-var captchaReady = false;   // true once hCaptcha widget loads
+var pinVerified  = false;
+var pinChecking  = false;
+var captchaReady = false;
 
-/* ── Captcha section: hidden until PIN is verified ───────────────── */
-var captchaWrap  = document.querySelector('.captcha-wrap');
+/* ── Element refs ────────────────────────────────────────────────── */
+var pinInput     = document.getElementById('pinInput');
+var dots         = [document.getElementById('d1'),document.getElementById('d2'),
+                    document.getElementById('d3'),document.getElementById('d4'),
+                    document.getElementById('d5')];
+var stepPin      = document.getElementById('stepPin');
+var takeoverForm = document.getElementById('takeoverForm');
 var captchaFrame = document.getElementById('captchaBox');
 var captchaStatusBar = document.getElementById('captchaStatusBar');
-var pinErrEl    = document.getElementById('pinError');
-captchaWrap.style.display = 'none';
+var verifyPinBtn = document.getElementById('verifyPinBtn');
 
-/* ── PIN input handler ───────────────────────────────────────────── */
+/* ── PIN dot display ─────────────────────────────────────────────── */
 pinInput.addEventListener('input', function(){
   var len = this.value.length;
   dots.forEach(function(d,i){
     if(i < len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
     else d.classList.remove('filled');
   });
-
-  /* Reset if user edits after a successful check */
+  verifyPinBtn.disabled = (len !== 5);
   if(pinVerified && len < 5){
     pinVerified = false;
-    captchaWrap.style.display = 'none';
     hidePinError();
   }
+});
 
-  /* Trigger PIN check once all 5 digits are typed */
-  if(len === 5 && !pinVerified && !pinChecking){
-    checkPin(this.value);
+/* ── Verify PIN button click ─────────────────────────────────────── */
+verifyPinBtn.addEventListener('click', function(){
+  if(pinInput.value.length === 5 && !pinChecking){
+    checkPin(pinInput.value);
   }
 });
 
@@ -2250,6 +2281,8 @@ pinInput.addEventListener('input', function(){
 function checkPin(pin){
   pinChecking = true;
   setPinState('checking');
+  verifyPinBtn.disabled = true;
+  verifyPinBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>&ensp;Verifying…";
 
   fetch('/api/check-takeover-pin', {
     method: 'POST',
@@ -2263,16 +2296,20 @@ function checkPin(pin){
       pinVerified = true;
       setPinState('valid');
       hidePinError();
-      revealCaptcha();
+      revealCaptchaStep();
     } else {
       pinVerified = false;
       setPinState('invalid');
+      verifyPinBtn.disabled = false;
+      verifyPinBtn.innerHTML = "<i class='fas fa-key'></i>&ensp;Verify PIN";
       showPinError(res.data.error || 'Incorrect PIN. Try again.');
     }
   })
   .catch(function(){
     pinChecking = false;
     setPinState('');
+    verifyPinBtn.disabled = false;
+    verifyPinBtn.innerHTML = "<i class='fas fa-key'></i>&ensp;Verify PIN";
     showPinError('Connection error. Please try again.');
   });
 }
@@ -2280,7 +2317,6 @@ function checkPin(pin){
 /* ── Visual PIN field states ─────────────────────────────────────── */
 function setPinState(state){
   var wrap = document.querySelector('.pin-wrap');
-  var inp  = document.getElementById('pinInput');
   wrap.classList.remove('pin-checking','pin-valid','pin-invalid');
   if(state) wrap.classList.add('pin-' + state);
 }
@@ -2302,11 +2338,18 @@ function hidePinError(){
   if(el) el.style.display = 'none';
 }
 
-/* ── Reveal captcha after valid PIN ──────────────────────────────── */
-function revealCaptcha(){
-  captchaWrap.style.display = 'flex';
-  captchaWrap.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
-  setTimeout(function(){ captchaWrap.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 80);
+/* ── Switch to Step 2: hide PIN, show captcha form ───────────────── */
+function revealCaptchaStep(){
+  document.getElementById('hiddenPin').value = pinInput.value;
+  stepPin.style.animation = 'fadeOut 0.3s ease both';
+  setTimeout(function(){
+    stepPin.style.display = 'none';
+    takeoverForm.style.display = 'block';
+    takeoverForm.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
+    setTimeout(function(){
+      takeoverForm.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }, 80);
+  }, 280);
 }
 
 /* ── hCaptcha callbacks ─────────────────────────────────────────── */
