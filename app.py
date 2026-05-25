@@ -1470,7 +1470,7 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgb(26,10,0);
+  background:linear-gradient(to right,rgba(75,52,12,0) 0%,rgb(75,52,12) 18%);
   pointer-events:none;
   z-index:6;
 }
@@ -2202,7 +2202,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgb(26,10,0);
+  background:linear-gradient(to right,rgba(75,52,12,0) 0%,rgb(75,52,12) 18%);
   pointer-events:none;
   z-index:3;
 }
