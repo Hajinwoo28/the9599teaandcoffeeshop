@@ -1483,15 +1483,15 @@ h2{
   overflow:hidden;
   box-shadow:0 2px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,140,70,0.08);
 }
-/* ── Full-frame colour equaliser + dot-pattern right-column ── */
+/* ── Coffee-toned right column with warm dot pattern ── */
 .login-captcha-wrap::before{
   content:\'\';
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background-color:rgb(88,48,14);
-  background-image:radial-gradient(circle, rgba(180,110,40,0.18) 1px, transparent 1px);
-  background-size:6px 6px;
+  background-color:rgba(62,32,8,0.98);
+  background-image:radial-gradient(circle, rgba(190,125,45,0.22) 1px, transparent 1px);
+  background-size:5px 5px;
   pointer-events:none;
   z-index:6;
 }
@@ -1500,13 +1500,13 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:0;
-  background:rgba(88,48,14,0.55);
+  background:rgba(70,36,9,0.48);
   pointer-events:none;
   z-index:5;
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:grayscale(1) sepia(1) hue-rotate(12deg) saturate(4) brightness(0.95);
+  filter:grayscale(1) sepia(1) hue-rotate(8deg) saturate(3.5) brightness(0.98);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -1595,10 +1595,10 @@ h2{
     <form method="POST" id="loginForm" style="display:none;">
       <input type="hidden" name="pin" id="loginHiddenPin">
       <div class="step2-header">
-        <div class="step2-icon"><i class="fas fa-shield-halved"></i></div>
+        <div class="step2-icon"><i class="fas fa-mug-hot"></i></div>
         <div>
-          <div class="step2-title">Human Verification</div>
-          <div class="step2-sub">PIN confirmed — complete the captcha to proceed</div>
+          <div class="step2-title">One quick check ☕</div>
+          <div class="step2-sub">Almost there — just confirm you're not a bot!</div>
         </div>
       </div>
       <div class="login-captcha-wrap">
@@ -1610,7 +1610,7 @@ h2{
         <i class="fas fa-circle-check"></i>&nbsp;Verified — you’re human!
       </div>
       <button type="submit" class="btn" id="submitBtn" disabled>
-        <i class="fas fa-lock"></i>&ensp;Complete Verification First
+        <i class="fas fa-mug-hot"></i>&ensp;Complete the check first
       </button>
     </form>
   </div>
@@ -2194,38 +2194,38 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .btn:active{transform:scale(0.97);}
 .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 
-/* ── hCaptcha — unified frame design ── */
+/* ── hCaptcha — coffee shop frame design ── */
 .captcha-wrap{
   margin-bottom:10px;
   display:flex;flex-direction:column;gap:8px;
 }
 .captcha-label{
-  font-size:0.58rem;font-weight:700;color:rgba(255,220,150,0.55);
+  font-size:0.58rem;font-weight:700;color:rgba(210,160,90,0.65);
   text-transform:uppercase;letter-spacing:1.5px;
   display:flex;align-items:center;gap:4px;
 }
 .captcha-frame{
   position:relative;
-  border:1.5px solid rgba(200,140,70,0.35);
+  border:1.5px solid rgba(180,115,45,0.42);
   border-radius:12px;
   overflow:hidden;
-  background:linear-gradient(135deg,rgba(100,56,16,0.99) 0%,rgba(82,44,10,0.99) 100%);
-  box-shadow:0 2px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,140,70,0.08);
+  background:linear-gradient(135deg,rgba(90,50,14,0.97) 0%,rgba(70,36,9,0.97) 100%);
+  box-shadow:0 2px 14px rgba(0,0,0,0.32), inset 0 1px 0 rgba(210,160,90,0.1);
   transition:border-color 0.25s,box-shadow 0.25s;
 }
 .captcha-frame.verified{
-  border-color:rgba(232,201,138,0.8);
-  box-shadow:0 0 0 3px rgba(232,201,138,0.18), 0 2px 16px rgba(0,0,0,0.35);
+  border-color:rgba(210,165,80,0.75);
+  box-shadow:0 0 0 3px rgba(210,165,80,0.14), 0 2px 14px rgba(0,0,0,0.28);
 }
-/* ── Full-frame colour equaliser + dot-pattern right-column ── */
+/* ── Coffee-toned right column with warm dot pattern ── */
 .captcha-frame::before{
   content:\'\';
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background-color:rgb(88,48,14);
-  background-image:radial-gradient(circle, rgba(180,110,40,0.18) 1px, transparent 1px);
-  background-size:6px 6px;
+  background-color:rgba(62,32,8,0.98);
+  background-image:radial-gradient(circle, rgba(190,125,45,0.22) 1px, transparent 1px);
+  background-size:5px 5px;
   pointer-events:none;
   z-index:3;
 }
@@ -2234,25 +2234,25 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:0;
-  background:rgba(88,48,14,0.55);
+  background:rgba(70,36,9,0.48);
   pointer-events:none;
   z-index:2;
 }
 .captcha-overlay{
   position:absolute;inset:0;z-index:3;
   display:flex;align-items:center;justify-content:center;gap:7px;
-  background:rgba(20,8,0,0.55);
-  font-size:0.62rem;color:rgba(255,220,150,0.45);
+  background:rgba(30,14,3,0.5);
+  font-size:0.62rem;color:rgba(220,175,100,0.5);
   pointer-events:none;
   transition:opacity 0.35s;
   border-radius:12px;
 }
-.captcha-overlay i{color:rgba(205,152,72,0.7);}
+.captcha-overlay i{color:rgba(200,145,65,0.75);}
 .captcha-frame.loaded .captcha-overlay{opacity:0;}
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:grayscale(1) sepia(1) hue-rotate(12deg) saturate(4) brightness(0.95);
+  filter:grayscale(1) sepia(1) hue-rotate(8deg) saturate(3.5) brightness(0.98);
 }
 .h-captcha iframe{
   display:block !important;
@@ -2264,9 +2264,9 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .captcha-status-bar{
   display:none;align-items:center;gap:6px;
   font-size:0.65rem;font-weight:700;
-  color:rgba(205,152,72,1);
-  background:rgba(205,152,72,0.1);
-  border:1px solid rgba(205,152,72,0.3);
+  color:rgba(195,145,65,1);
+  background:rgba(195,145,65,0.1);
+  border:1px solid rgba(195,145,65,0.28);
   border-radius:8px;padding:7px 12px;
   animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
@@ -2276,18 +2276,18 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .captcha-pending-msg,.captcha-verified-badge{display:none;}
 .step2-header{
   display:flex;align-items:center;gap:12px;
-  background:rgba(205,152,72,0.08);
-  border:1px solid rgba(205,152,72,0.2);
+  background:rgba(195,145,65,0.07);
+  border:1px solid rgba(180,115,45,0.22);
   border-radius:10px;padding:12px 14px;margin-bottom:14px;
 }
 .step2-icon{
   width:36px;height:36px;flex-shrink:0;
-  background:rgba(205,152,72,0.15);border-radius:8px;
+  background:rgba(195,145,65,0.13);border-radius:8px;
   display:flex;align-items:center;justify-content:center;
-  color:rgba(205,152,72,0.9);font-size:0.9rem;
+  color:rgba(200,150,70,0.9);font-size:0.9rem;
 }
-.step2-title{font-size:0.8rem;font-weight:700;color:rgba(255,220,150,0.9);margin-bottom:2px;}
-.step2-sub{font-size:0.62rem;color:rgba(255,220,150,0.45);line-height:1.4;}
+.step2-title{font-size:0.8rem;font-weight:700;color:rgba(240,210,150,0.92);margin-bottom:2px;}
+.step2-sub{font-size:0.62rem;color:rgba(210,170,100,0.48);line-height:1.4;}
 @keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
 
 /* ══════════════════════════════════════════════
@@ -2419,15 +2419,15 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
       <input type="hidden" name="force" value="1">
       <input type="hidden" name="pin" id="hiddenPin">
       <div class="step2-header">
-        <div class="step2-icon"><i class="fas fa-shield-halved"></i></div>
+        <div class="step2-icon"><i class="fas fa-mug-hot"></i></div>
         <div>
-          <div class="step2-title">Human Verification</div>
-          <div class="step2-sub">PIN confirmed — complete the captcha to proceed</div>
+          <div class="step2-title">One quick check ☕</div>
+          <div class="step2-sub">Almost there — just confirm you're not a bot!</div>
         </div>
       </div>
       <div class="captcha-wrap">
         <label class="captcha-label">
-          <i class="fas fa-shield-halved"></i>&ensp;Human Verification Required
+          <i class="fas fa-mug-hot"></i>&ensp;Quick security check
         </label>
         <div class="captcha-frame" id="captchaBox">
           <div class="captcha-overlay" id="captchaOverlay">
@@ -2447,7 +2447,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
         <div class="captcha-box" style="display:none;" id="_captchaBoxLegacy"></div>
       </div>
       <button type="submit" class="btn" id="takeoverBtn" disabled>
-        <i class="fas fa-lock"></i>&ensp;Complete Verification First
+        <i class="fas fa-mug-hot"></i>&ensp;Complete the check first
       </button>
     </form>
   </div>
