@@ -1483,13 +1483,15 @@ h2{
   overflow:hidden;
   box-shadow:0 2px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,140,70,0.08);
 }
-/* ── Full-frame colour equaliser + solid right-column blocker ── */
+/* ── Full-frame colour equaliser + dot-pattern right-column ── */
 .login-captcha-wrap::before{
   content:\'\';
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgb(88,48,14);
+  background-color:rgb(88,48,14);
+  background-image:radial-gradient(circle, rgba(180,110,40,0.18) 1px, transparent 1px);
+  background-size:6px 6px;
   pointer-events:none;
   z-index:6;
 }
@@ -1498,13 +1500,13 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:0;
-  background:rgba(88,48,14,0.80);
+  background:rgba(88,48,14,0.55);
   pointer-events:none;
   z-index:5;
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:grayscale(1) sepia(1) hue-rotate(12deg) saturate(5) brightness(0.7);
+  filter:grayscale(1) sepia(1) hue-rotate(12deg) saturate(4) brightness(0.95);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -2215,13 +2217,15 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   border-color:rgba(232,201,138,0.8);
   box-shadow:0 0 0 3px rgba(232,201,138,0.18), 0 2px 16px rgba(0,0,0,0.35);
 }
-/* ── Full-frame colour equaliser + solid right-column blocker ── */
+/* ── Full-frame colour equaliser + dot-pattern right-column ── */
 .captcha-frame::before{
   content:\'\';
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgb(88,48,14);
+  background-color:rgb(88,48,14);
+  background-image:radial-gradient(circle, rgba(180,110,40,0.18) 1px, transparent 1px);
+  background-size:6px 6px;
   pointer-events:none;
   z-index:3;
 }
@@ -2230,14 +2234,14 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:0;
-  background:rgba(88,48,14,0.80);
+  background:rgba(88,48,14,0.55);
   pointer-events:none;
   z-index:2;
 }
 .captcha-overlay{
   position:absolute;inset:0;z-index:3;
   display:flex;align-items:center;justify-content:center;gap:7px;
-  background:rgba(20,8,0,0.78);
+  background:rgba(20,8,0,0.55);
   font-size:0.62rem;color:rgba(255,220,150,0.45);
   pointer-events:none;
   transition:opacity 0.35s;
@@ -2248,7 +2252,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:grayscale(1) sepia(1) hue-rotate(12deg) saturate(5) brightness(0.7);
+  filter:grayscale(1) sepia(1) hue-rotate(12deg) saturate(4) brightness(0.95);
 }
 .h-captcha iframe{
   display:block !important;
