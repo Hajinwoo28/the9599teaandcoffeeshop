@@ -1458,11 +1458,11 @@ h2{
 .login-captcha-wrap{
   position:relative;
   margin-bottom:14px;
-  background:linear-gradient(135deg,rgba(80,38,8,0.9) 0%,rgba(55,22,4,0.95) 100%);
-  border:1.5px solid rgba(205,152,72,0.3);
+  background:linear-gradient(135deg,rgba(59,26,8,0.97) 0%,rgba(26,10,0,0.99) 100%);
+  border:1.5px solid rgba(232,201,138,0.4);
   border-radius:12px;
   overflow:hidden;
-  box-shadow:0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(205,152,72,0.08);
+  box-shadow:0 2px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(232,201,138,0.1);
 }
 /* ── Full-frame colour equaliser + solid right-column blocker ── */
 .login-captcha-wrap::before{
@@ -1470,7 +1470,7 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgb(72,32,8);
+  background:rgb(26,10,0);
   pointer-events:none;
   z-index:6;
 }
@@ -1479,13 +1479,13 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:0;width:60%;
-  background:rgba(55,22,4,0.38);
+  background:rgba(200,130,58,0.12);
   pointer-events:none;
   z-index:5;
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(4) brightness(0.78);
+  filter:grayscale(1) sepia(1) hue-rotate(8deg) saturate(6) brightness(0.88);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -2185,16 +2185,16 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 }
 .captcha-frame{
   position:relative;
-  border:1.5px solid rgba(205,152,72,0.35);
+  border:1.5px solid rgba(232,201,138,0.4);
   border-radius:12px;
   overflow:hidden;
-  background:linear-gradient(135deg,rgba(60,30,10,0.85) 0%,rgba(40,18,5,0.92) 100%);
-  box-shadow:0 2px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(205,152,72,0.08);
+  background:linear-gradient(135deg,rgba(59,26,8,0.97) 0%,rgba(26,10,0,0.99) 100%);
+  box-shadow:0 2px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(232,201,138,0.1);
   transition:border-color 0.25s,box-shadow 0.25s;
 }
 .captcha-frame.verified{
-  border-color:rgba(205,152,72,0.7);
-  box-shadow:0 0 0 3px rgba(205,152,72,0.15), 0 2px 16px rgba(0,0,0,0.35);
+  border-color:rgba(232,201,138,0.8);
+  box-shadow:0 0 0 3px rgba(232,201,138,0.18), 0 2px 16px rgba(0,0,0,0.35);
 }
 /* ── Full-frame colour equaliser + solid right-column blocker ── */
 .captcha-frame::before{
@@ -2202,7 +2202,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgb(72,32,8);
+  background:rgb(26,10,0);
   pointer-events:none;
   z-index:3;
 }
@@ -2211,7 +2211,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:0;width:60%;
-  background:rgba(55,22,4,0.38);
+  background:rgba(200,130,58,0.12);
   pointer-events:none;
   z-index:2;
 }
@@ -2229,7 +2229,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(4) brightness(0.78);
+  filter:grayscale(1) sepia(1) hue-rotate(8deg) saturate(6) brightness(0.88);
 }
 .h-captcha iframe{
   display:block !important;
