@@ -99,6 +99,15 @@ _check_production_secrets()
 
 app.secret_key = os.environ.get('SECRET_KEY', '9599isthesecretkey')
 
+# hCaptcha — bot protection for the order form.
+# Get a free key at: https://www.hcaptcha.com
+HCAPTCHA_SECRET_KEY  = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
+HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '').strip()
+HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
+# Minimum seconds a real human takes to fill in the order gate form.
+# Submissions faster than this are rejected as bots.
+BOT_MIN_FORM_SECONDS = 3
+
 def verify_hcaptcha(token: str) -> tuple:
     """
     Verify an hCaptcha token server-side.
@@ -122,16 +131,6 @@ def verify_hcaptcha(token: str) -> tuple:
     except Exception as e:
         print(f"[hCaptcha] Verification request failed: {e}")
         return True, ''
-
-
-# hCaptcha — bot protection for the order form.
-# Get a free key at: https://www.hcaptcha.com
-HCAPTCHA_SECRET_KEY  = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
-HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '').strip()
-HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
-# Minimum seconds a real human takes to fill in the order gate form.
-# Submissions faster than this are rejected as bots.
-BOT_MIN_FORM_SECONDS = 3
 
 # ── PayMongo GCash Payment Gateway ────────────────────────────────────────────
 # Sign up free at https://dashboard.paymongo.com
@@ -16385,6 +16384,7 @@ def manual_auth():
             pass  # Malformed timestamp — allow through
 
     # ── hCaptcha verification ─────────────────────────────────────────────
+    captcha_token = request.form.get('h-captcha-response', '')
     captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
     if not captcha_ok:
         return jsonify({"error": captcha_err}), 400
