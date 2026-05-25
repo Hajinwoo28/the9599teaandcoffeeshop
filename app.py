@@ -1470,7 +1470,7 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgba(0,0,0,0.05);
+  background:rgba(0,0,0,0.18);
   pointer-events:none;
   z-index:5;
 }
@@ -2193,7 +2193,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgba(0,0,0,0.05);
+  background:rgba(0,0,0,0.18);
   pointer-events:none;
   z-index:2;
 }
