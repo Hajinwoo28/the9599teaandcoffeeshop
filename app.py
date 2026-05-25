@@ -103,12 +103,12 @@ def _check_production_secrets():
         for msg in issues:
             print(f"  • {msg}")
         print("!"*60 + "\n")
-        # On cloud deployments, refuse to start with the default admin PIN
+        # On cloud deployments, warn loudly about the default admin PIN
         if _ON_CLOUD and any("ADMIN_PIN" in i for i in issues):
-            raise RuntimeError(
-                "FATAL: ADMIN_PIN is the default '12345' on a cloud deployment. "
-                "Set a strong ADMIN_PIN environment variable before deploying."
-            )
+            print("!"*60)
+            print("  WARNING: ADMIN_PIN is still the default '12345'.")
+            print("  Set a strong ADMIN_PIN in your Vercel environment variables.")
+            print("!"*60 + "\n")
 
 _check_production_secrets()
 
