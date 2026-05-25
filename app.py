@@ -1465,7 +1465,7 @@ h2{
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:hue-rotate(5deg) brightness(0.88) saturate(0.75);
+  filter:sepia(1) hue-rotate(330deg) saturate(2.5) brightness(0.65);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -2190,7 +2190,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:sepia(0.55) hue-rotate(340deg) brightness(0.78) saturate(1.8) contrast(0.95);
+  filter:sepia(1) hue-rotate(330deg) saturate(2.5) brightness(0.65);
 }
 .h-captcha iframe{
   display:block !important;
