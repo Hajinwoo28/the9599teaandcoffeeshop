@@ -93,6 +93,25 @@ def _check_production_secrets():
 
 _check_production_secrets()
 
+# ── hCaptcha config diagnostic ─────────────────────────────────────────────
+# Set HCAPTCHA_SECRET_KEY in your .env or environment variables.
+# Get a free key at: https://www.hcaptcha.com
+# Leave blank to run in dev mode (hCaptcha checks are skipped locally).
+def _check_captcha_config():
+    secret = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
+    print("\n" + "="*55)
+    print("  HCAPTCHA CONFIG CHECK")
+    print("="*55)
+    if secret:
+        print("  [OK] HCAPTCHA_SECRET_KEY found — bot protection active.")
+    else:
+        print("  [--] HCAPTCHA_SECRET_KEY NOT set.")
+        print("       Bot protection will be SKIPPED in dev mode.")
+        print("       Fix: set HCAPTCHA_SECRET_KEY=<your_secret> in .env")
+    print("="*55 + "\n")
+
+_check_captcha_config()
+
 # ==========================================
 # 1. ADVANCED SECURITY CONFIGURATION
 # ==========================================
@@ -102,7 +121,7 @@ app.secret_key = os.environ.get('SECRET_KEY', '9599isthesecretkey')
 # hCaptcha — bot protection for the order form.
 # Get a free key at: https://www.hcaptcha.com
 HCAPTCHA_SECRET_KEY  = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
-HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '').strip()
+HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '10000000-ffff-ffff-ffff-000000000001').strip()  # default = hCaptcha test key
 HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
 # Minimum seconds a real human takes to fill in the order gate form.
 # Submissions faster than this are rejected as bots.
