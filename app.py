@@ -870,7 +870,7 @@ class PhoneOTP(db.Model):
     __tablename__ = 'phone_otps'
     id         = db.Column(db.Integer, primary_key=True)
     phone      = db.Column(db.String(30), nullable=False, index=True)
-    code       = db.Column(db.String(6), nullable=False)
+    code       = db.Column(db.String(128), nullable=False)   # HMAC-SHA256 hex digest (64 chars)
     attempts   = db.Column(db.Integer, default=0)       # wrong guesses on this code
     verified   = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=get_ph_time)
@@ -19676,6 +19676,37 @@ def _ensure_schema():
 
     # reservations — partial_amount_paid added later
     all_ok &= _add_col("reservations", "partial_amount_paid", "DOUBLE PRECISION DEFAULT 0.0")
+
+    # phone_otps — code column was VARCHAR(6) but HMAC-SHA256 digest is 64 hex chars.
+    # SQLite cannot ALTER COLUMN width, so we recreate the table if the column is too narrow.
+    if not is_pg:
+        try:
+            rows = db.session.execute(db.text("PRAGMA table_info(phone_otps)")).fetchall()
+            code_col = next((r for r in rows if r[1] == 'code'), None)
+            # r[2] is the declared type, e.g. 'VARCHAR(6)' or 'TEXT'
+            # If the declared length is ≤ 6, the column is too narrow for a 64-char hash
+            _need_recreate = False
+            if code_col:
+                _m = re.search(r'\((\d+)\)', str(code_col[2]))
+                if _m and int(_m.group(1)) < 64:
+                    _need_recreate = True
+            if _need_recreate:
+                db.session.execute(db.text("DROP TABLE IF EXISTS phone_otps"))
+                db.session.commit()
+                db.create_all()
+                print("_ensure_schema: recreated phone_otps with wider code column (VARCHAR(128))")
+        except Exception as e:
+            db.session.rollback()
+            print(f"_ensure_schema: phone_otps migration warning: {e}")
+    else:
+        # PostgreSQL — ALTER COLUMN type is safe
+        try:
+            db.session.execute(db.text(
+                "ALTER TABLE phone_otps ALTER COLUMN code TYPE VARCHAR(128)"
+            ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     if all_ok:
         _schema_ok = True   # stop checking once every column is confirmed
