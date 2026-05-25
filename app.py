@@ -2047,7 +2047,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:hue-rotate(5deg) brightness(0.92) saturate(0.85);
+  filter:sepia(0.55) hue-rotate(340deg) brightness(0.78) saturate(1.8) contrast(0.95);
 }
 .h-captcha iframe{
   display:block !important;
