@@ -75,6 +75,14 @@ def _check_captcha_config():
 
 _check_captcha_config()
 
+# ── Detect cloud environment (must be defined before _check_production_secrets) ─
+_ON_CLOUD = bool(
+    os.environ.get('RENDER') or
+    os.environ.get('DYNO') or
+    os.environ.get('VERCEL') or
+    os.environ.get('VERCEL_ENV')
+)
+
 # ── Startup security audit ────────────────────────────────────────────────────
 def _check_production_secrets():
     """Warn loudly (and refuse on cloud) if default/weak secrets are detected."""
@@ -144,12 +152,6 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID.app
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-_ON_CLOUD = bool(
-    os.environ.get('RENDER') or
-    os.environ.get('DYNO') or
-    os.environ.get('VERCEL') or
-    os.environ.get('VERCEL_ENV')
-)
 if _ON_CLOUD:
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'None'
