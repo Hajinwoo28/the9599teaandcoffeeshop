@@ -1454,6 +1454,23 @@ h2{
 }
 .footer-link a{color:var(--gold-dim);text-decoration:none;font-weight:600;}
 .footer-link a:hover{color:var(--gold);}
+/* ── Login captcha brown wrapper ── */
+.login-captcha-wrap{
+  margin-bottom:14px;
+  background:linear-gradient(135deg,rgba(80,38,8,0.9) 0%,rgba(55,22,4,0.95) 100%);
+  border:1.5px solid rgba(205,152,72,0.3);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(205,152,72,0.08);
+}
+.login-captcha-wrap .h-captcha{
+  display:block;width:100%;
+  filter:hue-rotate(5deg) brightness(0.88) saturate(0.75);
+}
+.login-captcha-wrap iframe{
+  display:block !important;border:none !important;
+  max-width:100% !important;width:100% !important;
+}
 </style>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
@@ -1502,7 +1519,7 @@ h2{
                placeholder="" required autofocus maxlength="5" minlength="5"
                pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
       </div>
-      <div style="margin-bottom:14px;">
+      <div class="login-captcha-wrap">
         <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"></div>
       </div>
       <button type="submit" class="btn" id="submitBtn">
