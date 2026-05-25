@@ -1471,6 +1471,31 @@ h2{
   display:block !important;border:none !important;
   max-width:100% !important;width:100% !important;
 }
+/* ── Step 2 header (shared) ── */
+.step2-header{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(205,152,72,0.08);
+  border:1px solid rgba(205,152,72,0.2);
+  border-radius:10px;padding:12px 14px;margin-bottom:14px;
+}
+.step2-icon{
+  width:36px;height:36px;flex-shrink:0;
+  background:rgba(205,152,72,0.15);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(205,152,72,0.9);font-size:0.9rem;
+}
+.step2-title{font-size:0.8rem;font-weight:700;color:rgba(255,220,150,0.9);margin-bottom:2px;}
+.step2-sub{font-size:0.62rem;color:rgba(255,220,150,0.45);line-height:1.4;}
+.captcha-status-bar{
+  display:none;align-items:center;gap:6px;
+  font-size:0.65rem;font-weight:700;
+  color:rgba(205,152,72,1);
+  background:rgba(205,152,72,0.1);
+  border:1px solid rgba(205,152,72,0.3);
+  border-radius:8px;padding:7px 12px;margin-bottom:8px;
+}
+.captcha-status-bar i{font-size:0.8rem;}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
 </style>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
