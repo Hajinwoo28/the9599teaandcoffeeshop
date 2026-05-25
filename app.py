@@ -1456,6 +1456,7 @@ h2{
 .footer-link a:hover{color:var(--gold);}
 /* ── Login captcha brown wrapper ── */
 .login-captcha-wrap{
+  position:relative;
   margin-bottom:14px;
   background:linear-gradient(135deg,rgba(80,38,8,0.9) 0%,rgba(55,22,4,0.95) 100%);
   border:1.5px solid rgba(205,152,72,0.3);
@@ -1463,9 +1464,19 @@ h2{
   overflow:hidden;
   box-shadow:0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(205,152,72,0.08);
 }
+/* ── Right-panel equaliser — darkens the hCaptcha branding column to match left ── */
+.login-captcha-wrap::after{
+  content:\'\';
+  position:absolute;
+  top:0;right:0;bottom:0;
+  left:60%;
+  background:rgba(0,0,0,0.22);
+  pointer-events:none;
+  z-index:5;
+}
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:sepia(1) hue-rotate(328deg) saturate(2.2) brightness(0.46);
+  filter:sepia(1) hue-rotate(328deg) saturate(2.4) brightness(0.44);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -2176,6 +2187,16 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   border-color:rgba(205,152,72,0.7);
   box-shadow:0 0 0 3px rgba(205,152,72,0.15), 0 2px 16px rgba(0,0,0,0.35);
 }
+/* ── Right-panel equaliser ── */
+.captcha-frame::after{
+  content:\'\';
+  position:absolute;
+  top:0;right:0;bottom:0;
+  left:60%;
+  background:rgba(0,0,0,0.22);
+  pointer-events:none;
+  z-index:2;
+}
 .captcha-overlay{
   position:absolute;inset:0;z-index:3;
   display:flex;align-items:center;justify-content:center;gap:7px;
@@ -2190,7 +2211,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:sepia(1) hue-rotate(328deg) saturate(2.2) brightness(0.46);
+  filter:sepia(1) hue-rotate(328deg) saturate(2.4) brightness(0.44);
 }
 .h-captcha iframe{
   display:block !important;
