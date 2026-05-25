@@ -1502,7 +1502,8 @@ h2{
     <div class="err"><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
     {% endif %}
 
-    <form method="POST" id="loginForm">
+    <!-- Step 1: PIN Entry -->
+    <div id="loginStepPin">
       <input type="text" name="_email_confirm"
              style="display:none;position:absolute;left:-9999px;"
              tabindex="-1" autocomplete="off">
@@ -1515,15 +1516,35 @@ h2{
           <div class="pin-dot" id="d4"></div>
           <div class="pin-dot" id="d5"></div>
         </div>
-        <input type="password" name="pin" class="inp" id="pinInput"
-               placeholder="" required autofocus maxlength="5" minlength="5"
+        <input type="password" class="inp" id="pinInput"
+               placeholder="" autofocus maxlength="5" minlength="5"
                pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
       </div>
-      <div class="login-captcha-wrap">
-        <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"></div>
+      <button type="button" class="btn" id="loginVerifyPinBtn" disabled>
+        <i class="fas fa-key"></i>&ensp;Verify PIN
+      </button>
+    </div>
+
+    <!-- Step 2: Human Verification -->
+    <form method="POST" id="loginForm" style="display:none;">
+      <input type="hidden" name="pin" id="loginHiddenPin">
+      <div class="step2-header">
+        <div class="step2-icon"><i class="fas fa-shield-halved"></i></div>
+        <div>
+          <div class="step2-title">Human Verification</div>
+          <div class="step2-sub">PIN confirmed — complete the captcha to proceed</div>
+        </div>
       </div>
-      <button type="submit" class="btn" id="submitBtn">
-        <i class="fas fa-lock"></i> Login Securely
+      <div class="login-captcha-wrap">
+        <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"
+             data-callback="onLoginCaptchaSolved"
+             data-expired-callback="onLoginCaptchaExpired"></div>
+      </div>
+      <div class="captcha-status-bar" id="loginCaptchaStatus" style="display:none;">
+        <i class="fas fa-circle-check"></i>&nbsp;Verified — you’re human!
+      </div>
+      <button type="submit" class="btn" id="submitBtn" disabled>
+        <i class="fas fa-lock"></i>&ensp;Complete Verification First
       </button>
     </form>
   </div>
@@ -1539,25 +1560,122 @@ window._bubbleColors = [
   'rgba(200,130,58,0.05)',
   'rgba(255,248,240,0.04)'
 ];
-// PIN dot logic
-var pinInput = document.getElementById('pinInput');
+/* ── State ── */
+var loginPinVerified = false;
+var loginPinChecking = false;
+
+/* ── Refs ── */
+var pinInput         = document.getElementById('pinInput');
+var loginStepPin     = document.getElementById('loginStepPin');
+var loginForm        = document.getElementById('loginForm');
+var loginVerifyBtn   = document.getElementById('loginVerifyPinBtn');
+var loginCaptchaSt   = document.getElementById('loginCaptchaStatus');
 var dots = [document.getElementById('d1'),document.getElementById('d2'),
             document.getElementById('d3'),document.getElementById('d4'),
             document.getElementById('d5')];
 
+/* ── PIN dot display ── */
 pinInput.addEventListener('input', function(){
   var len = this.value.length;
   dots.forEach(function(d,i){
-    if(i < len){ if(!d.classList.contains('filled')){ d.classList.add('filled'); } }
-    else { d.classList.remove('filled'); }
+    if(i < len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
+    else d.classList.remove('filled');
   });
+  loginVerifyBtn.disabled = (len !== 5);
+  if(loginPinVerified && len < 5){ loginPinVerified = false; hideLoginPinErr(); }
 });
 
-// Submit guard
+/* ── Verify PIN button ── */
+loginVerifyBtn.addEventListener('click', function(){
+  if(pinInput.value.length === 5 && !loginPinChecking) checkLoginPin(pinInput.value);
+});
+
+/* ── Check PIN against server ── */
+function checkLoginPin(pin){
+  loginPinChecking = true;
+  loginVerifyBtn.disabled = true;
+  loginVerifyBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>&ensp;Verifying…";
+  setLoginPinState('checking');
+
+  fetch('/api/check-takeover-pin', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pin:pin})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,data:d}; }); })
+  .then(function(res){
+    loginPinChecking = false;
+    if(res.ok && res.data.valid){
+      loginPinVerified = true;
+      setLoginPinState('valid');
+      hideLoginPinErr();
+      revealLoginCaptcha();
+    } else {
+      loginPinVerified = false;
+      setLoginPinState('invalid');
+      loginVerifyBtn.disabled = false;
+      loginVerifyBtn.innerHTML = "<i class='fas fa-key'></i>&ensp;Verify PIN";
+      showLoginPinErr(res.data.error || 'Incorrect PIN. Try again.');
+    }
+  })
+  .catch(function(){
+    loginPinChecking = false;
+    setLoginPinState('');
+    loginVerifyBtn.disabled = false;
+    loginVerifyBtn.innerHTML = "<i class='fas fa-key'></i>&ensp;Verify PIN";
+    showLoginPinErr('Connection error. Please try again.');
+  });
+}
+
+function setLoginPinState(s){
+  var w = document.querySelector('.pin-wrap');
+  w.classList.remove('pin-checking','pin-valid','pin-invalid');
+  if(s) w.classList.add('pin-'+s);
+}
+function showLoginPinErr(msg){
+  var el = document.getElementById('loginPinErr');
+  if(!el){
+    el = document.createElement('div'); el.id='loginPinErr';
+    el.style.cssText='font-size:0.62rem;color:#FF9090;display:flex;align-items:center;gap:5px;margin-top:5px;font-weight:600;';
+    document.querySelector('.pin-wrap').insertAdjacentElement('afterend',el);
+  }
+  el.innerHTML='<i class="fas fa-circle-exclamation"></i> '+msg;
+  el.style.display='flex';
+}
+function hideLoginPinErr(){
+  var el=document.getElementById('loginPinErr'); if(el) el.style.display='none';
+}
+
+/* ── Switch to captcha step ── */
+function revealLoginCaptcha(){
+  document.getElementById('loginHiddenPin').value = pinInput.value;
+  loginStepPin.style.animation = 'fadeOut 0.3s ease both';
+  setTimeout(function(){
+    loginStepPin.style.display = 'none';
+    loginForm.style.display = 'block';
+    loginForm.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
+  }, 280);
+}
+
+/* ── hCaptcha callbacks ── */
+function onLoginCaptchaSolved(){
+  var btn = document.getElementById('submitBtn');
+  if(loginCaptchaSt) loginCaptchaSt.style.display='flex';
+  btn.disabled = false;
+  btn.innerHTML = "<i class='fas fa-arrow-right-to-bracket'></i>&ensp;Login Securely";
+}
+function onLoginCaptchaExpired(){
+  var btn = document.getElementById('submitBtn');
+  if(loginCaptchaSt) loginCaptchaSt.style.display='none';
+  btn.disabled = true;
+  btn.innerHTML = "<i class='fas fa-lock'></i>&ensp;Complete Verification First";
+}
+
+/* ── Submit guard ── */
 document.getElementById('loginForm').addEventListener('submit', function(){
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+  btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>&ensp;Verifying…";
 });
 </script>
 
