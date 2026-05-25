@@ -1464,7 +1464,16 @@ h2{
   overflow:hidden;
   box-shadow:0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(205,152,72,0.08);
 }
-/* ── Full-frame colour equaliser — forces the whole widget to one brown tone ── */
+/* ── Full-frame colour equaliser + solid right-column blocker ── */
+.login-captcha-wrap::before{
+  content:\'\';
+  position:absolute;
+  top:0;right:0;bottom:0;
+  left:60%;
+  background:rgb(55,22,4);
+  pointer-events:none;
+  z-index:6;
+}
 .login-captcha-wrap::after{
   content:\'\';
   position:absolute;
@@ -2187,7 +2196,16 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   border-color:rgba(205,152,72,0.7);
   box-shadow:0 0 0 3px rgba(205,152,72,0.15), 0 2px 16px rgba(0,0,0,0.35);
 }
-/* ── Full-frame colour equaliser — forces the whole widget to one brown tone ── */
+/* ── Full-frame colour equaliser + solid right-column blocker ── */
+.captcha-frame::before{
+  content:\'\';
+  position:absolute;
+  top:0;right:0;bottom:0;
+  left:60%;
+  background:rgb(50,20,3);
+  pointer-events:none;
+  z-index:3;
+}
 .captcha-frame::after{
   content:\'\';
   position:absolute;
