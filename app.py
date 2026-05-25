@@ -1464,19 +1464,19 @@ h2{
   overflow:hidden;
   box-shadow:0 2px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(205,152,72,0.08);
 }
-/* ── Right-panel equaliser — darkens the hCaptcha branding column to match left ── */
+/* ── Full-frame colour equaliser — forces the whole widget to one brown tone ── */
 .login-captcha-wrap::after{
   content:\'\';
   position:absolute;
   top:0;right:0;bottom:0;
-  left:60%;
-  background:rgba(0,0,0,0.18);
+  left:0;
+  background:rgba(55,22,4,0.52);
   pointer-events:none;
   z-index:5;
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(5) brightness(0.46);
+  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(4) brightness(0.5) contrast(0.45);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -2187,13 +2187,13 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   border-color:rgba(205,152,72,0.7);
   box-shadow:0 0 0 3px rgba(205,152,72,0.15), 0 2px 16px rgba(0,0,0,0.35);
 }
-/* ── Right-panel equaliser ── */
+/* ── Full-frame colour equaliser — forces the whole widget to one brown tone ── */
 .captcha-frame::after{
   content:\'\';
   position:absolute;
   top:0;right:0;bottom:0;
-  left:60%;
-  background:rgba(0,0,0,0.18);
+  left:0;
+  background:rgba(55,22,4,0.52);
   pointer-events:none;
   z-index:2;
 }
@@ -2211,7 +2211,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(5) brightness(0.46);
+  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(4) brightness(0.5) contrast(0.45);
 }
 .h-captcha iframe{
   display:block !important;
