@@ -296,6 +296,9 @@ ADMIN_HTML = """
         .status-completed { background: #4CAF50; }
         .status-cancelled { background: #D32F2F; }
         .item-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; margin-right: 10px; border: 1px solid #EFEBE4; }
+        /* Live pulse indicator */
+        .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4CAF50; margin-left: 6px; vertical-align: middle; animation: livePulse 2s ease-in-out infinite; }
+        @keyframes livePulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,0.5); } 50% { opacity: 0.6; box-shadow: 0 0 0 5px rgba(76,175,80,0); } }
     </style>
 </head>
 <body>
@@ -311,11 +314,11 @@ ADMIN_HTML = """
             <div class="admin-pill"><i class="fas fa-shield-alt"></i> Admin Panel</div>
         </div>
         <nav class="nav-links">
-            <div class="nav-item active" onclick="switchTab('kds', 'Live Orders', this)"><i class="fas fa-clipboard-list"></i> Live Orders</div>
-            <div class="nav-item" onclick="switchTab('inventory', 'Inventory', this)"><i class="fas fa-boxes"></i> Inventory</div>
-            <div class="nav-item" onclick="switchTab('finance', 'Finance & Reports', this)"><i class="fas fa-chart-line"></i> Finance</div>
-            <div class="nav-item" onclick="switchTab('audit', 'Audit Trail', this)"><i class="fas fa-list-ol"></i> Audit Trail</div>
-            <div class="nav-item" onclick="switchTab('settings', 'Settings & Menu', this)"><i class="fas fa-sliders-h"></i> Settings</div>
+            <div class="nav-item active" onclick="switchTab('kds', 'Live Orders', this)"><i class="fas fa-clipboard-list"></i> Live Orders <span class="live-dot"></span></div>
+            <div class="nav-item" onclick="switchTab('inventory', 'Inventory', this)"><i class="fas fa-boxes"></i> Inventory <span class="live-dot"></span></div>
+            <div class="nav-item" onclick="switchTab('finance', 'Finance & Reports', this)"><i class="fas fa-chart-line"></i> Finance <span class="live-dot"></span></div>
+            <div class="nav-item" onclick="switchTab('audit', 'Audit Trail', this)"><i class="fas fa-list-ol"></i> Audit Trail <span class="live-dot"></span></div>
+            <div class="nav-item" onclick="switchTab('settings', 'Settings & Menu', this)"><i class="fas fa-sliders-h"></i> Settings <span class="live-dot"></span></div>
         </nav>
     </div>
     <div class="sidebar-footer">
@@ -953,8 +956,46 @@ ADMIN_HTML = """
         } catch(e) { showToast("Error granting permission", "error"); }
     }
 
-    setInterval(() => { if(document.getElementById('tab-kds').classList.contains('active')) fetchLiveOrders(); }, 5000);
-    setInterval(fetchPermissionRequests, 5000);
+    // ═══════════════════════════════════════════════════════════════════
+    // REALTIME AUTO-REFRESH — all tabs poll every 5 seconds when active
+    // ═══════════════════════════════════════════════════════════════════
+    const _REALTIME_MS = 5000;
+    let _inventoryEditing = false;   // prevent overwrite while user edits stock
+    let _menuEditing = false;        // prevent overwrite while menu modal is open
+
+    // Track when user focuses a stock input field
+    document.addEventListener('focusin', e => {
+        if (e.target.classList?.contains('stock-input')) _inventoryEditing = true;
+        if (e.target.id === 'menu-name' || e.target.id === 'menu-price' || e.target.id === 'menu-category' || e.target.id === 'menu-letter') _menuEditing = true;
+    });
+    document.addEventListener('focusout', e => {
+        if (e.target.classList?.contains('stock-input')) setTimeout(() => { _inventoryEditing = false; }, 2000);
+        if (e.target.id === 'menu-name' || e.target.id === 'menu-price' || e.target.id === 'menu-category' || e.target.id === 'menu-letter') setTimeout(() => { _menuEditing = false; }, 2000);
+    });
+
+    function _isActive(tabId) {
+        return document.getElementById('tab-' + tabId)?.classList.contains('active');
+    }
+
+    // KDS — Live Orders + Permission Requests (always polled regardless of tab)
+    setInterval(() => { if(_isActive('kds')) fetchLiveOrders(); }, _REALTIME_MS);
+    setInterval(fetchPermissionRequests, _REALTIME_MS);
+
+    // Inventory — skip refresh while user is editing stock values
+    setInterval(() => { if(_isActive('inventory') && !_inventoryEditing) fetchAdminInventory(); }, _REALTIME_MS);
+
+    // Finance — both daily finances and customer logs
+    setInterval(() => {
+        if(_isActive('finance')) { fetchDailyFinances(); fetchCustomerLogs(); }
+    }, _REALTIME_MS);
+
+    // Audit Trail
+    setInterval(() => { if(_isActive('audit')) fetchAuditLogs(); }, _REALTIME_MS);
+
+    // Settings — Menu Management (skip while modal is open)
+    setInterval(() => { if(_isActive('settings') && !_menuEditing) fetchAdminMenu(); }, _REALTIME_MS);
+
+    // Initial load for the default active tab
     fetchLiveOrders();
     fetchPermissionRequests();
 </script>
