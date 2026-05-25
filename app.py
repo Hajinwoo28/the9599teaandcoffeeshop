@@ -16668,7 +16668,7 @@ def manual_auth():
             pass  # Malformed timestamp — allow through
 
     # ── hCaptcha verification ─────────────────────────────────────────────
-    captcha_token = request.form.get('h-captcha-response', '')
+    captcha_token = data.get('h-captcha-response', '').strip()
     captcha_ok, captcha_err = verify_hcaptcha(captcha_token)
     if not captcha_ok:
         return jsonify({"error": captcha_err}), 400
@@ -17169,7 +17169,7 @@ def employee_login():
         if request.form.get('_email_confirm', ''):
             record_failed_attempt(client_ip, 'employee')
             log_audit("Security: Honeypot Triggered", f"Bot/scraper detected at employee login from {client_ip}")
-            return render_template_string(EMPLOYEE_LOGIN_HTML, error="Access Denied."), 403
+            return render_template_string(EMPLOYEE_LOGIN_HTML, error="Access Denied.", hcaptcha_site_key=HCAPTCHA_SITE_KEY), 403
         if master_pin_matches(pin):
             # ── Human verification gate — required on ALL logins ─────────────
             captcha_token = request.form.get('h-captcha-response', '').strip()
