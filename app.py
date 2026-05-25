@@ -1470,13 +1470,13 @@ h2{
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgba(0,0,0,0.06);
+  background:rgba(0,0,0,0.05);
   pointer-events:none;
   z-index:5;
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:sepia(1) hue-rotate(328deg) saturate(5) brightness(0.29);
+  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(5) brightness(0.46);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -2193,7 +2193,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   position:absolute;
   top:0;right:0;bottom:0;
   left:60%;
-  background:rgba(0,0,0,0.06);
+  background:rgba(0,0,0,0.05);
   pointer-events:none;
   z-index:2;
 }
@@ -2211,7 +2211,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:sepia(1) hue-rotate(328deg) saturate(5) brightness(0.29);
+  filter:grayscale(1) sepia(1) hue-rotate(342deg) saturate(5) brightness(0.46);
 }
 .h-captcha iframe{
   display:block !important;
