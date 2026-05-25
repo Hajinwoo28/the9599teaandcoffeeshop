@@ -56,25 +56,6 @@ app.wsgi_app = ProxyFix(
     x_host=1
 )
 
-# ── hCaptcha config diagnostic ─────────────────────────────────────────────
-# Set HCAPTCHA_SECRET_KEY in your .env or environment variables.
-# Get a free key at: https://www.hcaptcha.com
-# Leave blank to run in dev mode (hCaptcha checks are skipped locally).
-def _check_captcha_config():
-    secret = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
-    print("\n" + "="*55)
-    print("  HCAPTCHA CONFIG CHECK")
-    print("="*55)
-    if secret:
-        print("  [OK] HCAPTCHA_SECRET_KEY found — bot protection active.")
-    else:
-        print("  [--] HCAPTCHA_SECRET_KEY NOT set.")
-        print("       Bot protection will be SKIPPED in dev mode.")
-        print("       Fix: set HCAPTCHA_SECRET_KEY=<your_secret> in .env")
-    print("="*55 + "\n")
-
-_check_captcha_config()
-
 # ── Detect cloud environment (must be defined before _check_production_secrets) ─
 _ON_CLOUD = bool(
     os.environ.get('RENDER') or
@@ -118,11 +99,35 @@ _check_production_secrets()
 
 app.secret_key = os.environ.get('SECRET_KEY', '9599isthesecretkey')
 
+def verify_hcaptcha(token: str) -> tuple:
+    """
+    Verify an hCaptcha token server-side.
+    Returns (ok: bool, error_msg: str).
+    """
+    if not HCAPTCHA_SECRET_KEY:
+        return True, ''
+    if not token:
+        return False, 'CAPTCHA token missing. Please refresh and try again.'
+    try:
+        resp = requests.post(
+            HCAPTCHA_VERIFY_URL,
+            data={'secret': HCAPTCHA_SECRET_KEY, 'response': token},
+            timeout=8,
+        )
+        data = resp.json()
+        if data.get('success'):
+            return True, ''
+        codes = data.get('error-codes', [])
+        return False, f"CAPTCHA verification failed ({', '.join(codes)}). Please refresh and try again."
+    except Exception as e:
+        print(f"[hCaptcha] Verification request failed: {e}")
+        return True, ''
+
+
 # hCaptcha — bot protection for the order form.
-# Free key from https://www.hcaptcha.com  — set HCAPTCHA_SECRET_KEY in your env.
-# Also set HCAPTCHA_SITE_KEY (the public key shown in the widget).
-HCAPTCHA_SECRET_KEY  = os.environ.get('HCAPTCHA_SECRET_KEY', '').strip()
-HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '10000000-ffff-ffff-ffff-000000000001').strip()  # default = hCaptcha test key
+# Get a free key at: https://www.hcaptcha.com
+HCAPTCHA_SECRET_KEY  = os.environ.get('HCAPTCHA_SECRET_KEY', 'REMOVED_SECRET').strip()
+HCAPTCHA_SITE_KEY    = os.environ.get('HCAPTCHA_SITE_KEY', '1600832e-3a74-42a6-9590-b4ba3630366e').strip()
 HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
 # Minimum seconds a real human takes to fill in the order gate form.
 # Submissions faster than this are rejected as bots.
@@ -1190,34 +1195,6 @@ def send_otp_sms(phone: str, code: str) -> tuple:
 #                  Falls back to request.host_url at send-time if not set.
 # ══════════════════════════════════════════════════════════════════════════════
 
-def verify_hcaptcha(token: str) -> tuple:
-    """
-    Verify an hCaptcha token server-side.
-    Returns (ok: bool, error_msg: str).
-    If HCAPTCHA_SECRET_KEY is not configured, always passes (dev mode).
-    """
-    if not HCAPTCHA_SECRET_KEY:
-        # Dev mode — skip verification so local development works without a key.
-        return True, ''
-    if not token:
-        return False, 'CAPTCHA token missing. Please refresh and try again.'
-    try:
-        resp = requests.post(
-            HCAPTCHA_VERIFY_URL,
-            data={'secret': HCAPTCHA_SECRET_KEY, 'response': token},
-            timeout=8,
-        )
-        data = resp.json()
-        if data.get('success'):
-            return True, ''
-        codes = data.get('error-codes', [])
-        return False, f"CAPTCHA verification failed ({', '.join(codes)}). Please refresh and try again."
-    except Exception as e:
-        print(f"[hCaptcha] Verification request failed: {e}")
-        # Fail open on network error so real customers are never permanently blocked.
-        return True, ''
-
-
 def get_or_create_reputation(email):
     """Get or create a CustomerReputation record (keyed on lowercase email)."""
     norm = (email or '').lower().strip()
@@ -2027,7 +2004,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   text-transform:uppercase;letter-spacing:1.5px;
   display:flex;align-items:center;gap:4px;
 }
-/* Single unified frame that wraps status + widget together */
 .captcha-frame{
   position:relative;
   border:1.5px solid var(--inp-border);
@@ -2040,7 +2016,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   border-color:var(--accent-dim);
   box-shadow:0 0 0 3px var(--inp-focus);
 }
-/* Loading overlay — sits above the widget until captcha renders */
 .captcha-overlay{
   position:absolute;inset:0;z-index:3;
   display:flex;align-items:center;justify-content:center;gap:7px;
@@ -2052,10 +2027,8 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 }
 .captcha-overlay i{color:var(--accent-dim);}
 .captcha-frame.loaded .captcha-overlay{opacity:0;}
-/* The hCaptcha iframe container */
 .h-captcha{
   width:100%;display:block;
-  /* Scale the 300px-wide widget to fill our narrower card */
   transform-origin:top left;
 }
 .h-captcha iframe{
@@ -2065,7 +2038,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
   max-width:100% !important;
   width:100% !important;
 }
-/* Verified status bar — shown below frame after solve */
 .captcha-status-bar{
   display:none;align-items:center;gap:6px;
   font-size:0.65rem;font-weight:700;color:var(--accent);
@@ -2075,7 +2047,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 }
 .captcha-status-bar i{font-size:0.8rem;}
 .captcha-frame.verified ~ .captcha-status-bar{display:flex;}
-/* Legacy selectors kept for JS compatibility */
 .captcha-box{display:none;}
 .captcha-pending-msg,.captcha-verified-badge{display:none;}
 
@@ -2203,7 +2174,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
         <label class="captcha-label">
           <i class="fas fa-shield-halved"></i>&ensp;Human Verification Required
         </label>
-        <!-- Unified frame: overlay + widget live together -->
         <div class="captcha-frame" id="captchaBox">
           <div class="captcha-overlay" id="captchaOverlay">
             <i class="fas fa-circle-notch fa-spin"></i>
@@ -2216,11 +2186,9 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
                data-expired-callback="onHCaptchaExpired">
           </div>
         </div>
-        <!-- Shown only after solved -->
         <div class="captcha-status-bar" id="captchaStatusBar">
           <i class="fas fa-circle-check"></i>&nbsp;Verified — you&rsquo;re human!
         </div>
-        <!-- kept for backward-compat JS refs -->
         <div class="captcha-box" style="display:none;" id="_captchaBoxLegacy"></div>
       </div>
 
@@ -2339,7 +2307,6 @@ function hidePinError(){
 function revealCaptcha(){
   captchaWrap.style.display = 'flex';
   captchaWrap.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
-  /* Scroll the captcha into view smoothly */
   setTimeout(function(){ captchaWrap.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 80);
 }
 
@@ -6762,7 +6729,6 @@ function playGrantedSound() {
             if (window.hcaptcha) {
                 hcaptcha.execute();   // triggers invisible challenge → calls onHCaptchaVerified
             } else {
-                // hCaptcha script not loaded (e.g. offline dev) — proceed without token
                 await _doManualSignIn('');
             }
         } catch(e) {
@@ -16207,7 +16173,6 @@ def storefront():
         close_time=status["cutoff_time"],   # cutoff = 1h before actual close
         actual_close_time=status["close_time"],
         google_client_id=GOOGLE_CLIENT_ID,
-        hcaptcha_site_key=HCAPTCHA_SITE_KEY
     )
 
 # ── Customer-facing error page ────────────────────────────────────────────────
@@ -16391,7 +16356,7 @@ def google_auth():
 
 @app.route('/api/auth/manual', methods=['POST'])
 def manual_auth():
-    """Manual sign-in: name + email + optional phone + required location + hCaptcha token."""
+    """Manual sign-in: name + email + optional phone + required location."""
     data = request.get_json(force=True, silent=True) or {}
     name  = (data.get('name') or '').strip()
     email = (data.get('email') or '').strip()
@@ -16399,8 +16364,6 @@ def manual_auth():
     lat   = (data.get('lat') or '').strip()
     lng   = (data.get('lng') or '').strip()
     address = (data.get('address') or '').strip()
-    captcha_token = (data.get('h-captcha-response') or '').strip()
-
     if not name:
         return jsonify({"error": "Full name is required."}), 400
     if not email or '@' not in email:
