@@ -2315,6 +2315,10 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .captcha-wrap{
   margin-bottom:10px;
   display:flex;flex-direction:column;gap:8px;
+  background:#333;
+  border-radius:12px;
+  overflow:hidden;
+  padding:0;
 }
 .captcha-label{
   font-size:0.58rem;font-weight:700;color:rgba(215,168,90,0.78);
@@ -2524,26 +2528,19 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
           <div class="step2-sub">Almost there — just confirm you're not a bot!</div>
         </div>
       </div>
+      <label class="captcha-label">
+        <i class="fas fa-shield-halved"></i>&ensp;Human verification
+      </label>
       <div class="captcha-wrap">
-        <label class="captcha-label">
-          <i class="fas fa-mug-hot"></i>&ensp;Quick security check
-        </label>
-        <div class="captcha-frame" id="captchaBox">
-          <div class="captcha-overlay" id="captchaOverlay">
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <span>Loading verification…</span>
-          </div>
-          <div class="h-captcha"
-               data-sitekey="{{ hcaptcha_site_key }}"
-               data-theme="dark"
-               data-callback="onHCaptchaSolved"
-               data-expired-callback="onHCaptchaExpired">
-          </div>
+        <div class="h-captcha"
+             data-sitekey="{{ hcaptcha_site_key }}"
+             data-theme="dark"
+             data-callback="onHCaptchaSolved"
+             data-expired-callback="onHCaptchaExpired">
         </div>
-        <div class="captcha-status-bar" id="captchaStatusBar">
-          <i class="fas fa-circle-check"></i>&nbsp;Verified — you’re human!
-        </div>
-        <div class="captcha-box" style="display:none;" id="_captchaBoxLegacy"></div>
+      </div>
+      <div class="captcha-status-bar" id="captchaStatusBar">
+        <i class="fas fa-circle-check"></i>&nbsp;Verified — you’re human!
       </div>
       <button type="submit" class="btn" id="takeoverBtn" disabled>
         <i class="fas fa-mug-hot"></i>&ensp;Complete the check first
@@ -2573,7 +2570,6 @@ var dots         = [document.getElementById('d1'),document.getElementById('d2'),
                     document.getElementById('d5')];
 var stepPin      = document.getElementById('stepPin');
 var takeoverForm = document.getElementById('takeoverForm');
-var captchaFrame = document.getElementById('captchaBox');
 var captchaStatusBar = document.getElementById('captchaStatusBar');
 var verifyPinBtn = document.getElementById('verifyPinBtn');
 
@@ -2677,7 +2673,6 @@ function revealCaptchaStep(){
 function onHCaptchaSolved(token) {
   captchaReady = true;
   var btn = document.getElementById('takeoverBtn');
-  if(captchaFrame) captchaFrame.classList.add('verified');
   if(captchaStatusBar) captchaStatusBar.style.display = 'flex';
   btn.disabled = false;
   btn.innerHTML = "<i class='fas fa-arrow-right-to-bracket'></i>&ensp;Take Over &amp; Sign In";
@@ -2685,24 +2680,10 @@ function onHCaptchaSolved(token) {
 function onHCaptchaExpired() {
   captchaReady = false;
   var btn = document.getElementById('takeoverBtn');
-  if(captchaFrame) captchaFrame.classList.remove('verified');
   if(captchaStatusBar) captchaStatusBar.style.display = 'none';
   btn.disabled = true;
   btn.innerHTML = "<i class='fas fa-lock'></i>&ensp;Complete Verification First";
 }
-
-/* Remove loading overlay once hCaptcha iframe renders */
-(function(){
-  var frame = document.getElementById('captchaBox');
-  var overlay = document.getElementById('captchaOverlay');
-  if(!frame || !overlay) return;
-  var observer = new MutationObserver(function(){
-    var iframe = frame.querySelector('iframe');
-    if(iframe){ frame.classList.add('loaded'); observer.disconnect(); }
-  });
-  observer.observe(frame, {childList:true, subtree:true});
-  setTimeout(function(){ frame.classList.add('loaded'); }, 4000);
-})();
 
 /* ── Form submit guard ───────────────────────────────────────────── */
 document.getElementById('takeoverForm').addEventListener('submit', function(e){
