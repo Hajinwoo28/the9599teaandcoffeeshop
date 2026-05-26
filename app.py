@@ -4457,8 +4457,14 @@ document.addEventListener('click',function(e){
    We immediately redirect to /employee so the user sees the lock screen.
 ──────────────────────────────────────────────────────────────────────── */
 async function empFetch(url, opts){
+  // Do not attempt any request when the browser knows it has no network.
+  if(!navigator.onLine) return null;
   try{
-    const r = await fetch(url, opts);
+    // Abort stale requests after 12 s so they never pile up during network changes.
+    const ctrl = new AbortController();
+    const tid  = setTimeout(()=>ctrl.abort(), 12000);
+    const r = await fetch(url, { signal: ctrl.signal, ...opts });
+    clearTimeout(tid);
     if(r.status === 401 || r.status === 403){
       // Session expired or invalid — redirect to login
       window.location.href = '/employee/login';
@@ -4466,6 +4472,7 @@ async function empFetch(url, opts){
     }
     return r;
   }catch(e){
+    // AbortError = timeout or network change — silently ignore, no console spam.
     return null;
   }
 }
@@ -5516,9 +5523,38 @@ window.animNewRows=function(tbody,newIdSet){
 })();
 
 
-setInterval(()=>{if(document.getElementById('s-online').classList.contains('active')){fetchOrders();}},5000);
-setInterval(()=>empFetch('/api/employee/ping'),60000);
-setInterval(()=>{if(document.getElementById('s-stock').classList.contains('active'))fetchStockAlerts();},60000);
+// ── Resilient polling: pause when offline, resume when back online ──
+let _empOrdersInterval = null;
+let _empPingInterval   = null;
+let _empStockInterval  = null;
+
+function _startEmpPolling(){
+  if(!_empOrdersInterval){
+    _empOrdersInterval = setInterval(()=>{
+      if(navigator.onLine && document.getElementById('s-online').classList.contains('active')) fetchOrders();
+    }, 5000);
+  }
+  if(!_empPingInterval){
+    _empPingInterval = setInterval(()=>{
+      if(navigator.onLine) empFetch('/api/employee/ping');
+    }, 60000);
+  }
+  if(!_empStockInterval){
+    _empStockInterval = setInterval(()=>{
+      if(navigator.onLine && document.getElementById('s-stock').classList.contains('active')) fetchStockAlerts();
+    }, 60000);
+  }
+}
+function _stopEmpPolling(){
+  if(_empOrdersInterval){ clearInterval(_empOrdersInterval); _empOrdersInterval=null; }
+  if(_empPingInterval){   clearInterval(_empPingInterval);   _empPingInterval=null; }
+  if(_empStockInterval){  clearInterval(_empStockInterval);  _empStockInterval=null; }
+}
+
+window.addEventListener('offline', ()=>{ _stopEmpPolling(); if(typeof sseStatus==='function') sseStatus('global-sse-dot','err'); });
+window.addEventListener('online',  ()=>{ _startEmpPolling(); fetchOrders(); });
+
+_startEmpPolling();
 fetchOrders();
 fetchStockAlerts(); // pre-load badge count on startup
 
@@ -5574,12 +5610,19 @@ fetchStockAlerts(); // pre-load badge count on startup
 (function connectEmpSSE(){
   /* Update the global SSE dot */
   function _sseSetDot(state){if(typeof sseStatus==='function')sseStatus('global-sse-dot',state);}
-  let _empSrc=null,_empRetry=null;
+  let _empSrc=null, _empRetry=null, _retryDelay=5000;
+  const MAX_RETRY=60000; // cap at 60 s
+
   function connect(){
+    if(!navigator.onLine){ _sseSetDot('err'); return; } // don't connect when offline
     if(_empSrc){try{_empSrc.close();}catch(e){}}
     _empSrc=new EventSource('/api/employee/stream');
-    _empSrc.addEventListener('connected',()=>{ if(_empRetry){clearTimeout(_empRetry);_empRetry=null;} });
-    _empSrc.addEventListener('ping',()=>{});
+    _empSrc.addEventListener('connected',()=>{
+      _retryDelay=5000; // reset backoff on successful connection
+      if(_empRetry){clearTimeout(_empRetry);_empRetry=null;}
+      _sseSetDot('ok');
+    });
+    _empSrc.addEventListener('ping',()=>{ _sseSetDot('ok'); });
     _empSrc.addEventListener('stock_update',()=>{
       fetchStockAlerts();
       if(typeof showToast==='function') showToast('📦 Stock levels updated by admin','info');
@@ -5596,8 +5639,23 @@ fetchStockAlerts(); // pre-load badge count on startup
         if(typeof showToast==='function') showToast(msg,'error');
       }catch(_){}
     });
-    _empSrc.onerror=()=>{ try{_empSrc.close();}catch(e){} _empSrc=null; if(typeof sseStatus==='function')sseStatus('global-sse-dot','err'); if(!_empRetry)_empRetry=setTimeout(()=>{if(typeof sseStatus==='function')sseStatus('global-sse-dot','warn');connect();},5000); };
+    _empSrc.onerror=()=>{
+      try{_empSrc.close();}catch(e){}
+      _empSrc=null;
+      _sseSetDot('err');
+      if(!_empRetry){
+        _sseSetDot('warn');
+        _empRetry=setTimeout(()=>{
+          _empRetry=null;
+          _retryDelay=Math.min(_retryDelay*2, MAX_RETRY); // exponential backoff
+          connect();
+        }, _retryDelay);
+      }
+    };
   }
+  // Reconnect SSE when network comes back (browser won't do this automatically)
+  window.addEventListener('online', ()=>{ if(!_empSrc){ _retryDelay=5000; connect(); } });
+  window.addEventListener('offline',()=>{ if(_empRetry){clearTimeout(_empRetry);_empRetry=null;} try{if(_empSrc)_empSrc.close();}catch(e){} _empSrc=null; _sseSetDot('err'); });
   connect();
 })();
 
@@ -5673,8 +5731,8 @@ function closeEmpOrdDetail(){const ov=document.getElementById('emp-ord-detail-ov
 let _annLoaded = false;
 async function empLoadAnnouncements() {
   try {
-    const r = await fetch('/api/employee/announcements');
-    if (!r.ok) return;
+    const r = await empFetch('/api/employee/announcements'); // empFetch handles offline + timeout
+    if (!r || !r.ok) return;
     const data = await r.json();
     const badge = document.getElementById('emp-ann-badge');
     if (badge) { badge.textContent = data.length; badge.style.display = data.length ? 'flex' : 'none'; }
