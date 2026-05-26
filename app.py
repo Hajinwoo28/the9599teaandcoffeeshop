@@ -1483,15 +1483,12 @@ h2{
 .login-captcha-wrap{
   position:relative;
   margin-bottom:14px;
-  border-radius:12px;
-  overflow:hidden;
 }
 .login-captcha-wrap .h-captcha{
-  display:block;width:100%;
+  display:block;
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
-  max-width:100% !important;width:100% !important;
 }
 /* ── Step 2 header (shared) ── */
 .step2-header{
@@ -1998,7 +1995,7 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
             <div class="step2-sub">Almost there — just confirm you're not a bot!</div>
           </div>
         </div>
-        <div style="margin-bottom:14px;border-radius:12px;overflow:hidden;">
+        <div style="margin-bottom:14px;">
           <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"
                data-callback="onEmpCaptchaSolved"
                data-expired-callback="onEmpCaptchaExpired"></div>
@@ -2327,7 +2324,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .captcha-frame{
   position:relative;
   border-radius:12px;
-  overflow:hidden;
   transition:border-color 0.3s, box-shadow 0.3s;
 }
 .captcha-frame.verified{
@@ -2351,15 +2347,13 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .captcha-overlay i{color:rgba(200,145,65,0.75);}
 .captcha-frame.loaded .captcha-overlay{opacity:0;}
 .h-captcha{
-  width:100%;display:block;
+  display:block;
   transform-origin:top left;
 }
 .h-captcha iframe{
   display:block !important;
   border-radius:0 !important;
   border:none !important;
-  max-width:100% !important;
-  width:100% !important;
 }
 .captcha-status-bar{
   display:none;align-items:center;gap:8px;
