@@ -1479,41 +1479,15 @@ h2{
 }
 .footer-link a{color:var(--gold-dim);text-decoration:none;font-weight:600;}
 .footer-link a:hover{color:var(--gold);}
-/* ── Login captcha brown wrapper ── */
+/* ── Login captcha wrapper — clean native hCaptcha dark style ── */
 .login-captcha-wrap{
   position:relative;
   margin-bottom:14px;
-  background:linear-gradient(145deg,rgba(110,60,16,0.99) 0%,rgba(78,40,8,0.99) 55%,rgba(58,28,5,0.99) 100%);
-  border:1.5px solid rgba(195,135,55,0.45);
   border-radius:12px;
   overflow:hidden;
-  box-shadow:0 3px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(220,165,80,0.12), inset 0 -1px 0 rgba(0,0,0,0.3);
-  transition:border-color 0.3s, box-shadow 0.3s;
-}
-/* ── Coffee-toned right column with warm dot pattern ── */
-.login-captcha-wrap::before{
-  content:\'\';
-  position:absolute;
-  top:0;right:0;bottom:0;
-  left:60%;
-  background-color:rgba(62,32,8,0.98);
-  background-image:radial-gradient(circle, rgba(190,125,45,0.22) 1px, transparent 1px);
-  background-size:5px 5px;
-  pointer-events:none;
-  z-index:6;
-}
-.login-captcha-wrap::after{
-  content:\'\';
-  position:absolute;
-  top:0;right:0;bottom:0;
-  left:0;
-  background:rgba(70,36,9,0.48);
-  pointer-events:none;
-  z-index:5;
 }
 .login-captcha-wrap .h-captcha{
   display:block;width:100%;
-  filter:grayscale(1) sepia(1) hue-rotate(8deg) saturate(3.5) brightness(0.98);
 }
 .login-captcha-wrap iframe{
   display:block !important;border:none !important;
@@ -1929,6 +1903,35 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
   color:var(--text-muted);animation:fadeIn 0.6s 0.5s both;}
 .footer-link a{color:var(--teal-dim);text-decoration:none;font-weight:600;}
 .footer-link a:hover{color:var(--teal);}
+
+/* ── Step 2 header ── */
+.step2-header{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(62,207,173,0.08);
+  border:1px solid rgba(62,207,173,0.2);
+  border-radius:10px;padding:12px 14px;margin-bottom:14px;
+}
+.step2-icon{
+  width:36px;height:36px;flex-shrink:0;
+  background:rgba(62,207,173,0.15);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--teal);font-size:0.9rem;
+}
+.step2-title{font-size:0.8rem;font-weight:700;color:rgba(190,255,240,0.9);margin-bottom:2px;}
+.step2-sub{font-size:0.62rem;color:rgba(190,255,240,0.45);line-height:1.4;}
+
+/* ── Captcha status bar ── */
+.captcha-status-bar{
+  display:flex;align-items:center;gap:8px;
+  font-size:0.65rem;font-weight:700;
+  color:var(--teal);
+  background:rgba(62,207,173,0.1);
+  border:1px solid rgba(62,207,173,0.3);
+  border-radius:8px;padding:8px 14px;margin-bottom:8px;
+  animation:scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.8) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
 </style>
 <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
@@ -1964,25 +1967,49 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
       <input type="text" name="_email_confirm"
              style="display:none;position:absolute;left:-9999px;"
              tabindex="-1" autocomplete="off">
-      <label class="lbl">Staff PIN</label>
-      <div class="pin-wrap">
-        <div class="pin-dots">
-          <div class="pin-dot" id="d1"></div>
-          <div class="pin-dot" id="d2"></div>
-          <div class="pin-dot" id="d3"></div>
-          <div class="pin-dot" id="d4"></div>
-          <div class="pin-dot" id="d5"></div>
+
+      <!-- Step 1: PIN Entry -->
+      <div id="empStepPin">
+        <label class="lbl">Staff PIN</label>
+        <div class="pin-wrap">
+          <div class="pin-dots">
+            <div class="pin-dot" id="d1"></div>
+            <div class="pin-dot" id="d2"></div>
+            <div class="pin-dot" id="d3"></div>
+            <div class="pin-dot" id="d4"></div>
+            <div class="pin-dot" id="d5"></div>
+          </div>
+          <input type="password" class="inp" id="pinInput"
+                 placeholder="" autofocus maxlength="5" minlength="5"
+                 pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
         </div>
-        <input type="password" name="pin" class="inp" id="pinInput"
-               placeholder="" required autofocus maxlength="5" minlength="5"
-               pattern="[0-9]{5}" inputmode="numeric" autocomplete="one-time-code">
+        <button type="button" class="btn" id="empVerifyPinBtn" disabled>
+          <i class="fas fa-key"></i>&ensp;Verify PIN
+        </button>
       </div>
-      <div style="margin-bottom:14px;">
-        <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"></div>
+
+      <!-- Step 2: Human Verification (shown only after correct PIN) -->
+      <div id="empStepCaptcha" style="display:none;">
+        <input type="hidden" name="pin" id="empHiddenPin">
+        <div class="step2-header">
+          <div class="step2-icon"><i class="fas fa-mug-hot"></i></div>
+          <div>
+            <div class="step2-title">One quick check 🧋</div>
+            <div class="step2-sub">Almost there — just confirm you're not a bot!</div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;border-radius:12px;overflow:hidden;">
+          <div class="h-captcha" data-sitekey="{{ hcaptcha_site_key }}" data-theme="dark"
+               data-callback="onEmpCaptchaSolved"
+               data-expired-callback="onEmpCaptchaExpired"></div>
+        </div>
+        <div class="captcha-status-bar" id="empCaptchaStatus" style="display:none;">
+          <i class="fas fa-circle-check"></i>&nbsp;Verified — you're human!
+        </div>
+        <button type="submit" class="btn" id="submitBtn" disabled>
+          <i class="fas fa-lock"></i>&ensp;Complete the check first
+        </button>
       </div>
-      <button type="submit" class="btn" id="submitBtn">
-        <i class="fas fa-arrow-right-to-bracket"></i> Sign In to Station
-      </button>
     </form>
   </div>
 
@@ -1997,17 +2024,101 @@ window._bubbleColors = [
   'rgba(13,138,110,0.05)',
   'rgba(220,255,248,0.04)'
 ];
-var pinInput = document.getElementById('pinInput');
-var dots = [document.getElementById('d1'),document.getElementById('d2'),
-            document.getElementById('d3'),document.getElementById('d4'),
-            document.getElementById('d5')];
+
+var empPinVerified  = false;
+var empPinChecking  = false;
+var pinInput        = document.getElementById('pinInput');
+var dots            = [document.getElementById('d1'),document.getElementById('d2'),
+                       document.getElementById('d3'),document.getElementById('d4'),
+                       document.getElementById('d5')];
+var empVerifyBtn    = document.getElementById('empVerifyPinBtn');
+var empStepPin      = document.getElementById('empStepPin');
+var empStepCaptcha  = document.getElementById('empStepCaptcha');
+var empCaptchaSt    = document.getElementById('empCaptchaStatus');
+
+/* PIN dot display */
 pinInput.addEventListener('input', function(){
   var len = this.value.length;
   dots.forEach(function(d,i){
     if(i<len){ if(!d.classList.contains('filled')) d.classList.add('filled'); }
     else d.classList.remove('filled');
   });
+  empVerifyBtn.disabled = (len !== 5);
+  if(empPinVerified && len < 5){ empPinVerified = false; hideEmpPinErr(); }
 });
+
+/* Verify PIN button */
+empVerifyBtn.addEventListener('click', function(){
+  if(pinInput.value.length === 5 && !empPinChecking) checkEmpPin(pinInput.value);
+});
+
+/* Server PIN check */
+function checkEmpPin(pin){
+  empPinChecking = true;
+  empVerifyBtn.disabled = true;
+  empVerifyBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>&ensp;Verifying…";
+
+  fetch('/api/check-takeover-pin', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pin:pin})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,data:d}; }); })
+  .then(function(res){
+    empPinChecking = false;
+    if(res.ok && res.data.valid){
+      empPinVerified = true;
+      document.getElementById('empHiddenPin').value = pin;
+      empStepPin.style.animation = 'fadeOut 0.3s ease both';
+      setTimeout(function(){
+        empStepPin.style.display = 'none';
+        empStepCaptcha.style.display = 'block';
+        empStepCaptcha.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
+      }, 280);
+    } else {
+      empPinVerified = false;
+      empVerifyBtn.disabled = false;
+      empVerifyBtn.innerHTML = "<i class='fas fa-key'></i>&ensp;Verify PIN";
+      showEmpPinErr(res.data.error || 'Incorrect PIN. Try again.');
+    }
+  })
+  .catch(function(){
+    empPinChecking = false;
+    empVerifyBtn.disabled = false;
+    empVerifyBtn.innerHTML = "<i class='fas fa-key'></i>&ensp;Verify PIN";
+    showEmpPinErr('Connection error. Please try again.');
+  });
+}
+
+function showEmpPinErr(msg){
+  var el = document.getElementById('empPinErr');
+  if(!el){
+    el = document.createElement('div'); el.id='empPinErr';
+    el.style.cssText='font-size:0.62rem;color:#FF9090;display:flex;align-items:center;gap:5px;margin-top:5px;font-weight:600;';
+    document.querySelector('.pin-wrap').insertAdjacentElement('afterend',el);
+  }
+  el.innerHTML='<i class="fas fa-circle-exclamation"></i> '+msg;
+  el.style.display='flex';
+}
+function hideEmpPinErr(){
+  var el=document.getElementById('empPinErr'); if(el) el.style.display='none';
+}
+
+/* hCaptcha callbacks */
+function onEmpCaptchaSolved(){
+  var btn = document.getElementById('submitBtn');
+  if(empCaptchaSt) empCaptchaSt.style.display='flex';
+  btn.disabled = false;
+  btn.innerHTML = "<i class='fas fa-arrow-right-to-bracket'></i>&ensp;Sign In to Station";
+}
+function onEmpCaptchaExpired(){
+  var btn = document.getElementById('submitBtn');
+  if(empCaptchaSt) empCaptchaSt.style.display='none';
+  btn.disabled = true;
+  btn.innerHTML = "<i class='fas fa-lock'></i>&ensp;Complete the check first";
+}
+
+/* Submit guard */
 document.getElementById('empForm').addEventListener('submit', function(){
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
@@ -2215,11 +2326,8 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 }
 .captcha-frame{
   position:relative;
-  border:1.5px solid rgba(185,120,48,0.45);
   border-radius:12px;
   overflow:hidden;
-  background:linear-gradient(145deg,rgba(105,56,14,0.98) 0%,rgba(78,40,8,0.98) 55%,rgba(58,28,5,0.98) 100%);
-  box-shadow:0 3px 18px rgba(0,0,0,0.38), inset 0 1px 0 rgba(220,165,80,0.12), inset 0 -1px 0 rgba(0,0,0,0.3);
   transition:border-color 0.3s, box-shadow 0.3s;
 }
 .captcha-frame.verified{
@@ -2230,27 +2338,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 @keyframes verifiedGlow{
   0%{box-shadow:0 0 0 6px rgba(220,175,80,0.3), 0 4px 20px rgba(130,75,15,0.35);}
   100%{box-shadow:0 0 0 3px rgba(220,175,80,0.16), 0 4px 20px rgba(130,75,15,0.35);}
-}
-/* ── Coffee-toned right column with warm dot pattern ── */
-.captcha-frame::before{
-  content:\'\';
-  position:absolute;
-  top:0;right:0;bottom:0;
-  left:60%;
-  background-color:rgba(62,32,8,0.98);
-  background-image:radial-gradient(circle, rgba(190,125,45,0.22) 1px, transparent 1px);
-  background-size:5px 5px;
-  pointer-events:none;
-  z-index:3;
-}
-.captcha-frame::after{
-  content:\'\';
-  position:absolute;
-  top:0;right:0;bottom:0;
-  left:0;
-  background:rgba(70,36,9,0.48);
-  pointer-events:none;
-  z-index:2;
 }
 .captcha-overlay{
   position:absolute;inset:0;z-index:3;
@@ -2266,7 +2353,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .h-captcha{
   width:100%;display:block;
   transform-origin:top left;
-  filter:grayscale(1) sepia(1) hue-rotate(8deg) saturate(3.5) brightness(0.98);
 }
 .h-captcha iframe{
   display:block !important;
