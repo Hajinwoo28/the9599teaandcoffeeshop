@@ -4460,10 +4460,14 @@ async function empFetch(url, opts){
   // Do not attempt any request when the browser knows it has no network.
   if(!navigator.onLine) return null;
   try{
-    // Abort stale requests after 12 s so they never pile up during network changes.
+    // Support an external AbortSignal (e.g. from fetchOrders) alongside our own timeout.
     const ctrl = new AbortController();
     const tid  = setTimeout(()=>ctrl.abort(), 12000);
-    const r = await fetch(url, { signal: ctrl.signal, ...opts });
+    // If caller passed a signal, abort our internal controller when theirs fires too.
+    const callerSignal = opts && opts.signal;
+    if(callerSignal) callerSignal.addEventListener('abort', ()=>ctrl.abort(), {once:true});
+    const { signal: _ignored, ...restOpts } = opts || {};
+    const r = await fetch(url, { signal: ctrl.signal, ...restOpts });
     clearTimeout(tid);
     if(r.status === 401 || r.status === 403){
       // Session expired or invalid — redirect to login
@@ -4472,7 +4476,7 @@ async function empFetch(url, opts){
     }
     return r;
   }catch(e){
-    // AbortError = timeout or network change — silently ignore, no console spam.
+    // AbortError = timeout, network change, or superseded by a newer fetchOrders call.
     return null;
   }
 }
@@ -4547,9 +4551,15 @@ function setFilter(f,btn){
   renderOrders();
 }
 
+let _fetchOrdersCtrl = null; // AbortController for the in-flight fetchOrders request
+
 async function fetchOrders(){
+  // Cancel any previous in-flight request — its response is now stale.
+  if(_fetchOrdersCtrl){ try{ _fetchOrdersCtrl.abort(); }catch(e){} }
+  _fetchOrdersCtrl = new AbortController();
+  const signal = _fetchOrdersCtrl.signal;
   try{
-    const r=await empFetch('/api/orders');
+    const r = await empFetch('/api/orders', { signal });
     if(!r||!r.ok) return;
     const data=await r.json();
     allOrders=data.orders||[];
