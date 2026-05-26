@@ -2315,10 +2315,6 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-weight:700;
 .captcha-wrap{
   margin-bottom:10px;
   display:flex;flex-direction:column;gap:8px;
-  background:#333;
-  border-radius:12px;
-  overflow:hidden;
-  padding:0;
 }
 .captcha-label{
   font-size:0.58rem;font-weight:700;color:rgba(215,168,90,0.78);
