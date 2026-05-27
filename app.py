@@ -4,9 +4,7 @@ import uuid
 import socket
 import threading
 import json
-import io
 import queue
-import random
 import hmac
 import hashlib
 import secrets
@@ -22,12 +20,12 @@ from flask import (
     Response,
     stream_with_context,
 )
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy  # type: ignore[import-untyped]
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from itsdangerous import URLSafeTimedSerializer, BadSignature
+from flask_limiter import Limiter  # type: ignore[import-untyped]
+from flask_limiter.util import get_remote_address  # type: ignore[import-untyped]
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # ── Load .env file (for local development) ────────────────────────────────────
@@ -199,12 +197,12 @@ def master_pin_matches(submitted_pin):
         return False
     return check_password_hash(ADMIN_PIN_HASH, s)
 
-token_serializer = URLSafeTimedSerializer(app.secret_key)
+token_serializer = URLSafeTimedSerializer(str(app.secret_key or ''))
 
 # ── OTP hashing helpers ───────────────────────────────────────────────────────
 # OTP codes are stored as HMAC-SHA256 hashes (never plaintext).
 # This prevents a DB dump from exposing live codes.
-_OTP_HMAC_KEY: bytes = (os.environ.get('OTP_HMAC_KEY') or app.secret_key).encode()
+_OTP_HMAC_KEY: bytes = (os.environ.get('OTP_HMAC_KEY') or str(app.secret_key or '')).encode()
 
 def _hash_otp_code(code: str) -> str:
     """Return a hex HMAC-SHA256 digest of the raw 6-digit OTP code."""
@@ -468,7 +466,7 @@ def log_audit(action, details="", ip=None):
                 ip = forwarded.split(',')[0].strip() if forwarded else (request.remote_addr or '')
             except RuntimeError:
                 ip = ''
-        new_log = AuditLog(action=action, details=details, ip_address=(ip or ''))
+        new_log = AuditLog(action=action, details=details, ip_address=(ip or ''))  # type: ignore[call-arg]
         db.session.add(new_log)
         db.session.commit()
     except Exception as e:
@@ -969,7 +967,7 @@ def record_failed_attempt(ip: str, attempt_type: str = 'admin'):
         if count >= MAX_FAILED_ATTEMPTS:
             existing = BlacklistedIP.query.filter_by(ip_address=ip).first()
             if not existing:
-                db.session.add(BlacklistedIP(
+                db.session.add(BlacklistedIP(  # type: ignore[call-arg]
                     ip_address=ip,
                     reason=f'Auto-banned: {count} failed login attempts in {FAILED_WINDOW_MIN} min',
                     is_manual=False
@@ -1102,7 +1100,7 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     international = _normalize_ph_number(phone)
     message = (
         f"Your 9599 Tea & Coffee verification code is: {code}. "
-        f"Valid for 5 minutes. Do NOT share this code with anyone."
+        "Valid for 5 minutes. Do NOT share this code with anyone."
     )
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -1188,10 +1186,10 @@ def send_otp_sms(phone: str, code: str) -> tuple:
     # OTP is printed to the terminal so you can test locally without the app.
     # ══════════════════════════════════════════════════════════════════════════
     print(f"\n{'='*55}")
-    print(f"  [DEV OTP]  SMS Gateway not configured.")
+    print("  [DEV OTP]  SMS Gateway not configured.")
     print(f"  Phone : {international}")
     print(f"  Code  : {code}")
-    print(f"  Set SMS_GATEWAY_URL, SMS_GATEWAY_USER, SMS_GATEWAY_PASS in .env")
+    print("  Set SMS_GATEWAY_URL, SMS_GATEWAY_USER, SMS_GATEWAY_PASS in .env")
     print(f"{'='*55}\n")
     if _ON_CLOUD:
         return False, (
@@ -1227,7 +1225,7 @@ def get_or_create_reputation(email):
         return None
     rep = CustomerReputation.query.filter_by(identifier=norm).first()
     if not rep:
-        rep = CustomerReputation(identifier=norm)
+        rep = CustomerReputation(identifier=norm)  # type: ignore[call-arg]
         db.session.add(rep)
         try:
             db.session.flush()
@@ -1247,7 +1245,7 @@ def build_order_meta(reservation_id, flags, total, email):
     flag_reason  = '; '.join(f for f in flags if f in (
         'suspicious_pattern', 'watchlist', 'large_order', 'high_cancel_rate'))
 
-    meta = OrderMeta(
+    meta = OrderMeta(  # type: ignore[call-arg]
         reservation_id=reservation_id,
         is_flagged=is_flagged,
         flag_reason=flag_reason,
@@ -12046,6 +12044,64 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .period-pill{background:var(--cream);border:1.5px solid var(--cream-dark);color:var(--muted);font-size:0.72rem;font-weight:800;padding:5px 13px;border-radius:20px;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;letter-spacing:0.3px;}
 .period-pill.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);}
 
+/* ══ ANALYTICS SCREEN REDESIGN ══ */
+#s-analytics{background:var(--cream);}
+.an-scroll{padding:0 14px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
+.an-scroll::-webkit-scrollbar{width:3px;}
+.an-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
+
+/* Analytics card shell */
+.an-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;}
+.an-card:hover{box-shadow:0 8px 28px rgba(61,36,16,0.13);transform:translateY(-2px);}
+
+/* Analytics card header */
+.an-card-head{padding:14px 16px 12px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.an-card-title-row{display:flex;align-items:center;gap:10px;}
+.an-card-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.an-card-label{font-size:0.84rem;font-weight:900;color:var(--text);font-family:'Playfair Display',serif;}
+.an-card-sublabel{font-size:0.64rem;color:var(--muted);font-weight:600;margin-top:1px;}
+.an-card-body{padding:14px 16px;}
+
+/* Date range bar */
+.an-date-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.an-date-icon{width:32px;height:32px;border-radius:9px;background:rgba(123,79,46,0.1);display:flex;align-items:center;justify-content:center;color:var(--brown);font-size:0.82rem;}
+.an-date-label{font-size:0.78rem;font-weight:900;color:var(--text);}
+.an-date-pills{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* Active range badge */
+.an-range-badge{font-size:0.67rem;font-weight:800;color:var(--brown);background:rgba(196,168,130,0.18);border:1px solid rgba(196,168,130,0.35);border-radius:20px;padding:4px 10px;white-space:nowrap;}
+
+/* KPI summary grid */
+.an-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px;}
+.an-kpi{border-radius:13px;padding:13px 12px;text-align:center;border:1.5px solid;}
+.an-kpi-icon{font-size:0.72rem;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:6px;}
+.an-kpi-val{font-size:1.08rem;font-weight:900;font-family:'Playfair Display',serif;line-height:1;}
+.an-kpi.rev{background:rgba(123,79,46,0.07);border-color:rgba(123,79,46,0.18);}
+.an-kpi.rev .an-kpi-icon{color:var(--brown);}
+.an-kpi.rev .an-kpi-val{color:var(--brown-dark);}
+.an-kpi.exp{background:rgba(192,57,43,0.06);border-color:rgba(192,57,43,0.16);}
+.an-kpi.exp .an-kpi-icon{color:var(--red);}
+.an-kpi.exp .an-kpi-val{color:var(--red);}
+.an-kpi.prof{background:rgba(39,174,96,0.07);border-color:rgba(39,174,96,0.2);}
+.an-kpi.prof .an-kpi-icon{color:var(--green);}
+.an-kpi.prof .an-kpi-val{color:var(--green);}
+.an-kpi.prof-neg{background:rgba(192,57,43,0.06);border-color:rgba(192,57,43,0.16);}
+.an-kpi.prof-neg .an-kpi-icon{color:var(--red);}
+.an-kpi.prof-neg .an-kpi-val{color:var(--red);}
+
+/* Chart containers */
+.an-chart-wrap{position:relative;height:185px;padding:0 2px 4px;}
+
+/* Custom date range row */
+.an-custom-row{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;border-top:1.5px solid rgba(196,168,130,0.18);}
+.an-custom-row.visible{display:flex;}
+.an-date-field{display:flex;align-items:center;gap:6px;}
+.an-date-field label{font-size:0.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+
+/* Divider between sections */
+.an-divider{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:640px){.an-divider{grid-template-columns:1fr;}}
+
 /* ── BEST-SELLER BARS ── */
 .bs-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:12px;margin-bottom:6px;background:var(--cream);border:1.5px solid transparent;transition:border-color 0.15s,background 0.15s;}
 .bs-row:hover{background:#f7f2ea;border-color:var(--cream-dark);}
@@ -12917,162 +12973,183 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 ens-wrap">
 
   <!-- ANALYTICS SCREEN -->
-  <div id="s-analytics" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
-    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-      <div>
+  <div id="s-analytics" class="screen lo-screen-flex" style="overflow:hidden;">
+
+    <!-- Page Header -->
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:26px;">
+      <div style="position:relative;z-index:1;">
         <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
         <p>Sales trends, reports, top items &amp; hourly performance</p>
       </div>
       <button id="analytics-print-btn" onclick="printAnalytics()" title="Print Analytics Report"
-        style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:10px;border:none;
-               background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;
+        style="display:flex;align-items:center;gap:7px;padding:9px 18px;border-radius:12px;border:none;
+               background:#fff;color:var(--brown-dark);
                font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;
-               box-shadow:0 3px 10px rgba(13,122,106,0.28);transition:filter 0.18s,transform 0.18s;
+               box-shadow:0 2px 12px rgba(0,0,0,0.18);transition:all 0.18s;
                flex-shrink:0;position:relative;z-index:100;"
-        onmouseover="this.style.filter='brightness(1.12)';this.style.transform='translateY(-1px)'"
-        onmouseout="this.style.filter='';this.style.transform=''">
-        <i class="fas fa-print"></i> Print Report
+        onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 5px 20px rgba(0,0,0,0.22)'"
+        onmouseout="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.18)'">
+        <i class="fas fa-print" style="color:var(--brown);"></i> Print Report
       </button>
     </div>
-    <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;">
 
-      <!-- Date Range Picker -->
-      <div class="section card" style="padding:12px 14px;">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <i class="fas fa-calendar-alt" style="color:var(--brown);font-size:1rem;"></i>
-          <span style="font-size:0.8rem;font-weight:900;color:var(--text);">Date Range</span>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-            <button class="period-pill active" id="an-pill-7"  onclick="anSetPreset(7,this)">7 Days</button>
-            <button class="period-pill"        id="an-pill-14" onclick="anSetPreset(14,this)">14 Days</button>
-            <button class="period-pill"        id="an-pill-30" onclick="anSetPreset(30,this)">30 Days</button>
-            <button class="period-pill"        id="an-pill-custom" onclick="anToggleCustom()">📅 Custom</button>
+    <!-- Scrollable content -->
+    <div class="an-scroll">
+
+      <!-- ① Date Range Picker -->
+      <div class="an-card">
+        <div class="an-card-body" style="padding:13px 16px;">
+          <div class="an-date-bar">
+            <div class="an-date-icon"><i class="fas fa-calendar-alt"></i></div>
+            <span class="an-date-label">Date Range</span>
+            <div class="an-date-pills">
+              <button class="period-pill active" id="an-pill-7"  onclick="anSetPreset(7,this)">7 Days</button>
+              <button class="period-pill"        id="an-pill-14" onclick="anSetPreset(14,this)">14 Days</button>
+              <button class="period-pill"        id="an-pill-30" onclick="anSetPreset(30,this)">30 Days</button>
+              <button class="period-pill"        id="an-pill-custom" onclick="anToggleCustom()">
+                <i class="fas fa-sliders-h" style="margin-right:4px;font-size:0.65rem;"></i>Custom
+              </button>
+            </div>
           </div>
         </div>
-        <div id="an-custom-range" style="display:none;margin-top:10px;display:none;align-items:center;gap:8px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <label style="font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">From</label>
-            <input type="date" id="an-date-from" class="inp" style="padding:5px 9px;font-size:0.8rem;width:140px;" onchange="anCustomChanged()">
+        <!-- Custom date row (toggled) -->
+        <div id="an-custom-range" class="an-custom-row">
+          <div class="an-date-field">
+            <label>From</label>
+            <input type="date" id="an-date-from" class="inp" style="padding:6px 10px;font-size:0.8rem;width:140px;border-radius:9px;" onchange="anCustomChanged()">
           </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <label style="font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">To</label>
-            <input type="date" id="an-date-to" class="inp" style="padding:5px 9px;font-size:0.8rem;width:140px;" onchange="anCustomChanged()">
+          <div class="an-date-field">
+            <label>To</label>
+            <input type="date" id="an-date-to" class="inp" style="padding:6px 10px;font-size:0.8rem;width:140px;border-radius:9px;" onchange="anCustomChanged()">
           </div>
-          <button class="btn-primary" style="padding:6px 14px;font-size:0.78rem;" onclick="anApplyCustom()"><i class="fas fa-check"></i> Apply</button>
+          <button class="btn-primary" style="padding:7px 16px;font-size:0.78rem;width:auto;margin:0;" onclick="anApplyCustom()">
+            <i class="fas fa-check"></i> Apply
+          </button>
           <span id="an-range-label" style="font-size:0.74rem;font-weight:700;color:var(--brown);"></span>
         </div>
       </div>
 
-      <!-- Revenue Trend (from Date Range picker) -->
-      <div class="section card" style="padding:0;overflow:hidden;">
-        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#e67e22,var(--brown));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(230,126,34,0.25);">
-              <i class="fas fa-chart-line" style="color:#fff;font-size:0.85rem;"></i>
+      <!-- ② Revenue Trend Chart -->
+      <div class="an-card">
+        <div class="an-card-head">
+          <div class="an-card-title-row">
+            <div class="an-card-icon" style="background:linear-gradient(135deg,#e67e22,var(--brown));box-shadow:0 3px 10px rgba(230,126,34,0.28);">
+              <i class="fas fa-chart-area" style="color:#fff;font-size:0.85rem;"></i>
             </div>
             <div>
-              <div class="card-title" style="margin:0;">Revenue Trend</div>
-              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Sales timeline performance</div>
+              <div class="an-card-label">Revenue Trend</div>
+              <div class="an-card-sublabel">Sales timeline performance</div>
             </div>
           </div>
-          <span id="an-active-label" style="font-size:0.68rem;font-weight:700;color:var(--brown);background:rgba(200,130,58,0.1);border:1px solid rgba(200,130,58,0.25);border-radius:20px;padding:4px 10px;">Last 7 Days</span>
+          <span id="an-active-label" class="an-range-badge">Last 7 Days</span>
         </div>
-        <div style="padding:14px 14px 8px;">
-          <div style="position:relative;height:180px;">
-            <canvas id="an-revenue-chart"></canvas>
-          </div>
+        <div class="an-card-body">
+          <div class="an-chart-wrap"><canvas id="an-revenue-chart"></canvas></div>
         </div>
       </div>
 
-      <!-- Best-sellers (from Finance Reports) -->
-      <div class="section card" style="padding:0;overflow:hidden;">
-        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(61,36,16,0.25);">
-              <i class="fas fa-trophy" style="color:#FFD54F;font-size:0.85rem;"></i>
-            </div>
-            <div>
-              <div class="card-title" style="margin:0;">Best-Sellers</div>
-              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Top performing items</div>
-            </div>
-          </div>
-          <div class="period-pills">
-            <button class="period-pill active" id="bsp-today" onclick="loadBestSellers('today',this)">Today</button>
-            <button class="period-pill" id="bsp-week" onclick="loadBestSellers('week',this)">This Week</button>
-            <button class="period-pill" id="bsp-all" onclick="loadBestSellers('all',this)">All Time</button>
-          </div>
-        </div>
-        <div style="padding:12px 14px;">
-          <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;">Loading…</div></div>
-        </div>
-      </div>
+      <!-- ③ Two-column: Best-Sellers | Sales Overview KPIs -->
+      <div class="an-divider">
 
-      <!-- Sales Chart (from Finance Reports) -->
-      <div class="section card" style="padding:0;overflow:hidden;">
-        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#1B5E20,var(--green));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(46,125,50,0.3);">
-              <i class="fas fa-chart-line" style="color:#fff;font-size:0.85rem;"></i>
+        <!-- Best-Sellers -->
+        <div class="an-card">
+          <div class="an-card-head">
+            <div class="an-card-title-row">
+              <div class="an-card-icon" style="background:linear-gradient(135deg,var(--brown-dark),var(--brown));box-shadow:0 3px 10px rgba(61,36,16,0.28);">
+                <i class="fas fa-trophy" style="color:#FFD54F;font-size:0.85rem;"></i>
+              </div>
+              <div>
+                <div class="an-card-label">Best-Sellers</div>
+                <div class="an-card-sublabel">Top performing items</div>
+              </div>
             </div>
-            <div>
-              <div class="card-title" style="margin:0;">Sales Overview</div>
-              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Revenue, expenses &amp; net profit</div>
+            <div class="period-pills">
+              <button class="period-pill active" id="bsp-today" onclick="loadBestSellers('today',this)">Today</button>
+              <button class="period-pill" id="bsp-week" onclick="loadBestSellers('week',this)">This Week</button>
+              <button class="period-pill" id="bsp-all" onclick="loadBestSellers('all',this)">All Time</button>
             </div>
           </div>
-          <div class="period-pills">
-            <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
-            <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
+          <div class="an-card-body">
+            <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading…</div></div>
           </div>
         </div>
-        <div id="chart-loading" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;"><i class="fas fa-spinner fa-spin"></i> Loading chart…</div>
-        <div style="padding:14px 14px 8px;">
-          <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
-          <div style="position:relative;height:180px;">
-            <canvas id="sales-chart"></canvas>
-          </div>
-        </div>
-      </div>
 
-      <!-- Low Stock Alerts (from Finance Reports) -->
-      <div class="section card" style="padding:0;overflow:hidden;">
-        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#B71C1C,var(--red));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(211,47,47,0.3);">
+        <!-- Sales Overview -->
+        <div class="an-card">
+          <div class="an-card-head">
+            <div class="an-card-title-row">
+              <div class="an-card-icon" style="background:linear-gradient(135deg,#1B5E20,var(--green));box-shadow:0 3px 10px rgba(46,125,50,0.3);">
+                <i class="fas fa-chart-line" style="color:#fff;font-size:0.85rem;"></i>
+              </div>
+              <div>
+                <div class="an-card-label">Sales Overview</div>
+                <div class="an-card-sublabel">Revenue, expenses &amp; net profit</div>
+              </div>
+            </div>
+            <div class="period-pills">
+              <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
+              <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
+            </div>
+          </div>
+          <!-- KPI tiles (populated by loadSalesChart) -->
+          <div id="chart-summary" class="an-kpi-grid"></div>
+          <div id="chart-loading" style="text-align:center;padding:12px 16px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;">
+            <i class="fas fa-spinner fa-spin"></i> Loading chart…
+          </div>
+          <div class="an-card-body" style="padding-top:0;">
+            <div class="an-chart-wrap"><canvas id="sales-chart"></canvas></div>
+          </div>
+        </div>
+
+      </div><!-- /.an-divider -->
+
+      <!-- ④ Stock Alerts -->
+      <div class="an-card">
+        <div class="an-card-head">
+          <div class="an-card-title-row">
+            <div class="an-card-icon" style="background:linear-gradient(135deg,#B71C1C,var(--red));box-shadow:0 3px 10px rgba(211,47,47,0.3);">
               <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:0.85rem;"></i>
             </div>
             <div>
-              <div class="card-title" style="margin:0;">Stock Alerts</div>
-              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Ingredients needing attention</div>
+              <div class="an-card-label">Stock Alerts</div>
+              <div class="an-card-sublabel">Ingredients needing attention</div>
             </div>
           </div>
-          <button class="btn-secondary" style="font-size:0.72rem;padding:6px 12px;display:flex;align-items:center;gap:5px;" onclick="loadLowStock()">
+          <button onclick="loadLowStock()"
+            style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1.5px solid rgba(123,79,46,0.22);
+                   background:var(--white);color:var(--brown);font-family:'Nunito',sans-serif;font-size:0.74rem;
+                   font-weight:800;cursor:pointer;transition:all 0.15s;"
+            onmouseover="this.style.background='rgba(123,79,46,0.06)'"
+            onmouseout="this.style.background='var(--white)'">
             <i class="fas fa-sync-alt"></i> Refresh
           </button>
         </div>
-        <div style="padding:12px 14px;">
-          <div id="low-stock-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">Loading…</div></div>
+        <div class="an-card-body">
+          <div id="low-stock-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading…</div></div>
         </div>
       </div>
 
-      <!-- Analytics Charts -->
-      <div class="section card" style="padding:0;overflow:hidden;">
-        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0D47A1,var(--blue));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(21,101,192,0.3);">
+      <!-- ⑤ Hourly Orders -->
+      <div class="an-card">
+        <div class="an-card-head">
+          <div class="an-card-title-row">
+            <div class="an-card-icon" style="background:linear-gradient(135deg,#0D47A1,var(--blue));box-shadow:0 3px 10px rgba(21,101,192,0.3);">
               <i class="fas fa-clock" style="color:#fff;font-size:0.85rem;"></i>
             </div>
             <div>
-              <div class="card-title" style="margin:0;">Hourly Orders</div>
-              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Today's order volume by hour</div>
+              <div class="an-card-label">Hourly Orders</div>
+              <div class="an-card-sublabel">Today's order volume by hour</div>
             </div>
           </div>
-          <span id="an-hourly-date" style="font-size:0.68rem;font-weight:700;color:var(--muted);background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:20px;padding:4px 10px;"></span>
+          <span id="an-hourly-date" class="an-range-badge"></span>
         </div>
-        <div style="padding:14px;">
-          <canvas id="an-hourly-chart" height="190"></canvas>
+        <div class="an-card-body">
+          <div class="an-chart-wrap" style="height:195px;"><canvas id="an-hourly-chart"></canvas></div>
         </div>
       </div>
-    </div>
-  </div>
+
+    </div><!-- /.an-scroll -->
+  </div><!-- /#s-analytics -->
 
   <!-- PROMO CODES SCREEN -->
   <div id="s-promos" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
@@ -14396,26 +14473,32 @@ async function loadSalesChart(days,btn){
     const totalRev=revenue.reduce((a,b)=>a+b,0);
     const totalExp=expenses.reduce((a,b)=>a+b,0);
     const totalPro=profit.reduce((a,b)=>a+b,0);
+    const profClass = totalPro >= 0 ? 'prof' : 'prof-neg';
     document.getElementById('chart-summary').innerHTML=`
-      <div style="background:rgba(123,79,46,0.07);border-radius:12px;padding:12px;text-align:center;border:1.5px solid rgba(123,79,46,0.15);position:relative;overflow:hidden;">
-        <div style="font-size:0.58rem;font-weight:900;color:var(--brown);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:4px;"><i class="fas fa-coins"></i> Revenue</div>
-        <div style="font-size:1.05rem;font-weight:900;color:var(--brown-dark);font-family:'Playfair Display',serif;">₱${totalRev.toFixed(0)}</div>
+      <div class="an-kpi rev">
+        <div class="an-kpi-icon"><i class="fas fa-coins"></i> Revenue</div>
+        <div class="an-kpi-val">&#8369;${totalRev.toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
       </div>
-      <div style="background:rgba(211,47,47,0.06);border-radius:12px;padding:12px;text-align:center;border:1.5px solid rgba(211,47,47,0.15);">
-        <div style="font-size:0.58rem;font-weight:900;color:var(--red);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:4px;"><i class="fas fa-receipt"></i> Expenses</div>
-        <div style="font-size:1.05rem;font-weight:900;color:var(--red);font-family:'Playfair Display',serif;">₱${totalExp.toFixed(0)}</div>
+      <div class="an-kpi exp">
+        <div class="an-kpi-icon"><i class="fas fa-receipt"></i> Expenses</div>
+        <div class="an-kpi-val">&#8369;${totalExp.toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
       </div>
-      <div style="background:${totalPro>=0?'rgba(46,125,50,0.07)':'rgba(211,47,47,0.06)'};border-radius:12px;padding:12px;text-align:center;border:1.5px solid ${totalPro>=0?'rgba(46,125,50,0.18)':'rgba(211,47,47,0.15)'};">
-        <div style="font-size:0.58rem;font-weight:900;color:${totalPro>=0?'var(--green)':'var(--red)'};text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:4px;"><i class="fas fa-chart-pie"></i> Net Profit</div>
-        <div style="font-size:1.05rem;font-weight:900;color:${totalPro>=0?'var(--green)':'var(--red)'};font-family:'Playfair Display',serif;">₱${totalPro.toFixed(0)}</div>
+      <div class="an-kpi ${profClass}">
+        <div class="an-kpi-icon"><i class="fas fa-chart-pie"></i> Net Profit</div>
+        <div class="an-kpi-val">&#8369;${Math.abs(totalPro).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}${totalPro<0?' <span style="font-size:0.6rem;font-weight:700;">(loss)</span>':''}</div>
       </div>`;
     const ctx=document.getElementById('sales-chart').getContext('2d');
     if(salesChartObj)salesChartObj.destroy();
     salesChartObj=new Chart(ctx,{type:'bar',data:{labels,datasets:[
-      {label:'Revenue',data:revenue,backgroundColor:'rgba(123,79,46,0.75)',borderRadius:5,borderSkipped:false},
-      {label:'Expenses',data:expenses,backgroundColor:'rgba(192,57,43,0.6)',borderRadius:5,borderSkipped:false},
-      {label:'Profit',data:profit,type:'line',borderColor:'#27AE60',backgroundColor:'rgba(39,174,96,0.1)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#27AE60',tension:0.35,fill:true,yAxisID:'y'}
-    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{font:{family:'Nunito',size:10,weight:'700'},color:'#2A1505',boxWidth:12,padding:10}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Nunito',size:9,weight:'700'},color:'#8D6E55',maxRotation:45}},y:{position:'left',grid:{color:'rgba(196,168,130,0.2)'},ticks:{font:{family:'Nunito',size:9},color:'#8D6E55',callback:v=>'\u20B1'+v}}}}});
+      {label:'Revenue',data:revenue,backgroundColor:'rgba(123,79,46,0.75)',borderRadius:6,borderSkipped:false},
+      {label:'Expenses',data:expenses,backgroundColor:'rgba(192,57,43,0.55)',borderRadius:6,borderSkipped:false},
+      {label:'Profit',data:profit,type:'line',borderColor:'#27AE60',backgroundColor:'rgba(39,174,96,0.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#27AE60',pointBorderColor:'#fff',pointBorderWidth:1.5,tension:0.4,fill:true,yAxisID:'y'}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{font:{family:'Nunito',size:10,weight:'700'},color:'#2A1505',boxWidth:10,borderRadius:4,padding:12,usePointStyle:true}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:'Nunito',size:9,weight:'700'},color:'#8D6E55',maxRotation:40}},
+        y:{position:'left',grid:{color:'rgba(196,168,130,0.15)'},border:{dash:[4,4]},ticks:{font:{family:'Nunito',size:9},color:'#8D6E55',callback:v=>'\u20B1'+v.toLocaleString()}}
+      }}});
   }catch(e){document.getElementById('chart-loading').style.display='none';}
 }
 
@@ -16072,7 +16155,7 @@ function anSetPreset(days, btn) {
   _anStartDate = null; _anEndDate = null;
   document.querySelectorAll('#s-analytics .period-pill').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  document.getElementById('an-custom-range').style.display = 'none';
+  document.getElementById('an-custom-range').classList.remove('visible');
   const label = document.getElementById('an-active-label');
   if (label) label.textContent = 'Last ' + days + ' Days';
   loadAnalytics(days);
@@ -16080,8 +16163,8 @@ function anSetPreset(days, btn) {
 
 function anToggleCustom() {
   const row = document.getElementById('an-custom-range');
-  const showing = row.style.display === 'flex';
-  row.style.display = showing ? 'none' : 'flex';
+  const showing = row.classList.contains('visible');
+  if (showing) { row.classList.remove('visible'); } else { row.classList.add('visible'); }
   if (!showing) {
     // Pre-fill with current range
     const today = new Date();
@@ -16141,19 +16224,36 @@ async function loadAnalytics(days) {
     const rctx = document.getElementById('an-revenue-chart');
     if (rctx) {
       if (_anRevenueChart) _anRevenueChart.destroy();
+      const rCanvas = rctx;
+      const rGrad = rCanvas.getContext('2d').createLinearGradient(0,0,0,185);
+      rGrad.addColorStop(0,'rgba(123,79,46,0.22)');
+      rGrad.addColorStop(1,'rgba(123,79,46,0.0)');
       _anRevenueChart = new Chart(rctx, {
         type: 'line',
         data: {
           labels: trend.map(t => t.date),
           datasets: [{
-            label: 'Revenue (₱)',
+            label: 'Revenue',
             data: trend.map(t => t.revenue),
-            borderColor: '#7B4F2E', backgroundColor: 'rgba(123,79,46,0.1)',
+            borderColor: '#7B4F2E', backgroundColor: rGrad,
             borderWidth: 2.5, tension: 0.4, fill: true,
-            pointBackgroundColor: '#7B4F2E', pointRadius: 4
+            pointBackgroundColor: '#7B4F2E', pointBorderColor: '#fff',
+            pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7
           }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ' \u20B1' + ctx.parsed.y.toLocaleString('en-PH') } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { family:'Nunito', size:9, weight:'700' }, color:'#8D6E55', maxTicksLimit: 10 } },
+            y: { beginAtZero: true, grid: { color:'rgba(196,168,130,0.15)' }, border: { dash:[4,4] },
+                 ticks: { font:{ family:'Nunito', size:9 }, color:'#8D6E55', callback: v => '\u20B1'+v.toLocaleString() } }
+          }
+        }
       });
     }
 
@@ -16169,8 +16269,13 @@ async function loadAnalytics(days) {
       if (_anHourlyChart) _anHourlyChart.destroy();
       const visibleHourly = hourly.filter(h => parseInt(h.hour) >= 6 && parseInt(h.hour) <= 22);
       const maxOrders = Math.max(...visibleHourly.map(h=>h.orders), 1);
-      const barColors = visibleHourly.map(h => h.orders === maxOrders && h.orders > 0
-        ? 'rgba(61,36,16,0.9)' : 'rgba(123,79,46,0.65)');
+      const barColors = visibleHourly.map(h => {
+        if (h.orders === maxOrders && h.orders > 0) return 'rgba(61,36,16,0.92)';  // peak = darkest
+        if (h.orders >= maxOrders * 0.7) return 'rgba(123,79,46,0.78)';             // high
+        if (h.orders >= maxOrders * 0.3) return 'rgba(123,79,46,0.55)';             // mid
+        return 'rgba(196,168,130,0.45)';                                              // low
+      });
+      const borderColors = barColors.map(c => c.replace(/[0-9.]+[)].?$/, '1)'));
       _anHourlyChart = new Chart(hctx, {
         type: 'bar',
         data: {
@@ -16179,7 +16284,9 @@ async function loadAnalytics(days) {
             label: 'Orders',
             data: visibleHourly.map(h => h.orders),
             backgroundColor: barColors,
-            borderRadius: 7,
+            borderColor: borderColors,
+            borderWidth: 0,
+            borderRadius: 8,
             borderSkipped: false,
           }]
         },
@@ -16189,12 +16296,19 @@ async function loadAnalytics(days) {
           plugins: {
             legend: { display: false },
             tooltip: {
-              callbacks: { label: ctx => ` ${ctx.parsed.y} order${ctx.parsed.y!==1?'s':''}` }
+              backgroundColor: 'rgba(42,21,5,0.92)',
+              titleColor: '#F0EDE4', bodyColor: '#C4A882',
+              cornerRadius: 10, padding: 10,
+              callbacks: {
+                title: items => items[0].label + ':00',
+                label: ctx => ` ${ctx.parsed.y} order${ctx.parsed.y !== 1 ? 's' : ''}`
+              }
             }
           },
           scales: {
             x: { grid: { display: false }, ticks: { font: { family:'Nunito', size: 9, weight:'700' }, color:'#8D6E55' } },
-            y: { beginAtZero: true, grid: { color:'rgba(196,168,130,0.2)' }, ticks: { precision: 0, font:{ family:'Nunito', size: 9 }, color:'#8D6E55' } }
+            y: { beginAtZero: true, grid: { color:'rgba(196,168,130,0.15)' }, border: { dash:[4,4] },
+                 ticks: { precision: 0, stepSize: 1, font:{ family:'Nunito', size: 9 }, color:'#8D6E55' } }
           }
         }
       });
@@ -16735,7 +16849,7 @@ def storefront():
     # ── Closed / Not Configured pages ───────────────────────────────────
     def closed_page(title, icon, headline, sub, extra=''):
         # icon param kept for compatibility but logo image is always used
-        return f"""<!DOCTYPE html><html><head>
+        return """<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
@@ -16807,7 +16921,7 @@ def storefront():
         return closed_page(
             "Closing Soon", "🕐",
             "We're Closing Soon!",
-            f"Online ordering closes <b>1 hour before closing time</b> to ensure your order can be prepared.<br><br>"
+            "Online ordering closes <b>1 hour before closing time</b> to ensure your order can be prepared.<br><br>"
             f"Today's hours: <b>{status['open_time']} – {status['close_time']}</b><br>"
             f"Last order accepted at: <b>{status['cutoff_time']}</b>",
             f'<div class="badge">Next opening: {status["next_open"]}</div>'
@@ -16817,9 +16931,9 @@ def storefront():
         return closed_page(
             "Closed", "🧋",
             "We're Currently Closed",
-            f"9599 Tea & Coffee is not accepting orders right now.<br><br>"
+            "9599 Tea & Coffee is not accepting orders right now.<br><br>"
             f"<b>Today's Hours:</b> {status['open_time']} – {status['close_time']}<br><br>"
-            f"Online orders close 1 hour before closing time.",
+            "Online orders close 1 hour before closing time.",
             f'<div class="badge">Next opening: {status["next_open"]}</div>'
         ), 403
 
@@ -17068,8 +17182,8 @@ def manual_auth():
 
 def _build_verification_email_html(name: str, verify_url: str) -> str:
     """Build a beautiful branded HTML email matching professional verification email style."""
-    first_name = name.split()[0] if name else 'there'
-    return f"""<!DOCTYPE html>
+    _ = name.split()[0] if name else 'there'
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -17295,13 +17409,13 @@ def verify_email_route():
     log_audit("Email Verified", f"{ev.email} verified via link — IP: {get_client_ip()}", ip=get_client_ip())
 
     # Redirect back to the store
-    token_val = request.args.get('store_token', '')
+    _ = request.args.get('store_token', '')
     try:
-        store_token = link_serializer.dumps({'store': '9599', 'v': 2})
+        _ = link_serializer.dumps({'store': '9599', 'v': 2})
     except Exception:
-        store_token = ''
+        _ = ''
 
-    return f"""<!DOCTYPE html>
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -17663,7 +17777,7 @@ def generate_link():
     token = link_serializer.dumps({'store': '9599', 'v': 2})
     return jsonify({"url": f"{request.host_url}?token={token}"})
 
-@app.route('/api/schedule', methods=['GET', 'POST'])
+@app.route('/api/schedule', methods=['GET', 'POST'])  # type: ignore[arg-type]
 def handle_schedule():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
     day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
@@ -17706,7 +17820,7 @@ def handle_schedule():
                 entry.close_minute = new_cm
                 entry.is_open = new_is_open
             else:
-                db.session.add(StoreScheduleEntry(
+                db.session.add(StoreScheduleEntry(  # type: ignore[call-arg]
                     day_of_week=dow,
                     open_hour=new_oh, open_minute=new_om,
                     close_hour=new_ch, close_minute=new_cm,
@@ -17717,7 +17831,7 @@ def handle_schedule():
         push_customer_event('schedule_update', {'reason': 'hours_changed'})
         return jsonify({"status": "success"})
 
-@app.route('/api/closed_days', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/closed_days', methods=['GET', 'POST', 'DELETE'])  # type: ignore[arg-type]
 def handle_closed_days():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
     if request.method == 'GET':
@@ -17728,7 +17842,7 @@ def handle_closed_days():
         if not date_str: return jsonify({"error": "Missing date"}), 400
         existing = ClosedDay.query.filter_by(date_str=date_str).first()
         if not existing:
-            db.session.add(ClosedDay(date_str=date_str))
+            db.session.add(ClosedDay(date_str=date_str))  # type: ignore[call-arg]
             db.session.commit()
             log_audit("Closed Day Added", f"Shop closed on {date_str}")
             push_customer_event('schedule_update', {'reason': 'day_closed', 'date': date_str})
@@ -17748,7 +17862,7 @@ def store_status_api():
     return jsonify(get_store_status())
 
 
-@app.route('/api/menu', methods=['GET', 'POST'])
+@app.route('/api/menu', methods=['GET', 'POST'])  # type: ignore[arg-type]
 def handle_menu():
     if request.method == 'GET':
         # Use the in-memory cache so repeated menu loads don't hit the DB every time
@@ -17759,14 +17873,14 @@ def handle_menu():
         existing = MenuItem.query.filter(db.func.lower(MenuItem.name) == data['name'].strip().lower()).first()
         if existing:
             return jsonify({"status": "error", "error": f"'{data['name']}' already exists in the menu."}), 409
-        new_item = MenuItem(name=data['name'].strip(), price=float(data['price']), letter=data['letter'][:2].upper(), category=data['category'], is_out_of_stock=bool(data.get('is_out_of_stock', False)))
+        new_item = MenuItem(name=data['name'].strip(), price=float(data['price']), letter=data['letter'][:2].upper(), category=data['category'], is_out_of_stock=bool(data.get('is_out_of_stock', False)))  # type: ignore[call-arg]
         db.session.add(new_item)
         db.session.commit()
         _invalidate_menu_cache()
         push_customer_event('menu_update', {'reason': 'item_added', 'name': data['name'].strip()})
         return jsonify({"status": "success"})
 
-@app.route('/api/menu/<int:item_id>', methods=['PUT', 'DELETE'])
+@app.route('/api/menu/<int:item_id>', methods=['PUT', 'DELETE'])  # type: ignore[arg-type]
 def handle_menu_item(item_id):
     if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     item = MenuItem.query.get_or_404(item_id)
@@ -17789,7 +17903,7 @@ def handle_menu_item(item_id):
         push_customer_event('menu_update', {'reason': 'item_deleted', 'name': name})
         return jsonify({"status": "success"})
 
-@app.route('/api/inventory', methods=['GET', 'PUT'])
+@app.route('/api/inventory', methods=['GET', 'PUT'])  # type: ignore[arg-type]
 def handle_inventory():
     if not session.get('is_admin'): return jsonify({"status": "error"}), 403
     if request.method == 'GET':
@@ -17838,7 +17952,7 @@ def otp_send():
     db.session.add(otp)
     try:
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         return jsonify({"status": "error", "message": "Could not save OTP. Please try again."}), 500
 
@@ -17955,7 +18069,7 @@ def otp_send_email():
             existing.code = _hash_otp_code(raw_code)
             existing.attempts = 0
             db.session.commit()
-            code = raw_code
+            _ = raw_code
         else:
             # Invalidate old records and create a new one
             PhoneOTP.query.filter_by(phone=phone, verified=False).delete()
@@ -17964,13 +18078,13 @@ def otp_send_email():
             otp  = PhoneOTP(phone=phone, code=_hash_otp_code(raw_code))
             db.session.add(otp)
             db.session.commit()
-            code = raw_code
-    except Exception as e:
+            _ = raw_code
+    except Exception:
         db.session.rollback()
         return jsonify({"status": "error", "message": "Could not prepare verification code. Please try again."}), 500
 
     # Build a clean HTML email with the code
-    html_body = f"""
+    html_body = """
     <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
       <div style="background:linear-gradient(135deg,#8B5E3C,#5C3317);padding:28px 32px;text-align:center;">
         <div style="font-size:2.2rem;margin-bottom:6px;">☕</div>
@@ -18050,10 +18164,10 @@ def _send_otp_email(to_email: str, subject: str, html_body: str) -> tuple:
 
     # ── Dev fallback — no email provider configured ───────────────────────
     print(f"\n{'='*55}")
-    print(f"  [DEV EMAIL OTP]  No email provider configured.")
+    print("  [DEV EMAIL OTP]  No email provider configured.")
     print(f"  To: {to_email}")
     print(f"  Subject: {subject}")
-    print(f"  Set RESEND_API_KEY or GMAIL_SENDER+GMAIL_APP_PASSWORD in .env")
+    print("  Set RESEND_API_KEY or GMAIL_SENDER+GMAIL_APP_PASSWORD in .env")
     print(f"{'='*55}\n")
     if _ON_CLOUD:
         return False, 'No email provider configured. Set RESEND_API_KEY or GMAIL_SENDER in your environment variables.'
@@ -18207,7 +18321,7 @@ def reserve_blend():
         # gcash/maya = fully paid online | partial = partially paid (not fully paid) | cash = unpaid
         is_paid_online = payment_method in ('gcash', 'maya', 'paypal')
 
-        new_res = Reservation(
+        new_res = Reservation(  # type: ignore[call-arg]
             patron_name=name,
             patron_email=email,
             patron_phone=phone,
@@ -18224,7 +18338,7 @@ def reserve_blend():
         db.session.add(new_res)
         db.session.flush()
         for i in data['items']:
-            new_inf = Infusion(
+            new_inf = Infusion(  # type: ignore[call-arg]
                 reservation_id=new_res.id,
                 foundation=i['foundation'],
                 sweetener=i.get('sweetener','Standard'),
@@ -18270,7 +18384,7 @@ def reserve_blend():
         if 'large_order' in flags:
             resp["prepayment_amount"] = meta.prepayment_amount
             resp["message"] = (
-                f"Your order has been received and is pending staff approval "
+                "Your order has been received and is pending staff approval "
                 f"(high-value order ≥ ₱{LARGE_ORDER_THRESHOLD:.0f}). "
                 f"A 50% deposit of ₱{meta.prepayment_amount:.2f} is required via GCash or Maya before your order is prepared."
             )
@@ -18468,7 +18582,7 @@ def flag_order(order_id):
 
     meta = OrderMeta.query.filter_by(reservation_id=order_id).first()
     if not meta:
-        meta = OrderMeta(reservation_id=order_id)
+        meta = OrderMeta(reservation_id=order_id)  # type: ignore[call-arg]
         db.session.add(meta)
 
     meta.is_flagged  = True
@@ -18594,7 +18708,7 @@ def get_flagged_orders():
         app.logger.error(f"/api/fraud/flagged_orders error: {e}")
         # Self-heal: attempt schema repair then return empty list so the UI doesn't crash
         try:
-            _schema_ok_bak = globals().get('_schema_ok', True)
+            _ = globals().get('_schema_ok', True)
             globals()['_schema_ok'] = False
             _ensure_schema()
         except Exception:
@@ -18647,13 +18761,13 @@ def restore_data():
         # Restore expenses
         for x in data.get('expenses', []):
             if not Expense.query.filter_by(description=x['description'], amount=x['amount']).first():
-                db.session.add(Expense(description=x['description'], amount=x['amount']))
+                db.session.add(Expense(description=x['description'], amount=x['amount']))  # type: ignore[call-arg]
 
         # Restore menu items (update stock status only — don't overwrite prices set by admin)
         for m in data.get('menu_items', []):
             existing = MenuItem.query.filter_by(name=m['name']).first()
             if not existing:
-                db.session.add(MenuItem(name=m['name'], price=m['price'], letter=m['letter'],
+                db.session.add(MenuItem(name=m['name'], price=m['price'], letter=m['letter'],  # type: ignore[call-arg]
                     category=m['category'], is_out_of_stock=m.get('is_out_of_stock', False)))
 
         # Restore ingredients stock levels
@@ -18662,11 +18776,11 @@ def restore_data():
             if existing:
                 existing.stock = i['stock']
             else:
-                db.session.add(Ingredient(name=i['name'], unit=i['unit'], stock=i['stock']))
+                db.session.add(Ingredient(name=i['name'], unit=i['unit'], stock=i['stock']))  # type: ignore[call-arg]
 
         # Restore customer logs
         for c in data.get('customer_logs', []):
-            db.session.add(CustomerLog(full_name=c['name'], gmail=c['gmail'], phone=c['phone'],
+            db.session.add(CustomerLog(full_name=c['name'], gmail=c['gmail'], phone=c['phone'],  # type: ignore[call-arg]
                 order_source=c['source'], order_total=c['total']))
 
         db.session.commit()
@@ -18703,7 +18817,7 @@ def customer_update_order():
     try:
         added_total = 0.0
         for i in items:
-            inf = Infusion(
+            inf = Infusion(  # type: ignore[call-arg]
                 reservation_id=order.id,
                 foundation=i.get('foundation', 'Unknown'),
                 cup_size=i.get('size', '16 oz'),
@@ -18767,7 +18881,7 @@ def create_item_query(order_id):
     if not unavailable:
         return jsonify({"error": "No items selected"}), 400
     order.status = 'Awaiting Customer'
-    q = ItemAvailabilityQuery(
+    q = ItemAvailabilityQuery(  # type: ignore[call-arg]
         reservation_id=order_id,
         order_code=order.reservation_code,
         unavailable_items=json.dumps(unavailable),
@@ -18929,7 +19043,7 @@ def update_order_status(order_id):
     if new_status == 'Completed' and prev_status != 'Completed':
         try:
             items_summary = ', '.join(i.foundation for i in order.infusions)
-            clog = CustomerLog(
+            clog = CustomerLog(  # type: ignore[call-arg]
                 full_name=order.patron_name,
                 gmail=order.patron_email,
                 phone=order.patron_phone or '',
@@ -18976,7 +19090,7 @@ def update_order_status(order_id):
                     "Ingredient Deduction",
                     f"Order {order.reservation_code} completed — {'; '.join(deduction_log)}"
                 )
-        except Exception as deduct_err:
+        except Exception:
             pass  # Never block status update due to deduction failure
     db.session.commit()
     push_event('order_status', {'id': order_id, 'status': new_status})
@@ -19151,7 +19265,7 @@ def admin_manual_order():
     close_dt = now.replace(hour=ch, minute=cm, second=0, microsecond=0)
     if not (open_dt <= now < close_dt):
         return jsonify({
-            "error": f"Walk-in orders are only accepted during store hours "
+            "error": "Walk-in orders are only accepted during store hours "
                      f"({_fmt(oh, om)} – {_fmt(ch, cm)}). The store is currently closed."
         }), 403
     # ── End store hours guard ────────────────────────────────────────────
@@ -19159,11 +19273,11 @@ def admin_manual_order():
     data = request.get_json(force=True, silent=True) or {}
     customer_name = data.get('customer_name', 'Walk-In')
     try:
-        res = Reservation(patron_name=customer_name, patron_email="walkin@local", total_investment=data['total'], pickup_time="Walk-In", status="Waiting Confirmation", order_source="Manual/Walk-In", patron_address="Walk-In")
+        res = Reservation(patron_name=customer_name, patron_email="walkin@local", total_investment=data['total'], pickup_time="Walk-In", status="Waiting Confirmation", order_source="Manual/Walk-In", patron_address="Walk-In")  # type: ignore[call-arg]
         db.session.add(res)
         db.session.flush()
         for i in data['items']:
-            inf = Infusion(reservation_id=res.id, foundation=i['foundation'], cup_size=i.get('size','16 oz'), sweetener=i.get('sugar','N/A'), ice_level=i.get('ice','N/A'), pearls='Walk-In', addons=i.get('addons',''), item_total=i['price'])
+            inf = Infusion(reservation_id=res.id, foundation=i['foundation'], cup_size=i.get('size','16 oz'), sweetener=i.get('sugar','N/A'), ice_level=i.get('ice','N/A'), pearls='Walk-In', addons=i.get('addons',''), item_total=i['price'])  # type: ignore[call-arg]
             db.session.add(inf)
         db.session.commit()
         push_event('order_new', {'code': res.reservation_code, 'name': customer_name, 'total': data['total']})
@@ -19306,7 +19420,7 @@ def order_history():
 def add_expense():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
     _ej = request.get_json(force=True, silent=True) or {}
-    db.session.add(Expense(description=_ej.get('description',''), amount=float(_ej.get('amount', 0) or 0)))
+    db.session.add(Expense(description=_ej.get('description',''), amount=float(_ej.get('amount', 0) or 0)))  # type: ignore[call-arg]
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -19349,7 +19463,7 @@ def get_audit_logs():
                 "time": l.created_at.strftime('%Y-%m-%d %I:%M %p') if l.created_at else '—'
             })
         return jsonify(result)
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         # Fallback: return without ip if column doesn't exist yet
         try:
@@ -19402,7 +19516,7 @@ def security_add_blacklist():
     existing = BlacklistedIP.query.filter_by(ip_address=ip).first()
     if existing:
         return jsonify({"error": "IP already blacklisted"}), 409
-    db.session.add(BlacklistedIP(ip_address=ip, reason=reason, is_manual=True))
+    db.session.add(BlacklistedIP(ip_address=ip, reason=reason, is_manual=True))  # type: ignore[call-arg]
     db.session.commit()
     log_audit("Security: IP Blacklisted", f"Admin manually blocked {ip}: {reason}")
     return jsonify({"ok": True})
@@ -19470,7 +19584,7 @@ def promos_create():
             expires = datetime.strptime(data['expires_at'], '%Y-%m-%d')
         except Exception:
             pass
-    p = PromoCode(
+    p = PromoCode(  # type: ignore[call-arg]
         code=code,
         description=(data.get('description') or '')[:200],
         discount_type=data.get('discount_type', 'percent'),
@@ -19572,7 +19686,7 @@ def announcements_create():
     msg = (data.get('message') or '').strip()
     if not title or not msg:
         return jsonify({"error": "Title and message are required"}), 400
-    a = StaffAnnouncement(
+    a = StaffAnnouncement(  # type: ignore[call-arg]
         title=title, message=msg,
         priority=data.get('priority', 'normal'),
         is_active=True
@@ -19636,7 +19750,7 @@ def waste_log():
     if ing:
         ing.stock = max(0, ing.stock - qty)
         unit = ing.unit
-    db.session.add(WasteLog(ingredient_name=name, quantity=qty, unit=unit, reason=reason, logged_by='Employee'))
+    db.session.add(WasteLog(ingredient_name=name, quantity=qty, unit=unit, reason=reason, logged_by='Employee'))  # type: ignore[call-arg]
     db.session.commit()
     log_audit("Waste Logged", f"{qty} {unit} of {name} — {reason}")
     return jsonify({"ok": True})
@@ -19695,7 +19809,7 @@ def checklist_get():
             ],
         }
         for i, task in enumerate(defaults.get(ctype, [])):
-            db.session.add(QuickChecklist(task_name=task, checklist_type=ctype, display_order=i))
+            db.session.add(QuickChecklist(task_name=task, checklist_type=ctype, display_order=i))  # type: ignore[call-arg]
         try:
             db.session.commit()
         except Exception:
@@ -19715,7 +19829,7 @@ def checklist_add():
     ctype = data.get('type', 'opening')
     if not task:
         return jsonify({"error": "Task name required"}), 400
-    c = QuickChecklist(task_name=task, checklist_type=ctype)
+    c = QuickChecklist(task_name=task, checklist_type=ctype)  # type: ignore[call-arg]
     db.session.add(c)
     db.session.commit()
     log_audit("Checklist Item Added", f"[{ctype}] {task}")
@@ -19794,7 +19908,7 @@ def checklist_submit():
     items_total= int(data.get('items_total', 0))
     notes      = (data.get('notes') or '').strip()[:300]
     completed_by = (data.get('completed_by') or 'Staff').strip()[:100]
-    entry = ChecklistCompletion(
+    entry = ChecklistCompletion(  # type: ignore[call-arg]
         checklist_type=ctype,
         items_done=items_done,
         items_total=items_total,
@@ -19971,7 +20085,7 @@ def _ensure_schema():
             if is_pg:
                 return db.session.execute(db.text(
                     "SELECT COUNT(*) FROM information_schema.columns "
-                    f"WHERE table_name=:t AND column_name=:c"
+                    "WHERE table_name=:t AND column_name=:c"
                 ), {"t": table, "c": col}).scalar() > 0
             else:
                 rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
@@ -20144,7 +20258,7 @@ try:
                 col_exists = False
                 if is_postgres:
                     result = db.session.execute(db.text(
-                        f"SELECT COUNT(*) FROM information_schema.columns "
+                        "SELECT COUNT(*) FROM information_schema.columns "
                         f"WHERE table_name='customer_logs' AND column_name='{col_name}'"
                     )).scalar()
                     col_exists = (result > 0)
@@ -20231,7 +20345,7 @@ try:
                 print("Migration: added cancel_reason column to reservations")
             else:
                 print("Migration: reservations.cancel_reason already exists, skipped")
-        except Exception as migration_cancel_err:
+        except Exception:
             db.session.rollback()
 
         # Migrate: add patron_address column to reservations
@@ -20257,7 +20371,7 @@ try:
                 print("Migration: reservations.patron_address already exists, skipped")
         except Exception as migration_addr_err:
             db.session.rollback()
-            print(f"Migration warning (non-fatal): {migration_cancel_err}")
+            print(f"Migration warning (non-fatal): {migration_addr_err}")
 
         # Migrate: add order_source column to reservations (critical — used in /api/orders query)
         try:
@@ -20320,7 +20434,7 @@ try:
                 col_exists = False
                 if is_postgres:
                     result = db.session.execute(db.text(
-                        f"SELECT COUNT(*) FROM information_schema.columns "
+                        "SELECT COUNT(*) FROM information_schema.columns "
                         f"WHERE table_name='system_state' AND column_name='{col_name}'"
                     )).scalar()
                     col_exists = (result > 0)
@@ -20351,7 +20465,7 @@ try:
                 col_exists = False
                 if is_postgres:
                     result = db.session.execute(db.text(
-                        f"SELECT COUNT(*) FROM information_schema.columns "
+                        "SELECT COUNT(*) FROM information_schema.columns "
                         f"WHERE table_name='permission_requests' AND column_name='{col_name}'"
                     )).scalar()
                     col_exists = (result > 0)
@@ -20605,7 +20719,7 @@ try:
         for dow, (oh, om, ch, cm) in STORE_SCHEDULE.items():
             existing_sched = StoreScheduleEntry.query.filter_by(day_of_week=dow).first()
             if not existing_sched:
-                db.session.add(StoreScheduleEntry(
+                db.session.add(StoreScheduleEntry(  # type: ignore[call-arg]
                     day_of_week=dow,
                     open_hour=oh, open_minute=om,
                     close_hour=ch, close_minute=cm
@@ -20682,7 +20796,7 @@ try:
         for name, unit, stock, category in ingredients_data:
             existing = Ingredient.query.filter_by(name=name).first()
             if not existing:
-                db.session.add(Ingredient(name=name, unit=unit, stock=stock, category=category))
+                db.session.add(Ingredient(name=name, unit=unit, stock=stock, category=category))  # type: ignore[call-arg]
             else:
                 # Update category for existing ingredients that may not have one
                 if existing.category == 'Other' or not existing.category:
@@ -20757,7 +20871,7 @@ try:
         for name, price, letter, category in menu_data:
             existing_item = MenuItem.query.filter(db.func.lower(MenuItem.name) == name.strip().lower()).first()
             if not existing_item:
-                db.session.add(MenuItem(name=name, price=price, letter=letter, category=category))
+                db.session.add(MenuItem(name=name, price=price, letter=letter, category=category))  # type: ignore[call-arg]
             else:
                 # Always sync category to the canonical seed value
                 existing_item.category = category
@@ -20803,7 +20917,7 @@ try:
             if m and i:
                 exists = RecipeItem.query.filter_by(menu_item_id=m.id, ingredient_id=i.id).first()
                 if not exists:
-                    db.session.add(RecipeItem(menu_item_id=m.id, ingredient_id=i.id, quantity_required=qty))
+                    db.session.add(RecipeItem(menu_item_id=m.id, ingredient_id=i.id, quantity_required=qty))  # type: ignore[call-arg]
         try:
             db.session.commit()
         except Exception:
@@ -21557,7 +21671,7 @@ def dev_blacklist_add():
     try:
         existing = BlacklistedIP.query.filter_by(ip_address=ip).first()
         if not existing:
-            db.session.add(BlacklistedIP(ip_address=ip, reason=reason, is_manual=True))
+            db.session.add(BlacklistedIP(ip_address=ip, reason=reason, is_manual=True))  # type: ignore[call-arg]
             db.session.commit()
         log_audit("Dev: IP Banned", f"Dev portal banned {ip}: {reason}")
         return jsonify({"status": "ok"})
@@ -21691,7 +21805,7 @@ def rating_submit():
         if OrderRating.query.filter_by(reservation_id=order.id).first():
             return jsonify({"error": "Already rated"}), 409
 
-        rating = OrderRating(
+        rating = OrderRating(  # type: ignore[call-arg]
             reservation_id=order.id,
             order_code=code,
             customer_email=order.patron_email,
@@ -21763,6 +21877,7 @@ def dev_customers():
 
 def parse_user_agent(ua):
     """Convert raw UA string into a human-readable device label."""
+    import re as re  # ensure re is in local scope (module-level import may be shadowed)
     if not ua:
         return '—'
     # OS detection
@@ -21772,13 +21887,10 @@ def parse_user_agent(ua):
         os = 'iPad'
     elif 'Android' in ua:
         # Try to extract device model e.g. "SM-G991B" or "Pixel 6"
-        import re
         m = re.search(r'Android [0-9.]+; ([^)]+)', ua)
         os = m.group(1).strip() if m else 'Android'
     elif 'Windows NT' in ua:
         ver_map = {'10.0':'10/11','6.3':'8.1','6.2':'8','6.1':'7','6.0':'Vista'}
-        m2 = re.search(r'Windows NT ([0-9.]+)', ua) if True else None
-        import re
         m2 = re.search(r'Windows NT ([0-9.]+)', ua)
         os = 'Windows ' + ver_map.get(m2.group(1) if m2 else '', m2.group(1) if m2 else '') if m2 else 'Windows'
     elif 'Macintosh' in ua or 'Mac OS X' in ua:
@@ -21840,7 +21952,7 @@ def dev_force_migrate():
             else:
                 rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
                 return any(row[1] == col for row in rows)
-        except Exception as e:
+        except Exception:
             return False
 
     def run_alter(table, col, col_def_sqlite, col_def_pg=None):
@@ -22127,7 +22239,7 @@ def gcash_create_link():
                     # (In production, add a dedicated `paymongo_source_id` column)
                     meta = OrderMeta.query.filter_by(reservation_id=order.id).first()
                     if not meta:
-                        meta = OrderMeta(reservation_id=order.id)
+                        meta = OrderMeta(reservation_id=order.id)  # type: ignore[call-arg]
                         db.session.add(meta)
                     meta.paymongo_source_id = source_id
                     db.session.commit()
@@ -22249,7 +22361,7 @@ def gcash_return():
     """
     status     = request.args.get('status', 'failed')
     order_id   = request.args.get('order_id', '')
-    order_code = request.args.get('code', '')
+    _ = request.args.get('code', '')
 
     if status == 'success':
         # Optimistically mark the order paid here too (webhook is the source of truth,
@@ -22263,7 +22375,7 @@ def gcash_return():
             except Exception:
                 pass
 
-        html = f"""<!DOCTYPE html>
+        html = """<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -22323,7 +22435,7 @@ def gcash_return():
         return html, 200, {'Content-Type': 'text/html'}
 
     else:
-        html = f"""<!DOCTYPE html>
+        html = """<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -22377,7 +22489,7 @@ if __name__ == '__main__':
         # Requires: pip install pyOpenSSL
         ssl_ctx = None
         try:
-            import OpenSSL  # noqa
+            __import__('OpenSSL')  # probe: pyOpenSSL available
             ssl_ctx = 'adhoc'
         except ImportError:
             print(" WARNING: pyOpenSSL not found - running over HTTP.")

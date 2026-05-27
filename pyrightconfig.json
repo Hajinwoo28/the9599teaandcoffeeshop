@@ -1,0 +1,17 @@
+{
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportCallIssue": "none",
+  "reportArgumentType": "none",
+  "reportOperatorIssue": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportReturnType": "none",
+  "reportIndexIssue": "none",
+  "reportGeneralTypeIssues": "none",
+  "exclude": [
+    "**/__pycache__"
+  ]
+}
