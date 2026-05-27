@@ -12040,9 +12040,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .inv-tab.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.25);}
 
 /* ── CHART PERIOD PILLS ── */
-.period-pills{display:flex;gap:6px;flex-wrap:wrap;}
-.period-pill{background:var(--cream);border:1.5px solid var(--cream-dark);color:var(--muted);font-size:0.72rem;font-weight:800;padding:5px 13px;border-radius:20px;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;letter-spacing:0.3px;}
-.period-pill.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);}
+.period-pills{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:100%;}
+.period-pill{background:var(--cream);border:1.5px solid var(--cream-dark);color:var(--muted);font-size:0.7rem;font-weight:800;padding:5px 11px;border-radius:20px;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.18s;letter-spacing:0.2px;white-space:nowrap;}
+.period-pill:hover{border-color:var(--tan);color:var(--brown);background:rgba(196,168,130,0.12);}
+.period-pill.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);box-shadow:0 2px 8px rgba(61,36,16,0.22);}
 
 /* ══ ANALYTICS SCREEN REDESIGN ══ */
 #s-analytics{background:var(--cream);}
@@ -12051,13 +12052,15 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .an-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
 
 /* Analytics card shell */
-.an-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;}
+.an-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:visible;transition:box-shadow 0.22s,transform 0.22s;}
 .an-card:hover{box-shadow:0 8px 28px rgba(61,36,16,0.13);transform:translateY(-2px);}
+/* Clip only the chart bodies — not the headers — so pills never get cut off */
+.an-card .an-card-body,.an-card .an-kpi-grid{overflow:hidden;border-radius:0 0 18px 18px;}
 
 /* Analytics card header */
-.an-card-head{padding:14px 16px 12px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.an-card-head{padding:14px 16px 12px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;border-radius:18px 18px 0 0;background:var(--white);position:relative;z-index:1;}
 .an-card-title-row{display:flex;align-items:center;gap:10px;}
-.an-card-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.an-card-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
 .an-card-label{font-size:0.84rem;font-weight:900;color:var(--text);font-family:'Playfair Display',serif;}
 .an-card-sublabel{font-size:0.64rem;color:var(--muted);font-weight:600;margin-top:1px;}
 .an-card-body{padding:14px 16px;}
@@ -12073,6 +12076,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* KPI summary grid */
 .an-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px;}
+.an-kpi-grid:empty{display:none;}
 .an-kpi{border-radius:13px;padding:13px 12px;text-align:center;border:1.5px solid;}
 .an-kpi-icon{font-size:0.72rem;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:6px;}
 .an-kpi-val{font-size:1.08rem;font-weight:900;font-family:'Playfair Display',serif;line-height:1;}
@@ -12090,7 +12094,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .an-kpi.prof-neg .an-kpi-val{color:var(--red);}
 
 /* Chart containers */
-.an-chart-wrap{position:relative;height:185px;padding:0 2px 4px;}
+.an-chart-wrap{position:relative;height:185px;padding:0 2px 4px;overflow:hidden;border-radius:0 0 16px 16px;}
 
 /* Custom date range row */
 .an-custom-row{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;border-top:1.5px solid rgba(196,168,130,0.18);}
@@ -12101,6 +12105,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* Divider between sections */
 .an-divider{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:640px){.an-divider{grid-template-columns:1fr;}}
+/* In narrow 2-col layout, allow card heads to stack cleanly */
+@media(max-width:900px){
+  .an-divider .an-card-head{flex-direction:column;align-items:flex-start;gap:8px;}
+  .an-divider .period-pills{justify-content:flex-start;}
+}
 
 /* ── BEST-SELLER BARS ── */
 .bs-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:12px;margin-bottom:6px;background:var(--cream);border:1.5px solid transparent;transition:border-color 0.15s,background 0.15s;}
@@ -13093,7 +13102,7 @@ ens-wrap">
           </div>
           <!-- KPI tiles (populated by loadSalesChart) -->
           <div id="chart-summary" class="an-kpi-grid"></div>
-          <div id="chart-loading" style="text-align:center;padding:12px 16px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;">
+          <div id="chart-loading" style="text-align:center;padding:12px 16px;color:var(--muted);font-size:0.82rem;font-weight:600;display:block;">
             <i class="fas fa-spinner fa-spin"></i> Loading chart…
           </div>
           <div class="an-card-body" style="padding-top:0;">
@@ -13703,7 +13712,16 @@ function goScreen(name, btn){
     if(el){ el.style.display = 'flex'; el.classList.add('active'); }
     if(btn) btn.classList.add('active');
     /* Load data */
-    if(name === 'analytics'){ anSetPreset(7, document.getElementById('an-pill-7')); loadBestSellers('today',document.getElementById('bsp-today')); loadSalesChart(7,document.getElementById('pp-7')); loadLowStock(); }
+    if(name === 'analytics'){
+      anSetPreset(7, document.getElementById('an-pill-7'));
+      loadBestSellers('today', document.getElementById('bsp-today'));
+      loadSalesChart(7, document.getElementById('pp-7'));
+      loadLowStock();
+      // Populate the hourly date badge immediately on load
+      const hd = document.getElementById('an-hourly-date');
+      if(hd){ const d=new Date(); hd.textContent=d.toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'}); }
+      loadAnalytics(_anActiveDays||7);
+    }
     if(name === 'promos')    loadPromos();
     if(name === 'announce')  loadAnnouncements();
     if(name === 'waste')     loadWaste();
