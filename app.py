@@ -12176,9 +12176,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 #an-print-overlay{display:none;}
 @media print{
   body > *{display:none !important;}
-  #an-print-overlay{display:block !important;width:100%;font-family:'Nunito','Segoe UI',sans-serif;font-size:10.5pt;color:#1a1a1a;background:#fff;}
+  #an-print-overlay{display:block !important;width:100%;font-family:'Nunito','Segoe UI',sans-serif;font-size:10.5pt;color:#1a1a1a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
   @page{size:A4 portrait;margin:16mm 14mm;}
-  .an-rpt-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #0d7a6a;padding-bottom:10px;margin-bottom:16px;}.an-rpt-brand{display:flex;align-items:center;gap:10px;}.an-rpt-logo{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #0d7a6a;flex-shrink:0;}
+  .an-rpt-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #0d7a6a;padding-bottom:10px;margin-bottom:16px;}.an-rpt-brand{display:flex;align-items:center;gap:12px;}.an-rpt-logo{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #0d7a6a;flex-shrink:0;display:block !important;visibility:visible !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.an-rpt-logo-placeholder{width:52px;height:52px;border-radius:50%;border:2px solid #0d7a6a;flex-shrink:0;background:#e0f2ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
   .an-rpt-title{font-family:'Playfair Display','Georgia',serif;font-size:18pt;font-weight:900;color:#0d7a6a;display:flex;flex-direction:column;gap:2px;}
   .an-rpt-sub{font-family:'Nunito','Segoe UI',sans-serif;font-size:8.5pt;font-weight:700;color:#666;margin-top:3px;}
   .an-rpt-meta{text-align:right;font-size:8pt;color:#666;line-height:1.8;}
@@ -15937,8 +15937,8 @@ function printAnalytics() {
       document.body.appendChild(overlayEl);
     }
     var logoTag = logoSrc
-      ? '<img class="an-rpt-logo" src="' + logoSrc + '">'
-      : '<div class="an-rpt-logo-placeholder"></div>';
+      ? '<img class="an-rpt-logo" src="' + logoSrc + '" alt="Shop Logo" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #0d7a6a;flex-shrink:0;display:block;visibility:visible;-webkit-print-color-adjust:exact;print-color-adjust:exact;">'
+      : '<div class="an-rpt-logo-placeholder" style="width:52px;height:52px;border-radius:50%;border:2px solid #0d7a6a;flex-shrink:0;background:#e0f2ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>';
     overlayEl.innerHTML =
       '<div class="an-rpt-header">' +
         '<div class="an-rpt-brand">' + logoTag + '<div class="an-rpt-title">' + storeName + '<span class="an-rpt-sub">Analytics Report</span></div></div>' +
