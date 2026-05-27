@@ -15896,7 +15896,7 @@ function printAnalytics() {
     var bsRow = bsRows[bi];
     var bsText = bsRow.textContent.trim();
     if (!bsText || bsText.indexOf('Loading') !== -1 || bsText.indexOf('loading') !== -1) continue;
-    bsHtml += '<tr><td>' + (bi+1) + '</td><td>' + (bsRow.innerText.trim().replace(/\n+/g,' · ')) + '</td></tr>';
+    bsHtml += '<tr><td>' + (bi+1) + '</td><td>' + (bsRow.innerText.trim().split(String.fromCharCode(10)).join(' - ')) + '</td></tr>';
   }
   if (!bsHtml) bsHtml = '<tr><td colspan="2" style="text-align:center;color:#aaa;padding:10px;">No data available</td></tr>';
 
@@ -15904,7 +15904,7 @@ function printAnalytics() {
   var summaryHtml = '';
   var summaryCards = document.querySelectorAll('#chart-summary > div');
   for (var si = 0; si < summaryCards.length; si++) {
-    var cardText = summaryCards[si].innerText.trim().replace(/\n+/g,' ');
+    var cardText = summaryCards[si].innerText.trim().split(String.fromCharCode(10)).join(' ');
     if (cardText) summaryHtml += '<div class="an-sc"><div class="an-sc-inner">' + cardText + '</div></div>';
   }
 
@@ -15914,7 +15914,7 @@ function printAnalytics() {
   for (var ki = 0; ki < stockRows.length; ki++) {
     var stockText = stockRows[ki].textContent.trim();
     if (!stockText || stockText.indexOf('Loading') !== -1) continue;
-    stockHtml += '<tr><td>' + stockRows[ki].innerText.trim().replace(/\n+/g,' · ') + '</td></tr>';
+    stockHtml += '<tr><td>' + stockRows[ki].innerText.trim().split(String.fromCharCode(10)).join(' - ') + '</td></tr>';
   }
   if (!stockHtml) stockHtml = '<tr><td style="text-align:center;color:#aaa;padding:10px;">No stock alerts</td></tr>';
 
