@@ -19,7 +19,8 @@ from flask import (
     session, 
     redirect, 
     url_for, 
-    Response
+    Response,
+    stream_with_context,
 )
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
@@ -554,7 +555,7 @@ def push_dev_event(event_type, data=None):
 
 def push_customer_event(event_type, data=None):
     """Broadcast an SSE event to every connected customer browser tab."""
-    msg = f"event: {event_type}\\ndata: {json.dumps(data or {})}\\n\\n"
+    msg = f"event: {event_type}\ndata: {json.dumps(data or {})}\n\n"
     with _customer_sse_lock:
         dead = []
         for q in _customer_sse_subscribers:
@@ -578,7 +579,7 @@ def push_employee_event(event_type, data=None):
 
 def push_event(event_type, data=None):
     """Broadcast an SSE event to every connected admin client and mirror to customers and employees."""
-    msg = f"event: {event_type}\\ndata: {json.dumps(data or {})}\\n\\n"
+    msg = f"event: {event_type}\ndata: {json.dumps(data or {})}\n\n"
     with _sse_lock:
         dead = []
         for q in _sse_subscribers:
@@ -18884,7 +18885,7 @@ def employee_sse_stream():
             yield "event: connected\ndata: {}\n\n"
             while True:
                 try:
-                    msg = q.get(timeout=25)
+                    msg = q.get(timeout=10)
                     yield msg
                 except queue.Empty:
                     yield "event: ping\ndata: {}\n\n"
@@ -18895,7 +18896,7 @@ def employee_sse_stream():
                 if q in _emp_sse_subscribers:
                     _emp_sse_subscribers.remove(q)
 
-    resp = Response(generate(), mimetype='text/event-stream')
+    resp = Response(stream_with_context(generate()), mimetype='text/event-stream')
     resp.headers['Cache-Control'] = 'no-cache'
     resp.headers['X-Accel-Buffering'] = 'no'
     resp.headers['Connection'] = 'keep-alive'
@@ -18917,10 +18918,10 @@ def sse_stream():
             yield "event: connected\ndata: {}\n\n"
             while True:
                 try:
-                    msg = q.get(timeout=20)
+                    msg = q.get(timeout=10)
                     yield msg
                 except queue.Empty:
-                    # Keepalive ping every 20 s to prevent proxy timeouts
+                    # Keepalive ping every 10 s to prevent proxy timeouts
                     yield "event: ping\ndata: {}\n\n"
         except GeneratorExit:
             pass
@@ -18929,7 +18930,7 @@ def sse_stream():
                 if q in _sse_subscribers:
                     _sse_subscribers.remove(q)
 
-    resp = Response(generate(), mimetype='text/event-stream')
+    resp = Response(stream_with_context(generate()), mimetype='text/event-stream')
     resp.headers['Cache-Control'] = 'no-cache'
     resp.headers['X-Accel-Buffering'] = 'no'      # disable nginx buffering
     resp.headers['Connection'] = 'keep-alive'
@@ -18947,7 +18948,7 @@ def customer_sse_stream():
             yield "event: connected\ndata: {}\n\n"
             while True:
                 try:
-                    msg = q.get(timeout=20)
+                    msg = q.get(timeout=10)
                     yield msg
                 except queue.Empty:
                     yield "event: ping\ndata: {}\n\n"
@@ -18958,7 +18959,7 @@ def customer_sse_stream():
                 if q in _customer_sse_subscribers:
                     _customer_sse_subscribers.remove(q)
 
-    resp = Response(generate(), mimetype='text/event-stream')
+    resp = Response(stream_with_context(generate()), mimetype='text/event-stream')
     resp.headers['Cache-Control'] = 'no-cache'
     resp.headers['X-Accel-Buffering'] = 'no'
     resp.headers['Connection'] = 'keep-alive'
