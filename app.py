@@ -12168,6 +12168,35 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .emp-ord-detail-lbl{font-size:0.74rem;font-weight:700;color:#557570;}
 .emp-ord-detail-val{font-size:0.82rem;font-weight:800;color:#0A2925;}
 .emp-ord-modal-foot{padding:14px 22px 18px;border-top:1px solid #e5f0ee;display:flex;gap:9px;}
+
+/* ═══════════════════════════════════════════════
+   ANALYTICS PRINT STYLES  (permanent, not injected)
+   body.an-printing → hide everything but the report
+   ═══════════════════════════════════════════════ */
+#an-print-overlay{display:none;}
+@media print{
+  body > *{display:none !important;}
+  #an-print-overlay{display:block !important;width:100%;font-family:'Nunito','Segoe UI',sans-serif;font-size:10.5pt;color:#1a1a1a;background:#fff;}
+  @page{size:A4 portrait;margin:16mm 14mm;}
+  .an-rpt-header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #0d7a6a;padding-bottom:10px;margin-bottom:16px;}
+  .an-rpt-title{font-family:'Playfair Display','Georgia',serif;font-size:18pt;font-weight:900;color:#0d7a6a;display:flex;flex-direction:column;gap:2px;}
+  .an-rpt-sub{font-family:'Nunito','Segoe UI',sans-serif;font-size:8.5pt;font-weight:700;color:#666;margin-top:3px;}
+  .an-rpt-meta{text-align:right;font-size:8pt;color:#666;line-height:1.8;}
+  .an-rpt-meta b{color:#0d7a6a;}
+  .an-sec-title{font-family:'Playfair Display','Georgia',serif;font-size:11pt;font-weight:900;color:#0d7a6a;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid #c8e6e1;}
+  .an-summary-row{display:flex;gap:8px;margin-bottom:10px;}
+  .an-sc{flex:1;border:1.5px solid #c8e6e1;border-radius:6px;padding:8px 10px;background:#f4fbf9;text-align:center;}
+  .an-sc-inner{font-size:9pt;font-weight:800;color:#0d7a6a;}
+  .an-chart-wrap{border:1.5px solid #c8e6e1;border-radius:6px;padding:8px 10px;background:#f4fbf9;margin-bottom:8px;}
+  .an-chart-wrap img{width:100%;max-height:200px;object-fit:contain;display:block;}
+  .an-print-table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:6px;}
+  .an-print-table thead tr{background:#0d7a6a;color:#fff;}
+  .an-print-table thead th{padding:6px 9px;text-align:left;font-weight:800;font-size:8pt;text-transform:uppercase;letter-spacing:0.3px;}
+  .an-print-table tbody tr:nth-child(even){background:#f0faf8;}
+  .an-print-table tbody td{padding:5px 9px;border-bottom:1px solid #ddeee9;vertical-align:middle;}
+  .an-rpt-footer{margin-top:24px;padding-top:7px;border-top:1px solid #ccc;font-size:7.5pt;color:#aaa;text-align:center;}
+  .an-no-data{color:#aaa;font-size:9pt;padding:6px 0;}
+}
 </style>
 </head>
 <body>
@@ -12884,7 +12913,8 @@ ens-wrap">
         style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:10px;border:none;
                background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;
                font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;
-               box-shadow:0 3px 10px rgba(13,122,106,0.28);transition:filter 0.18s,transform 0.18s;flex-shrink:0;"
+               box-shadow:0 3px 10px rgba(13,122,106,0.28);transition:filter 0.18s,transform 0.18s;
+               flex-shrink:0;position:relative;z-index:100;"
         onmouseover="this.style.filter='brightness(1.12)';this.style.transform='translateY(-1px)'"
         onmouseout="this.style.filter='';this.style.transform=''">
         <i class="fas fa-print"></i> Print Report
@@ -15849,154 +15879,87 @@ setInterval(()=>{
 
 /* ── ANALYTICS PRINT ── */
 function printAnalytics() {
-  // Gather current period label
-  let periodLabel = 'Last 7 Days';
-  const activePill = document.querySelector('#s-analytics .period-pill.active');
+  // ── 1. Gather period label ────────────────────────────────────
+  var periodLabel = 'Last 7 Days';
+  var activePill = document.querySelector('#s-analytics .period-pill.active');
   if (activePill) {
-    const rangeLabel = document.getElementById('an-range-label');
+    var rangeLabel = document.getElementById('an-range-label');
     periodLabel = (rangeLabel && rangeLabel.textContent.trim())
       ? rangeLabel.textContent.trim()
       : activePill.textContent.trim();
   }
 
-  // Collect Best-Sellers rows
-  let bsHtml = '';
-  document.querySelectorAll('#bestsellers-list .bs-row, #bestsellers-list [style*="display:flex"]').forEach((row, i) => {
-    const name = row.querySelector('.bs-name, [style*="font-weight:800"]')?.textContent?.trim() || '—';
-    const qty  = row.querySelector('.bs-qty, [style*="border-radius:999px"]')?.textContent?.trim() || '';
-    const rev  = row.querySelector('.bs-rev, [style*="color:var(--teal"]')?.textContent?.trim() || '';
-    bsHtml += `<tr><td>${i+1}</td><td>${name}</td><td>${qty}</td><td>${rev}</td></tr>`;
+  // ── 2. Collect Best-Sellers rows ─────────────────────────────
+  var bsHtml = '';
+  var bsRows = document.querySelectorAll('#bestsellers-list > div');
+  for (var bi = 0; bi < bsRows.length; bi++) {
+    var bsRow = bsRows[bi];
+    var bsText = bsRow.textContent.trim();
+    if (!bsText || bsText.indexOf('Loading') !== -1 || bsText.indexOf('loading') !== -1) continue;
+    bsHtml += '<tr><td>' + (bi+1) + '</td><td>' + (bsRow.innerText.trim().replace(/\n+/g,' · ')) + '</td></tr>';
+  }
+  if (!bsHtml) bsHtml = '<tr><td colspan="2" style="text-align:center;color:#aaa;padding:10px;">No data available</td></tr>';
+
+  // ── 3. Collect Sales Summary cards ────────────────────────────
+  var summaryHtml = '';
+  var summaryCards = document.querySelectorAll('#chart-summary > div');
+  for (var si = 0; si < summaryCards.length; si++) {
+    var cardText = summaryCards[si].innerText.trim().replace(/\n+/g,' ');
+    if (cardText) summaryHtml += '<div class="an-sc"><div class="an-sc-inner">' + cardText + '</div></div>';
+  }
+
+  // ── 4. Collect Stock Alert rows ───────────────────────────────
+  var stockHtml = '';
+  var stockRows = document.querySelectorAll('#low-stock-list > div');
+  for (var ki = 0; ki < stockRows.length; ki++) {
+    var stockText = stockRows[ki].textContent.trim();
+    if (!stockText || stockText.indexOf('Loading') !== -1) continue;
+    stockHtml += '<tr><td>' + stockRows[ki].innerText.trim().replace(/\n+/g,' · ') + '</td></tr>';
+  }
+  if (!stockHtml) stockHtml = '<tr><td style="text-align:center;color:#aaa;padding:10px;">No stock alerts</td></tr>';
+
+  // ── 5. Capture canvas charts ──────────────────────────────────
+  var salesImgSrc = '', hourlyImgSrc = '';
+  try { var sc = document.getElementById('sales-chart');    if (sc) salesImgSrc  = sc.toDataURL('image/png'); } catch(e) {}
+  try { var hc = document.getElementById('an-hourly-chart'); if (hc) hourlyImgSrc = hc.toDataURL('image/png'); } catch(e) {}
+
+  // ── 6. Meta ───────────────────────────────────────────────────
+  var now = new Date().toLocaleString('en-PH', {dateStyle:'long', timeStyle:'short'});
+  var storeEl = document.querySelector('.admin-store-name, .topbar-title, .brand-name');
+  var storeName = storeEl ? storeEl.textContent.trim() : '9599 Tea & Coffee';
+
+  // ── 7. Build overlay HTML ─────────────────────────────────────
+  var overlayEl = document.getElementById('an-print-overlay');
+  if (!overlayEl) {
+    overlayEl = document.createElement('div');
+    overlayEl.id = 'an-print-overlay';
+    document.body.appendChild(overlayEl);
+  }
+  overlayEl.innerHTML =
+    '<div class="an-rpt-header">' +
+      '<div class="an-rpt-title">' + storeName + '<span class="an-rpt-sub">Analytics Report</span></div>' +
+      '<div class="an-rpt-meta"><b>Period:</b> ' + periodLabel + '<br><b>Printed:</b> ' + now + '</div>' +
+    '</div>' +
+    '<div class="an-sec-title">Sales Overview</div>' +
+    (summaryHtml ? '<div class="an-summary-row">' + summaryHtml + '</div>' : '<p class="an-no-data">No summary data.</p>') +
+    (salesImgSrc ? '<div class="an-chart-wrap"><img src="' + salesImgSrc + '"></div>' : '') +
+    '<div class="an-sec-title">Best-Sellers</div>' +
+    '<table class="an-print-table"><thead><tr><th>#</th><th>Item &amp; Details</th></tr></thead><tbody>' + bsHtml + '</tbody></table>' +
+    '<div class="an-sec-title">Hourly Orders (Today)</div>' +
+    (hourlyImgSrc ? '<div class="an-chart-wrap"><img src="' + hourlyImgSrc + '"></div>' : '<p class="an-no-data">No hourly data.</p>') +
+    '<div class="an-sec-title">Stock Alerts</div>' +
+    '<table class="an-print-table"><thead><tr><th>Item &amp; Status</th></tr></thead><tbody>' + stockHtml + '</tbody></table>' +
+    '<div class="an-rpt-footer">Generated by Admin Panel &nbsp;&bull;&nbsp; ' + storeName + ' &nbsp;&bull;&nbsp; ' + now + '</div>';
+
+  // ── 8. Fire the browser print dialog directly ─────────────────
+  window.print();
+
+  // ── 9. Cleanup after print dialog closes ─────────────────────
+  window.addEventListener('afterprint', function cleanup() {
+    window.removeEventListener('afterprint', cleanup);
+    var o = document.getElementById('an-print-overlay');
+    if (o) o.innerHTML = '';
   });
-  if (!bsHtml) bsHtml = '<tr><td colspan="4" style="text-align:center;color:#aaa;">No data</td></tr>';
-
-  // Collect Chart summary cards
-  let summaryHtml = '';
-  document.querySelectorAll('#chart-summary > div').forEach(card => {
-    const label = card.querySelector('[style*="font-size:0.68rem"],[style*="font-size:0.7rem"]')?.textContent?.trim() || '';
-    const value = card.querySelector('[style*="font-size:1.1rem"],[style*="font-weight:900"]')?.textContent?.trim() || '';
-    if (label || value) summaryHtml += `<div class="summary-card"><div class="sc-val">${value}</div><div class="sc-lbl">${label}</div></div>`;
-  });
-
-  // Collect Stock Alerts rows
-  let stockHtml = '';
-  document.querySelectorAll('#low-stock-list > div[style]').forEach(row => {
-    const name = row.querySelector('[style*="font-weight:800"],[style*="font-weight:700"]')?.textContent?.trim() || '—';
-    const info = [...row.querySelectorAll('span:not([style*="font-weight:8"])')].map(s=>s.textContent.trim()).join(' · ') || '';
-    stockHtml += `<tr><td>${name}</td><td>${info}</td></tr>`;
-  });
-  if (!stockHtml) stockHtml = '<tr><td colspan="2" style="text-align:center;color:#aaa;">No alerts</td></tr>';
-
-  // Capture sales chart as image
-  const salesCanvas = document.getElementById('sales-chart');
-  const salesImg    = salesCanvas ? `<img src="${salesCanvas.toDataURL()}" style="width:100%;max-height:220px;object-fit:contain;margin-top:10px;">` : '';
-  const hourlyCanvas = document.getElementById('an-hourly-chart');
-  const hourlyImg    = hourlyCanvas ? `<img src="${hourlyCanvas.toDataURL()}" style="width:100%;max-height:180px;object-fit:contain;margin-top:10px;">` : '';
-
-  const now = new Date().toLocaleString('en-PH', {dateStyle:'long', timeStyle:'short'});
-  const storeName = document.querySelector('.dash-store-name, .brand-name, h1')?.textContent?.trim() || '9599 Tea & Coffee';
-
-  const printWin = window.open('', '_blank', 'width=900,height=700');
-  printWin.document.write(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Analytics Report — ${periodLabel}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@600;700;800;900&display=swap');
-  @page { size: A4 portrait; margin: 18mm 16mm 18mm 16mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Nunito', sans-serif; font-size: 11pt; color: #1a1a1a; background: #fff; }
-
-  /* ── Report Header ── */
-  .rpt-header { display: flex; justify-content: space-between; align-items: flex-end;
-    border-bottom: 2.5px solid #0d7a6a; padding-bottom: 10px; margin-bottom: 18px; }
-  .rpt-store { font-family: 'Playfair Display', serif; font-size: 20pt; font-weight: 900; color: #0d7a6a; }
-  .rpt-sub { font-size: 8.5pt; color: #666; font-weight: 700; margin-top: 2px; }
-  .rpt-meta { text-align: right; font-size: 8pt; color: #777; line-height: 1.7; }
-  .rpt-meta strong { color: #0d7a6a; font-size: 9pt; }
-
-  /* ── Section Titles ── */
-  .sec-title { font-family: 'Playfair Display', serif; font-size: 12pt; font-weight: 900;
-    color: #0d7a6a; margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #d1ede9; }
-
-  /* ── Summary Cards ── */
-  .summary-row { display: flex; gap: 10px; margin-bottom: 14px; }
-  .summary-card { flex: 1; border: 1.5px solid #d1ede9; border-radius: 8px; padding: 10px 12px;
-    text-align: center; background: #f7fdfb; }
-  .sc-val { font-size: 14pt; font-weight: 900; color: #0d7a6a; }
-  .sc-lbl { font-size: 7.5pt; font-weight: 700; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
-
-  /* ── Tables ── */
-  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-  thead tr { background: #0d7a6a; color: #fff; }
-  thead th { padding: 7px 10px; text-align: left; font-weight: 800; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.3px; }
-  tbody tr:nth-child(even) { background: #f0faf8; }
-  tbody tr:hover { background: #e2f5f1; }
-  tbody td { padding: 6px 10px; border-bottom: 1px solid #e5eeec; vertical-align: middle; }
-  tbody td:first-child { font-weight: 800; color: #444; }
-  .badge-warn { background: #fff3cd; color: #856404; padding: 2px 7px; border-radius: 999px;
-    font-size: 7.5pt; font-weight: 800; }
-
-  /* ── Chart images ── */
-  .chart-wrap { border: 1.5px solid #d1ede9; border-radius: 8px; padding: 10px 14px;
-    background: #f7fdfb; margin-bottom: 6px; }
-
-  /* ── Footer ── */
-  .rpt-footer { margin-top: 28px; padding-top: 8px; border-top: 1px solid #ccc;
-    font-size: 7.5pt; color: #aaa; text-align: center; }
-</style>
-</head>
-<body>
-
-<div class="rpt-header">
-  <div>
-    <div class="rpt-store">${storeName}</div>
-    <div class="rpt-sub">Analytics Report</div>
-  </div>
-  <div class="rpt-meta">
-    <div><strong>Period:</strong> ${periodLabel}</div>
-    <div><strong>Printed:</strong> ${now}</div>
-  </div>
-</div>
-
-<!-- Sales Summary -->
-<div class="sec-title">📊 Sales Overview</div>
-${summaryHtml ? `<div class="summary-row">${summaryHtml}</div>` : '<p style="color:#aaa;font-size:9pt;">No summary data available.</p>'}
-${salesImg ? `<div class="chart-wrap">${salesImg}</div>` : ''}
-
-<!-- Best-Sellers -->
-<div class="sec-title">🏆 Best-Sellers</div>
-<table>
-  <thead><tr><th>#</th><th>Item</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
-  <tbody>${bsHtml}</tbody>
-</table>
-
-<!-- Hourly -->
-<div class="sec-title">⏰ Hourly Orders (Today)</div>
-${hourlyImg ? `<div class="chart-wrap">${hourlyImg}</div>` : '<p style="color:#aaa;font-size:9pt;">No hourly data available.</p>'}
-
-<!-- Stock Alerts -->
-<div class="sec-title">⚠️ Stock Alerts</div>
-<table>
-  <thead><tr><th>Ingredient / Item</th><th>Status</th></tr></thead>
-  <tbody>${stockHtml}</tbody>
-</table>
-
-<div class="rpt-footer">
-  Generated automatically by the Admin Panel · ${storeName} · ${now}
-</div>
-
-<script>
-  window.onload = function() {
-    setTimeout(function() {
-      window.print();
-      window.onafterprint = function() { window.close(); };
-    }, 400);
-  };
-<\/script>
-</body>
-</html>`);
-  printWin.document.close();
 }
 
 /* ── ANALYTICS ── */
