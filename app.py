@@ -15923,6 +15923,19 @@ function printAnalytics() {
   try { var sc = document.getElementById('sales-chart');    if (sc) salesImgSrc  = sc.toDataURL('image/png'); } catch(e) {}
   try { var hc = document.getElementById('an-hourly-chart'); if (hc) hourlyImgSrc = hc.toDataURL('image/png'); } catch(e) {}
 
+  // ── 5b. Capture logo from live DOM image (avoids path resolution issues) ─
+  var logoSrc = '';
+  try {
+    var logoImg = document.querySelector('.logo-circle img, .topbar-logo img, img[src*="9599"]');
+    if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+      var logoCanvas = document.createElement('canvas');
+      logoCanvas.width = logoImg.naturalWidth;
+      logoCanvas.height = logoImg.naturalHeight;
+      logoCanvas.getContext('2d').drawImage(logoImg, 0, 0);
+      logoSrc = logoCanvas.toDataURL('image/png');
+    }
+  } catch(e) {}
+
   // ── 6. Meta ───────────────────────────────────────────────────
   var now = new Date().toLocaleString('en-PH', {dateStyle:'long', timeStyle:'short'});
   var storeEl = document.querySelector('.admin-store-name, .topbar-title, .brand-name');
@@ -15937,7 +15950,7 @@ function printAnalytics() {
   }
   overlayEl.innerHTML =
     '<div class="an-rpt-header">' +
-      '<div class="an-rpt-brand"><img class="an-rpt-logo" src="/static/images/9599.jpg" alt="Logo"><div class="an-rpt-title">' + storeName + '<span class="an-rpt-sub">Analytics Report</span></div></div>' +
+      '<div class="an-rpt-brand">' + (logoSrc ? '<img class="an-rpt-logo" src="' + logoSrc + '">' : '<img class="an-rpt-logo" src="/static/images/9599.jpg">') + '<div class="an-rpt-title">' + storeName + '<span class="an-rpt-sub">Analytics Report</span></div></div>' +
       '<div class="an-rpt-meta"><b>Period:</b> ' + periodLabel + '<br><b>Printed:</b> ' + now + '</div>' +
     '</div>' +
     '<div class="an-sec-title">Sales Overview</div>' +
