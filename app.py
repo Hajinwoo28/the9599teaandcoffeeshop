@@ -12875,9 +12875,20 @@ ens-wrap">
 
   <!-- ANALYTICS SCREEN -->
   <div id="s-analytics" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
-    <div class="page-header">
-      <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
-      <p>Sales trends, reports, top items &amp; hourly performance</p>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div>
+        <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
+        <p>Sales trends, reports, top items &amp; hourly performance</p>
+      </div>
+      <button id="analytics-print-btn" onclick="printAnalytics()" title="Print Analytics Report"
+        style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:10px;border:none;
+               background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;
+               font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;
+               box-shadow:0 3px 10px rgba(13,122,106,0.28);transition:filter 0.18s,transform 0.18s;flex-shrink:0;"
+        onmouseover="this.style.filter='brightness(1.12)';this.style.transform='translateY(-1px)'"
+        onmouseout="this.style.filter='';this.style.transform=''">
+        <i class="fas fa-print"></i> Print Report
+      </button>
     </div>
     <div style="padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;">
 
@@ -15835,6 +15846,158 @@ setInterval(()=>{
 ══════════════════════════════════════════════════════════ */
 
 /* goScreen is defined earlier as a unified function — no patching needed */
+
+/* ── ANALYTICS PRINT ── */
+function printAnalytics() {
+  // Gather current period label
+  let periodLabel = 'Last 7 Days';
+  const activePill = document.querySelector('#s-analytics .period-pill.active');
+  if (activePill) {
+    const rangeLabel = document.getElementById('an-range-label');
+    periodLabel = (rangeLabel && rangeLabel.textContent.trim())
+      ? rangeLabel.textContent.trim()
+      : activePill.textContent.trim();
+  }
+
+  // Collect Best-Sellers rows
+  let bsHtml = '';
+  document.querySelectorAll('#bestsellers-list .bs-row, #bestsellers-list [style*="display:flex"]').forEach((row, i) => {
+    const name = row.querySelector('.bs-name, [style*="font-weight:800"]')?.textContent?.trim() || '—';
+    const qty  = row.querySelector('.bs-qty, [style*="border-radius:999px"]')?.textContent?.trim() || '';
+    const rev  = row.querySelector('.bs-rev, [style*="color:var(--teal"]')?.textContent?.trim() || '';
+    bsHtml += `<tr><td>${i+1}</td><td>${name}</td><td>${qty}</td><td>${rev}</td></tr>`;
+  });
+  if (!bsHtml) bsHtml = '<tr><td colspan="4" style="text-align:center;color:#aaa;">No data</td></tr>';
+
+  // Collect Chart summary cards
+  let summaryHtml = '';
+  document.querySelectorAll('#chart-summary > div').forEach(card => {
+    const label = card.querySelector('[style*="font-size:0.68rem"],[style*="font-size:0.7rem"]')?.textContent?.trim() || '';
+    const value = card.querySelector('[style*="font-size:1.1rem"],[style*="font-weight:900"]')?.textContent?.trim() || '';
+    if (label || value) summaryHtml += `<div class="summary-card"><div class="sc-val">${value}</div><div class="sc-lbl">${label}</div></div>`;
+  });
+
+  // Collect Stock Alerts rows
+  let stockHtml = '';
+  document.querySelectorAll('#low-stock-list > div[style]').forEach(row => {
+    const name = row.querySelector('[style*="font-weight:800"],[style*="font-weight:700"]')?.textContent?.trim() || '—';
+    const info = [...row.querySelectorAll('span:not([style*="font-weight:8"])')].map(s=>s.textContent.trim()).join(' · ') || '';
+    stockHtml += `<tr><td>${name}</td><td>${info}</td></tr>`;
+  });
+  if (!stockHtml) stockHtml = '<tr><td colspan="2" style="text-align:center;color:#aaa;">No alerts</td></tr>';
+
+  // Capture sales chart as image
+  const salesCanvas = document.getElementById('sales-chart');
+  const salesImg    = salesCanvas ? `<img src="${salesCanvas.toDataURL()}" style="width:100%;max-height:220px;object-fit:contain;margin-top:10px;">` : '';
+  const hourlyCanvas = document.getElementById('an-hourly-chart');
+  const hourlyImg    = hourlyCanvas ? `<img src="${hourlyCanvas.toDataURL()}" style="width:100%;max-height:180px;object-fit:contain;margin-top:10px;">` : '';
+
+  const now = new Date().toLocaleString('en-PH', {dateStyle:'long', timeStyle:'short'});
+  const storeName = document.querySelector('.dash-store-name, .brand-name, h1')?.textContent?.trim() || '9599 Tea & Coffee';
+
+  const printWin = window.open('', '_blank', 'width=900,height=700');
+  printWin.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Analytics Report — ${periodLabel}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@600;700;800;900&display=swap');
+  @page { size: A4 portrait; margin: 18mm 16mm 18mm 16mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; font-size: 11pt; color: #1a1a1a; background: #fff; }
+
+  /* ── Report Header ── */
+  .rpt-header { display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2.5px solid #0d7a6a; padding-bottom: 10px; margin-bottom: 18px; }
+  .rpt-store { font-family: 'Playfair Display', serif; font-size: 20pt; font-weight: 900; color: #0d7a6a; }
+  .rpt-sub { font-size: 8.5pt; color: #666; font-weight: 700; margin-top: 2px; }
+  .rpt-meta { text-align: right; font-size: 8pt; color: #777; line-height: 1.7; }
+  .rpt-meta strong { color: #0d7a6a; font-size: 9pt; }
+
+  /* ── Section Titles ── */
+  .sec-title { font-family: 'Playfair Display', serif; font-size: 12pt; font-weight: 900;
+    color: #0d7a6a; margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #d1ede9; }
+
+  /* ── Summary Cards ── */
+  .summary-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .summary-card { flex: 1; border: 1.5px solid #d1ede9; border-radius: 8px; padding: 10px 12px;
+    text-align: center; background: #f7fdfb; }
+  .sc-val { font-size: 14pt; font-weight: 900; color: #0d7a6a; }
+  .sc-lbl { font-size: 7.5pt; font-weight: 700; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  thead tr { background: #0d7a6a; color: #fff; }
+  thead th { padding: 7px 10px; text-align: left; font-weight: 800; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.3px; }
+  tbody tr:nth-child(even) { background: #f0faf8; }
+  tbody tr:hover { background: #e2f5f1; }
+  tbody td { padding: 6px 10px; border-bottom: 1px solid #e5eeec; vertical-align: middle; }
+  tbody td:first-child { font-weight: 800; color: #444; }
+  .badge-warn { background: #fff3cd; color: #856404; padding: 2px 7px; border-radius: 999px;
+    font-size: 7.5pt; font-weight: 800; }
+
+  /* ── Chart images ── */
+  .chart-wrap { border: 1.5px solid #d1ede9; border-radius: 8px; padding: 10px 14px;
+    background: #f7fdfb; margin-bottom: 6px; }
+
+  /* ── Footer ── */
+  .rpt-footer { margin-top: 28px; padding-top: 8px; border-top: 1px solid #ccc;
+    font-size: 7.5pt; color: #aaa; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="rpt-header">
+  <div>
+    <div class="rpt-store">${storeName}</div>
+    <div class="rpt-sub">Analytics Report</div>
+  </div>
+  <div class="rpt-meta">
+    <div><strong>Period:</strong> ${periodLabel}</div>
+    <div><strong>Printed:</strong> ${now}</div>
+  </div>
+</div>
+
+<!-- Sales Summary -->
+<div class="sec-title">📊 Sales Overview</div>
+${summaryHtml ? `<div class="summary-row">${summaryHtml}</div>` : '<p style="color:#aaa;font-size:9pt;">No summary data available.</p>'}
+${salesImg ? `<div class="chart-wrap">${salesImg}</div>` : ''}
+
+<!-- Best-Sellers -->
+<div class="sec-title">🏆 Best-Sellers</div>
+<table>
+  <thead><tr><th>#</th><th>Item</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+  <tbody>${bsHtml}</tbody>
+</table>
+
+<!-- Hourly -->
+<div class="sec-title">⏰ Hourly Orders (Today)</div>
+${hourlyImg ? `<div class="chart-wrap">${hourlyImg}</div>` : '<p style="color:#aaa;font-size:9pt;">No hourly data available.</p>'}
+
+<!-- Stock Alerts -->
+<div class="sec-title">⚠️ Stock Alerts</div>
+<table>
+  <thead><tr><th>Ingredient / Item</th><th>Status</th></tr></thead>
+  <tbody>${stockHtml}</tbody>
+</table>
+
+<div class="rpt-footer">
+  Generated automatically by the Admin Panel · ${storeName} · ${now}
+</div>
+
+<script>
+  window.onload = function() {
+    setTimeout(function() {
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    }, 400);
+  };
+<\/script>
+</body>
+</html>`);
+  printWin.document.close();
+}
 
 /* ── ANALYTICS ── */
 let _anRevenueChart = null, _anHourlyChart = null, _anActiveDays = 7;
