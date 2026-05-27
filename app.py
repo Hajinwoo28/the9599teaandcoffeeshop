@@ -70,20 +70,20 @@ def _check_production_secrets():
     """Warn loudly (and refuse on cloud) if default/weak secrets are detected."""
     issues = []
     if os.environ.get('SECRET_KEY', '') in ('', '9599isthesecretkey'):
-        issues.append("SECRET_KEY is unset or using the default value — set a strong random key!")
+        issues.append("SECRET_KEY is unset or using the default value - set a strong random key!")
     if (os.environ.get('ADMIN_PIN', '12345') or '12345').strip() == '12345':
-        issues.append("ADMIN_PIN is '12345' (default) — set a strong 5-digit PIN in your environment!")
+        issues.append("ADMIN_PIN is '12345' (default) - set a strong 5-digit PIN in your environment!")
     if os.environ.get('LINK_SECRET', '') in ('', 'link-9599-store-permanent'):
-        issues.append("LINK_SECRET is unset or default — set it in your environment.")
+        issues.append("LINK_SECRET is unset or default - set it in your environment.")
     if os.environ.get('DEV_SECRET', '') in ('', 'dev-9599-local'):
-        issues.append("DEV_SECRET is unset or default — set it in your environment.")
+        issues.append("DEV_SECRET is unset or default - set it in your environment.")
 
     if issues:
         print("\n" + "!"*60)
-        print("  ⚠  SECURITY WARNINGS — ACTION REQUIRED")
+        print("  [!]  SECURITY WARNINGS - ACTION REQUIRED")
         print("!"*60)
         for msg in issues:
-            print(f"  • {msg}")
+            print(f"  * {msg}")
         print("!"*60 + "\n")
         # On cloud deployments, warn loudly about the default admin PIN
         if _ON_CLOUD and any("ADMIN_PIN" in i for i in issues):
@@ -104,7 +104,7 @@ def _check_captcha_config():
     print("  HCAPTCHA CONFIG CHECK")
     print("="*55)
     if secret:
-        print("  [OK] HCAPTCHA_SECRET_KEY found — bot protection active.")
+        print("  [OK] HCAPTCHA_SECRET_KEY found - bot protection active.")
     else:
         print("  [--] HCAPTCHA_SECRET_KEY NOT set.")
         print("       Bot protection will be SKIPPED in dev mode.")
@@ -524,7 +524,7 @@ def log_system_error(route, exc, context_request=None):
 
     # Also write to audit log for record-keeping
     log_audit('System Error', f"{error_type} on {route}: {error_msg[:120]}'")
-    print(f"[SYSTEM ERROR] {route} → {error_type}: {error_msg[:200]}")
+    print(f"[SYSTEM ERROR] {route} -> {error_type}: {error_msg[:200]}")
 
 # ==========================================
 # SSE — REAL-TIME PUSH TO ADMIN PANEL
@@ -12962,6 +12962,27 @@ ens-wrap">
         </div>
       </div>
 
+      <!-- Revenue Trend (from Date Range picker) -->
+      <div class="section card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#e67e22,var(--brown));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(230,126,34,0.25);">
+              <i class="fas fa-chart-line" style="color:#fff;font-size:0.85rem;"></i>
+            </div>
+            <div>
+              <div class="card-title" style="margin:0;">Revenue Trend</div>
+              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Sales timeline performance</div>
+            </div>
+          </div>
+          <span id="an-active-label" style="font-size:0.68rem;font-weight:700;color:var(--brown);background:rgba(200,130,58,0.1);border:1px solid rgba(200,130,58,0.25);border-radius:20px;padding:4px 10px;">Last 7 Days</span>
+        </div>
+        <div style="padding:14px 14px 8px;">
+          <div style="position:relative;height:180px;">
+            <canvas id="an-revenue-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
       <!-- Best-sellers (from Finance Reports) -->
       <div class="section card" style="padding:0;overflow:hidden;">
         <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
@@ -22359,7 +22380,7 @@ if __name__ == '__main__':
             import OpenSSL  # noqa
             ssl_ctx = 'adhoc'
         except ImportError:
-            print(" WARNING: pyOpenSSL not found — running over HTTP.")
+            print(" WARNING: pyOpenSSL not found - running over HTTP.")
             print("          GPS only works on this machine (localhost).")
             print("          Fix: pip install pyOpenSSL")
 
