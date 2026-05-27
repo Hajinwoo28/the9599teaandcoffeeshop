@@ -12047,28 +12047,41 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .period-pill.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream);}
 
 /* ── BEST-SELLER BARS ── */
-.bs-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.bs-rank{width:22px;height:22px;border-radius:50%;background:var(--cream-dark);color:var(--muted);font-size:0.65rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.bs-rank.gold{background:#F9A825;color:#fff;}
-.bs-rank.silver{background:#90A4AE;color:#fff;}
-.bs-rank.bronze{background:#A1887F;color:#fff;}
+.bs-row{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:12px;margin-bottom:6px;background:var(--cream);border:1.5px solid transparent;transition:border-color 0.15s,background 0.15s;}
+.bs-row:hover{background:#f7f2ea;border-color:var(--cream-dark);}
+.bs-rank{width:30px;height:30px;border-radius:50%;background:var(--cream-dark);color:var(--muted);font-size:0.7rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(61,36,16,0.12);}
+.bs-rank.gold{background:linear-gradient(135deg,#F9A825,#FFD54F);color:#fff;box-shadow:0 3px 8px rgba(249,168,37,0.4);}
+.bs-rank.silver{background:linear-gradient(135deg,#78909C,#B0BEC5);color:#fff;box-shadow:0 3px 8px rgba(120,144,156,0.35);}
+.bs-rank.bronze{background:linear-gradient(135deg,#8D6E63,#BCAAA4);color:#fff;box-shadow:0 3px 8px rgba(141,110,99,0.35);}
 .bs-bar-wrap{flex:1;min-width:0;}
-.bs-name{font-size:0.78rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;}
-.bs-bar-track{height:7px;background:var(--cream-dark);border-radius:4px;overflow:hidden;}
-.bs-bar-fill{height:100%;background:linear-gradient(90deg,var(--brown) 0%,var(--tan) 100%);border-radius:4px;transition:width 0.5s ease;}
-.bs-count{font-size:0.72rem;font-weight:900;color:var(--brown);flex-shrink:0;min-width:28px;text-align:right;}
+.bs-name{font-size:0.8rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;}
+.bs-bar-track{height:9px;background:var(--cream-dark);border-radius:6px;overflow:hidden;}
+.bs-bar-fill{height:100%;background:linear-gradient(90deg,var(--brown-dark) 0%,var(--brown) 55%,var(--tan) 100%);border-radius:6px;transition:width 0.65s cubic-bezier(0.34,1.56,0.64,1);}
+.bs-count{font-size:0.75rem;font-weight:900;color:var(--brown);flex-shrink:0;min-width:36px;text-align:right;line-height:1;}
+.bs-count-lbl{font-size:0.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;display:block;}
 
 /* ── LOW STOCK ALERTS ── */
-.stock-alert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:7px;border:1.5px solid;}
-.stock-alert.critical{background:rgba(192,57,43,0.07);border-color:rgba(192,57,43,0.25);}
-.stock-alert.low{background:rgba(245,124,0,0.07);border-color:rgba(245,124,0,0.25);}
-.stock-alert.medium{background:rgba(25,118,210,0.06);border-color:rgba(25,118,210,0.2);}
+.stock-alert{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:12px;margin-bottom:7px;border:1.5px solid;transition:transform 0.15s,box-shadow 0.15s;}
+.stock-alert:hover{transform:translateX(3px);box-shadow:0 4px 14px rgba(0,0,0,0.07);}
+.stock-alert.critical{background:rgba(211,47,47,0.06);border-color:rgba(211,47,47,0.22);}
+.stock-alert.low{background:rgba(230,81,0,0.06);border-color:rgba(230,81,0,0.22);}
+.stock-alert.medium{background:rgba(21,101,192,0.05);border-color:rgba(21,101,192,0.18);}
+.sa-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.stock-alert.critical .sa-icon{background:rgba(211,47,47,0.12);color:var(--red);}
+.stock-alert.low .sa-icon{background:rgba(230,81,0,0.12);color:var(--orange);}
+.stock-alert.medium .sa-icon{background:rgba(21,101,192,0.1);color:var(--blue);}
 .sa-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 .critical .sa-dot{background:var(--red);}
 .low .sa-dot{background:var(--orange);}
 .medium .sa-dot{background:var(--blue);}
-.sa-name{flex:1;font-size:0.79rem;font-weight:800;color:var(--text);}
-.sa-val{font-size:0.72rem;font-weight:700;color:var(--muted);}
+.sa-body{flex:1;min-width:0;}
+.sa-name{font-size:0.8rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sa-level-badge{font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:3px;}
+.stock-alert.critical .sa-level-badge{background:rgba(211,47,47,0.12);color:var(--red);}
+.stock-alert.low .sa-level-badge{background:rgba(230,81,0,0.12);color:var(--orange);}
+.stock-alert.medium .sa-level-badge{background:rgba(21,101,192,0.1);color:var(--blue);}
+.sa-val{font-size:0.8rem;font-weight:800;color:var(--text);text-align:right;flex-shrink:0;}
+.sa-unit{font-size:0.65rem;font-weight:700;color:var(--muted);display:block;text-align:right;margin-top:2px;}
 
 /* ── ORDER HISTORY SEARCH ── */
 .oh-search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
@@ -12950,49 +12963,92 @@ ens-wrap">
       </div>
 
       <!-- Best-sellers (from Finance Reports) -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
-          <span class="card-title" style="margin:0;">Best-Sellers</span>
+      <div class="section card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(61,36,16,0.25);">
+              <i class="fas fa-trophy" style="color:#FFD54F;font-size:0.85rem;"></i>
+            </div>
+            <div>
+              <div class="card-title" style="margin:0;">Best-Sellers</div>
+              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Top performing items</div>
+            </div>
+          </div>
           <div class="period-pills">
             <button class="period-pill active" id="bsp-today" onclick="loadBestSellers('today',this)">Today</button>
             <button class="period-pill" id="bsp-week" onclick="loadBestSellers('week',this)">This Week</button>
             <button class="period-pill" id="bsp-all" onclick="loadBestSellers('all',this)">All Time</button>
           </div>
         </div>
-        <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;">Loading…</div></div>
+        <div style="padding:12px 14px;">
+          <div id="bestsellers-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;padding:8px 0;">Loading…</div></div>
+        </div>
       </div>
 
       <!-- Sales Chart (from Finance Reports) -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
-          <span class="card-title" style="margin:0;">Sales Overview</span>
+      <div class="section card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#1B5E20,var(--green));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(46,125,50,0.3);">
+              <i class="fas fa-chart-line" style="color:#fff;font-size:0.85rem;"></i>
+            </div>
+            <div>
+              <div class="card-title" style="margin:0;">Sales Overview</div>
+              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Revenue, expenses &amp; net profit</div>
+            </div>
+          </div>
           <div class="period-pills">
             <button class="period-pill active" id="pp-7" onclick="loadSalesChart(7,this)">7 Days</button>
             <button class="period-pill" id="pp-30" onclick="loadSalesChart(30,this)">30 Days</button>
           </div>
         </div>
         <div id="chart-loading" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;display:none;"><i class="fas fa-spinner fa-spin"></i> Loading chart…</div>
-        <div style="position:relative;height:150px;">
-          <canvas id="sales-chart"></canvas>
+        <div style="padding:14px 14px 8px;">
+          <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+          <div style="position:relative;height:180px;">
+            <canvas id="sales-chart"></canvas>
+          </div>
         </div>
-        <div id="chart-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;"></div>
       </div>
 
       <!-- Low Stock Alerts (from Finance Reports) -->
-      <div class="section card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-          <span class="card-title" style="margin:0;">⚠️ Stock Alerts</span>
-          <button class="btn-secondary" style="font-size:0.72rem;padding:5px 10px;" onclick="loadLowStock()"><i class="fas fa-sync-alt"></i></button>
+      <div class="section card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#B71C1C,var(--red));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(211,47,47,0.3);">
+              <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:0.85rem;"></i>
+            </div>
+            <div>
+              <div class="card-title" style="margin:0;">Stock Alerts</div>
+              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Ingredients needing attention</div>
+            </div>
+          </div>
+          <button class="btn-secondary" style="font-size:0.72rem;padding:6px 12px;display:flex;align-items:center;gap:5px;" onclick="loadLowStock()">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
         </div>
-        <div id="low-stock-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">Loading…</div></div>
+        <div style="padding:12px 14px;">
+          <div id="low-stock-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">Loading…</div></div>
+        </div>
       </div>
 
       <!-- Analytics Charts -->
-
-
-      <div class="section card" style="padding:14px;">
-          <div style="font-size:0.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hourly Orders (Today)</div>
-          <canvas id="an-hourly-chart" height="200"></canvas>
+      <div class="section card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 16px 12px;border-bottom:1.5px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0D47A1,var(--blue));display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(21,101,192,0.3);">
+              <i class="fas fa-clock" style="color:#fff;font-size:0.85rem;"></i>
+            </div>
+            <div>
+              <div class="card-title" style="margin:0;">Hourly Orders</div>
+              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:1px;">Today's order volume by hour</div>
+            </div>
+          </div>
+          <span id="an-hourly-date" style="font-size:0.68rem;font-weight:700;color:var(--muted);background:var(--cream);border:1.5px solid var(--cream-dark);border-radius:20px;padding:4px 10px;"></span>
+        </div>
+        <div style="padding:14px;">
+          <canvas id="an-hourly-chart" height="190"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -14320,17 +14376,17 @@ async function loadSalesChart(days,btn){
     const totalExp=expenses.reduce((a,b)=>a+b,0);
     const totalPro=profit.reduce((a,b)=>a+b,0);
     document.getElementById('chart-summary').innerHTML=`
-      <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;border:1.5px solid var(--cream-dark);">
-        <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Revenue</div>
-        <div style="font-size:1rem;font-weight:900;color:var(--brown);font-family:'Playfair Display',serif;">₱${totalRev.toFixed(0)}</div>
+      <div style="background:rgba(123,79,46,0.07);border-radius:12px;padding:12px;text-align:center;border:1.5px solid rgba(123,79,46,0.15);position:relative;overflow:hidden;">
+        <div style="font-size:0.58rem;font-weight:900;color:var(--brown);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:4px;"><i class="fas fa-coins"></i> Revenue</div>
+        <div style="font-size:1.05rem;font-weight:900;color:var(--brown-dark);font-family:'Playfair Display',serif;">₱${totalRev.toFixed(0)}</div>
       </div>
-      <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;border:1.5px solid var(--cream-dark);">
-        <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Expenses</div>
-        <div style="font-size:1rem;font-weight:900;color:var(--red);font-family:'Playfair Display',serif;">₱${totalExp.toFixed(0)}</div>
+      <div style="background:rgba(211,47,47,0.06);border-radius:12px;padding:12px;text-align:center;border:1.5px solid rgba(211,47,47,0.15);">
+        <div style="font-size:0.58rem;font-weight:900;color:var(--red);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:4px;"><i class="fas fa-receipt"></i> Expenses</div>
+        <div style="font-size:1.05rem;font-weight:900;color:var(--red);font-family:'Playfair Display',serif;">₱${totalExp.toFixed(0)}</div>
       </div>
-      <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;border:1.5px solid var(--cream-dark);">
-        <div style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Net Profit</div>
-        <div style="font-size:1rem;font-weight:900;color:${totalPro>=0?'var(--green)':'var(--red)'};font-family:'Playfair Display',serif;">₱${totalPro.toFixed(0)}</div>
+      <div style="background:${totalPro>=0?'rgba(46,125,50,0.07)':'rgba(211,47,47,0.06)'};border-radius:12px;padding:12px;text-align:center;border:1.5px solid ${totalPro>=0?'rgba(46,125,50,0.18)':'rgba(211,47,47,0.15)'};">
+        <div style="font-size:0.58rem;font-weight:900;color:${totalPro>=0?'var(--green)':'var(--red)'};text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:flex;align-items:center;justify-content:center;gap:4px;"><i class="fas fa-chart-pie"></i> Net Profit</div>
+        <div style="font-size:1.05rem;font-weight:900;color:${totalPro>=0?'var(--green)':'var(--red)'};font-family:'Playfair Display',serif;">₱${totalPro.toFixed(0)}</div>
       </div>`;
     const ctx=document.getElementById('sales-chart').getContext('2d');
     if(salesChartObj)salesChartObj.destroy();
@@ -14356,14 +14412,16 @@ async function loadBestSellers(mode,btn){
     const max=data[0].count||1;
     el.innerHTML=data.map((item,i)=>{
       const rankClass=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+      const medalIcon=i===0?'🥇':i===1?'🥈':i===2?'🥉':null;
+      const rankContent=medalIcon?`<span style="font-size:1rem;line-height:1;">${medalIcon}</span>`:(i+1);
       const pct=Math.round((item.count/max)*100);
       return`<div class="bs-row">
-        <div class="bs-rank ${rankClass}">${i+1}</div>
+        <div class="bs-rank ${rankClass}">${rankContent}</div>
         <div class="bs-bar-wrap">
           <div class="bs-name">${escapeHTML(item.name)}</div>
           <div class="bs-bar-track"><div class="bs-bar-fill" style="width:${pct}%"></div></div>
         </div>
-        <div class="bs-count">${item.count}</div>
+        <div class="bs-count">${item.count}<span class="bs-count-lbl">orders</span></div>
       </div>`;
     }).join('');
   }catch(e){el.innerHTML='<div style="color:var(--red);font-size:0.8rem;">Error loading.</div>';}
@@ -14378,12 +14436,21 @@ async function loadLowStock(){
     if(!r||!r.ok)return;
     const data=await r.json();
     if(!data.length){el.innerHTML='<div style="background:rgba(39,174,96,0.08);border:1.5px solid rgba(39,174,96,0.25);border-radius:10px;padding:13px 14px;display:flex;align-items:center;gap:10px;font-size:0.82rem;font-weight:700;color:var(--green);"><i class="fas fa-check-circle"></i> All ingredients are well-stocked!</div>';return;}
-    el.innerHTML=data.map(item=>`
-      <div class="stock-alert ${item.level}">
-        <div class="sa-dot"></div>
-        <div class="sa-name">${escapeHTML(item.name)}</div>
-        <div class="sa-val">${item.stock} ${escapeHTML(item.unit)}</div>
-      </div>`).join('');
+    el.innerHTML=data.map(item=>{
+      const icons={'critical':'fas fa-exclamation-circle','low':'fas fa-exclamation-triangle','medium':'fas fa-info-circle'};
+      const labels={'critical':'Critical','low':'Low','medium':'Monitor'};
+      return`<div class="stock-alert ${item.level}">
+        <div class="sa-icon"><i class="${icons[item.level]||'fas fa-circle'}"></i></div>
+        <div class="sa-body">
+          <div class="sa-name">${escapeHTML(item.name)}</div>
+          <span class="sa-level-badge">${labels[item.level]||item.level}</span>
+        </div>
+        <div>
+          <div class="sa-val">${item.stock}</div>
+          <div class="sa-unit">${escapeHTML(item.unit)}</div>
+        </div>
+      </div>`;
+    }).join('');
   }catch(e){el.innerHTML='<div style="color:var(--red);font-size:0.8rem;">Error loading.</div>';}
 }
 
@@ -16071,19 +16138,44 @@ async function loadAnalytics(days) {
 
     // Hourly chart
     const hctx = document.getElementById('an-hourly-chart');
+    // Populate the date badge
+    const hourlyDateEl = document.getElementById('an-hourly-date');
+    if (hourlyDateEl) {
+      const d = new Date();
+      hourlyDateEl.textContent = d.toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'});
+    }
     if (hctx) {
       if (_anHourlyChart) _anHourlyChart.destroy();
+      const visibleHourly = hourly.filter(h => parseInt(h.hour) >= 6 && parseInt(h.hour) <= 22);
+      const maxOrders = Math.max(...visibleHourly.map(h=>h.orders), 1);
+      const barColors = visibleHourly.map(h => h.orders === maxOrders && h.orders > 0
+        ? 'rgba(61,36,16,0.9)' : 'rgba(123,79,46,0.65)');
       _anHourlyChart = new Chart(hctx, {
         type: 'bar',
         data: {
-          labels: hourly.filter(h => parseInt(h.hour) >= 10 && parseInt(h.hour) <= 19).map(h => h.hour),
+          labels: visibleHourly.map(h => h.hour),
           datasets: [{
             label: 'Orders',
-            data: hourly.filter(h => parseInt(h.hour) >= 10 && parseInt(h.hour) <= 19).map(h => h.orders),
-            backgroundColor: 'rgba(123,79,46,0.7)', borderRadius: 6
+            data: visibleHourly.map(h => h.orders),
+            backgroundColor: barColors,
+            borderRadius: 7,
+            borderSkipped: false,
           }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: ctx => ` ${ctx.parsed.y} order${ctx.parsed.y!==1?'s':''}` }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { family:'Nunito', size: 9, weight:'700' }, color:'#8D6E55' } },
+            y: { beginAtZero: true, grid: { color:'rgba(196,168,130,0.2)' }, ticks: { precision: 0, font:{ family:'Nunito', size: 9 }, color:'#8D6E55' } }
+          }
+        }
       });
     }
 
