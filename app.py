@@ -12247,6 +12247,93 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* Waste summary bar */
 .adm-waste-summary{padding:11px 14px;background:var(--cream);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1.5px solid rgba(196,168,130,0.2);}
 
+/* ══ REDESIGNED 7-SECTION ENHANCEMENTS ══════════════════════════ */
+.ph-stats-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;position:relative;z-index:1;}
+.ph-stat-chip{background:rgba(255,255,255,0.09);border:1px solid rgba(196,168,130,0.22);border-radius:11px;padding:8px 13px;text-align:center;min-width:68px;flex-shrink:0;}
+.ph-stat-chip-val{font-size:1.15rem;font-weight:900;color:#fff;line-height:1;font-family:'Playfair Display',serif;}
+.ph-stat-chip-lbl{font-size:0.56rem;font-weight:800;color:var(--tan);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
+.adm-pri-pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;}
+.adm-pri-pill{padding:6px 13px;border-radius:20px;border:1.5px solid var(--cream-dark);font-size:0.71rem;font-weight:800;cursor:pointer;transition:all 0.15s;font-family:'Nunito',sans-serif;background:transparent;color:var(--muted);}
+.adm-pri-pill.sel-urg{background:#fde8e7;border-color:#e74c3c;color:#922b21;}
+.adm-pri-pill.sel-hi{background:#fef3e2;border-color:var(--orange);color:#925500;}
+.adm-pri-pill.sel-nor{background:rgba(21,101,192,0.08);border-color:var(--blue);color:#1340a0;}
+.adm-pri-pill.sel-lo{background:var(--cream-dark);border-color:var(--tan);color:var(--brown-dark);}
+.adm-ann-new{border-radius:12px;border:1.5px solid var(--cream-dark);padding:12px 14px;background:#fff;position:relative;overflow:hidden;margin-bottom:9px;transition:box-shadow 0.18s;}
+.adm-ann-new:last-child{margin-bottom:0;}
+.adm-ann-new::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.adm-ann-new.urg::before{background:var(--red);}
+.adm-ann-new.hi::before{background:var(--orange);}
+.adm-ann-new.nor::before{background:var(--blue);}
+.adm-ann-new.lo::before{background:var(--tan);}
+.adm-ann-new:hover{box-shadow:0 4px 16px rgba(61,36,16,0.1);}
+.adm-ann-new-title{font-size:0.84rem;font-weight:900;color:var(--text);padding-left:9px;margin-bottom:3px;}
+.adm-ann-new-body{font-size:0.73rem;color:var(--muted);line-height:1.55;padding-left:9px;}
+.adm-ann-new-meta{display:flex;align-items:center;gap:8px;margin-top:8px;padding-left:9px;flex-wrap:wrap;}
+.adm-waste-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.adm-waste-stat{background:var(--cream);border-radius:10px;border:1.5px solid var(--cream-dark);padding:10px;text-align:center;}
+.adm-waste-stat-val{font-size:1.2rem;font-weight:900;font-family:'Playfair Display',serif;}
+.adm-waste-stat-lbl{font-size:0.57rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+.adm-wrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(196,168,130,0.18);}
+.adm-wrow:last-child{border-bottom:none;}
+.adm-wrow-icon{width:35px;height:35px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.adm-reason-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:0.62rem;font-weight:900;}
+.adm-threat-banner{border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.adm-threat-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;}
+.adm-threat-safe{background:#d5f5e3;border:1.5px solid #a8e6bc;color:#1a6b3a;}
+.adm-threat-warn{background:#fef3e2;border:1.5px solid #fbc65e;color:#925500;}
+.adm-threat-alert{background:#fde8e7;border:1.5px solid #f0a8a3;color:#922b21;}
+.adm-att-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid rgba(196,168,130,0.16);}
+.adm-att-row:last-child{border-bottom:none;}
+.adm-att-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.adm-att-time{font-size:0.62rem;color:var(--muted);font-weight:700;min-width:44px;}
+.adm-rat-gauge{text-align:center;padding:16px;}
+.adm-rat-big{font-family:'Playfair Display',serif;font-size:3rem;font-weight:900;color:var(--text);line-height:1;}
+.adm-rat-stars{font-size:1.2rem;letter-spacing:3px;color:#f1c40f;margin-top:4px;}
+.adm-rat-count{font-size:0.68rem;font-weight:700;color:var(--muted);margin-top:4px;}
+.adm-dist-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.adm-dist-bar-track{flex:1;height:8px;background:var(--cream-dark);border-radius:4px;overflow:hidden;}
+.adm-dist-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#f1c40f,#e6ac1a);transition:width 0.6s ease;}
+.adm-dist-count{font-size:0.65rem;font-weight:800;color:var(--brown);min-width:22px;text-align:right;}
+.adm-rev-card{border-radius:11px;border:1.5px solid var(--cream-dark);padding:13px;background:#fff;margin-bottom:9px;transition:box-shadow 0.18s;}
+.adm-rev-card:last-child{margin-bottom:0;}
+.adm-rev-card:hover{box-shadow:0 4px 14px rgba(61,36,16,0.09);}
+.adm-rev-name{font-size:0.8rem;font-weight:900;color:var(--text);}
+.adm-rev-code{font-size:0.62rem;font-weight:700;color:var(--tan);font-family:monospace;}
+.adm-rev-msg{font-size:0.73rem;color:var(--muted);line-height:1.55;margin-top:6px;}
+.adm-fraud-flag{border-radius:11px;border:1.5px solid;padding:12px 14px;margin-bottom:9px;}
+.adm-fraud-flag:last-child{margin-bottom:0;}
+.adm-fraud-hi{border-color:#e74c3c;background:#fff8f8;}
+.adm-fraud-med{border-color:var(--orange);background:#fffbf5;}
+.adm-promo-preview{background:linear-gradient(135deg,var(--brown-dark),var(--brown-mid));border-radius:11px;padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.adm-promo-code-display{font-family:monospace;font-size:1.3rem;font-weight:900;color:#fff;letter-spacing:3px;}
+.adm-promo-code-sub{font-size:0.6rem;color:var(--tan);font-weight:700;margin-top:2px;}
+.adm-type-pills{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.adm-type-pill{flex:1;min-width:100px;padding:8px;border-radius:9px;border:1.5px solid var(--cream-dark);font-size:0.72rem;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;background:transparent;color:var(--muted);text-align:center;transition:all 0.15s;}
+.adm-type-pill.active{background:rgba(123,79,46,0.1);border-color:var(--brown);color:var(--brown-dark);}
+.adm-usage-wrap{flex:1;height:5px;background:var(--cream-dark);border-radius:3px;overflow:hidden;margin-top:4px;}
+.adm-usage-fill{height:100%;background:linear-gradient(90deg,var(--brown),var(--tan));border-radius:3px;}
+.adm-ring-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2px;}
+@media(max-width:480px){.adm-ring-grid{grid-template-columns:1fr 1fr;}}
+.adm-ring-card{background:#fff;border-radius:13px;border:1.5px solid var(--cream-dark);padding:14px 10px;text-align:center;transition:box-shadow 0.18s,transform 0.18s;}
+.adm-ring-card:hover{box-shadow:0 5px 16px rgba(61,36,16,0.1);transform:translateY(-2px);}
+.adm-ring-card.done{border-color:rgba(39,174,96,0.35);background:#f0faf5;}
+.adm-ring-card.partial{border-color:rgba(245,124,0,0.35);background:#fffbf5;}
+.adm-ring-wrap{position:relative;width:64px;height:64px;margin:0 auto 8px;}
+.adm-ring-wrap svg{position:absolute;top:0;left:0;}
+.adm-ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900;color:var(--text);}
+.adm-ring-type{font-size:0.6rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.adm-ring-status{font-size:0.73rem;font-weight:800;margin-top:4px;}
+.adm-ring-status.done{color:var(--green);}
+.adm-ring-status.partial{color:var(--orange);}
+.adm-ring-status.none{color:var(--muted);}
+.adm-ring-detail{font-size:0.62rem;font-weight:700;margin-top:3px;}
+.adm-hist-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(196,168,130,0.16);}
+.adm-hist-row:last-child{border-bottom:none;}
+.adm-hist-dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.adm-bl-pills{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.adm-bl-pill{padding:6px 14px;border-radius:20px;border:1.5px solid var(--cream-dark);font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;font-family:'Nunito',sans-serif;background:transparent;color:var(--muted);}
+.adm-bl-pill.active{background:rgba(123,79,46,0.1);border-color:var(--brown);color:var(--brown-dark);}
+@media(max-width:520px){.adm-waste-stat-grid{grid-template-columns:1fr 1fr 1fr;}.ph-stats-row{gap:7px;}.ph-stat-chip{padding:6px 10px;min-width:56px;}.ph-stat-chip-val{font-size:0.95rem;}}
 /* ── ORDER HISTORY SEARCH ── */
 .oh-search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
 .oh-search-inp{flex:1;min-width:140px;padding:9px 13px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;outline:none;color:var(--text);background:var(--white);}
@@ -13262,35 +13349,60 @@ ens-wrap">
   <!-- PROMO CODES SCREEN -->
   <div id="s-promos" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-tags"></i> Promo Codes</h2>
-      <p>Manage discount codes and special offers</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-tags"></i>&ensp;Promo Codes</div>
+        <h2 style="font-size:1.2rem !important;">Discount Manager</h2>
+        <p>Create and manage promotional codes for your customers</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-promo-active">—</div><div class="ph-stat-chip-lbl">Active</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-promo-uses">—</div><div class="ph-stat-chip-lbl">Total Uses</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-promo-saved">—</div><div class="ph-stat-chip-lbl">Discounts Given</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
-            <div class="adm-card-icon adm-icon-brown"><i class="fas fa-plus"></i></div>
-            <div><div class="adm-card-label">Create New Promo Code</div><div class="adm-card-sub">Fill in the details and publish</div></div>
+            <div class="adm-card-icon adm-icon-brown"><i class="fas fa-plus-circle"></i></div>
+            <div><div class="adm-card-label">Create New Promo Code</div><div class="adm-card-sub">Fill in the fields below to generate a code</div></div>
           </div>
         </div>
         <div class="adm-card-body">
+          <!-- Live preview banner -->
+          <div class="adm-promo-preview">
+            <div>
+              <div class="adm-promo-code-display" id="promo-preview-code">SAVE20</div>
+              <div class="adm-promo-code-sub">Preview — appears to customers at checkout</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.3rem;font-weight:900;color:var(--tan);" id="promo-preview-val">20%</div>
+              <div style="font-size:0.6rem;color:rgba(196,168,130,0.7);font-weight:700;" id="promo-preview-type">Percent discount</div>
+            </div>
+          </div>
+          <!-- Type pills -->
+          <label class="adm-form-label">Discount Type</label>
+          <div class="adm-type-pills">
+            <button class="adm-type-pill active" onclick="admPromoType(this,'percent')"><i class="fas fa-percent" style="margin-right:4px;"></i>Percent %</button>
+            <button class="adm-type-pill" onclick="admPromoType(this,'fixed')"><i class="fas fa-peso-sign" style="margin-right:4px;"></i>Fixed ₱</button>
+          </div>
           <div class="adm-form-grid" style="margin-bottom:10px;">
-            <div><label class="adm-form-label">Promo Code</label><input id="promo-code" class="inp" placeholder="e.g. SAVE20" style="text-transform:uppercase;margin:0;"></div>
-            <div><label class="adm-form-label">Discount Type</label><select id="promo-type" class="inp" style="margin:0;"><option value="percent">Percent (%)</option><option value="fixed">Fixed Amount (₱)</option></select></div>
-            <div><label class="adm-form-label">Discount Value</label><input id="promo-value" class="inp" type="number" placeholder="e.g. 20" min="0" style="margin:0;"></div>
-            <div><label class="adm-form-label">Min Order (₱, 0 = none)</label><input id="promo-min" class="inp" type="number" placeholder="0" min="0" style="margin:0;"></div>
+            <div><label class="adm-form-label">Promo Code</label><input id="promo-code" class="inp" placeholder="e.g. SAVE20" style="text-transform:uppercase;margin:0;letter-spacing:1px;font-family:monospace;font-size:0.9rem;" oninput="document.getElementById('promo-preview-code').textContent=this.value.toUpperCase()||'SAVE20'"></div>
+            <div><label class="adm-form-label">Discount Value</label><input id="promo-value" class="inp" type="number" placeholder="e.g. 20" min="0" style="margin:0;" oninput="document.getElementById('promo-preview-val').textContent=this.value+(document.querySelector('.adm-type-pill.active').textContent.includes('%')?'%':'₱')"></div>
+            <div><label class="adm-form-label">Min Order ₱ (0 = none)</label><input id="promo-min" class="inp" type="number" placeholder="0" min="0" style="margin:0;"></div>
             <div><label class="adm-form-label">Max Uses (blank = unlimited)</label><input id="promo-max-uses" class="inp" type="number" placeholder="Unlimited" min="1" style="margin:0;"></div>
             <div><label class="adm-form-label">Expiry Date (optional)</label><input id="promo-expires" class="inp" type="date" style="margin:0;"></div>
+            <div><label class="adm-form-label">Customer Description</label><input id="promo-desc" class="inp" placeholder="Shown at checkout" style="margin:0;"></div>
           </div>
-          <div style="margin-bottom:12px;"><label class="adm-form-label">Customer-Facing Description</label><input id="promo-desc" class="inp" placeholder="e.g. Get 20% off your next order!" style="margin:0;"></div>
-          <button class="btn-primary" onclick="createPromo()" style="margin:0;"><i class="fas fa-plus"></i> Create Promo Code</button>
+          <input type="hidden" id="promo-type" value="percent">
+          <button class="btn-primary" onclick="createPromo()" style="margin:0;width:100%;justify-content:center;padding:11px;"><i class="fas fa-bolt"></i> Create Promo Code</button>
         </div>
       </div>
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-gold"><i class="fas fa-list"></i></div>
-            <div><div class="adm-card-label">Active Promo Codes</div><div class="adm-card-sub">All published codes and their usage</div></div>
+            <div><div class="adm-card-label">Active Promo Codes</div><div class="adm-card-sub">All published codes and their current usage</div></div>
           </div>
           <button class="adm-refresh-btn" onclick="loadPromos()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
@@ -13304,31 +13416,43 @@ ens-wrap">
   <!-- ANNOUNCEMENTS SCREEN -->
   <div id="s-announce" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-bullhorn"></i> Staff Announcements</h2>
-      <p>Post bulletins &amp; notices to the employee station</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-bullhorn"></i>&ensp;Announcements</div>
+        <h2 style="font-size:1.2rem !important;">Staff Communications</h2>
+        <p>Post bulletins and notices to the employee station</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-ann-active">—</div><div class="ph-stat-chip-lbl">Active</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-ann-urgent" style="color:#f1948a;">—</div><div class="ph-stat-chip-lbl">Urgent</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-orange"><i class="fas fa-paper-plane"></i></div>
-            <div><div class="adm-card-label">Post New Announcement</div><div class="adm-card-sub">Visible instantly on the employee station</div></div>
+            <div><div class="adm-card-label">Post Announcement</div><div class="adm-card-sub">Staff will see this on their station immediately</div></div>
           </div>
         </div>
         <div class="adm-card-body">
-          <div style="margin-bottom:10px;"><label class="adm-form-label">Title</label><input id="ann-title" class="inp" placeholder="e.g. Reminder: Inventory Check" style="margin:0;"></div>
-          <div style="margin-bottom:10px;"><label class="adm-form-label">Message</label><textarea id="ann-msg" class="inp" placeholder="Write your message here…" rows="3" style="resize:vertical;line-height:1.5;margin:0;"></textarea></div>
-          <div class="adm-form-row" style="margin-bottom:0;">
-            <div style="flex:1;min-width:160px;"><label class="adm-form-label">Priority Level</label><select id="ann-priority" class="inp" style="margin:0;"><option value="normal">🟡 Normal</option><option value="high">🟠 High</option><option value="urgent">🚨 Urgent</option><option value="low">🔵 Low</option></select></div>
-            <div style="align-self:flex-end;"><button class="btn-primary" style="margin:0;white-space:nowrap;" onclick="createAnnouncement()"><i class="fas fa-paper-plane"></i> Post Announcement</button></div>
+          <div style="margin-bottom:10px;"><label class="adm-form-label">Title</label><input id="ann-title" class="inp" placeholder="e.g. Reminder: Inventory Check Tonight" style="margin:0;"></div>
+          <div style="margin-bottom:10px;"><label class="adm-form-label">Message</label><textarea id="ann-msg" class="inp" placeholder="Write your announcement here…" rows="3" style="resize:vertical;line-height:1.55;margin:0;"></textarea></div>
+          <label class="adm-form-label">Priority Level</label>
+          <div class="adm-pri-pills">
+            <button class="adm-pri-pill sel-urg" id="ann-pp-urg" onclick="admAnnPri(this,'urgent','urg')">🚨 Urgent</button>
+            <button class="adm-pri-pill" id="ann-pp-hi" onclick="admAnnPri(this,'high','hi')">⚠️ High</button>
+            <button class="adm-pri-pill sel-nor" id="ann-pp-nor" onclick="admAnnPri(this,'normal','nor')">📢 Normal</button>
+            <button class="adm-pri-pill" id="ann-pp-lo" onclick="admAnnPri(this,'low','lo')">📌 Low</button>
           </div>
+          <input type="hidden" id="ann-priority" value="urgent">
+          <button class="btn-primary" style="margin:0;width:100%;justify-content:center;" onclick="createAnnouncement()"><i class="fas fa-satellite-dish"></i> Broadcast to Staff</button>
         </div>
       </div>
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-teal"><i class="fas fa-bell"></i></div>
-            <div><div class="adm-card-label">Posted Announcements</div><div class="adm-card-sub">Latest bulletins for your team</div></div>
+            <div><div class="adm-card-label">Current Announcements</div><div class="adm-card-sub">Latest bulletins for your team</div></div>
           </div>
           <button class="adm-refresh-btn" onclick="loadAnnouncements()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
@@ -13342,17 +13466,45 @@ ens-wrap">
   <!-- WASTE LOG SCREEN (ADMIN VIEW) -->
   <div id="s-waste" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-trash-alt"></i> Waste Log</h2>
-      <p>Track ingredient waste reported by staff</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-trash-alt"></i>&ensp;Waste Log</div>
+        <h2 style="font-size:1.2rem !important;">Waste Tracking</h2>
+        <p>Ingredient waste reported by staff — track losses and patterns</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-waste-week">—</div><div class="ph-stat-chip-lbl">This Week</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-waste-vol">—</div><div class="ph-stat-chip-lbl">Volume Lost</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-waste-val">—</div><div class="ph-stat-chip-lbl">Est. Value</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
+      <!-- Filters -->
+      <div class="adm-card">
+        <div class="adm-card-head">
+          <div class="adm-card-title-row">
+            <div class="adm-card-icon adm-icon-brown"><i class="fas fa-filter"></i></div>
+            <div><div class="adm-card-label">Filters</div><div class="adm-card-sub">Narrow down waste entries</div></div>
+          </div>
+          <button class="adm-refresh-btn" onclick="document.getElementById('waste-filter-ingredient').value='';document.getElementById('waste-filter-reason').value='';loadWaste()"><i class="fas fa-times"></i> Clear</button>
+        </div>
+        <div class="adm-card-body">
+          <div class="adm-form-grid">
+            <div><label class="adm-form-label">Ingredient</label><input id="waste-filter-ingredient" class="inp" placeholder="Search ingredient…" style="margin:0;" oninput="loadWaste()"></div>
+            <div><label class="adm-form-label">Reason</label><select id="waste-filter-reason" class="inp" style="margin:0;" onchange="loadWaste()"><option value="">All Reasons</option><option value="Expired">Expired</option><option value="Spillage">Spillage</option><option value="Over-prep">Over-prep</option><option value="Contaminated">Contaminated</option><option value="Quality Issue">Quality Issue</option></select></div>
+          </div>
+        </div>
+      </div>
+      <!-- Reports -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-red"><i class="fas fa-trash-alt"></i></div>
-            <div><div class="adm-card-label">Staff Waste Reports</div><div class="adm-card-sub">Ingredient waste submitted by team members</div></div>
+            <div><div class="adm-card-label">Waste Entries</div><div class="adm-card-sub">Ingredient waste submitted by team members</div></div>
           </div>
-          <button class="adm-refresh-btn danger" onclick="loadWaste()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <div style="display:flex;gap:7px;">
+            <button class="adm-refresh-btn" onclick="exportWasteCSV()"><i class="fas fa-download"></i> Export</button>
+            <button class="adm-refresh-btn danger" onclick="loadWaste()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          </div>
         </div>
         <div class="adm-card-body" style="padding:0;">
           <div id="waste-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
@@ -13364,10 +13516,32 @@ ens-wrap">
   <!-- SECURITY SCREEN -->
   <div id="s-security" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-user-shield"></i> Security Center</h2>
-      <p>IP blacklist, brute-force detection &amp; threat monitoring</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-shield-halved"></i>&ensp;Security Center</div>
+        <h2 style="font-size:1.2rem !important;">Threat Monitoring</h2>
+        <p>IP blacklist, brute-force detection &amp; access control</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-sec-status" style="color:#a8e6bc;font-size:0.95rem;">Safe</div><div class="ph-stat-chip-lbl">Status</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-sec-blocked">—</div><div class="ph-stat-chip-lbl">Blocked IPs</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-sec-attempts">—</div><div class="ph-stat-chip-lbl">Failed (24h)</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
+      <!-- Threat Status -->
+      <div class="adm-card">
+        <div class="adm-card-body">
+          <div class="adm-threat-banner" style="background:#f0faf5;border:1.5px solid #a8e6bc;border-radius:10px;" id="sec-threat-banner">
+            <div class="adm-threat-icon adm-threat-safe"><i class="fas fa-shield-halved"></i></div>
+            <div style="flex:1;">
+              <div style="font-size:0.85rem;font-weight:900;color:#1a6b3a;" id="sec-threat-label">All Systems Secure</div>
+              <div style="font-size:0.68rem;color:#2e7d52;font-weight:700;margin-top:2px;" id="sec-threat-sub">No active threats detected · Last checked just now</div>
+            </div>
+            <button class="adm-refresh-btn" onclick="loadBlacklist();loadAttempts();" style="flex-shrink:0;"><i class="fas fa-sync-alt"></i></button>
+          </div>
+        </div>
+      </div>
+      <!-- My IP -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
@@ -13384,6 +13558,7 @@ ens-wrap">
           <div class="adm-ip-hint">Use "Use to Block" to pre-fill the IP into the block form below.</div>
         </div>
       </div>
+      <!-- Block IP -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
@@ -13392,18 +13567,19 @@ ens-wrap">
           </div>
         </div>
         <div class="adm-card-body">
-          <div class="adm-form-row">
-            <input id="sec-ip-input" class="inp" placeholder="e.g. 192.168.1.100" style="margin:0;flex:1;min-width:140px;">
-            <input id="sec-ip-reason" class="inp" placeholder="Reason (optional)" style="margin:0;flex:1;min-width:140px;">
-            <button class="btn-primary" style="white-space:nowrap;margin:0;" onclick="blockIP()"><i class="fas fa-ban"></i> Block IP</button>
+          <div class="adm-form-grid" style="margin-bottom:10px;">
+            <div><label class="adm-form-label">IP Address</label><input id="sec-ip-input" class="inp" placeholder="e.g. 203.0.113.42" style="margin:0;font-family:monospace;"></div>
+            <div><label class="adm-form-label">Reason (optional)</label><input id="sec-ip-reason" class="inp" placeholder="e.g. Brute-force attempt" style="margin:0;"></div>
           </div>
+          <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--red),#a93226);" onclick="blockIP()"><i class="fas fa-ban"></i> Block IP</button>
         </div>
       </div>
+      <!-- Blacklisted IPs -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-red"><i class="fas fa-shield-alt"></i></div>
-            <div><div class="adm-card-label">Blacklisted IPs</div><div class="adm-card-sub">Devices currently blocked from the system</div></div>
+            <div><div class="adm-card-label">🔴 Blacklisted IPs</div><div class="adm-card-sub">Devices currently blocked from the system</div></div>
           </div>
           <button class="adm-refresh-btn danger" onclick="loadBlacklist()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
@@ -13411,11 +13587,12 @@ ens-wrap">
           <div id="blacklist-table"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
+      <!-- Failed Attempts -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-orange"><i class="fas fa-exclamation-triangle"></i></div>
-            <div><div class="adm-card-label">Access Attempts (Last 24h)</div><div class="adm-card-sub">Devices that tried and failed to authenticate</div></div>
+            <div><div class="adm-card-label">⚠️ Recent Failed Attempts (24h)</div><div class="adm-card-sub">Suspicious access attempts detected</div></div>
           </div>
           <button class="adm-refresh-btn" onclick="loadAttempts()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
@@ -13429,15 +13606,24 @@ ens-wrap">
   <!-- FRAUD CONTROL SCREEN -->
   <div id="s-fraud" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-exclamation-triangle"></i> Fraud Control</h2>
-      <p>Order limits, blocklist, customer reputation &amp; staff controls</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-exclamation-triangle"></i>&ensp;Fraud Control</div>
+        <h2 style="font-size:1.2rem !important;">Risk Management</h2>
+        <p>Flagged orders, blocklist, customer reputation &amp; limits</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-fraud-flagged" style="color:#f1948a;">—</div><div class="ph-stat-chip-lbl">Flagged</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-fraud-blocked">—</div><div class="ph-stat-chip-lbl">Blocked</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-fraud-prepay">—</div><div class="ph-stat-chip-lbl">Prepay Req.</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
+      <!-- Flagged Orders -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-red"><i class="fas fa-flag"></i></div>
-            <div><div class="adm-card-label">Flagged &amp; Pending-Approval Orders</div><div class="adm-card-sub">Orders requiring manual review before processing</div></div>
+            <div><div class="adm-card-label">Flagged Orders</div><div class="adm-card-sub">Orders requiring manual review before processing</div></div>
           </div>
           <button class="adm-refresh-btn danger" onclick="loadFraudOrders()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
@@ -13445,6 +13631,7 @@ ens-wrap">
           <div id="fraud-orders-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
         </div>
       </div>
+      <!-- Block Customer -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
@@ -13453,15 +13640,22 @@ ens-wrap">
           </div>
         </div>
         <div class="adm-card-body">
-          <div class="adm-form-grid" style="margin-bottom:10px;">
-            <div><label class="adm-form-label">Block By</label><select id="bl-type" class="inp" style="margin:0;"><option value="email">Email</option><option value="phone">Phone</option><option value="name">Name</option></select></div>
-            <div><label class="adm-form-label">Value to Block</label><input id="bl-value" class="inp" placeholder="Enter value…" style="margin:0;"></div>
+          <label class="adm-form-label">Block By</label>
+          <div class="adm-bl-pills">
+            <button class="adm-bl-pill active" id="blp-email" onclick="admBlPill(this,'email')">📧 Email</button>
+            <button class="adm-bl-pill" id="blp-phone" onclick="admBlPill(this,'phone')">📱 Phone</button>
+            <button class="adm-bl-pill" id="blp-name" onclick="admBlPill(this,'name')">👤 Name</button>
           </div>
-          <div style="margin-bottom:12px;"><label class="adm-form-label">Reason (optional)</label><input id="bl-reason" class="inp" placeholder="e.g. Repeated no-shows" style="margin:0;"></div>
-          <button class="btn-primary" style="margin:0;" onclick="addBlocklistEntry()"><i class="fas fa-ban"></i> Add to Blocklist</button>
+          <input type="hidden" id="bl-type" value="email">
+          <div class="adm-form-grid" style="margin-bottom:10px;">
+            <div><label class="adm-form-label">Value to Block</label><input id="bl-value" class="inp" placeholder="Enter value…" style="margin:0;"></div>
+            <div><label class="adm-form-label">Reason (optional)</label><input id="bl-reason" class="inp" placeholder="e.g. Repeat no-show" style="margin:0;"></div>
+          </div>
+          <button class="btn-primary" style="margin:0;background:linear-gradient(135deg,var(--red),#a93226);" onclick="addBlocklistEntry()"><i class="fas fa-user-slash"></i> Block Customer</button>
           <div style="margin-top:14px;" id="fraud-blocklist"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
         </div>
       </div>
+      <!-- Reputation -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
@@ -13474,21 +13668,22 @@ ens-wrap">
           <div id="fraud-reps"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
         </div>
       </div>
+      <!-- Behavioural Limits -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-purple"><i class="fas fa-sliders-h"></i></div>
-            <div><div class="adm-card-label">Active Behavioural Limits</div><div class="adm-card-sub">Rules applied automatically to all incoming orders</div></div>
+            <div><div class="adm-card-label">⚙️ Active Behavioural Limits</div><div class="adm-card-sub">Rules applied automatically to all incoming orders</div></div>
           </div>
         </div>
         <div class="adm-card-body">
           <div class="adm-limit-grid">
-            <div class="adm-limit-tile"><div class="adm-limit-key">Cooldown Period</div><div class="adm-limit-val">30 min</div><div class="adm-limit-desc">Between orders from the same email</div></div>
-            <div class="adm-limit-tile"><div class="adm-limit-key">Daily Order Cap</div><div class="adm-limit-val">5 orders</div><div class="adm-limit-desc">Per email per calendar day</div></div>
-            <div class="adm-limit-tile"><div class="adm-limit-key">Suspicious Pattern</div><div class="adm-limit-val" style="color:var(--orange);">5+ / 1 hour</div><div class="adm-limit-desc">Same name → flagged for manual review</div></div>
-            <div class="adm-limit-tile"><div class="adm-limit-key">No-Show Threshold</div><div class="adm-limit-val" style="color:var(--red);">2 no-shows</div><div class="adm-limit-desc">Triggers prepayment requirement</div></div>
-            <div class="adm-limit-tile"><div class="adm-limit-key">Large Order Threshold</div><div class="adm-limit-val">₱500+</div><div class="adm-limit-desc">Requires staff confirmation before processing</div></div>
-            <div class="adm-limit-tile"><div class="adm-limit-key">Holding Fee</div><div class="adm-limit-val">20%</div><div class="adm-limit-desc">Of large-order total — refunded on pickup</div></div>
+            <div class="adm-limit-tile"><div class="adm-limit-key">Cooldown Period</div><div class="adm-limit-val">30 min</div><div class="adm-limit-desc">Between orders / same email</div></div>
+            <div class="adm-limit-tile"><div class="adm-limit-key">Daily Order Cap</div><div class="adm-limit-val">5 orders</div><div class="adm-limit-desc">Per email per day</div></div>
+            <div class="adm-limit-tile"><div class="adm-limit-key">Suspicious Pattern</div><div class="adm-limit-val" style="color:var(--orange);">5+ / hr</div><div class="adm-limit-desc">Same name → manual review</div></div>
+            <div class="adm-limit-tile"><div class="adm-limit-key">No-Show Threshold</div><div class="adm-limit-val" style="color:var(--red);">2 no-shows</div><div class="adm-limit-desc">→ Prepayment required</div></div>
+            <div class="adm-limit-tile"><div class="adm-limit-key">Large Order</div><div class="adm-limit-val">₱500+</div><div class="adm-limit-desc">Requires staff confirmation</div></div>
+            <div class="adm-limit-tile"><div class="adm-limit-key">Holding Fee</div><div class="adm-limit-val">20%</div><div class="adm-limit-desc">Refunded on pickup</div></div>
           </div>
         </div>
       </div>
@@ -13498,27 +13693,33 @@ ens-wrap">
   <!-- ══ RATINGS SCREEN ══ -->
   <div id="s-ratings" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-star" style="color:#f1c40f;"></i> Customer Ratings</h2>
-      <p>Star ratings and feedback submitted after completed online orders</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-star"></i>&ensp;Customer Ratings</div>
+        <h2 style="font-size:1.2rem !important;">Feedback &amp; Reviews</h2>
+        <p>Star ratings submitted after completed online orders</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="rat-avg" style="color:#f1c40f;">—</div><div class="ph-stat-chip-lbl">Avg Rating</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="rat-total" style="color:#a8e6bc;">—</div><div class="ph-stat-chip-lbl">Reviews</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="rat-satisfaction" style="color:#c8a8e6;">—</div><div class="ph-stat-chip-lbl">Satisfaction</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
-      <div class="adm-stat-grid">
-        <div class="adm-stat-tile"><div class="adm-stat-val" id="rat-avg" style="color:#f1c40f;">—</div><div class="adm-stat-label">Avg Rating</div><div id="rat-stars-display" class="adm-stat-sub" style="color:#f1c40f;letter-spacing:2px;">—</div></div>
-        <div class="adm-stat-tile"><div class="adm-stat-val" id="rat-total" style="color:var(--teal-dark);">—</div><div class="adm-stat-label">Total Reviews</div></div>
-        <div class="adm-stat-tile"><div class="adm-stat-val" id="rat-positive" style="color:var(--green);">—</div><div class="adm-stat-label">4–5 ★ Reviews</div></div>
-        <div class="adm-stat-tile"><div class="adm-stat-val" id="rat-satisfaction" style="color:#9b59b6;">—</div><div class="adm-stat-label">Satisfaction %</div><div class="adm-stat-sub">of 4–5★ ratings</div></div>
-      </div>
+      <!-- Gauge + Distribution combined card -->
       <div class="adm-card">
-        <div class="adm-card-head">
-          <div class="adm-card-title-row">
-            <div class="adm-card-icon adm-icon-gold"><i class="fas fa-chart-bar"></i></div>
-            <div><div class="adm-card-label">Rating Distribution</div><div class="adm-card-sub">Breakdown by star level</div></div>
+        <div class="adm-card-body" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+          <div class="adm-rat-gauge" style="flex:0 0 auto;min-width:110px;">
+            <div class="adm-rat-big" id="rat-avg-big">—</div>
+            <div class="adm-rat-stars" id="rat-stars-display">—</div>
+            <div class="adm-rat-count" id="rat-count-sub">— reviews</div>
+            <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:#d5f5e3;color:#1a6b3a;border-radius:20px;padding:4px 11px;font-size:0.65rem;font-weight:900;" id="rat-trend-badge" style="display:none;"></div>
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div id="rat-dist" style="display:flex;flex-direction:column;gap:9px;"></div>
           </div>
         </div>
-        <div class="adm-card-body">
-          <div id="rat-dist" style="display:flex;flex-direction:column;gap:9px;"></div>
-        </div>
       </div>
+      <!-- Feedback card -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
@@ -13548,31 +13749,83 @@ ens-wrap">
   <!-- DAILY CHECKLIST MONITOR SCREEN -->
   <div id="s-checklist" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <h2><i class="fas fa-clipboard-check" style="color:#0D7A6A;"></i> Daily Checklist</h2>
-      <p>Monitor opening &amp; closing task completion by staff</p>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-clipboard-check"></i>&ensp;Daily Checklist</div>
+        <h2 style="font-size:1.2rem !important;">Task Completion</h2>
+        <p>Monitor opening, closing &amp; cleaning task completion by staff</p>
+        <div class="ph-stats-row">
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-cl-submitted">—</div><div class="ph-stat-chip-lbl">Submitted</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-cl-opening" style="color:#a8e6bc;">—</div><div class="ph-stat-chip-lbl">Opening</div></div>
+          <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-cl-closing" style="color:#fbc65e;">—</div><div class="ph-stat-chip-lbl">Closing</div></div>
+        </div>
+      </div>
     </div>
     <div class="adm-scroll">
+      <!-- Ring Status Cards -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-teal"><i class="fas fa-clipboard-check"></i></div>
-            <div><div class="adm-card-label">Today's Completion Status</div><div class="adm-card-sub">Real-time checklist progress for each shift</div></div>
+            <div><div class="adm-card-label" id="cl-today-label">Today's Status</div><div class="adm-card-sub">Real-time checklist progress for each shift</div></div>
           </div>
           <button class="adm-refresh-btn" onclick="loadAdminChecklist()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
         <div class="adm-card-body">
-          <div class="adm-cl-grid">
-            <div class="adm-cl-tile empty" id="cl-card-opening"><span class="adm-cl-icon" id="cl-icon-opening">⏳</span><div class="adm-cl-type">Opening</div><div class="adm-cl-status" id="cl-status-opening">Not submitted</div><div class="adm-cl-time" id="cl-time-opening">—</div></div>
-            <div class="adm-cl-tile empty" id="cl-card-closing"><span class="adm-cl-icon" id="cl-icon-closing">⏳</span><div class="adm-cl-type">Closing</div><div class="adm-cl-status" id="cl-status-closing">Not submitted</div><div class="adm-cl-time" id="cl-time-closing">—</div></div>
-            <div class="adm-cl-tile empty" id="cl-card-cleaning"><span class="adm-cl-icon" id="cl-icon-cleaning">⏳</span><div class="adm-cl-type">Cleaning</div><div class="adm-cl-status" id="cl-status-cleaning">Not submitted</div><div class="adm-cl-time" id="cl-time-cleaning">—</div></div>
+          <div class="adm-ring-grid">
+            <!-- Opening ring -->
+            <div class="adm-ring-card" id="cl-ring-opening">
+              <div class="adm-ring-wrap">
+                <svg width="64" height="64" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
+                  <circle id="cl-ring-arc-opening" cx="32" cy="32" r="26" fill="none" stroke="var(--green)" stroke-width="5" stroke-dasharray="0 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)" style="transition:stroke-dasharray 0.6s ease;"/>
+                </svg>
+                <div class="adm-ring-pct" id="cl-ring-pct-opening">—</div>
+              </div>
+              <div class="adm-ring-type">Opening</div>
+              <div class="adm-ring-status none" id="cl-ring-status-opening">Not submitted</div>
+              <div class="adm-ring-detail" id="cl-ring-detail-opening" style="color:var(--muted);">—</div>
+            </div>
+            <!-- Cleaning ring -->
+            <div class="adm-ring-card" id="cl-ring-cleaning">
+              <div class="adm-ring-wrap">
+                <svg width="64" height="64" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
+                  <circle id="cl-ring-arc-cleaning" cx="32" cy="32" r="26" fill="none" stroke="var(--orange)" stroke-width="5" stroke-dasharray="0 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)" style="transition:stroke-dasharray 0.6s ease;"/>
+                </svg>
+                <div class="adm-ring-pct" id="cl-ring-pct-cleaning">—</div>
+              </div>
+              <div class="adm-ring-type">Cleaning</div>
+              <div class="adm-ring-status none" id="cl-ring-status-cleaning">Not submitted</div>
+              <div class="adm-ring-detail" id="cl-ring-detail-cleaning" style="color:var(--muted);">—</div>
+            </div>
+            <!-- Closing ring -->
+            <div class="adm-ring-card" id="cl-ring-closing">
+              <div class="adm-ring-wrap">
+                <svg width="64" height="64" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
+                  <circle id="cl-ring-arc-closing" cx="32" cy="32" r="26" fill="none" stroke="var(--blue)" stroke-width="5" stroke-dasharray="0 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)" style="transition:stroke-dasharray 0.6s ease;"/>
+                </svg>
+                <div class="adm-ring-pct" id="cl-ring-pct-closing">—</div>
+              </div>
+              <div class="adm-ring-type">Closing</div>
+              <div class="adm-ring-status none" id="cl-ring-status-closing">Not submitted</div>
+              <div class="adm-ring-detail" id="cl-ring-detail-closing" style="color:var(--muted);">—</div>
+            </div>
+          </div>
+          <!-- Keep old tile IDs hidden for JS compatibility -->
+          <div style="display:none;">
+            <div id="cl-card-opening"></div><div id="cl-icon-opening"></div><div id="cl-status-opening"></div><div id="cl-time-opening"></div>
+            <div id="cl-card-closing"></div><div id="cl-icon-closing"></div><div id="cl-status-closing"></div><div id="cl-time-closing"></div>
+            <div id="cl-card-cleaning"></div><div id="cl-icon-cleaning"></div><div id="cl-status-cleaning"></div><div id="cl-time-cleaning"></div>
           </div>
         </div>
       </div>
+      <!-- Submission History -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-blue"><i class="fas fa-history"></i></div>
-            <div><div class="adm-card-label">Submission History</div><div class="adm-card-sub">All past checklist submissions by staff</div></div>
+            <div><div class="adm-card-label">📋 Submission History</div><div class="adm-card-sub">All past checklist submissions by staff</div></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <select id="cl-history-type" class="inp" style="margin:0;padding:6px 10px;font-size:0.78rem;width:auto;">
@@ -13588,11 +13841,12 @@ ens-wrap">
           <div id="cl-history-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
         </div>
       </div>
+      <!-- Manage Tasks -->
       <div class="adm-card">
         <div class="adm-card-head">
           <div class="adm-card-title-row">
             <div class="adm-card-icon adm-icon-purple"><i class="fas fa-tasks"></i></div>
-            <div><div class="adm-card-label">Manage Checklist Tasks</div><div class="adm-card-sub">Add, remove, or reorder tasks per shift type</div></div>
+            <div><div class="adm-card-label">⚙️ Manage Checklist Tasks</div><div class="adm-card-sub">Add, remove, or reorder tasks per shift type</div></div>
           </div>
         </div>
         <div class="adm-card-body">
@@ -13891,6 +14145,14 @@ async function loadRatings() {
     document.getElementById('rat-avg').textContent = avg ? avg.toFixed(1) : '—';
     document.getElementById('rat-total').textContent = d.total || 0;
     const pos = (d.distribution?.['4'] || 0) + (d.distribution?.['5'] || 0);
+    // New gauge elements (redesign)
+    const avgBig = document.getElementById('rat-avg-big');
+    if(avgBig) avgBig.textContent = avg ? avg.toFixed(1) : '—';
+    const ratCountSub = document.getElementById('rat-count-sub');
+    if(ratCountSub) ratCountSub.textContent = (d.total || 0) + ' reviews';
+    const starsEl = document.getElementById('rat-stars-display');
+    const filled2 = Math.round(avg);
+    if(starsEl) starsEl.textContent = avg ? '★'.repeat(filled2) + '☆'.repeat(5-filled2) : '—';
     document.getElementById('rat-positive').textContent = pos;
 
     // Satisfaction %
@@ -14041,6 +14303,9 @@ function closeRatingDetail() {
 let _clCurrentTaskType = 'opening';
 
 async function loadAdminChecklist() {
+  // Update today's date label
+  const todayLbl = document.getElementById('cl-today-label');
+  if (todayLbl) todayLbl.textContent = "Today's Status — " + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
   // Load today's summary cards
   try {
     const r = await apiFetch('/api/admin/checklist/today');
@@ -14057,6 +14322,7 @@ async function loadAdminChecklist() {
         if(time) time.textContent = '—';
         const card = document.getElementById('cl-card-' + type);
         if(card){ card.classList.remove('done','pending'); card.classList.add('empty'); }
+        admRingUpdate(type, 0, 0, null);
       } else {
         const pct = entry.items_total > 0 ? Math.round((entry.items_done / entry.items_total) * 100) : 0;
         if(icon) icon.textContent = pct === 100 ? '✅' : '⚠️';
@@ -14067,6 +14333,7 @@ async function loadAdminChecklist() {
         if(time) time.textContent = entry.submitted_at || '—';
         const card = document.getElementById('cl-card-' + type);
         if(card){ card.classList.remove('empty','pending','done'); card.classList.add(pct===100?'done':'pending'); }
+        admRingUpdate(type, entry.items_done, entry.items_total, entry.submitted_at || null);
       }
     });
   } catch(e) { console.error('checklist today error', e); }
@@ -16701,6 +16968,65 @@ function secFillMyIP() {
   document.getElementById('sec-ip-input').focus();
   showToast('Your IP filled in — add a reason and click Block if needed', 'info');
 }
+
+/* ── UI helpers for redesigned 7 sections ─────────────────── */
+function admPromoType(el, type) {
+  document.querySelectorAll('.adm-type-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('promo-type').value = type;
+  const pt = document.getElementById('promo-preview-type');
+  if (pt) pt.textContent = type === 'percent' ? 'Percent discount' : 'Fixed peso discount';
+}
+
+function admAnnPri(el, val, cls) {
+  document.querySelectorAll('.adm-pri-pill').forEach(p => { p.className = 'adm-pri-pill'; });
+  el.classList.add('sel-' + cls);
+  document.getElementById('ann-priority').value = val;
+}
+
+function admBlPill(el, val) {
+  document.querySelectorAll('.adm-bl-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('bl-type').value = val;
+}
+
+function admRingUpdate(type, done, total, submittedAt) {
+  const circ = 163.4;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const arc = document.getElementById('cl-ring-arc-' + type);
+  const pctEl = document.getElementById('cl-ring-pct-' + type);
+  const statEl = document.getElementById('cl-ring-status-' + type);
+  const detEl = document.getElementById('cl-ring-detail-' + type);
+  const card = document.getElementById('cl-ring-' + type);
+  if (arc) arc.setAttribute('stroke-dasharray', (circ * pct / 100) + ' ' + circ);
+  if (pctEl) pctEl.textContent = pct === 100 ? '✓' : pct + '%';
+  if (statEl) {
+    statEl.className = 'adm-ring-status ' + (pct === 100 ? 'done' : pct > 0 ? 'partial' : 'none');
+    statEl.textContent = pct === 100 ? 'Complete' : pct > 0 ? 'In Progress' : 'Not Started';
+  }
+  if (detEl) {
+    detEl.textContent = submittedAt ? done + '/' + total + ' · ' + submittedAt : (total > 0 ? done + '/' + total + ' tasks' : '—');
+    detEl.style.color = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--orange)' : 'var(--muted)';
+  }
+  if (card) {
+    card.classList.remove('done','partial');
+    if (pct === 100) card.classList.add('done');
+    else if (pct > 0) card.classList.add('partial');
+  }
+}
+
+function exportWasteCSV() {
+  showToast('Exporting waste log…', 'info');
+  apiFetch('/api/admin/waste?export=csv').then(r => {
+    if (r && r.ok) r.blob().then(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'waste_log.csv';
+      a.click();
+    });
+  }).catch(() => showToast('Export failed', 'error'));
+}
+/* ─────────────────────────────────────────────────────────── */
 
 async function blockIP() {
   const ip = (document.getElementById('sec-ip-input').value||'').trim();
