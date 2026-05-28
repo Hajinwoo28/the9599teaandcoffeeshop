@@ -20236,10 +20236,10 @@ def _ensure_schema():
     def _col_exists(table, col):
         try:
             if is_pg:
-                return db.session.execute(db.text(
+                return (db.session.execute(db.text(
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name=:t AND column_name=:c"
-                ), {"t": table, "c": col}).scalar() > 0
+                ), {"t": table, "c": col}).scalar() or 0) > 0
             else:
                 rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
                 return any(r[1] == col for r in rows)
@@ -20383,7 +20383,7 @@ try:
                     """SELECT COUNT(*) FROM information_schema.columns
                        WHERE table_name='menu_items' AND column_name='is_out_of_stock'"""
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 # SQLite: parse PRAGMA
                 cols = db.session.execute(db.text("PRAGMA table_info(menu_items)")).fetchall()
@@ -20414,7 +20414,7 @@ try:
                         "SELECT COUNT(*) FROM information_schema.columns "
                         f"WHERE table_name='customer_logs' AND column_name='{col_name}'"
                     )).scalar()
-                    col_exists = (result > 0)
+                    col_exists = ((result or 0) > 0)
                 else:
                     cols = db.session.execute(db.text("PRAGMA table_info(customer_logs)")).fetchall()
                     col_exists = any(row[1] == col_name for row in cols)
@@ -20439,7 +20439,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='store_schedule' AND column_name='is_open'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(store_schedule)")).fetchall()
                 col_exists = any(row[1] == 'is_open' for row in cols)
@@ -20463,7 +20463,7 @@ try:
                 result = db.session.execute(db.text(
                     "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='ingredients' AND column_name='category'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(ingredients)")).fetchall()
                 col_exists = any(row[1] == 'category' for row in cols)
@@ -20486,7 +20486,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='reservations' AND column_name='cancel_reason'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
                 col_exists = any(row[1] == 'cancel_reason' for row in cols)
@@ -20510,7 +20510,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='reservations' AND column_name='patron_address'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
                 col_exists = any(row[1] == 'patron_address' for row in cols)
@@ -20535,7 +20535,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='reservations' AND column_name='order_source'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
                 col_exists = any(row[1] == 'order_source' for row in cols)
@@ -20560,7 +20560,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='reservations' AND column_name='patron_phone'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
                 col_exists = any(row[1] == 'patron_phone' for row in cols)
@@ -20590,7 +20590,7 @@ try:
                         "SELECT COUNT(*) FROM information_schema.columns "
                         f"WHERE table_name='system_state' AND column_name='{col_name}'"
                     )).scalar()
-                    col_exists = (result > 0)
+                    col_exists = ((result or 0) > 0)
                 else:
                     cols = db.session.execute(db.text("PRAGMA table_info(system_state)")).fetchall()
                     col_exists = any(row[1] == col_name for row in cols)
@@ -20621,7 +20621,7 @@ try:
                         "SELECT COUNT(*) FROM information_schema.columns "
                         f"WHERE table_name='permission_requests' AND column_name='{col_name}'"
                     )).scalar()
-                    col_exists = (result > 0)
+                    col_exists = ((result or 0) > 0)
                 else:
                     cols = db.session.execute(db.text("PRAGMA table_info(permission_requests)")).fetchall()
                     col_exists = any(row[1] == col_name for row in cols)
@@ -20645,7 +20645,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.tables "
                     "WHERE table_name='phone_otps'"
                 )).scalar()
-                table_exists = (result > 0)
+                table_exists = ((result or 0) > 0)
             else:
                 result = db.session.execute(db.text(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name='phone_otps'"
@@ -20694,7 +20694,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='reservations' AND column_name='is_paid'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
                 col_exists = any(row[1] == 'is_paid' for row in cols)
@@ -20723,7 +20723,7 @@ try:
                     "SELECT COUNT(*) FROM information_schema.columns "
                     "WHERE table_name='reservations' AND column_name='partial_amount_paid'"
                 )).scalar()
-                col_exists = (result > 0)
+                col_exists = ((result or 0) > 0)
             else:
                 cols = db.session.execute(db.text("PRAGMA table_info(reservations)")).fetchall()
                 col_exists = any(row[1] == 'partial_amount_paid' for row in cols)
@@ -22101,7 +22101,7 @@ def dev_force_migrate():
                     "SELECT COUNT(*) FROM information_schema.columns "
                     f"WHERE table_name='{table}' AND column_name='{col}'"
                 )).scalar()
-                return r > 0
+                return (r or 0) > 0
             else:
                 rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
                 return any(row[1] == col for row in rows)
