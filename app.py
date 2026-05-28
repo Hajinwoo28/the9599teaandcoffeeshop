@@ -14140,36 +14140,30 @@ async function loadRatings() {
     if(!r || !r.ok) { return; }
     const d = await r.json();
 
-    // Summary cards
+    // Safe helper — never throws on missing IDs
+    const setEl = (id, val, style) => { const el = document.getElementById(id); if (!el) return; el.textContent = val; if (style) Object.assign(el.style, style); };
+
     const avg = d.average || 0;
-    document.getElementById('rat-avg').textContent = avg ? avg.toFixed(1) : '—';
-    document.getElementById('rat-total').textContent = d.total || 0;
     const pos = (d.distribution?.['4'] || 0) + (d.distribution?.['5'] || 0);
-    // New gauge elements (redesign)
-    const avgBig = document.getElementById('rat-avg-big');
-    if(avgBig) avgBig.textContent = avg ? avg.toFixed(1) : '—';
-    const ratCountSub = document.getElementById('rat-count-sub');
-    if(ratCountSub) ratCountSub.textContent = (d.total || 0) + ' reviews';
-    const starsEl = document.getElementById('rat-stars-display');
-    const filled2 = Math.round(avg);
-    if(starsEl) starsEl.textContent = avg ? '★'.repeat(filled2) + '☆'.repeat(5-filled2) : '—';
-    document.getElementById('rat-positive').textContent = pos;
-
-    // Satisfaction %
     const satPct = d.total ? Math.round((pos / d.total) * 100) : 0;
-    const satEl = document.getElementById('rat-satisfaction');
-    if(satEl) {
-      satEl.textContent = d.total ? satPct + '%' : '—';
-      satEl.style.color = satPct >= 80 ? '#2ecc71' : satPct >= 60 ? '#f1c40f' : '#e74c3c';
-    }
-
-    // Star display
     const filled = Math.round(avg);
-    document.getElementById('rat-stars-display').textContent = avg
-      ? '★'.repeat(filled) + '☆'.repeat(5 - filled) : '—';
+    const starStr = avg ? '★'.repeat(filled) + '☆'.repeat(5 - filled) : '—';
+
+    // Header chips (redesign)
+    setEl('rat-avg',          avg ? avg.toFixed(1) : '—');
+    setEl('rat-total',        d.total || 0);
+    setEl('rat-satisfaction', d.total ? satPct + '%' : '—',
+          { color: satPct >= 80 ? '#2ecc71' : satPct >= 60 ? '#f1c40f' : '#e74c3c' });
+    // Gauge elements (redesign)
+    setEl('rat-avg-big',       avg ? avg.toFixed(1) : '—');
+    setEl('rat-count-sub',     (d.total || 0) + ' reviews');
+    setEl('rat-stars-display', starStr);
+    // Legacy IDs — safe no-ops if absent
+    setEl('rat-positive',  pos);
 
     // Distribution bars with percentage
     const distEl = document.getElementById('rat-dist');
+    if (distEl) {
     const labels = ['','😞 1★','😕 2★','😊 3★','😃 4★','🤩 5★'];
     const colors = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
     let distHtml = '';
@@ -14186,6 +14180,7 @@ async function loadRatings() {
       </div>`;
     });
     distEl.innerHTML = distHtml || '<div style="color:var(--muted);font-size:0.8rem;">No ratings yet.</div>';
+    }
 
     // Cache all recent and render
     _ratingsCache = d.recent || [];
