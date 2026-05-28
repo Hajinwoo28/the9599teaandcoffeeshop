@@ -11592,15 +11592,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .screen{position:absolute;top:0;right:0;bottom:0;left:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 16px;}
 /* ensure table wrappers can always scroll horizontally */
 .screen.active{display:block;}
-/* Screens that use flex-column + adm-scroll are patched to display:flex via
-   their IDs below (in the adm-scroll fix block) — don't change this rule or
-   it will break non-flex screens like the dashboard, orders, KDS. */
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
 
 /* ── PAGE HEADER ── */
-.page-header{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 60%,var(--brown) 100%);padding:18px 16px 24px;position:relative;overflow:hidden;}
-.page-header::after{content:'';position:absolute;bottom:-16px;left:0;right:0;height:32px;background:var(--cream);border-radius:20px 20px 0 0;}
+.page-header{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 60%,var(--brown) 100%);padding:18px 16px 28px;position:relative;overflow:visible;flex-shrink:0;}
+.page-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:20px;background:var(--cream);border-radius:18px 18px 0 0;}
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.76rem;color:var(--tan);margin-top:3px;}
 
@@ -11632,13 +11629,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .topbar{position:fixed;top:0;left:0;right:0;z-index:200;}
   .screens{position:fixed;top:var(--topbar-h);left:248px;right:0;bottom:0;overflow:hidden;z-index:5;}
   .screen{overflow-y:auto;overflow-x:hidden;}
-  /* Flex-column screens must stay flex on desktop */
-  #s-announce.active,#s-waste.active,#s-security.active,#s-fraud.active,
-  #s-ratings.active,#s-checklist.active,#s-promos.active,#s-inventory.active{
-    display:flex !important;flex-direction:column;overflow:hidden !important;
-  }
   /* Extended screens (analytics, promos etc) must also sit to the right of the sidebar */
   #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
+  @media(max-width:767px){#screens-ext{left:0 !important;}}
   .admin-hamburger-btn{display:none !important;}
   .admin-drawer-close{display:none !important;}
   .admin-drawer-header{display:none !important;}
@@ -12156,62 +12149,17 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
    Promo Codes · Announcements · Waste Log · Security ·
    Customer Ratings · Fraud Control · Daily Checklist
 ══════════════════════════════════════════════════════════════ */
-.adm-scroll{padding:0 14px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
+.adm-scroll{padding:0 14px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
 .adm-scroll::-webkit-scrollbar{width:3px;}
 .adm-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
-
-/* ── FIX: screens using adm-scroll must activate as flex-column so adm-scroll
-        can take the remaining height via flex:1 and scroll internally.
-        The inline overflow:hidden on the screen container is correct — the child
-        (adm-scroll) handles scrolling. Without display:flex the flex:1 on
-        adm-scroll has no effect and content overflows invisibly. ── */
-#s-announce.active,
-#s-waste.active,
-#s-security.active,
-#s-fraud.active,
-#s-ratings.active,
-#s-checklist.active,
-#s-promos.active,
-#s-inventory.active {
-  display: flex !important;
-  flex-direction: column;
-  overflow: hidden !important;
-}
-/* Ensure page-header never grows past its content on small viewports */
-#s-announce .page-header,
-#s-waste .page-header,
-#s-security .page-header,
-#s-fraud .page-header,
-#s-ratings .page-header,
-#s-checklist .page-header {
-  flex-shrink: 0;
-}
-/* Mobile: tighten page-header so more content area is visible */
-@media(max-width:767px){
-  #s-announce .page-header,
-  #s-waste .page-header,
-  #s-security .page-header,
-  #s-fraud .page-header,
-  #s-ratings .page-header,
-  #s-checklist .page-header {
-    padding: 12px 12px 18px !important;
-  }
-  .adm-scroll{padding:0 10px 24px;gap:10px;}
-  .adm-card-body{padding:12px 12px;}
-  .adm-card-head{padding:11px 12px 10px;}
-  .adm-card-label{font-size:0.8rem;}
-  .adm-form-grid{grid-template-columns:1fr !important;}
-  .ph-stats-row{gap:6px;}
-}
-@media(max-width:480px){
-  .adm-scroll{padding:0 8px 20px;gap:8px;}
-  .adm-card{border-radius:14px;}
-  .adm-card-body{padding:10px 10px;}
-  .adm-ring-grid{grid-template-columns:1fr 1fr 1fr;gap:6px;}
-  .adm-limit-grid{grid-template-columns:1fr 1fr;gap:8px;}
-}
-
 .adm-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;}
+.adm-card-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.adm-table{width:100%;border-collapse:collapse;font-size:0.78rem;min-width:480px;}
+.adm-table th,.adm-table td{padding:9px 10px;text-align:left;border-bottom:1px solid rgba(196,168,130,0.18);}
+.adm-table th{font-size:0.65rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;background:rgba(196,168,130,0.06);}
+.adm-table tbody tr:last-child td{border-bottom:none;}
+.adm-table tbody tr:hover td{background:rgba(196,168,130,0.06);}
+@media(max-width:480px){.adm-table{min-width:420px;}}
 .adm-card:hover{box-shadow:0 6px 22px rgba(61,36,16,0.11);}
 .adm-card-head{padding:14px 16px 13px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--white);}
 .adm-card-title-row{display:flex;align-items:center;gap:10px;}
@@ -12307,6 +12255,39 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* Waste summary bar */
 .adm-waste-summary{padding:11px 14px;background:var(--cream);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1.5px solid rgba(196,168,130,0.2);}
 
+/* ══ FLEX-SCREEN LAYOUT (redesigned 7 sections) ═════════════ */
+/* Default hidden — JS sets display:flex when activated */
+.adm-flex-screen{display:none;flex-direction:column;overflow:hidden;position:absolute;inset:0;}
+.adm-flex-screen.active{display:flex !important;flex-direction:column !important;overflow:hidden !important;}
+/* Page header must never shrink */
+.adm-flex-screen>.page-header{flex-shrink:0;}
+/* Ring cards responsive grid */
+@media(max-width:420px){.adm-ring-grid{grid-template-columns:1fr 1fr;}}
+/* Gauge card responsive */
+.adm-rat-gauge-wrap{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+.adm-rat-gauge-wrap>.adm-rat-gauge{flex:0 0 auto;min-width:100px;}
+.adm-rat-gauge-wrap>.adm-rat-dist{flex:1;min-width:150px;}
+@media(max-width:480px){.adm-rat-gauge-wrap{flex-direction:column;}.adm-rat-gauge-wrap>.adm-rat-gauge{width:100%;text-align:center;}}
+/* Card body responsive helpers */
+.adm-card-body{padding:14px 16px;}
+@media(max-width:480px){.adm-card-body{padding:12px 12px;}.adm-scroll{padding:0 10px 28px;gap:10px;}}
+/* Ring card content always visible */
+.adm-ring-card{background:#fff;border-radius:13px;border:1.5px solid var(--cream-dark);padding:14px 10px 12px;text-align:center;transition:box-shadow 0.18s,transform 0.18s;display:flex;flex-direction:column;align-items:center;}
+.adm-ring-card.done{border-color:rgba(39,174,96,0.35);background:#f0faf5;}
+.adm-ring-card.partial{border-color:rgba(245,124,0,0.35);background:#fffbf5;}
+/* Waste stats grid responsive */
+@media(max-width:360px){.adm-waste-stat-grid{grid-template-columns:1fr 1fr;}}
+/* Priority pills wrap properly on small screens */
+.adm-pri-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+/* Type pills wrap on small screens */
+.adm-type-pills{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+/* Promo preview banner responsive */
+.adm-promo-preview{flex-wrap:wrap;gap:8px;}
+/* Form grid single column on very small screens */
+@media(max-width:380px){.adm-form-grid{grid-template-columns:1fr !important;}}
+/* Announce form: priority pills + button stacking */
+@media(max-width:480px){.adm-form-row{flex-direction:column;}}
+/* ══════════════════════════════════════════════════════════ */
 /* ══ REDESIGNED 7-SECTION ENHANCEMENTS ══════════════════════════ */
 .ph-stats-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;position:relative;z-index:1;}
 .ph-stat-chip{background:rgba(255,255,255,0.09);border:1px solid rgba(196,168,130,0.22);border-radius:11px;padding:8px 13px;text-align:center;min-width:68px;flex-shrink:0;}
@@ -13224,7 +13205,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 </div><!-- /screens -->
 
 <!-- ══ NEW FEATURE SCREENS ══ -->
-<div class="screens" id="screens-ext" style="position:fixed;inset:0;top:var(--topbar-h);overflow:hidden;display:none;z-index:5;">
+<div class="screens" id="screens-ext" style="position:fixed;top:var(--topbar-h);left:248px;right:0;bottom:0;overflow:hidden;display:none;z-index:5;">
 ens-wrap">
 
   <!-- ANALYTICS SCREEN -->
@@ -13407,7 +13388,7 @@ ens-wrap">
   </div><!-- /#s-analytics -->
 
   <!-- PROMO CODES SCREEN -->
-  <div id="s-promos" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-promos" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-tags"></i>&ensp;Promo Codes</div>
@@ -13474,7 +13455,7 @@ ens-wrap">
   </div>
 
   <!-- ANNOUNCEMENTS SCREEN -->
-  <div id="s-announce" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-announce" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-bullhorn"></i>&ensp;Announcements</div>
@@ -13524,7 +13505,7 @@ ens-wrap">
   </div>
 
   <!-- WASTE LOG SCREEN (ADMIN VIEW) -->
-  <div id="s-waste" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-waste" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-trash-alt"></i>&ensp;Waste Log</div>
@@ -13574,7 +13555,7 @@ ens-wrap">
   </div>
 
   <!-- SECURITY SCREEN -->
-  <div id="s-security" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-security" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-shield-halved"></i>&ensp;Security Center</div>
@@ -13664,7 +13645,7 @@ ens-wrap">
   </div>
 
   <!-- FRAUD CONTROL SCREEN -->
-  <div id="s-fraud" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-fraud" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-exclamation-triangle"></i>&ensp;Fraud Control</div>
@@ -13751,7 +13732,7 @@ ens-wrap">
   </div>
 
   <!-- ══ RATINGS SCREEN ══ -->
-  <div id="s-ratings" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-ratings" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-star"></i>&ensp;Customer Ratings</div>
@@ -13767,14 +13748,14 @@ ens-wrap">
     <div class="adm-scroll">
       <!-- Gauge + Distribution combined card -->
       <div class="adm-card">
-        <div class="adm-card-body" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-          <div class="adm-rat-gauge" style="flex:0 0 auto;min-width:110px;">
+        <div class="adm-card-body adm-rat-gauge-wrap">
+          <div class="adm-rat-gauge">
             <div class="adm-rat-big" id="rat-avg-big">—</div>
             <div class="adm-rat-stars" id="rat-stars-display">—</div>
             <div class="adm-rat-count" id="rat-count-sub">— reviews</div>
-            <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:#d5f5e3;color:#1a6b3a;border-radius:20px;padding:4px 11px;font-size:0.65rem;font-weight:900;" id="rat-trend-badge" style="display:none;"></div>
+            <div id="rat-trend-badge" style="display:none;margin:10px auto 0;max-width:fit-content;background:#d5f5e3;color:#1a6b3a;border-radius:20px;padding:4px 11px;font-size:0.65rem;font-weight:900;display:inline-flex;align-items:center;gap:5px;"></div>
           </div>
-          <div style="flex:1;min-width:160px;">
+          <div class="adm-rat-dist" style="flex:1;min-width:150px;">
             <div id="rat-dist" style="display:flex;flex-direction:column;gap:9px;"></div>
           </div>
         </div>
@@ -13807,7 +13788,7 @@ ens-wrap">
   </div>
 
   <!-- DAILY CHECKLIST MONITOR SCREEN -->
-  <div id="s-checklist" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
+  <div id="s-checklist" class="screen adm-flex-screen">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-clipboard-check"></i>&ensp;Daily Checklist</div>
@@ -13830,46 +13811,46 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadAdminChecklist()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body">
+        <div class="adm-card-body" style="padding-top:8px;">
           <div class="adm-ring-grid">
             <!-- Opening ring -->
             <div class="adm-ring-card" id="cl-ring-opening">
-              <div class="adm-ring-wrap">
-                <svg width="64" height="64" viewBox="0 0 64 64">
-                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
-                  <circle id="cl-ring-arc-opening" cx="32" cy="32" r="26" fill="none" stroke="var(--green)" stroke-width="5" stroke-dasharray="0 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)" style="transition:stroke-dasharray 0.6s ease;"/>
+              <div class="adm-ring-wrap" style="width:68px;height:68px;position:relative;margin:0 auto 10px;flex-shrink:0;">
+                <svg width="68" height="68" viewBox="0 0 68 68" style="position:absolute;top:0;left:0;">
+                  <circle cx="34" cy="34" r="28" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
+                  <circle id="cl-ring-arc-opening" cx="34" cy="34" r="28" fill="none" stroke="#27AE60" stroke-width="5" stroke-dasharray="0 175.9" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 34 34)" style="transition:stroke-dasharray 0.6s ease;"/>
                 </svg>
-                <div class="adm-ring-pct" id="cl-ring-pct-opening">—</div>
+                <div class="adm-ring-pct" id="cl-ring-pct-opening" style="font-size:0.75rem;font-weight:900;color:var(--text);">⏳</div>
               </div>
-              <div class="adm-ring-type">Opening</div>
-              <div class="adm-ring-status none" id="cl-ring-status-opening">Not submitted</div>
-              <div class="adm-ring-detail" id="cl-ring-detail-opening" style="color:var(--muted);">—</div>
+              <div class="adm-ring-type" style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Opening</div>
+              <div class="adm-ring-status none" id="cl-ring-status-opening" style="font-size:0.73rem;font-weight:800;color:var(--muted);">Pending</div>
+              <div class="adm-ring-detail" id="cl-ring-detail-opening" style="font-size:0.62rem;font-weight:700;margin-top:3px;color:var(--muted);">Not yet submitted</div>
             </div>
             <!-- Cleaning ring -->
             <div class="adm-ring-card" id="cl-ring-cleaning">
-              <div class="adm-ring-wrap">
-                <svg width="64" height="64" viewBox="0 0 64 64">
-                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
-                  <circle id="cl-ring-arc-cleaning" cx="32" cy="32" r="26" fill="none" stroke="var(--orange)" stroke-width="5" stroke-dasharray="0 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)" style="transition:stroke-dasharray 0.6s ease;"/>
+              <div class="adm-ring-wrap" style="width:68px;height:68px;position:relative;margin:0 auto 10px;flex-shrink:0;">
+                <svg width="68" height="68" viewBox="0 0 68 68" style="position:absolute;top:0;left:0;">
+                  <circle cx="34" cy="34" r="28" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
+                  <circle id="cl-ring-arc-cleaning" cx="34" cy="34" r="28" fill="none" stroke="#F57C00" stroke-width="5" stroke-dasharray="0 175.9" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 34 34)" style="transition:stroke-dasharray 0.6s ease;"/>
                 </svg>
-                <div class="adm-ring-pct" id="cl-ring-pct-cleaning">—</div>
+                <div class="adm-ring-pct" id="cl-ring-pct-cleaning" style="font-size:0.75rem;font-weight:900;color:var(--text);">⏳</div>
               </div>
-              <div class="adm-ring-type">Cleaning</div>
-              <div class="adm-ring-status none" id="cl-ring-status-cleaning">Not submitted</div>
-              <div class="adm-ring-detail" id="cl-ring-detail-cleaning" style="color:var(--muted);">—</div>
+              <div class="adm-ring-type" style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Cleaning</div>
+              <div class="adm-ring-status none" id="cl-ring-status-cleaning" style="font-size:0.73rem;font-weight:800;color:var(--muted);">Pending</div>
+              <div class="adm-ring-detail" id="cl-ring-detail-cleaning" style="font-size:0.62rem;font-weight:700;margin-top:3px;color:var(--muted);">Not yet submitted</div>
             </div>
             <!-- Closing ring -->
             <div class="adm-ring-card" id="cl-ring-closing">
-              <div class="adm-ring-wrap">
-                <svg width="64" height="64" viewBox="0 0 64 64">
-                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
-                  <circle id="cl-ring-arc-closing" cx="32" cy="32" r="26" fill="none" stroke="var(--blue)" stroke-width="5" stroke-dasharray="0 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)" style="transition:stroke-dasharray 0.6s ease;"/>
+              <div class="adm-ring-wrap" style="width:68px;height:68px;position:relative;margin:0 auto 10px;flex-shrink:0;">
+                <svg width="68" height="68" viewBox="0 0 68 68" style="position:absolute;top:0;left:0;">
+                  <circle cx="34" cy="34" r="28" fill="none" stroke="var(--cream-dark)" stroke-width="5"/>
+                  <circle id="cl-ring-arc-closing" cx="34" cy="34" r="28" fill="none" stroke="#1976D2" stroke-width="5" stroke-dasharray="0 175.9" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 34 34)" style="transition:stroke-dasharray 0.6s ease;"/>
                 </svg>
-                <div class="adm-ring-pct" id="cl-ring-pct-closing">—</div>
+                <div class="adm-ring-pct" id="cl-ring-pct-closing" style="font-size:0.75rem;font-weight:900;color:var(--text);">⏳</div>
               </div>
-              <div class="adm-ring-type">Closing</div>
-              <div class="adm-ring-status none" id="cl-ring-status-closing">Not submitted</div>
-              <div class="adm-ring-detail" id="cl-ring-detail-closing" style="color:var(--muted);">—</div>
+              <div class="adm-ring-type" style="font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Closing</div>
+              <div class="adm-ring-status none" id="cl-ring-status-closing" style="font-size:0.73rem;font-weight:800;color:var(--muted);">Pending</div>
+              <div class="adm-ring-detail" id="cl-ring-detail-closing" style="font-size:0.62rem;font-weight:700;margin-top:3px;color:var(--muted);">Due at close</div>
             </div>
           </div>
           <!-- Keep old tile IDs hidden for JS compatibility -->
@@ -14154,7 +14135,14 @@ function goScreen(name, btn){
     /* ── Extended screen ── */
     if(extWrap){ extWrap.style.display = 'block'; extWrap.style.zIndex = '5'; }
     var el = document.getElementById('s-' + name);
-    if(el){ el.style.display = 'flex'; el.classList.add('active'); }
+    if(el){
+      el.style.display = 'flex';
+      el.style.flexDirection = 'column';
+      el.style.overflow = 'hidden';
+      el.style.position = 'absolute';
+      el.style.inset = '0';
+      el.classList.add('active');
+    }
     if(btn) btn.classList.add('active');
     /* Load data */
     if(name === 'analytics'){
@@ -14403,12 +14391,17 @@ async function loadAdminChecklist() {
     const r = await apiFetch(url);
     if (!r || !r.ok) { listEl.innerHTML = '<div style="color:var(--red);padding:12px;font-size:0.82rem;">Failed to load history.</div>'; return; }
     const rows = await r.json();
+    // Update header chips
+    const clEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    clEl('ph-cl-submitted', rows.length);
+    clEl('ph-cl-opening',   rows.filter(r=>r.checklist_type==='opening').length);
+    clEl('ph-cl-closing',   rows.filter(r=>r.checklist_type==='closing').length);
     if (!rows.length) {
       listEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.82rem;">No submissions yet.</div>';
       return;
     }
     const typeEmoji = { opening:'🌅', closing:'🌙', cleaning:'🧹' };
-    listEl.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">'
+    listEl.innerHTML = '<div class="adm-card-scroll-x"><table class="adm-table">'
       + '<thead><tr style="border-bottom:2px solid var(--cream-dark);">'
       + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Type</th>'
       + '<th style="padding:8px 10px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Progress</th>'
@@ -16175,8 +16168,12 @@ async function loadFraudOrders(){
     // Update nav badge
     const badge=document.getElementById('fraud-nav-badge');
     if(badge){if(data.length){badge.style.display='flex';badge.textContent=data.length;}else{badge.style.display='none';}}
+    // Update header chips
+    const fEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    fEl('ph-fraud-flagged', data.filter(o=>o.is_flagged).length);
+    fEl('ph-fraud-prepay',  data.filter(o=>o.prepayment_required&&!o.prepayment_collected).length);
     if(!data.length){el.innerHTML='<div style="color:var(--green);font-weight:700;font-size:0.82rem;padding:10px;text-align:center;"><i class="fas fa-check-circle"></i> No flagged or pending orders</div>';return;}
-    el.innerHTML=`<div style="overflow-x:auto;"><table class="adm-table">
+    el.innerHTML=`<div class="adm-card-scroll-x"><table class="adm-table">
       <thead><tr>
         <th>Code</th>
         <th>Customer</th>
@@ -16320,8 +16317,10 @@ async function loadReputations(){
     const r=await apiFetch('/api/fraud/reputations');
     if(!r||!r.ok)return;
     const data=await r.json();
+    const bEl=document.getElementById('ph-fraud-blocked');
+    if(bEl) bEl.textContent=data.filter(r=>r.is_blocked).length;
     if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;text-align:center;padding:10px;">No customer reputation records yet.</div>';return;}
-    el.innerHTML=`<div style="overflow-x:auto;"><table class="adm-table">
+    el.innerHTML=`<div class="adm-card-scroll-x"><table class="adm-table">
       <thead><tr>
         <th>Customer</th>
         <th style="text-align:center;">Orders</th>
@@ -16792,6 +16791,10 @@ async function loadPromos() {
     const r = await apiFetch('/api/admin/promos');
     const data = await r.json();
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.84rem;">No promo codes yet.</div>'; return; }
+    const pEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    pEl('ph-promo-active', data.filter(p=>p.is_active).length);
+    pEl('ph-promo-uses',   data.reduce((s,p)=>s+(p.used_count||0),0));
+    pEl('ph-promo-saved',  data.length + ' codes');
     el.innerHTML = data.map(p => {
       const discountLabel = p.discount_type==='percent' ? p.discount_value+'% off' : '₱'+p.discount_value+' off';
       const usageLabel = `Used: ${p.used_count}${p.max_uses?'/'+p.max_uses:''}`;
@@ -16865,6 +16868,10 @@ async function loadAnnouncements() {
     const r = await apiFetch('/api/admin/announcements');
     const data = await r.json();
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:28px;font-size:0.84rem;"><i class="fas fa-bell-slash" style="font-size:1.4rem;opacity:0.3;display:block;margin-bottom:8px;"></i>No announcements yet.</div>'; return; }
+    // Update header chips
+    const setEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    setEl('ph-ann-active', data.length);
+    setEl('ph-ann-urgent', data.filter(a=>a.priority==='urgent').length);
     const pMap = {
       urgent:{bg:'#FFF5F5',border:'#FFCDD2',accent:'#C62828',badge:'red',label:'🚨 URGENT'},
       high:  {bg:'#FFF8F0',border:'#FFE0B2',accent:'#E65100',badge:'orange',label:'🔴 HIGH'},
@@ -16920,6 +16927,10 @@ async function loadWaste() {
     const data = await r.json();
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px;font-size:0.84rem;">No waste logs yet.</div>'; return; }
     const total = data.reduce((s,w)=>s+w.quantity,0);
+    const setEl2 = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    setEl2('ph-waste-week', data.length);
+    setEl2('ph-waste-vol', total.toFixed(1) + ' u');
+    setEl2('ph-waste-val', '—');
     el.innerHTML = `<div class="adm-waste-summary">
         <span style="font-size:0.78rem;font-weight:900;color:var(--text);">${data.length} entries</span>
         <span class="adm-badge orange"><i class="fas fa-exclamation-circle" style="margin-right:4px;"></i>Total: ${total.toFixed(2)} units wasted</span>
@@ -16958,8 +16969,10 @@ async function loadBlacklist() {
     const r = await apiFetch('/api/admin/security/blacklist');
     if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading blacklist</div>'; return; }
     const data = await r.json();
+    const secEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    secEl('ph-sec-blocked', data.length);
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No blocked IPs.</div>'; return; }
-    el.innerHTML = '<div style="overflow-x:auto;"><table class="adm-table">' +
+    el.innerHTML = '<div class="adm-card-scroll-x"><table class="adm-table">' +
       '<thead><tr><th>IP Address</th><th>Reason</th><th>Date Blocked</th><th></th></tr></thead><tbody>' +
       data.map(b => `<tr>
         <td><span style="font-family:monospace;font-weight:900;color:var(--red);">${escapeHTML(b.ip)}</span></td>
@@ -16978,8 +16991,9 @@ async function loadAttempts() {
     const r = await apiFetch('/api/admin/security/attempts');
     if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; return; }
     const data = await r.json();
+    const aEl = document.getElementById('ph-sec-attempts'); if(aEl) aEl.textContent = data.length;
     if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:16px;font-size:0.82rem;"><i class="fas fa-shield-alt" style="opacity:0.3;display:block;font-size:1.5rem;margin-bottom:6px;"></i>No failed attempts in the last 24 hours.</div>'; return; }
-    el.innerHTML = '<div style="overflow-x:auto;"><table class="adm-table">' +
+    el.innerHTML = '<div class="adm-card-scroll-x"><table class="adm-table">' +
       '<thead><tr>' +
       '<th style="white-space:nowrap;">IP Address</th>' +
       '<th>Type</th>' +
@@ -17046,22 +17060,28 @@ function admBlPill(el, val) {
 }
 
 function admRingUpdate(type, done, total, submittedAt) {
-  const circ = 163.4;
+  const circ = 175.9; // 2 * π * 28
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const arc = document.getElementById('cl-ring-arc-' + type);
   const pctEl = document.getElementById('cl-ring-pct-' + type);
   const statEl = document.getElementById('cl-ring-status-' + type);
   const detEl = document.getElementById('cl-ring-detail-' + type);
   const card = document.getElementById('cl-ring-' + type);
-  if (arc) arc.setAttribute('stroke-dasharray', (circ * pct / 100) + ' ' + circ);
-  if (pctEl) pctEl.textContent = pct === 100 ? '✓' : pct + '%';
+  if (arc) arc.setAttribute('stroke-dasharray', (circ * pct / 100).toFixed(1) + ' ' + circ);
+  if (pctEl) {
+    pctEl.textContent = pct === 100 ? '✓' : (total > 0 ? pct + '%' : '⏳');
+    pctEl.style.color = pct === 100 ? '#1a6b3a' : pct > 0 ? '#925500' : 'var(--muted)';
+  }
   if (statEl) {
-    statEl.className = 'adm-ring-status ' + (pct === 100 ? 'done' : pct > 0 ? 'partial' : 'none');
-    statEl.textContent = pct === 100 ? 'Complete' : pct > 0 ? 'In Progress' : 'Not Started';
+    statEl.className = 'adm-ring-status';
+    statEl.style.color = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--orange)' : 'var(--muted)';
+    statEl.textContent = pct === 100 ? '✅ Complete' : pct > 0 ? '🔄 In Progress' : '⏳ Pending';
   }
   if (detEl) {
-    detEl.textContent = submittedAt ? done + '/' + total + ' · ' + submittedAt : (total > 0 ? done + '/' + total + ' tasks' : '—');
-    detEl.style.color = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--orange)' : 'var(--muted)';
+    detEl.textContent = total > 0
+      ? done + '/' + total + ' tasks' + (submittedAt ? ' · ' + submittedAt : '')
+      : (type === 'closing' ? 'Due at close' : 'Not yet submitted');
+    detEl.style.color = pct === 100 ? '#2e7d52' : pct > 0 ? '#925500' : 'var(--muted)';
   }
   if (card) {
     card.classList.remove('done','partial');
@@ -21904,7 +21924,7 @@ async function loadCustomers() {
       'Cancelled': '#ff3b5c', 'Pending Staff Approval': '#ff9500'
     };
 
-    el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">' +
+    el.innerHTML = '<div class="adm-card-scroll-x"><table class="adm-table">' +
       '<thead><tr style="border-bottom:2px solid var(--border);">' +
       '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;white-space:nowrap;">#</th>' +
       '<th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:0.67rem;text-transform:uppercase;">Customer</th>' +
