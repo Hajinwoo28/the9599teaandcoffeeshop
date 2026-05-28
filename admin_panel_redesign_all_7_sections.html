@@ -1,0 +1,1104 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --br:#7B4F2E;--brd:#3D2410;--brm:#5A3520;--brl:#A0724A;
+  --cr:#F0EDE4;--crd:#E2DAC8;--tan:#C4A882;
+  --wh:#FDFAF5;--tx:#2A1505;--mu:#8D6E55;
+  --red:#C0392B;--grn:#27AE60;--org:#F57C00;--blu:#1976D2;--pur:#8E44AD;
+  --sh:0 2px 12px rgba(61,36,16,0.1);
+  --ra:12px;--gap:12px;
+}
+body{font-family:'Nunito',system-ui,sans-serif;background:var(--cr);color:var(--tx);min-height:100vh;}
+
+/* NAV */
+.snav{display:flex;gap:4px;background:var(--brd);padding:6px 8px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid rgba(196,168,130,0.2);}
+.snav::-webkit-scrollbar{display:none;}
+.snb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;border-radius:9px;border:none;background:transparent;color:rgba(196,168,130,0.65);font-size:0.58rem;font-weight:800;cursor:pointer;transition:all 0.18s;white-space:nowrap;font-family:inherit;letter-spacing:0.5px;text-transform:uppercase;}
+.snb i{font-size:1rem;transition:all 0.18s;}
+.snb:hover{background:rgba(196,168,130,0.12);color:var(--tan);}
+.snb.act{background:rgba(196,168,130,0.18);color:#fff;}
+.snb.act i{filter:drop-shadow(0 0 6px rgba(196,168,130,0.5));}
+
+/* SECTIONS */
+.sec{display:none;flex-direction:column;min-height:calc(100vh - 56px);animation:sIn 0.25s ease both;}
+.sec.act{display:flex;}
+@keyframes sIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* PAGE HEADER */
+.ph{background:linear-gradient(135deg,#2A1505,var(--brd) 60%,#4a2810);padding:18px 16px 28px;position:relative;overflow:hidden;}
+.ph::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 260px 160px at 85% 40%,rgba(196,168,130,0.13),transparent);}
+.ph::after{content:'';position:absolute;bottom:0;left:0;right:0;height:18px;background:var(--cr);border-radius:16px 16px 0 0;}
+.ph-inner{position:relative;z-index:1;}
+.ph-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;}
+.ph h2{font-size:1.25rem;font-weight:900;color:#fff;font-family:'Playfair Display',serif;line-height:1.2;}
+.ph p{font-size:0.7rem;color:rgba(196,168,130,0.75);font-weight:600;margin-top:4px;}
+.ph-stats{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;}
+.ph-stat{background:rgba(255,255,255,0.07);border:1px solid rgba(196,168,130,0.2);border-radius:10px;padding:8px 12px;text-align:center;}
+.ph-stat-val{font-size:1.1rem;font-weight:900;color:#fff;line-height:1;}
+.ph-stat-lbl{font-size:0.58rem;font-weight:800;color:var(--tan);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+
+/* SCROLL AREA */
+.scroll{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:var(--gap);}
+
+/* CARDS */
+.card{background:var(--wh);border-radius:var(--ra);border:1.5px solid var(--crd);box-shadow:var(--sh);overflow:hidden;}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 11px;border-bottom:1px solid var(--crd);}
+.card-title{font-size:0.78rem;font-weight:900;color:var(--tx);}
+.card-sub{font-size:0.63rem;color:var(--mu);font-weight:600;margin-top:2px;}
+.card-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.82rem;flex-shrink:0;}
+.card-body{padding:13px 14px;}
+
+/* FORM ELEMENTS */
+.inp{width:100%;padding:9px 11px;border:1.5px solid var(--crd);border-radius:9px;font-family:inherit;font-size:0.82rem;font-weight:600;color:var(--tx);background:var(--wh);outline:none;transition:border-color 0.15s,box-shadow 0.15s;margin-bottom:9px;}
+.inp:focus{border-color:var(--br);box-shadow:0 0 0 3px rgba(123,79,46,0.12);}
+.inp-label{font-size:0.62rem;font-weight:900;color:var(--mu);text-transform:uppercase;letter-spacing:0.7px;display:block;margin-bottom:5px;}
+.inp-group{display:grid;gap:8px;}
+.inp-wrap{display:flex;flex-direction:column;}
+
+/* BUTTONS */
+.btn-p{background:linear-gradient(135deg,var(--br),var(--brm));color:#fff;border:none;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:0.78rem;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.18s;}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(123,79,46,0.35);}
+.btn-s{background:var(--wh);border:1.5px solid var(--crd);border-radius:9px;padding:7px 13px;font-family:inherit;font-size:0.75rem;font-weight:800;color:var(--br);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.18s;}
+.btn-s:hover{background:var(--cr);border-color:var(--tan);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 9px;font-size:0.62rem;font-weight:900;letter-spacing:0.2px;}
+.badge-grn{background:#d5f5e3;color:#1a6b3a;}
+.badge-red{background:#fde8e7;color:#922b21;}
+.badge-org{background:#fef3e2;color:#925500;}
+.badge-blu{background:#dbeafe;color:#1340a0;}
+.badge-pur{background:#f3e8fd;color:#5b2c8d;}
+.badge-mu{background:var(--crd);color:var(--brm);}
+.badge-br{background:rgba(123,79,46,0.12);color:var(--br);}
+
+/* PRIORITY PILL SELECTOR */
+.pri-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;}
+.pri-pill{padding:5px 12px;border-radius:20px;border:1.5px solid var(--crd);font-size:0.7rem;font-weight:800;cursor:pointer;transition:all 0.15s;font-family:inherit;background:transparent;color:var(--mu);}
+.pri-pill.sel-urg{background:#fde8e7;border-color:#e74c3c;color:#922b21;}
+.pri-pill.sel-hi{background:#fef3e2;border-color:var(--org);color:#925500;}
+.pri-pill.sel-nor{background:#dbeafe;border-color:var(--blu);color:#1340a0;}
+.pri-pill.sel-lo{background:var(--crd);border-color:var(--tan);color:var(--brm);}
+
+/* ANNOUNCEMENT CARD */
+.ann-card{border-radius:10px;border:1.5px solid var(--crd);padding:11px 13px;background:var(--wh);position:relative;overflow:hidden;margin-bottom:8px;}
+.ann-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.ann-urgent::before{background:var(--red);}
+.ann-high::before{background:var(--org);}
+.ann-normal::before{background:var(--blu);}
+.ann-low::before{background:var(--tan);}
+.ann-title{font-size:0.82rem;font-weight:900;color:var(--tx);margin-bottom:3px;padding-left:8px;}
+.ann-msg{font-size:0.72rem;color:var(--mu);line-height:1.5;padding-left:8px;}
+.ann-meta{display:flex;align-items:center;gap:8px;margin-top:7px;padding-left:8px;}
+
+/* WASTE LOG */
+.waste-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.wstat{background:var(--cr);border-radius:10px;border:1.5px solid var(--crd);padding:10px;text-align:center;}
+.wstat-val{font-size:1.15rem;font-weight:900;color:var(--tx);}
+.wstat-lbl{font-size:0.58rem;font-weight:900;color:var(--mu);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+
+/* WASTE ROW */
+.wrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--crd);}
+.wrow:last-child{border-bottom:none;}
+.wrow-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.reason-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:0.6rem;font-weight:900;}
+
+/* SECURITY */
+.threat-card{border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.threat-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.threat-safe{background:#d5f5e3;border:1.5px solid #a8e6bc;color:#1a6b3a;}
+.threat-warn{background:#fef3e2;border:1.5px solid #fbc65e;color:#925500;}
+.threat-alert{background:#fde8e7;border:1.5px solid #f0a8a3;color:#922b21;}
+.sec-ip-box{font-family:monospace;font-size:1rem;font-weight:900;color:var(--br);background:var(--cr);border-radius:8px;padding:9px 12px;border:1.5px solid var(--crd);flex:1;}
+.ip-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.att-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--crd);}
+.att-row:last-child{border-bottom:none;}
+.att-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.att-time{font-size:0.62rem;color:var(--mu);font-weight:700;min-width:40px;}
+
+/* RATINGS */
+.rat-gauge{text-align:center;padding:16px;}
+.rat-num{font-family:'Playfair Display',serif;font-size:3rem;font-weight:900;color:var(--tx);line-height:1;}
+.rat-stars-big{font-size:1.3rem;letter-spacing:3px;margin-top:4px;}
+.rat-total{font-size:0.68rem;font-weight:700;color:var(--mu);margin-top:4px;}
+.dist-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.dist-bar-wrap{flex:1;height:8px;background:var(--crd);border-radius:4px;overflow:hidden;}
+.dist-bar{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.dist-label{font-size:0.65rem;font-weight:800;color:var(--mu);min-width:18px;text-align:right;}
+.dist-count{font-size:0.65rem;font-weight:800;color:var(--br);min-width:18px;}
+.rev-card{border-radius:10px;border:1.5px solid var(--crd);padding:12px;background:var(--wh);margin-bottom:8px;}
+.rev-stars{font-size:0.85rem;letter-spacing:1px;}
+.rev-name{font-size:0.78rem;font-weight:900;color:var(--tx);}
+.rev-msg{font-size:0.72rem;color:var(--mu);line-height:1.5;margin-top:5px;}
+.rev-code{font-size:0.62rem;font-weight:700;color:var(--tan);font-family:monospace;}
+
+/* FRAUD */
+.fraud-flag{border-radius:10px;border:1.5px solid;padding:10px 12px;margin-bottom:8px;position:relative;}
+.fraud-hi{border-color:#e74c3c;background:#fff8f8;}
+.fraud-med{border-color:var(--org);background:#fffbf5;}
+.fraud-level{position:absolute;top:10px;right:12px;}
+.bl-pill-sel{display:flex;gap:6px;margin-bottom:9px;}
+.bl-pill{padding:5px 12px;border-radius:20px;border:1.5px solid var(--crd);font-size:0.7rem;font-weight:800;cursor:pointer;transition:all 0.15s;font-family:inherit;background:transparent;color:var(--mu);}
+.bl-pill.active{background:rgba(123,79,46,0.1);border-color:var(--br);color:var(--brd);}
+.limit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.limit-card{background:var(--cr);border-radius:10px;border:1.5px solid var(--crd);padding:10px 12px;}
+.limit-val{font-size:1.05rem;font-weight:900;color:var(--br);}
+.limit-lbl{font-size:0.58rem;font-weight:900;color:var(--mu);text-transform:uppercase;letter-spacing:0.5px;}
+.limit-desc{font-size:0.65rem;color:var(--mu);margin-top:3px;}
+
+/* CHECKLIST */
+.cl-ring-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.cl-ring-card{background:var(--wh);border-radius:12px;border:1.5px solid var(--crd);padding:14px;text-align:center;}
+.cl-ring-wrap{position:relative;width:64px;height:64px;margin:0 auto 8px;}
+.cl-ring-wrap svg{position:absolute;top:0;left:0;}
+.cl-ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900;color:var(--tx);}
+.cl-type{font-size:0.6rem;font-weight:900;color:var(--mu);text-transform:uppercase;letter-spacing:0.5px;}
+.cl-status{font-size:0.72rem;font-weight:800;margin-top:4px;}
+.cl-done{color:var(--grn);}
+.cl-part{color:var(--org);}
+.cl-none{color:var(--mu);}
+.task-tab-bar{display:flex;gap:6px;margin-bottom:10px;}
+.task-tab{padding:5px 12px;border-radius:20px;border:1.5px solid var(--crd);font-size:0.7rem;font-weight:800;cursor:pointer;font-family:inherit;background:transparent;color:var(--mu);transition:all 0.15s;}
+.task-tab.active{background:rgba(13,122,106,0.1);border-color:#0D7A6A;color:#0D4A42;}
+.task-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--crd);}
+.task-row:last-child{border-bottom:none;}
+.task-num{width:22px;height:22px;border-radius:50%;background:var(--cr);border:1.5px solid var(--crd);font-size:0.62rem;font-weight:900;color:var(--mu);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* PROMO */
+.promo-preview{background:linear-gradient(135deg,var(--brd),var(--brm));border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.promo-code-display{font-family:monospace;font-size:1.3rem;font-weight:900;color:#fff;letter-spacing:3px;}
+.promo-code-sub{font-size:0.6rem;color:var(--tan);font-weight:700;margin-top:2px;}
+.type-pills{display:flex;gap:6px;margin-bottom:9px;}
+.type-pill{flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--crd);font-size:0.7rem;font-weight:800;cursor:pointer;font-family:inherit;background:transparent;color:var(--mu);text-align:center;transition:all 0.15s;}
+.type-pill.active{background:rgba(123,79,46,0.1);border-color:var(--br);color:var(--brd);}
+.promo-row{border-radius:10px;border:1.5px solid var(--crd);padding:11px 13px;background:var(--wh);margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.promo-code-badge{font-family:monospace;font-size:0.85rem;font-weight:900;background:var(--brd);color:var(--tan);border-radius:7px;padding:4px 10px;letter-spacing:1.5px;}
+.usage-bar-wrap{flex:1;height:5px;background:var(--crd);border-radius:3px;overflow:hidden;margin-top:4px;}
+.usage-bar{height:100%;background:linear-gradient(90deg,var(--br),var(--tan));border-radius:3px;}
+
+/* HISTORY */
+.hist-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--crd);}
+.hist-row:last-child{border-bottom:none;}
+.hist-dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
+
+<h2 class="sr-only">9599 Tea & Coffee Admin Panel — Redesigned Sections</h2>
+
+<!-- NAVIGATION -->
+<nav class="snav" role="navigation" aria-label="Admin sections">
+  <button class="snb act" onclick="show('promo',this)"><i class="fas fa-tags"></i>Promos</button>
+  <button class="snb" onclick="show('ann',this)"><i class="fas fa-bullhorn"></i>Announce</button>
+  <button class="snb" onclick="show('waste',this)"><i class="fas fa-trash-alt"></i>Waste</button>
+  <button class="snb" onclick="show('sec',this)"><i class="fas fa-shield-halved"></i>Security</button>
+  <button class="snb" onclick="show('rat',this)"><i class="fas fa-star"></i>Ratings</button>
+  <button class="snb" onclick="show('fraud',this)"><i class="fas fa-exclamation-triangle"></i>Fraud</button>
+  <button class="snb" onclick="show('cl',this)"><i class="fas fa-clipboard-check"></i>Checklist</button>
+</nav>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 1: PROMO CODES                  -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-promo" class="sec act">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-tags"></i>&ensp;Promo Codes</div>
+      <h2>Discount Manager</h2>
+      <p>Create and manage promotional codes for your customers</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val">4</div><div class="ph-stat-lbl">Active</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">237</div><div class="ph-stat-lbl">Total Uses</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">₱18,450</div><div class="ph-stat-lbl">Discounts Given</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll">
+    <!-- Create Form -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title"><i class="fas fa-plus-circle" style="color:var(--br);margin-right:6px;"></i>Create New Promo Code</div>
+          <div class="card-sub">Fill in the fields below to generate a code</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Preview -->
+        <div class="promo-preview">
+          <div>
+            <div class="promo-code-display" id="promo-preview-code">SAVE20</div>
+            <div class="promo-code-sub">Code preview — will appear to customers</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.3rem;font-weight:900;color:var(--tan);" id="promo-preview-val">20%</div>
+            <div style="font-size:0.6rem;color:rgba(196,168,130,0.7);font-weight:700;" id="promo-preview-type">Percent discount</div>
+          </div>
+        </div>
+        <!-- Discount type pills -->
+        <label class="inp-label">Discount Type</label>
+        <div class="type-pills">
+          <button class="type-pill active" onclick="selectType(this,'percent')"><i class="fas fa-percent" style="margin-right:4px;"></i>Percent %</button>
+          <button class="type-pill" onclick="selectType(this,'fixed')"><i class="fas fa-peso-sign" style="margin-right:4px;"></i>Fixed ₱</button>
+        </div>
+        <!-- Fields -->
+        <div class="inp-group" style="grid-template-columns:1fr 1fr;">
+          <div class="inp-wrap">
+            <label class="inp-label">Promo Code</label>
+            <input class="inp" placeholder="e.g. SUMMER25" style="text-transform:uppercase;letter-spacing:1px;font-family:monospace;font-size:0.9rem;" oninput="document.getElementById('promo-preview-code').textContent=this.value.toUpperCase()||'SAVE20'">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Discount Value</label>
+            <input class="inp" type="number" placeholder="e.g. 20" oninput="document.getElementById('promo-preview-val').textContent=this.value+'%'">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Min. Order Amount (₱)</label>
+            <input class="inp" type="number" placeholder="0 = no minimum">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Max Uses</label>
+            <input class="inp" type="number" placeholder="Blank = unlimited">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Expires On</label>
+            <input class="inp" type="date">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Customer Description</label>
+            <input class="inp" placeholder="Shown on checkout">
+          </div>
+        </div>
+        <button class="btn-p" style="width:100%;justify-content:center;padding:11px;"><i class="fas fa-bolt"></i> Create Promo Code</button>
+      </div>
+    </div>
+
+    <!-- Active Codes -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Active Promo Codes</div>
+          <div class="card-sub">4 codes currently in circulation</div>
+        </div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+      <div class="card-body">
+        <div class="promo-row">
+          <div class="promo-code-badge">SAVE20</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <span style="font-size:0.78rem;font-weight:900;color:var(--tx);">20% off</span>
+              <span class="badge badge-grn">Active</span>
+              <span class="badge badge-mu">Min ₱150</span>
+            </div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">85/100 uses · Expires Jun 30</div>
+            <div class="usage-bar-wrap"><div class="usage-bar" style="width:85%;"></div></div>
+          </div>
+          <button class="btn-s" style="padding:5px 10px;font-size:0.7rem;color:var(--red);border-color:rgba(192,57,43,0.25);"><i class="fas fa-pause"></i></button>
+        </div>
+        <div class="promo-row">
+          <div class="promo-code-badge">BDAY50</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <span style="font-size:0.78rem;font-weight:900;color:var(--tx);">₱50 off</span>
+              <span class="badge badge-grn">Active</span>
+              <span class="badge badge-mu">Min ₱200</span>
+            </div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">12/unlimited uses · No expiry</div>
+            <div class="usage-bar-wrap"><div class="usage-bar" style="width:20%;"></div></div>
+          </div>
+          <button class="btn-s" style="padding:5px 10px;font-size:0.7rem;color:var(--red);border-color:rgba(192,57,43,0.25);"><i class="fas fa-pause"></i></button>
+        </div>
+        <div class="promo-row">
+          <div class="promo-code-badge" style="opacity:0.55;">FLASH10</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <span style="font-size:0.78rem;font-weight:900;color:var(--tx);">10% off</span>
+              <span class="badge badge-red">Expired</span>
+            </div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">50/50 uses · Expired May 1</div>
+            <div class="usage-bar-wrap"><div class="usage-bar" style="width:100%;background:var(--crd);"></div></div>
+          </div>
+          <button class="btn-s" style="padding:5px 10px;font-size:0.7rem;color:var(--red);border-color:rgba(192,57,43,0.25);"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 2: ANNOUNCEMENTS                -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-ann" class="sec">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-bullhorn"></i>&ensp;Announcements</div>
+      <h2>Staff Communications</h2>
+      <p>Post bulletins and notices to the employee station</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val">3</div><div class="ph-stat-lbl">Active</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">1</div><div class="ph-stat-lbl"><span style="color:#f1948a;">Urgent</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--br);margin-right:6px;"></i>Post Announcement</div>
+          <div class="card-sub">Staff will see this on their station immediately</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="inp-wrap" style="margin-bottom:9px;">
+          <label class="inp-label">Title</label>
+          <input class="inp" placeholder="e.g. Reminder: Inventory Check Tonight" style="margin-bottom:0;">
+        </div>
+        <div class="inp-wrap" style="margin-bottom:9px;">
+          <label class="inp-label">Message</label>
+          <textarea class="inp" rows="3" placeholder="Write your announcement here…" style="resize:vertical;line-height:1.55;margin-bottom:0;"></textarea>
+        </div>
+        <label class="inp-label">Priority Level</label>
+        <div class="pri-pills">
+          <button class="pri-pill sel-urg" id="pp-urg" onclick="selPri(this,'urg')">🚨 Urgent</button>
+          <button class="pri-pill" id="pp-hi" onclick="selPri(this,'hi')">⚠️ High</button>
+          <button class="pri-pill" id="pp-nor" onclick="selPri(this,'nor')">📢 Normal</button>
+          <button class="pri-pill" id="pp-lo" onclick="selPri(this,'lo')">📌 Low</button>
+        </div>
+        <button class="btn-p" style="width:100%;justify-content:center;"><i class="fas fa-satellite-dish"></i> Broadcast to Staff</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Current Announcements</div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="ann-card ann-urgent">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;padding-left:8px;">
+            <span class="badge badge-red">🚨 Urgent</span>
+            <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">2 hrs ago · Admin</span>
+          </div>
+          <div class="ann-title">System Maintenance Tonight 11PM–1AM</div>
+          <div class="ann-msg">POS system will be offline. Use manual order forms. All orders must be recorded on paper and input tomorrow.</div>
+          <div class="ann-meta">
+            <button class="btn-s" style="padding:3px 10px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i> Delete</button>
+          </div>
+        </div>
+        <div class="ann-card ann-high">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;padding-left:8px;">
+            <span class="badge badge-org">⚠️ High</span>
+            <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">Yesterday · Admin</span>
+          </div>
+          <div class="ann-title">Monthly Inventory Check — Saturday</div>
+          <div class="ann-msg">All staff must participate in the Saturday 9AM inventory count. Please arrive 30 minutes early.</div>
+          <div class="ann-meta">
+            <button class="btn-s" style="padding:3px 10px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i> Delete</button>
+          </div>
+        </div>
+        <div class="ann-card ann-normal">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;padding-left:8px;">
+            <span class="badge badge-blu">📢 Normal</span>
+            <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">3 days ago · Admin</span>
+          </div>
+          <div class="ann-title">New Summer Menu Items Added</div>
+          <div class="ann-msg">Mango Yakult Tea and Ube Milk Tea are now available. Check the menu board for updated descriptions.</div>
+          <div class="ann-meta">
+            <button class="btn-s" style="padding:3px 10px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i> Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 3: WASTE LOG                    -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-waste" class="sec">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-trash-alt"></i>&ensp;Waste Log</div>
+      <h2>Waste Tracking</h2>
+      <p>Ingredient waste reported by staff — track losses and patterns</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val">14</div><div class="ph-stat-lbl">This Week</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">2.4kg</div><div class="ph-stat-lbl">Volume Lost</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">₱620</div><div class="ph-stat-lbl">Est. Value</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <!-- Filters -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><i class="fas fa-filter" style="color:var(--br);margin-right:6px;"></i>Filters</div>
+        <button class="btn-s" style="font-size:0.68rem;">Clear All</button>
+      </div>
+      <div class="card-body">
+        <div class="inp-group" style="grid-template-columns:1fr 1fr;">
+          <div class="inp-wrap">
+            <label class="inp-label">Ingredient</label>
+            <input class="inp" placeholder="Search ingredient…" style="margin-bottom:0;">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Reason</label>
+            <select class="inp" style="margin-bottom:0;">
+              <option>All Reasons</option>
+              <option>Expired</option>
+              <option>Spillage</option>
+              <option>Over-prep</option>
+              <option>Contaminated</option>
+              <option>Quality Issue</option>
+            </select>
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Date From</label>
+            <input class="inp" type="date" style="margin-bottom:0;">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Date To</label>
+            <input class="inp" type="date" style="margin-bottom:0;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Week at a Glance</div>
+      </div>
+      <div class="card-body">
+        <div class="waste-stats">
+          <div class="wstat"><div class="wstat-val" style="color:var(--red);">5</div><div class="wstat-lbl">Expired</div></div>
+          <div class="wstat"><div class="wstat-val" style="color:var(--org);">6</div><div class="wstat-lbl">Spillage</div></div>
+          <div class="wstat"><div class="wstat-val" style="color:var(--blu);">3</div><div class="wstat-lbl">Over-prep</div></div>
+        </div>
+        <div style="font-size:0.68rem;font-weight:700;color:var(--mu);display:flex;align-items:center;gap:6px;margin-top:4px;">
+          <i class="fas fa-exclamation-circle" style="color:var(--org);"></i>
+          Most wasted: <strong style="color:var(--tx);">Whole Milk (680ml total)</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Entries -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Waste Entries</div>
+        <button class="btn-s"><i class="fas fa-download"></i> Export</button>
+      </div>
+      <div class="card-body">
+        <div class="wrow">
+          <div class="wrow-icon" style="background:#fde8e7;color:var(--red);"><i class="fas fa-clock"></i></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:0.8rem;font-weight:900;color:var(--tx);">Whole Milk</span>
+              <span style="font-size:0.78rem;font-weight:900;color:var(--br);">500 ml</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+              <span class="reason-tag" style="background:#fde8e7;color:#922b21;">⏰ Expired</span>
+              <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">Today 7:30am · Juan</span>
+            </div>
+          </div>
+        </div>
+        <div class="wrow">
+          <div class="wrow-icon" style="background:#fef3e2;color:var(--org);"><i class="fas fa-droplet"></i></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:0.8rem;font-weight:900;color:var(--tx);">Brown Sugar Syrup</span>
+              <span style="font-size:0.78rem;font-weight:900;color:var(--br);">200 ml</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+              <span class="reason-tag" style="background:#fef3e2;color:#925500;">💧 Spillage</span>
+              <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">Today 10:15am · Maria</span>
+            </div>
+          </div>
+        </div>
+        <div class="wrow">
+          <div class="wrow-icon" style="background:#dbeafe;color:var(--blu);"><i class="fas fa-utensils"></i></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:0.8rem;font-weight:900;color:var(--tx);">Matcha Powder</span>
+              <span style="font-size:0.78rem;font-weight:900;color:var(--br);">50 g</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+              <span class="reason-tag" style="background:#dbeafe;color:#1340a0;">🍳 Over-prep</span>
+              <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">Yesterday 3:00pm · Pedro</span>
+            </div>
+          </div>
+        </div>
+        <div class="wrow">
+          <div class="wrow-icon" style="background:#d5f5e3;color:var(--grn);"><i class="fas fa-ban"></i></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:0.8rem;font-weight:900;color:var(--tx);">Pearl Tapioca</span>
+              <span style="font-size:0.78rem;font-weight:900;color:var(--br);">300 g</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+              <span class="reason-tag" style="background:#fde8e7;color:#922b21;">☣️ Contaminated</span>
+              <span style="font-size:0.6rem;color:var(--mu);font-weight:700;">Yesterday 8:00am · Ana</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 4: SECURITY                     -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-sec" class="sec">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-shield-halved"></i>&ensp;Security Center</div>
+      <h2>Threat Monitoring</h2>
+      <p>IP blacklist, brute-force detection &amp; access control</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val" style="color:#a8e6bc;">Safe</div><div class="ph-stat-lbl">Status</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">3</div><div class="ph-stat-lbl">Blocked IPs</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">7</div><div class="ph-stat-lbl">Failed Attempts (24h)</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <!-- Threat Level -->
+    <div class="card">
+      <div class="card-body">
+        <div class="threat-card" style="background:#f0faf5;border:1.5px solid #a8e6bc;border-radius:10px;margin-bottom:0;padding:12px;">
+          <div class="threat-icon threat-safe"><i class="fas fa-shield-halved"></i></div>
+          <div>
+            <div style="font-size:0.85rem;font-weight:900;color:#1a6b3a;">All Systems Secure</div>
+            <div style="font-size:0.68rem;color:#2e7d52;font-weight:700;margin-top:2px;">No active threats detected · Last checked just now</div>
+          </div>
+          <button class="btn-s" style="margin-left:auto;font-size:0.68rem;padding:5px 10px;"><i class="fas fa-sync-alt"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- My IP -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title"><i class="fas fa-desktop" style="color:var(--br);margin-right:6px;"></i>Your Device IP</div>
+          <div class="card-sub">Currently accessing this admin panel from:</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="ip-row">
+          <div class="sec-ip-box">192.168.1.105</div>
+          <button class="btn-s"><i class="fas fa-copy"></i> Copy</button>
+          <button class="btn-s" style="white-space:nowrap;"><i class="fas fa-arrow-down"></i> Use</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block IP -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><i class="fas fa-ban" style="color:var(--red);margin-right:6px;"></i>Block an IP Address</div>
+      </div>
+      <div class="card-body">
+        <div class="inp-group" style="grid-template-columns:1fr 1fr;">
+          <div class="inp-wrap">
+            <label class="inp-label">IP Address</label>
+            <input class="inp" placeholder="e.g. 203.0.113.42" style="margin-bottom:0;font-family:monospace;">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Reason (optional)</label>
+            <input class="inp" placeholder="e.g. Brute-force attempt" style="margin-bottom:0;">
+          </div>
+        </div>
+        <button class="btn-p" style="background:linear-gradient(135deg,var(--red),#a93226);margin-top:10px;"><i class="fas fa-ban"></i> Block IP</button>
+      </div>
+    </div>
+
+    <!-- Blacklisted IPs -->
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">🔴 Blacklisted IPs</div><div class="card-sub">3 addresses blocked</div></div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="att-row">
+          <div class="att-dot" style="background:var(--red);"></div>
+          <div style="flex:1;">
+            <div style="font-family:monospace;font-size:0.82rem;font-weight:900;color:var(--tx);">45.33.32.156</div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">Auto-banned · 5 failed admin attempts · May 22</div>
+          </div>
+          <span class="badge badge-red" style="font-size:0.58rem;">Auto</span>
+          <button class="btn-s" style="padding:4px 8px;font-size:0.65rem;color:var(--grn);border-color:rgba(39,174,96,0.25);">Unblock</button>
+        </div>
+        <div class="att-row">
+          <div class="att-dot" style="background:var(--red);"></div>
+          <div style="flex:1;">
+            <div style="font-family:monospace;font-size:0.82rem;font-weight:900;color:var(--tx);">198.51.100.0</div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">Manual block · Suspected scraper · May 20</div>
+          </div>
+          <span class="badge badge-org" style="font-size:0.58rem;">Manual</span>
+          <button class="btn-s" style="padding:4px 8px;font-size:0.65rem;color:var(--grn);border-color:rgba(39,174,96,0.25);">Unblock</button>
+        </div>
+        <div class="att-row">
+          <div class="att-dot" style="background:var(--org);"></div>
+          <div style="flex:1;">
+            <div style="font-family:monospace;font-size:0.82rem;font-weight:900;color:var(--tx);">203.0.113.42</div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">Auto-banned · 5 failed employee attempts · May 18</div>
+          </div>
+          <span class="badge badge-red" style="font-size:0.58rem;">Auto</span>
+          <button class="btn-s" style="padding:4px 8px;font-size:0.65rem;color:var(--grn);border-color:rgba(39,174,96,0.25);">Unblock</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Failed Attempts -->
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">⚠️ Recent Failed Attempts (24h)</div><div class="card-sub">7 suspicious access attempts detected</div></div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="att-row">
+          <div class="att-dot" style="background:var(--red);"></div>
+          <span class="att-time">10:42 AM</span>
+          <div style="flex:1;">
+            <span style="font-family:monospace;font-size:0.75rem;font-weight:800;color:var(--tx);">45.33.32.156</span>
+            <span class="badge badge-red" style="margin-left:6px;font-size:0.58rem;">Admin</span>
+          </div>
+          <span style="font-size:0.62rem;color:var(--mu);">Attempt 5/5</span>
+        </div>
+        <div class="att-row">
+          <div class="att-dot" style="background:var(--org);"></div>
+          <span class="att-time">9:17 AM</span>
+          <div style="flex:1;">
+            <span style="font-family:monospace;font-size:0.75rem;font-weight:800;color:var(--tx);">172.16.0.44</span>
+            <span class="badge badge-org" style="margin-left:6px;font-size:0.58rem;">Employee</span>
+          </div>
+          <span style="font-size:0.62rem;color:var(--mu);">Attempt 2/5</span>
+        </div>
+        <div class="att-row">
+          <div class="att-dot" style="background:var(--tan);"></div>
+          <span class="att-time">8:03 AM</span>
+          <div style="flex:1;">
+            <span style="font-family:monospace;font-size:0.75rem;font-weight:800;color:var(--tx);">10.0.0.88</span>
+            <span class="badge badge-mu" style="margin-left:6px;font-size:0.58rem;">Customer</span>
+          </div>
+          <span style="font-size:0.62rem;color:var(--mu);">Attempt 1/5</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 5: CUSTOMER RATINGS             -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-rat" class="sec">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-star"></i>&ensp;Customer Ratings</div>
+      <h2>Feedback &amp; Reviews</h2>
+      <p>Star ratings submitted after completed online orders</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val">4.6</div><div class="ph-stat-lbl">Avg Rating</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">128</div><div class="ph-stat-lbl">Total Reviews</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">91%</div><div class="ph-stat-lbl">4–5★ Rate</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <!-- Gauge + Distribution -->
+    <div class="card">
+      <div class="card-body" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+        <div class="rat-gauge" style="flex:1;min-width:100px;">
+          <div class="rat-num">4.6</div>
+          <div class="rat-stars-big">★★★★½</div>
+          <div class="rat-total">128 reviews</div>
+          <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:#d5f5e3;color:#1a6b3a;border-radius:20px;padding:4px 11px;font-size:0.65rem;font-weight:900;">
+            <i class="fas fa-arrow-trend-up"></i> +0.3 vs last month
+          </div>
+        </div>
+        <div style="flex:2;min-width:160px;">
+          <div class="dist-row">
+            <span style="font-size:0.7rem;font-weight:800;color:var(--tx);">5★</span>
+            <div class="dist-bar-wrap"><div class="dist-bar" style="width:68%;background:#f1c40f;"></div></div>
+            <span class="dist-count">87</span>
+          </div>
+          <div class="dist-row">
+            <span style="font-size:0.7rem;font-weight:800;color:var(--tx);">4★</span>
+            <div class="dist-bar-wrap"><div class="dist-bar" style="width:21%;background:#e6ac1a;"></div></div>
+            <span class="dist-count">27</span>
+          </div>
+          <div class="dist-row">
+            <span style="font-size:0.7rem;font-weight:800;color:var(--tx);">3★</span>
+            <div class="dist-bar-wrap"><div class="dist-bar" style="width:6%;background:var(--org);"></div></div>
+            <span class="dist-count">8</span>
+          </div>
+          <div class="dist-row">
+            <span style="font-size:0.7rem;font-weight:800;color:var(--tx);">2★</span>
+            <div class="dist-bar-wrap"><div class="dist-bar" style="width:3%;background:var(--red);"></div></div>
+            <span class="dist-count">4</span>
+          </div>
+          <div class="dist-row">
+            <span style="font-size:0.7rem;font-weight:800;color:var(--tx);">1★</span>
+            <div class="dist-bar-wrap"><div class="dist-bar" style="width:2%;background:var(--red);"></div></div>
+            <span class="dist-count">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Customer Feedback</div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div class="card-body">
+        <!-- Filter pills -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="task-tab active" style="font-size:0.68rem;">All</button>
+          <button class="task-tab" style="font-size:0.68rem;">🤩 5★</button>
+          <button class="task-tab" style="font-size:0.68rem;">😃 4★</button>
+          <button class="task-tab" style="font-size:0.68rem;">😊 3★</button>
+          <button class="task-tab" style="font-size:0.68rem;border-color:rgba(192,57,43,0.3);color:var(--red);">😞 1–2★</button>
+        </div>
+        <div class="rev-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
+            <div>
+              <div class="rev-name">Maria Santos</div>
+              <div class="rev-code">ORD-7821</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="rev-stars" style="color:#f1c40f;">★★★★★</div>
+              <div style="font-size:0.6rem;color:var(--mu);font-weight:700;">May 25, 2:40pm</div>
+            </div>
+          </div>
+          <div class="rev-msg">"Absolutely love the Taro Milk Tea! Always consistent and the staff is very friendly. Will definitely order again!"</div>
+        </div>
+        <div class="rev-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
+            <div>
+              <div class="rev-name">Juan Dela Cruz</div>
+              <div class="rev-code">ORD-7815</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="rev-stars">★★★★<span style="color:var(--crd);">★</span></div>
+              <div style="font-size:0.6rem;color:var(--mu);font-weight:700;">May 24, 11:20am</div>
+            </div>
+          </div>
+          <div class="rev-msg">"Good drinks, fast service. The Brown Sugar Milk Tea could be a bit sweeter for my taste but overall great experience."</div>
+        </div>
+        <div class="rev-card" style="border-color:rgba(192,57,43,0.25);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
+            <div>
+              <div class="rev-name">Ana Reyes</div>
+              <div class="rev-code">ORD-7790</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="rev-stars"><span style="color:#e74c3c;">★★</span><span style="color:var(--crd);">★★★</span></div>
+              <div style="font-size:0.6rem;color:var(--mu);font-weight:700;">May 22, 4:05pm</div>
+            </div>
+          </div>
+          <div class="rev-msg">"Order was late by 20 minutes and the matcha was not blended well. Hope the quality improves."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 6: FRAUD CONTROL                -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-fraud" class="sec">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-exclamation-triangle"></i>&ensp;Fraud Control</div>
+      <h2>Risk Management</h2>
+      <p>Flagged orders, blocklist, customer reputation &amp; limits</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val" style="color:#f1948a;">2</div><div class="ph-stat-lbl">Flagged</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">5</div><div class="ph-stat-lbl">Blocked</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">3</div><div class="ph-stat-lbl">Prepay Required</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <!-- Flagged Orders -->
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title"><i class="fas fa-flag" style="color:var(--red);margin-right:6px;"></i>Flagged Orders</div><div class="card-sub">2 orders require your review</div></div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="fraud-flag fraud-hi">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <span style="font-size:0.82rem;font-weight:900;color:var(--tx);">ORD-7840</span>
+              <span style="font-size:0.68rem;color:var(--mu);font-weight:700;margin-left:8px;">10:45 AM</span>
+            </div>
+            <span class="badge badge-red"><i class="fas fa-triangle-exclamation" style="margin-right:3px;"></i>High Risk</span>
+          </div>
+          <div style="font-size:0.75rem;font-weight:700;color:var(--tx);margin-bottom:3px;">
+            <i class="fas fa-user" style="color:var(--mu);margin-right:5px;"></i>John D. — johntest@temp.com
+          </div>
+          <div style="font-size:0.68rem;color:var(--mu);font-weight:700;margin-bottom:8px;">
+            ₱680.00 · 3rd order in 2hrs · 2 past no-shows · Suspicious pattern
+          </div>
+          <div style="display:flex;gap:7px;">
+            <button class="btn-p" style="flex:1;justify-content:center;padding:7px;font-size:0.73rem;"><i class="fas fa-check"></i> Approve</button>
+            <button class="btn-s" style="flex:1;justify-content:center;font-size:0.73rem;color:var(--red);border-color:rgba(192,57,43,0.25);"><i class="fas fa-times"></i> Reject</button>
+          </div>
+        </div>
+        <div class="fraud-flag fraud-med">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <span style="font-size:0.82rem;font-weight:900;color:var(--tx);">ORD-7836</span>
+              <span style="font-size:0.68rem;color:var(--mu);font-weight:700;margin-left:8px;">9:30 AM</span>
+            </div>
+            <span class="badge badge-org"><i class="fas fa-circle-exclamation" style="margin-right:3px;"></i>Medium Risk</span>
+          </div>
+          <div style="font-size:0.75rem;font-weight:700;color:var(--tx);margin-bottom:3px;">
+            <i class="fas fa-user" style="color:var(--mu);margin-right:5px;"></i>Lisa M. — lm@example.com
+          </div>
+          <div style="font-size:0.68rem;color:var(--mu);font-weight:700;margin-bottom:8px;">
+            ₱520.00 · Large order threshold triggered · Prepayment required
+          </div>
+          <div style="display:flex;gap:7px;">
+            <button class="btn-p" style="flex:1;justify-content:center;padding:7px;font-size:0.73rem;"><i class="fas fa-check"></i> Approve</button>
+            <button class="btn-s" style="flex:1;justify-content:center;font-size:0.73rem;color:var(--red);border-color:rgba(192,57,43,0.25);"><i class="fas fa-times"></i> Reject</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block Customer -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><i class="fas fa-user-slash" style="color:var(--red);margin-right:6px;"></i>Block Customer</div>
+      </div>
+      <div class="card-body">
+        <label class="inp-label">Block by</label>
+        <div class="bl-pill-sel">
+          <button class="bl-pill active" id="blp-email">📧 Email</button>
+          <button class="bl-pill" id="blp-phone">📱 Phone</button>
+          <button class="bl-pill" id="blp-name">👤 Name</button>
+        </div>
+        <div class="inp-group" style="grid-template-columns:1fr 1fr;">
+          <div class="inp-wrap">
+            <label class="inp-label">Value to Block</label>
+            <input class="inp" placeholder="customer@email.com" style="margin-bottom:0;">
+          </div>
+          <div class="inp-wrap">
+            <label class="inp-label">Reason (optional)</label>
+            <input class="inp" placeholder="e.g. Repeat no-show" style="margin-bottom:0;">
+          </div>
+        </div>
+        <button class="btn-p" style="background:linear-gradient(135deg,var(--red),#a93226);margin-top:10px;"><i class="fas fa-user-slash"></i> Block Customer</button>
+      </div>
+    </div>
+
+    <!-- Behavioral Limits -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">⚙️ Active Behavioral Limits</div>
+      </div>
+      <div class="card-body">
+        <div class="limit-grid">
+          <div class="limit-card"><div class="limit-lbl">Cooldown Period</div><div class="limit-val">30 min</div><div class="limit-desc">Between orders / same email</div></div>
+          <div class="limit-card"><div class="limit-lbl">Daily Order Cap</div><div class="limit-val">5 orders</div><div class="limit-desc">Per email per day</div></div>
+          <div class="limit-card"><div class="limit-lbl">Suspicious Pattern</div><div class="limit-val" style="color:var(--org);">5+ / hr</div><div class="limit-desc">Same name → manual review</div></div>
+          <div class="limit-card"><div class="limit-lbl">No-Show Threshold</div><div class="limit-val" style="color:var(--red);">2 no-shows</div><div class="limit-desc">→ Prepayment required</div></div>
+          <div class="limit-card"><div class="limit-lbl">Large Order</div><div class="limit-val">₱500+</div><div class="limit-desc">Requires staff confirmation</div></div>
+          <div class="limit-card"><div class="limit-lbl">Holding Fee</div><div class="limit-val">20%</div><div class="limit-desc">Refunded on pickup</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 7: DAILY CHECKLIST              -->
+<!-- ═══════════════════════════════════════ -->
+<div id="sec-cl" class="sec">
+  <div class="ph">
+    <div class="ph-inner">
+      <div class="ph-badge"><i class="fas fa-clipboard-check"></i>&ensp;Daily Checklist</div>
+      <h2>Task Completion</h2>
+      <p>Monitor opening, closing &amp; cleaning task completion by staff</p>
+      <div class="ph-stats">
+        <div class="ph-stat"><div class="ph-stat-val">2/3</div><div class="ph-stat-lbl">Submitted Today</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">100%</div><div class="ph-stat-lbl">Opening Done</div></div>
+        <div class="ph-stat"><div class="ph-stat-val">Pending</div><div class="ph-stat-lbl">Closing</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll">
+    <!-- Status Rings -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Today's Status — May 28</div>
+        <button class="btn-s"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="cl-ring-grid">
+          <!-- Opening — complete -->
+          <div class="cl-ring-card" style="border-color:rgba(39,174,96,0.35);background:#f0faf5;">
+            <div class="cl-ring-wrap">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--crd)" stroke-width="5"/>
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#27AE60" stroke-width="5" stroke-dasharray="163.4 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+              </svg>
+              <div class="cl-ring-pct" style="color:#1a6b3a;">✓</div>
+            </div>
+            <div class="cl-type">Opening</div>
+            <div class="cl-status cl-done">Complete</div>
+            <div style="font-size:0.62rem;color:#2e7d52;font-weight:700;margin-top:2px;">6:58 AM · 8/8 tasks</div>
+          </div>
+          <!-- Cleaning — partial -->
+          <div class="cl-ring-card" style="border-color:rgba(245,124,0,0.35);background:#fffbf5;">
+            <div class="cl-ring-wrap">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--crd)" stroke-width="5"/>
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#F57C00" stroke-width="5" stroke-dasharray="122.5 163.4" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+              </svg>
+              <div class="cl-ring-pct" style="color:#925500;">75%</div>
+            </div>
+            <div class="cl-type">Cleaning</div>
+            <div class="cl-status cl-part">In Progress</div>
+            <div style="font-size:0.62rem;color:#925500;font-weight:700;margin-top:2px;">3/4 tasks done</div>
+          </div>
+          <!-- Closing — not started -->
+          <div class="cl-ring-card" style="border-color:var(--crd);background:var(--wh);">
+            <div class="cl-ring-wrap">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--crd)" stroke-width="5"/>
+              </svg>
+              <div class="cl-ring-pct" style="color:var(--mu);">–</div>
+            </div>
+            <div class="cl-type">Closing</div>
+            <div class="cl-status cl-none">Not Started</div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;margin-top:2px;">Due at 9:00 PM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Manager -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">⚙️ Manage Tasks</div>
+      </div>
+      <div class="card-body">
+        <div class="inp-group" style="grid-template-columns:auto 1fr auto;margin-bottom:10px;">
+          <select class="inp" style="margin:0;padding:8px 10px;width:auto;">
+            <option>Opening</option><option>Closing</option><option>Cleaning</option>
+          </select>
+          <input class="inp" placeholder="New task description…" style="margin:0;">
+          <button class="btn-p" style="margin:0;"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <div class="task-tab-bar">
+          <button class="task-tab active" id="tbt-opening" onclick="showTasks('opening',this)">🌅 Opening</button>
+          <button class="task-tab" id="tbt-closing" onclick="showTasks('closing',this)">🌙 Closing</button>
+          <button class="task-tab" id="tbt-cleaning" onclick="showTasks('cleaning',this)">🧹 Cleaning</button>
+        </div>
+        <div id="task-list-opening">
+          <div class="task-row"><div class="task-num">1</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Turn on all equipment and check temperatures</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">2</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Check inventory levels and update stock sheet</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">3</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Prepare pearls and toppings for morning rush</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">4</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Check and refill syrup dispensers</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">5</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Wipe counters and sanitize workspace</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+        </div>
+        <div id="task-list-closing" style="display:none;">
+          <div class="task-row"><div class="task-num">1</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Count and record end-of-day cash</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">2</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Properly seal and store all milk and syrups</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">3</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Turn off all equipment and lock register</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+        </div>
+        <div id="task-list-cleaning" style="display:none;">
+          <div class="task-row"><div class="task-num">1</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Deep clean the blender and shaker tools</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">2</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Mop floors and sanitize seating area</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">3</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Clean and sanitize drink dispensers</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+          <div class="task-row"><div class="task-num">4</div><div style="flex:1;font-size:0.78rem;font-weight:700;color:var(--tx);">Dispose of expired ingredients and log waste</div><button class="btn-s" style="padding:3px 8px;font-size:0.65rem;color:var(--red);border-color:rgba(192,57,43,0.2);"><i class="fas fa-trash"></i></button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📋 Submission History</div>
+        <select class="inp" style="margin:0;padding:5px 8px;width:auto;font-size:0.72rem;">
+          <option>All types</option><option>Opening</option><option>Closing</option><option>Cleaning</option>
+        </select>
+      </div>
+      <div class="card-body">
+        <div class="hist-row">
+          <div class="hist-dot" style="background:var(--grn);"></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+              <span style="font-size:0.78rem;font-weight:900;color:var(--tx);">Opening Checklist</span>
+              <span class="badge badge-grn" style="font-size:0.58rem;">8/8 tasks</span>
+            </div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">Today · 6:58 AM · Juan dela Cruz</div>
+          </div>
+        </div>
+        <div class="hist-row">
+          <div class="hist-dot" style="background:var(--org);"></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+              <span style="font-size:0.78rem;font-weight:900;color:var(--tx);">Cleaning Checklist</span>
+              <span class="badge badge-org" style="font-size:0.58rem;">3/4 tasks</span>
+            </div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">Today · 10:30 AM · Maria Santos</div>
+          </div>
+        </div>
+        <div class="hist-row">
+          <div class="hist-dot" style="background:var(--grn);"></div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+              <span style="font-size:0.78rem;font-weight:900;color:var(--tx);">Closing Checklist</span>
+              <span class="badge badge-grn" style="font-size:0.58rem;">3/3 tasks</span>
+            </div>
+            <div style="font-size:0.62rem;color:var(--mu);font-weight:700;">Yesterday · 9:15 PM · Pedro Reyes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('act'));
+  document.querySelectorAll('.snb').forEach(b=>b.classList.remove('act'));
+  document.getElementById('sec-'+id).classList.add('act');
+  btn.classList.add('act');
+}
+function selectType(el, type) {
+  document.querySelectorAll('.type-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const pt = document.getElementById('promo-preview-type');
+  pt.textContent = type==='percent' ? 'Percent discount' : 'Fixed peso discount';
+}
+function selPri(el, type) {
+  document.querySelectorAll('.pri-pill').forEach(p=>{
+    p.className='pri-pill';
+  });
+  el.classList.add('sel-'+type);
+}
+function showTasks(type, btn) {
+  ['opening','closing','cleaning'].forEach(t=>{
+    document.getElementById('task-list-'+t).style.display = t===type ? 'block' : 'none';
+    document.getElementById('tbt-'+t).classList.toggle('active', t===type);
+  });
+}
+function selectBlPill(id) {
+  document.querySelectorAll('.bl-pill').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+document.querySelectorAll('.bl-pill').forEach(p=>p.onclick=()=>{
+  document.querySelectorAll('.bl-pill').forEach(q=>q.classList.remove('active'));
+  p.classList.add('active');
+});
+</script>
