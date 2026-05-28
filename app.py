@@ -11592,6 +11592,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .screen{position:absolute;top:0;right:0;bottom:0;left:0;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:none;padding:0 0 16px;}
 /* ensure table wrappers can always scroll horizontally */
 .screen.active{display:block;}
+/* Screens that use flex-column + adm-scroll are patched to display:flex via
+   their IDs below (in the adm-scroll fix block) — don't change this rule or
+   it will break non-flex screens like the dashboard, orders, KDS. */
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
 
@@ -11629,6 +11632,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .topbar{position:fixed;top:0;left:0;right:0;z-index:200;}
   .screens{position:fixed;top:var(--topbar-h);left:248px;right:0;bottom:0;overflow:hidden;z-index:5;}
   .screen{overflow-y:auto;overflow-x:hidden;}
+  /* Flex-column screens must stay flex on desktop */
+  #s-announce.active,#s-waste.active,#s-security.active,#s-fraud.active,
+  #s-ratings.active,#s-checklist.active,#s-promos.active,#s-inventory.active{
+    display:flex !important;flex-direction:column;overflow:hidden !important;
+  }
   /* Extended screens (analytics, promos etc) must also sit to the right of the sidebar */
   #screens-ext{left:248px !important;top:var(--topbar-h) !important;z-index:5 !important;}
   .admin-hamburger-btn{display:none !important;}
@@ -12148,9 +12156,61 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
    Promo Codes · Announcements · Waste Log · Security ·
    Customer Ratings · Fraud Control · Daily Checklist
 ══════════════════════════════════════════════════════════════ */
-.adm-scroll{padding:0 14px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
+.adm-scroll{padding:0 14px 28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--cream-dark) transparent;}
 .adm-scroll::-webkit-scrollbar{width:3px;}
 .adm-scroll::-webkit-scrollbar-thumb{background:var(--cream-dark);border-radius:3px;}
+
+/* ── FIX: screens using adm-scroll must activate as flex-column so adm-scroll
+        can take the remaining height via flex:1 and scroll internally.
+        The inline overflow:hidden on the screen container is correct — the child
+        (adm-scroll) handles scrolling. Without display:flex the flex:1 on
+        adm-scroll has no effect and content overflows invisibly. ── */
+#s-announce.active,
+#s-waste.active,
+#s-security.active,
+#s-fraud.active,
+#s-ratings.active,
+#s-checklist.active,
+#s-promos.active,
+#s-inventory.active {
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+/* Ensure page-header never grows past its content on small viewports */
+#s-announce .page-header,
+#s-waste .page-header,
+#s-security .page-header,
+#s-fraud .page-header,
+#s-ratings .page-header,
+#s-checklist .page-header {
+  flex-shrink: 0;
+}
+/* Mobile: tighten page-header so more content area is visible */
+@media(max-width:767px){
+  #s-announce .page-header,
+  #s-waste .page-header,
+  #s-security .page-header,
+  #s-fraud .page-header,
+  #s-ratings .page-header,
+  #s-checklist .page-header {
+    padding: 12px 12px 18px !important;
+  }
+  .adm-scroll{padding:0 10px 24px;gap:10px;}
+  .adm-card-body{padding:12px 12px;}
+  .adm-card-head{padding:11px 12px 10px;}
+  .adm-card-label{font-size:0.8rem;}
+  .adm-form-grid{grid-template-columns:1fr !important;}
+  .ph-stats-row{gap:6px;}
+}
+@media(max-width:480px){
+  .adm-scroll{padding:0 8px 20px;gap:8px;}
+  .adm-card{border-radius:14px;}
+  .adm-card-body{padding:10px 10px;}
+  .adm-ring-grid{grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .adm-limit-grid{grid-template-columns:1fr 1fr;gap:8px;}
+}
+
 .adm-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;}
 .adm-card:hover{box-shadow:0 6px 22px rgba(61,36,16,0.11);}
 .adm-card-head{padding:14px 16px 13px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--white);}
