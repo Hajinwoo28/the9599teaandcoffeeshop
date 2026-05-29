@@ -12185,7 +12185,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 #s-security .page-header,
 #s-fraud .page-header,
 #s-ratings .page-header,
-#s-checklist .page-header {
+#s-checklist .page-header,
+#s-promos .page-header {
   flex-shrink: 0;
 }
 /* Mobile: tighten page-header so more content area is visible */
@@ -12195,7 +12196,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   #s-security .page-header,
   #s-fraud .page-header,
   #s-ratings .page-header,
-  #s-checklist .page-header {
+  #s-checklist .page-header,
+  #s-promos .page-header {
     padding: 12px 12px 18px !important;
   }
   .adm-scroll{padding:0 10px 24px;gap:10px;}
@@ -13417,7 +13419,7 @@ ens-wrap">
   <!-- PROMO CODES SCREEN -->
   <div id="s-promos" class="screen" style="display:none;flex-direction:column;overflow:hidden;">
     <div class="page-header">
-      <div style="position:relative;z-index:1;">
+      <div style="position:relative;z-index:2;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-tags"></i>&ensp;Promo Codes</div>
         <h2 style="font-size:1.2rem !important;color:#fff !important;text-shadow:0 2px 10px rgba(0,0,0,0.5) !important;position:relative;z-index:3;">Discount Manager</h2>
         <p>Create and manage promotional codes for your customers</p>
