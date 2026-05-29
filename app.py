@@ -12213,7 +12213,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   .adm-limit-grid{grid-template-columns:1fr 1fr;gap:8px;}
 }
 
-.adm-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;}
+/* ── CRITICAL: adm-card is a flex child of adm-scroll (flex-column).
+   Without flex-shrink:0, flex will compress every card to make them all
+   fit in the fixed-height scroll container — shrunk cards clip their own
+   content via overflow:hidden. Setting flex-shrink:0 forces each card to
+   keep its full natural height; adm-scroll then overflows and scrolls. ── */
+.adm-scroll > * { flex-shrink: 0 !important; }
+.adm-card{background:var(--white);border-radius:18px;border:1.5px solid rgba(196,168,130,0.28);box-shadow:0 2px 14px rgba(61,36,16,0.07);overflow:hidden;transition:box-shadow 0.22s,transform 0.22s;flex-shrink:0;}
 .adm-card:hover{box-shadow:0 6px 22px rgba(61,36,16,0.11);}
 .adm-card-head{padding:14px 16px 13px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--white);}
 .adm-card-title-row{display:flex;align-items:center;gap:10px;}
@@ -12221,7 +12227,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .adm-card-icon i{color:#fff;}
 .adm-card-label{font-size:0.84rem;font-weight:900;color:var(--text);font-family:'Playfair Display',serif;}
 .adm-card-sub{font-size:0.63rem;color:var(--muted);font-weight:600;margin-top:1px;}
-.adm-card-body{padding:14px 16px;}
+.adm-card-body{padding:14px 16px;overflow:visible;}
 .adm-icon-brown{background:linear-gradient(135deg,var(--brown-dark),var(--brown));box-shadow:0 3px 10px rgba(123,79,46,0.3);}
 .adm-icon-red{background:linear-gradient(135deg,#B71C1C,var(--red));box-shadow:0 3px 10px rgba(211,47,47,0.3);}
 .adm-icon-orange{background:linear-gradient(135deg,#E65100,#FF8F00);box-shadow:0 3px 10px rgba(230,81,0,0.28);}
@@ -12376,12 +12382,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .adm-usage-fill{height:100%;background:linear-gradient(90deg,var(--brown),var(--tan));border-radius:3px;}
 .adm-ring-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2px;}
 @media(max-width:480px){.adm-ring-grid{grid-template-columns:1fr 1fr;}}
-.adm-ring-card{background:#fff;border-radius:13px;border:1.5px solid var(--cream-dark);padding:14px 10px;text-align:center;transition:box-shadow 0.18s,transform 0.18s;}
+.adm-ring-card{background:#fff;border-radius:13px;border:1.5px solid var(--cream-dark);padding:14px 10px;text-align:center;transition:box-shadow 0.18s,transform 0.18s;overflow:visible;flex-shrink:0;}
 .adm-ring-card:hover{box-shadow:0 5px 16px rgba(61,36,16,0.1);transform:translateY(-2px);}
 .adm-ring-card.done{border-color:rgba(39,174,96,0.35);background:#f0faf5;}
 .adm-ring-card.partial{border-color:rgba(245,124,0,0.35);background:#fffbf5;}
-.adm-ring-wrap{position:relative;width:64px;height:64px;margin:0 auto 8px;}
-.adm-ring-wrap svg{position:absolute;top:0;left:0;}
+.adm-ring-wrap{position:relative;width:64px;height:64px;margin:0 auto 8px;flex-shrink:0;}
+.adm-ring-wrap svg{position:absolute;top:0;left:0;width:64px;height:64px;}
 .adm-ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:900;color:var(--text);}
 .adm-ring-type{font-size:0.6rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
 .adm-ring-status{font-size:0.73rem;font-weight:800;margin-top:4px;}
@@ -14170,8 +14176,11 @@ function goScreen(name, btn){
         var headerEl = el.querySelector('.page-header');
         if(scrollEl && headerEl){
           var available = el.offsetHeight - headerEl.offsetHeight;
-          scrollEl.style.height = Math.max(120, available) + 'px';
+          /* Use max-height (not height) so cards keep their natural size.
+             flex-shrink:0 on cards means they won't compress; the scroll
+             container clips and scrolls overflow instead. */
           scrollEl.style.maxHeight = Math.max(120, available) + 'px';
+          scrollEl.style.height = '';          /* clear any previous rigid height */
           scrollEl.style.overflowY = 'auto';
           scrollEl.style.overflowX = 'hidden';
           scrollEl.style.flex = 'none';
@@ -14227,8 +14236,8 @@ window.goScreen = goScreen;
     var headerEl = activeScr.querySelector('.page-header');
     if(!scrollEl || !headerEl) return;
     var available = activeScr.offsetHeight - headerEl.offsetHeight;
-    scrollEl.style.height = Math.max(120, available) + 'px';
     scrollEl.style.maxHeight = Math.max(120, available) + 'px';
+    scrollEl.style.height = '';
   }
   window.addEventListener('resize', _fixActiveScrollHeight);
   window._fixActiveScrollHeight = _fixActiveScrollHeight;
