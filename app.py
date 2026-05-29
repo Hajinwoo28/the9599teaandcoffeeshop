@@ -16792,6 +16792,8 @@ async function loadAnalytics(days) {
       const schedOpenHour = Array.isArray(hourly) ? 6  : (hourly.open_hour  ?? 6);
       const schedCloseHour= Array.isArray(hourly) ? 22 : (hourly.close_hour ?? 22);
       const visibleHourly = hourlyHours.filter(h => parseInt(h.hour) >= schedOpenHour && parseInt(h.hour) <= schedCloseHour);
+      // Convert "H:00" 24-h string to "H AM/PM" 12-h label
+      const to12h = str => { const h = parseInt(str); const ap = h < 12 ? 'AM' : 'PM'; return (h % 12 || 12) + ' ' + ap; };
       const maxOrders = Math.max(...visibleHourly.map(h=>h.orders), 1);
       const barColors = visibleHourly.map(h => {
         if (h.orders === maxOrders && h.orders > 0) return 'rgba(61,36,16,0.92)';  // peak = darkest
@@ -16803,7 +16805,7 @@ async function loadAnalytics(days) {
       _anHourlyChart = new Chart(hctx, {
         type: 'bar',
         data: {
-          labels: visibleHourly.map(h => h.hour),
+          labels: visibleHourly.map(h => to12h(h.hour)),
           datasets: [{
             label: 'Orders',
             data: visibleHourly.map(h => h.orders),
@@ -16824,7 +16826,7 @@ async function loadAnalytics(days) {
               titleColor: '#F0EDE4', bodyColor: '#C4A882',
               cornerRadius: 10, padding: 10,
               callbacks: {
-                title: items => items[0].label + ':00',
+                title: items => items[0].label,
                 label: ctx => ` ${ctx.parsed.y} order${ctx.parsed.y !== 1 ? 's' : ''}`
               }
             }
