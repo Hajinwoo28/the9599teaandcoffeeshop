@@ -11535,9 +11535,9 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ══ ENHANCED PAGE HEADER ══ */
 .page-header{background:linear-gradient(135deg,#2A1505 0%,var(--brown-dark) 60%,var(--brown-mid) 100%) !important;border-bottom:none !important;position:relative;overflow:hidden;}
 .page-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 200px 150px at 90% 50%,rgba(196,168,130,0.08) 0%,transparent 70%);}
-.page-header h2{color:#fff !important;position:relative;z-index:1;}
-.page-header p{color:rgba(196,168,130,0.75) !important;position:relative;z-index:1;}
-.page-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:20px;background:var(--cream);border-radius:16px 16px 0 0;}
+.page-header h2{color:#fff !important;position:relative;z-index:2;text-shadow:0 1px 8px rgba(0,0,0,0.45);font-weight:900 !important;}
+.page-header p{color:rgba(220,196,160,0.88) !important;position:relative;z-index:2;}
+.page-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:20px;background:var(--cream);border-radius:16px 16px 0 0;z-index:1;}
 
 /* ══ TABLE ROW HOVER ══ */
 #inv-tbody tr,#kds-tbody tr{transition:background 0.18s,transform 0.15s;}
@@ -11600,7 +11600,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── PAGE HEADER ── */
 .page-header{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 60%,var(--brown) 100%);padding:13px 16px 22px;position:relative;overflow:hidden;}
-.page-header::after{content:'';position:absolute;bottom:-16px;left:0;right:0;height:32px;background:var(--cream);border-radius:20px 20px 0 0;}
+.page-header::after{content:'';position:absolute;bottom:-16px;left:0;right:0;height:32px;background:var(--cream);border-radius:20px 20px 0 0;z-index:1;}
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.74rem;color:var(--tan);margin-top:2px;}
 
@@ -12223,8 +12223,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .adm-card:hover{box-shadow:0 6px 22px rgba(61,36,16,0.11);}
 .adm-card-head{padding:14px 16px 13px;border-bottom:1.5px solid rgba(196,168,130,0.18);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:var(--white);}
 .adm-card-title-row{display:flex;align-items:center;gap:10px;}
-.adm-card-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.88rem;}
-.adm-card-icon i{color:#fff;}
+.adm-card-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.88rem;color:#fff;}
+.adm-card-icon i{color:#fff !important;}
 .adm-card-label{font-size:0.84rem;font-weight:900;color:var(--text);font-family:'Playfair Display',serif;}
 .adm-card-sub{font-size:0.63rem;color:var(--muted);font-weight:600;margin-top:1px;}
 .adm-card-body{padding:14px 16px;overflow:visible;}
@@ -12234,7 +12234,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .adm-icon-green{background:linear-gradient(135deg,#1B5E20,var(--green));box-shadow:0 3px 10px rgba(46,125,50,0.28);}
 .adm-icon-blue{background:linear-gradient(135deg,#0D47A1,var(--blue));box-shadow:0 3px 10px rgba(21,101,192,0.28);}
 .adm-icon-purple{background:linear-gradient(135deg,#4527A0,#7B1FA2);box-shadow:0 3px 10px rgba(74,20,140,0.3);}
-.adm-icon-teal{background:linear-gradient(135deg,#004D40,var(--teal-dark));box-shadow:0 3px 10px rgba(0,121,107,0.28);}
+.adm-icon-teal{background:linear-gradient(135deg,#004D40,#00796B);box-shadow:0 3px 10px rgba(0,121,107,0.32);color:#fff;}
 .adm-icon-gold{background:linear-gradient(135deg,#E65100,#F9A825);box-shadow:0 3px 10px rgba(249,168,37,0.3);}
 .adm-refresh-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1.5px solid rgba(123,79,46,0.22);background:var(--white);color:var(--brown);font-family:'Nunito',sans-serif;font-size:0.74rem;font-weight:800;cursor:pointer;transition:all 0.16s;white-space:nowrap;}
 .adm-refresh-btn:hover{background:rgba(123,79,46,0.06);border-color:var(--brown);}
@@ -13419,7 +13419,7 @@ ens-wrap">
     <div class="page-header">
       <div style="position:relative;z-index:1;">
         <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(196,168,130,0.15);border:1px solid rgba(196,168,130,0.25);border-radius:20px;padding:3px 10px;font-size:0.6rem;font-weight:800;color:var(--tan);letter-spacing:0.5px;margin-bottom:7px;text-transform:uppercase;"><i class="fas fa-tags"></i>&ensp;Promo Codes</div>
-        <h2 style="font-size:1.2rem !important;">Discount Manager</h2>
+        <h2 style="font-size:1.2rem !important;color:#fff !important;text-shadow:0 2px 10px rgba(0,0,0,0.5) !important;position:relative;z-index:3;">Discount Manager</h2>
         <p>Create and manage promotional codes for your customers</p>
         <div class="ph-stats-row">
           <div class="ph-stat-chip"><div class="ph-stat-chip-val" id="ph-promo-active">—</div><div class="ph-stat-chip-lbl">Active</div></div>
