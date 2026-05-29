@@ -16177,7 +16177,7 @@ function renderLoCards(){
     // Approval / photo actions in footer
     let extraActions='';
     if(o.requires_staff_confirm&&!o.staff_confirmed)extraActions+=`<button class="btn-primary" style="padding:3px 8px;margin:0;font-size:0.68rem;white-space:nowrap;" onclick="event.stopPropagation();staffConfirmOrder(${o.id}).then(()=>fetchLiveOrders())">✅ Approve</button>`;
-    extraActions+=`<button class="btn-secondary" style="padding:3px 8px;margin:0;font-size:0.68rem;" title="Flag order" onclick="event.stopPropagation();flagOrderByStaff(${o.id})"><i class="fas fa-flag"></i></button>`;
+
     return`<div class="lo-card" style="animation-delay:${idx*0.04}s${o.is_flagged?';border:2px solid rgba(192,57,43,0.35);':''}" onclick="openOrdDetail(${JSON.stringify(o).replace(/"/g,'&quot;')})">
       <div class="lo-card-bar ${barCls}"></div>
       <div class="lo-card-head">
