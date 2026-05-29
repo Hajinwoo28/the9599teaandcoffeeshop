@@ -14012,8 +14012,7 @@ ens-wrap">
     <!-- Sticky footer buttons -->
     <div class="ord-detail-footer">
       <div class="adm-modal-btns">
-        <button class="btn-secondary" onclick="closeOrdDetail()">Close</button>
-        <button class="btn-primary" style="margin:0;" id="ord-detail-print-btn"><i class="fas fa-print"></i> Print Receipt</button>
+        <button class="btn-secondary" onclick="closeOrdDetail()" style="flex:1;">Close</button>
       </div>
     </div>
   </div>
