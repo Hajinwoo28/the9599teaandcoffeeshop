@@ -16787,7 +16787,11 @@ async function loadAnalytics(days) {
     }
     if (hctx) {
       if (_anHourlyChart) _anHourlyChart.destroy();
-      const visibleHourly = hourly.filter(h => parseInt(h.hour) >= 6 && parseInt(h.hour) <= 22);
+      // Support both legacy flat-array and new {open_hour, close_hour, hours} response shapes
+      const hourlyHours   = Array.isArray(hourly) ? hourly : (hourly.hours || []);
+      const schedOpenHour = Array.isArray(hourly) ? 6  : (hourly.open_hour  ?? 6);
+      const schedCloseHour= Array.isArray(hourly) ? 22 : (hourly.close_hour ?? 22);
+      const visibleHourly = hourlyHours.filter(h => parseInt(h.hour) >= schedOpenHour && parseInt(h.hour) <= schedCloseHour);
       const maxOrders = Math.max(...visibleHourly.map(h=>h.orders), 1);
       const barColors = visibleHourly.map(h => {
         if (h.orders === maxOrders && h.orders > 0) return 'rgba(61,36,16,0.92)';  // peak = darkest
@@ -20605,6 +20609,9 @@ def analytics_hourly():
         return jsonify({"error": "Unauthorized"}), 403
     try:
         ph_now = get_ph_time()
+        # Get today's schedule (day_of_week: 0=Mon…6=Sun, Python weekday() matches)
+        dow = ph_now.weekday()
+        open_hour, open_minute, close_hour, close_minute = get_schedule_for_day(dow)
         day_start = ph_now.replace(hour=0, minute=0, second=0, microsecond=0)
         orders = Reservation.query.filter(
             Reservation.created_at >= day_start,
@@ -20614,7 +20621,11 @@ def analytics_hourly():
         for o in orders:
             if o.created_at is not None:
                 hourly[o.created_at.hour] += 1
-        return jsonify([{"hour": f"{h}:00", "orders": c} for h, c in hourly.items()])
+        return jsonify({
+            "open_hour": open_hour,
+            "close_hour": close_hour,
+            "hours": [{"hour": f"{h}:00", "orders": c} for h, c in hourly.items()]
+        })
     except Exception as e:
         print(f"analytics_hourly error: {e}")
         return jsonify({"error": str(e)}), 500
