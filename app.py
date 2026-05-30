@@ -11943,7 +11943,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .notif-section-label.perm-lbl::before{background:var(--orange);}
 .notif-section-label.stock-lbl::before{background:var(--red);}
 
-#s-inventory .page-header{position:relative;top:auto;}
+#s-inventory .page-header{position:relative;top:auto;flex-shrink:0;}
 
 /* ── BUTTONS ── */
 .btn-primary{background:linear-gradient(135deg,var(--brown) 0%,var(--brown-dark) 100%);color:var(--cream);border:none;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer;width:100%;margin-bottom:10px;font-family:'Nunito',sans-serif;font-size:0.87rem;box-shadow:0 3px 12px rgba(61,36,16,0.3);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s,opacity 0.15s;}
@@ -12028,6 +12028,13 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* ── SECTION SPACING ── */
 .section{margin:0 12px 8px;}
 .screen-inner{padding:16px 0 0;}
+/* ── INVENTORY SCROLL FIX: screen-inner must be a flex child that grows and
+   scrolls internally. Without flex:1 + overflow-y:auto + min-height:0 the
+   content below the viewport is hidden by the parent overflow:hidden. ── */
+#s-inventory.active .screen-inner{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:32px;scrollbar-width:thin;scrollbar-color:rgba(123,79,46,0.35) transparent;-webkit-overflow-scrolling:touch;}
+#s-inventory.active .screen-inner::-webkit-scrollbar{width:4px;}
+#s-inventory.active .screen-inner::-webkit-scrollbar-thumb{background:rgba(123,79,46,0.35);border-radius:4px;}
+#s-inventory.active .screen-inner::-webkit-scrollbar-track{background:transparent;}
 /* tables: left-flush with no horizontal clipping */
 .section .tbl-wrap,.screen-inner .tbl-wrap{margin:0;border-radius:10px;}
 .fin-content-scroll .tbl-wrap{margin:0 14px;}
@@ -12186,7 +12193,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 #s-fraud .page-header,
 #s-ratings .page-header,
 #s-checklist .page-header,
-#s-promos .page-header {
+#s-promos .page-header,
+#s-inventory .page-header {
   flex-shrink: 0;
 }
 /* Mobile: tighten page-header so more content area is visible */
@@ -12197,7 +12205,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   #s-fraud .page-header,
   #s-ratings .page-header,
   #s-checklist .page-header,
-  #s-promos .page-header {
+  #s-promos .page-header,
+  #s-inventory .page-header {
     padding: 12px 12px 18px !important;
   }
   .adm-scroll{padding:0 10px 24px;gap:10px;}
