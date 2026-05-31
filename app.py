@@ -957,9 +957,9 @@ def record_failed_attempt(ip: str, attempt_type: str = 'admin'):
             pass
         return
 
-    # Count attempts in the rolling window
+    # Count attempts in the rolling window (use get_ph_time to match stored timestamps)
     try:
-        cutoff = datetime.utcnow() - timedelta(minutes=FAILED_WINDOW_MIN)
+        cutoff = get_ph_time() - timedelta(minutes=FAILED_WINDOW_MIN)
         count = FailedLoginAttempt.query.filter(
             FailedLoginAttempt.ip_address == ip,
             FailedLoginAttempt.created_at >= cutoff
@@ -12293,12 +12293,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .adm-limit-desc{font-size:0.69rem;color:var(--muted);margin-top:4px;line-height:1.4;}
 .adm-ip-box{font-family:monospace;font-size:1.05rem;font-weight:900;color:var(--brown);background:var(--cream);border-radius:10px;padding:11px 14px;border:1.5px solid var(--cream-dark);flex:1;min-width:140px;letter-spacing:0.5px;}
 .adm-ip-hint{font-size:0.69rem;color:var(--muted);margin-top:6px;line-height:1.5;}
-.adm-empty{text-align:center;padding:22px 14px;color:var(--muted);font-size:0.82rem;font-weight:600;}
-.adm-empty i{display:block;font-size:1.65rem;margin-bottom:8px;opacity:0.60;}
+.adm-empty{text-align:center;padding:28px 14px;color:var(--muted);font-size:0.84rem;font-weight:700;line-height:1.55;}
+.adm-empty i{display:block;font-size:2rem;margin-bottom:10px;opacity:0.45;}
 /* Shared table style */
 .adm-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
-.adm-table th{padding:8px 12px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;background:var(--cream);border-bottom:2px solid var(--cream-dark);}
-.adm-table td{padding:9px 12px;border-bottom:1px solid rgba(196,168,130,0.2);vertical-align:middle;}
+.adm-table th{padding:8px 12px;text-align:left;font-size:0.67rem;font-weight:900;color:var(--brown-mid);text-transform:uppercase;letter-spacing:0.4px;background:var(--cream);border-bottom:2px solid var(--cream-dark);}
+.adm-table td{padding:9px 12px;border-bottom:1px solid rgba(196,168,130,0.2);vertical-align:middle;color:var(--text);line-height:1.45;}
 .adm-table tr:last-child td{border-bottom:none;}
 .adm-table tr:hover td{background:rgba(196,168,130,0.05);}
 /* Status / type badges */
@@ -13485,7 +13485,7 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadPromos()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body">
+        <div class="adm-card-body" style="min-height:80px;">
           <div id="promo-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -13535,7 +13535,7 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadAnnouncements()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body">
+        <div class="adm-card-body" style="min-height:80px;">
           <div id="ann-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -13662,7 +13662,7 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn danger" onclick="loadBlacklist()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body" style="padding:0;">
+        <div class="adm-card-body" style="padding:0;min-height:80px;">
           <div id="blacklist-table"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -13675,7 +13675,7 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadAttempts()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body" style="padding:0;">
+        <div class="adm-card-body" style="padding:0;min-height:80px;">
           <div id="attempts-table"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -16858,8 +16858,9 @@ async function loadPromos() {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
   try {
     const r = await apiFetch('/api/admin/promos');
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:0.84rem;">No promo codes yet.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-tags"></i>No promo codes yet.</div>'; return; }
     el.innerHTML = data.map(p => {
       const discountLabel = p.discount_type==='percent' ? p.discount_value+'% off' : '₱'+p.discount_value+' off';
       const usageLabel = `Used: ${p.used_count}${p.max_uses?'/'+p.max_uses:''}`;
@@ -16931,8 +16932,9 @@ async function loadAnnouncements() {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
   try {
     const r = await apiFetch('/api/admin/announcements');
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:28px;font-size:0.84rem;"><i class="fas fa-bell-slash" style="font-size:1.4rem;opacity:0.3;display:block;margin-bottom:8px;"></i>No announcements yet.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-bell-slash"></i>No announcements yet.</div>'; return; }
     const pMap = {
       urgent:{bg:'#FFF5F5',border:'#FFCDD2',accent:'#C62828',badge:'red',label:'🚨 URGENT'},
       high:  {bg:'#FFF8F0',border:'#FFE0B2',accent:'#E65100',badge:'orange',label:'🔴 HIGH'},
@@ -17026,7 +17028,7 @@ async function loadBlacklist() {
     const r = await apiFetch('/api/admin/security/blacklist');
     if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading blacklist</div>'; return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:12px;font-size:0.82rem;">No blocked IPs.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-shield-alt"></i>No blocked IPs.</div>'; return; }
     el.innerHTML = '<div style="overflow-x:auto;"><table class="adm-table">' +
       '<thead><tr><th>IP Address</th><th>Reason</th><th>Date Blocked</th><th></th></tr></thead><tbody>' +
       data.map(b => `<tr>
@@ -17046,7 +17048,7 @@ async function loadAttempts() {
     const r = await apiFetch('/api/admin/security/attempts');
     if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:16px;font-size:0.82rem;"><i class="fas fa-shield-alt" style="opacity:0.3;display:block;font-size:1.5rem;margin-bottom:6px;"></i>No failed attempts in the last 24 hours.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-shield-alt"></i>No failed attempts in the last 24 hours.</div>'; return; }
     el.innerHTML = '<div style="overflow-x:auto;"><table class="adm-table">' +
       '<thead><tr>' +
       '<th style="white-space:nowrap;">IP Address</th>' +
@@ -20142,7 +20144,9 @@ def security_remove_blacklist(bid):
 def security_get_attempts():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-    cutoff = datetime.utcnow() - timedelta(hours=24)
+    # Use get_ph_time() so the cutoff matches the PH-timezone timestamps
+    # stored in the database (all created_at columns default to get_ph_time).
+    cutoff = get_ph_time() - timedelta(hours=24)
     rows = (FailedLoginAttempt.query
             .filter(FailedLoginAttempt.created_at >= cutoff)
             .order_by(FailedLoginAttempt.created_at.desc())
