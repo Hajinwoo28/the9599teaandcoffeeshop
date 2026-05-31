@@ -13735,7 +13735,8 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadPromos()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body" style="min-height:80px;">
+        <!-- Keep the loaded promo list at its natural height; adm-scroll handles page overflow. -->
+        <div class="adm-card-body" style="min-height:80px;overflow:visible;">
           <div id="promo-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -13785,7 +13786,8 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadAnnouncements()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body" style="min-height:80px;">
+        <!-- Keep the loaded announcements at their natural height; adm-scroll handles page overflow. -->
+        <div class="adm-card-body" style="min-height:80px;overflow:visible;">
           <div id="ann-list"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -13925,7 +13927,8 @@ ens-wrap">
           </div>
           <button class="adm-refresh-btn" onclick="loadAttempts()"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        <div class="adm-card-body" style="padding:0;min-height:80px;">
+        <!-- Keep the failed-attempts table fully expanded; adm-scroll handles page overflow. -->
+        <div class="adm-card-body" style="padding:0;min-height:80px;overflow:visible;">
           <div id="attempts-table"><div class="adm-empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
         </div>
       </div>
@@ -14525,9 +14528,22 @@ window.goScreen = goScreen;
     scrollEl.style.maxHeight = Math.max(120, available) + 'px';
     scrollEl.style.height = '';
   }
-  window.addEventListener('resize', _fixActiveScrollHeight);
+window.addEventListener('resize', _fixActiveScrollHeight);
   window._fixActiveScrollHeight = _fixActiveScrollHeight;
 })();
+
+function admKeepPanelExpanded(el) {
+  if (!el) return;
+  // Dynamic admin panels should size to their rendered content; the page scroll
+  // container, not the table/list itself, is responsible for vertical scrolling.
+  el.style.display = 'block';
+  el.style.maxHeight = 'none';
+  el.style.height = 'auto';
+  el.style.overflow = 'visible';
+  requestAnimationFrame(function(){
+    if (window._fixActiveScrollHeight) window._fixActiveScrollHeight();
+  });
+}
 
 
 let _ratActiveFilter = 0;
@@ -17442,6 +17458,7 @@ async function loadPromos() {
         </div>
       </div>`;
     }).join('');
+    admKeepPanelExpanded(el);
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; }
 }
 
@@ -17515,6 +17532,7 @@ async function loadAnnouncements() {
         <div class="adm-ann-meta"><i class="fas fa-clock"></i>${a.created_at}</div>
       </div>`;
     }).join('');
+    admKeepPanelExpanded(el);
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; }
 }
 
@@ -17609,7 +17627,7 @@ async function loadAttempts() {
     if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; return; }
     const data = await r.json();
     if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-shield-alt"></i>No failed attempts in the last 24 hours.</div>'; return; }
-    el.innerHTML = '<div style="overflow-x:auto;"><table class="adm-table">' +
+    el.innerHTML = '<div style="overflow-x:auto;overflow-y:visible;"><table class="adm-table">' +
       '<thead><tr>' +
       '<th style="white-space:nowrap;">IP Address</th>' +
       '<th>Type</th>' +
@@ -17637,6 +17655,7 @@ async function loadAttempts() {
           <td><button onclick="secQuickBlock('${escapeHTML(a.ip)}')" class="adm-refresh-btn danger" style="font-size:0.71rem;white-space:nowrap;"><i class="fas fa-ban"></i> Block</button></td>
         </tr>`;
       }).join('') + '</tbody></table></div>';
+    admKeepPanelExpanded(el);
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; }
 }
 
