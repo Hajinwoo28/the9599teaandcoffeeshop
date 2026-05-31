@@ -15369,7 +15369,7 @@ function admCalPickToday(){
   const p=admCalPickDate.split('-');
   admCalYear=parseInt(p[0],10);
   admCalMonth=parseInt(p[1],10)-1;
-  admCalRenderGrid();
+  admCalApply();
 }
 function admCalPrevMonth(){admCalMonth--;if(admCalMonth<0){admCalMonth=11;admCalYear--;}admCalRenderGrid();}
 function admCalNextMonth(){admCalMonth++;if(admCalMonth>11){admCalMonth=0;admCalYear++;}admCalRenderGrid();}
