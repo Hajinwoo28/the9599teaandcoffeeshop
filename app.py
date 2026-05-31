@@ -17434,9 +17434,9 @@ async function loadPromos() {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
   try {
     const r = await apiFetch('/api/admin/promos');
-    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; return; }
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; admKeepPanelExpanded(el); return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-tags"></i>No promo codes yet.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-tags"></i>No promo codes yet.</div>'; admKeepPanelExpanded(el); return; }
     el.innerHTML = data.map(p => {
       const discountLabel = p.discount_type==='percent' ? p.discount_value+'% off' : '₱'+p.discount_value+' off';
       const usageLabel = `Used: ${p.used_count}${p.max_uses?'/'+p.max_uses:''}`;
@@ -17459,7 +17459,7 @@ async function loadPromos() {
       </div>`;
     }).join('');
     admKeepPanelExpanded(el);
-  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; }
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading promos</div>'; admKeepPanelExpanded(el); }
 }
 
 async function createPromo() {
@@ -17509,9 +17509,9 @@ async function loadAnnouncements() {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
   try {
     const r = await apiFetch('/api/admin/announcements');
-    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; return; }
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; admKeepPanelExpanded(el); return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-bell-slash"></i>No announcements yet.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-bell-slash"></i>No announcements yet.</div>'; admKeepPanelExpanded(el); return; }
     const pMap = {
       urgent:{bg:'#FFF5F5',border:'#FFCDD2',accent:'#C62828',badge:'red',label:'🚨 URGENT'},
       high:  {bg:'#FFF8F0',border:'#FFE0B2',accent:'#E65100',badge:'orange',label:'🔴 HIGH'},
@@ -17533,7 +17533,7 @@ async function loadAnnouncements() {
       </div>`;
     }).join('');
     admKeepPanelExpanded(el);
-  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; }
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px;text-align:center;">Error loading announcements</div>'; admKeepPanelExpanded(el); }
 }
 
 async function createAnnouncement() {
@@ -17624,9 +17624,9 @@ async function loadAttempts() {
   el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i></div>';
   try {
     const r = await apiFetch('/api/admin/security/attempts');
-    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; return; }
+    if (!r || !r.ok) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; admKeepPanelExpanded(el); return; }
     const data = await r.json();
-    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-shield-alt"></i>No failed attempts in the last 24 hours.</div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="adm-empty"><i class="fas fa-shield-alt"></i>No failed attempts in the last 24 hours.</div>'; admKeepPanelExpanded(el); return; }
     el.innerHTML = '<div style="overflow-x:auto;overflow-y:visible;"><table class="adm-table">' +
       '<thead><tr>' +
       '<th style="white-space:nowrap;">IP Address</th>' +
@@ -17656,7 +17656,7 @@ async function loadAttempts() {
         </tr>`;
       }).join('') + '</tbody></table></div>';
     admKeepPanelExpanded(el);
-  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; }
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:12px;text-align:center;">Error loading attempts</div>'; admKeepPanelExpanded(el); }
 }
 
 function secCopyMyIP() {
