@@ -12038,6 +12038,11 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 /* tables: left-flush with no horizontal clipping */
 .section .tbl-wrap,.screen-inner .tbl-wrap{margin:0;border-radius:10px;}
 .fin-content-scroll .tbl-wrap{margin:0 14px;}
+/* Inventory: no bottom horizontal scrollbar — table fits the panel */
+#s-inventory .tbl-wrap{overflow-x:hidden;overflow-y:auto;}
+#s-inventory .kds-table{min-width:0;width:100%;table-layout:fixed;}
+#s-inventory .kds-table th,#s-inventory .kds-table td{word-break:break-word;overflow-wrap:anywhere;}
+#s-inventory .kds-table td:nth-child(2){white-space:normal;}
 
 /* ── FINANCE TABS ── */
 .fin-tab-bar{display:flex;gap:0;margin:0 14px 14px;background:var(--cream-dark);border-radius:12px;padding:4px;}
@@ -12867,8 +12872,8 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
           <span id="inv-count" style="font-size:0.72rem;font-weight:700;color:var(--muted);background:var(--cream);padding:3px 10px;border-radius:20px;border:1px solid var(--cream-dark);"></span>
         </div>
         <div class="tbl-wrap">
-          <table class="kds-table" style="min-width:300px;">
-            <thead><tr><th>Ingredient</th><th>Category</th><th style="min-width:160px;">Stock</th><th>Status</th><th>Actions</th></tr></thead>
+          <table class="kds-table">
+            <thead><tr><th>Ingredient</th><th>Category</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="inv-tbody"></tbody>
           </table>
         </div>
