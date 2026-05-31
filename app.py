@@ -20606,10 +20606,8 @@ def get_customer_logs():
     if not session.get('is_admin'): return jsonify([]), 403
     try:
         date_arg = request.args.get('date', '').strip()
-        log_q = CustomerLog.query
-        if date_arg:
-            s, e, _ = _parse_day_bounds(date_arg)
-            log_q = log_q.filter(CustomerLog.created_at >= s, CustomerLog.created_at <= e)
+        s, e, _ = _parse_day_bounds(date_arg or None)
+        log_q = CustomerLog.query.filter(CustomerLog.created_at >= s, CustomerLog.created_at <= e)
         logs = log_q.order_by(CustomerLog.created_at.desc()).limit(200).all()
         return jsonify([{
             "id":          l.id,
