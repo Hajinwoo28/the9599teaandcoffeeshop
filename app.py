@@ -11495,12 +11495,93 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .dash-qa-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;}
 .dash-qa-label{font-size:0.67rem;font-weight:800;color:var(--text);letter-spacing:0.2px;line-height:1.3;}
 
-/* ══ DASHBOARD RECENT ORDERS ══ */
-.dash-order-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cream-dark);animation:adminRowIn 0.28s cubic-bezier(0.16,1,0.3,1) both;}
-.dash-order-row:last-child{border-bottom:none;}
-.dash-order-code{font-size:0.7rem;font-weight:900;color:var(--brown-dark);background:var(--cream);padding:3px 8px;border-radius:8px;border:1px solid var(--cream-dark);flex-shrink:0;font-family:monospace;}
-.dash-order-name{flex:1;font-size:0.8rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dash-order-total{font-size:0.8rem;font-weight:900;color:var(--green);flex-shrink:0;}
+/* ══ DASHBOARD PANELS (Recent Orders + Stock Alerts) ══ */
+.dash-panels-grid{display:grid;grid-template-columns:1fr;gap:12px;padding:4px 14px 22px;}
+@media(min-width:900px){.dash-panels-grid{grid-template-columns:1fr 1fr;gap:14px;}}
+.dash-panel{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:16px;box-shadow:0 4px 18px rgba(61,36,16,0.09);overflow:hidden;display:flex;flex-direction:column;min-height:0;animation:adminRowIn 0.35s cubic-bezier(0.16,1,0.3,1) both;}
+.dash-panels-grid .dash-panel:nth-child(2){animation-delay:0.07s;}
+.dash-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:linear-gradient(180deg,rgba(245,239,230,0.95) 0%,#fff 100%);border-bottom:1px solid var(--cream-dark);flex-shrink:0;}
+.dash-panel-title{display:flex;align-items:center;gap:9px;font-size:0.8rem;font-weight:900;color:var(--text);}
+.dash-panel-title i{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.82rem;flex-shrink:0;}
+.dash-panel-title.orders i{background:rgba(25,118,210,0.12);color:var(--blue);}
+.dash-panel-title.alerts i{background:rgba(245,124,0,0.12);color:var(--orange);}
+.dash-panel-badge{font-size:0.62rem;font-weight:900;padding:4px 10px;border-radius:20px;background:var(--cream-dark);color:var(--muted);letter-spacing:0.4px;text-transform:uppercase;}
+.dash-panel-badge.warn{background:rgba(245,124,0,0.15);color:var(--orange);}
+.dash-panel-link{background:none;border:none;font-size:0.68rem;font-weight:800;color:var(--brown);cursor:pointer;padding:4px 8px;border-radius:8px;font-family:'Nunito',sans-serif;transition:background 0.15s,color 0.15s;}
+.dash-panel-link:hover{background:rgba(123,79,46,0.1);color:var(--brown-dark);}
+.dash-panel-body{padding:10px;flex:1;min-height:0;max-height:min(320px,42vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(123,79,46,0.28) transparent;}
+.dash-panel-body::-webkit-scrollbar{width:4px;}
+.dash-panel-body::-webkit-scrollbar-thumb{background:rgba(123,79,46,0.28);border-radius:4px;}
+.dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:32px 18px;text-align:center;}
+.dash-empty-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:var(--cream);color:var(--muted);border:1.5px solid var(--cream-dark);}
+.dash-empty-title{font-size:0.86rem;font-weight:800;color:var(--text);}
+.dash-empty-sub{font-size:0.72rem;font-weight:600;color:var(--muted);line-height:1.5;max-width:220px;}
+.dash-well-stocked{display:flex;align-items:center;gap:12px;padding:16px 14px;margin:2px;background:linear-gradient(135deg,rgba(39,174,96,0.09),rgba(39,174,96,0.03));border:1.5px solid rgba(39,174,96,0.22);border-radius:12px;}
+.dash-well-stocked i{font-size:1.35rem;color:var(--green);flex-shrink:0;}
+.dash-well-stocked-text{font-size:0.84rem;font-weight:800;color:var(--green);line-height:1.35;}
+.dash-well-stocked-sub{font-size:0.7rem;font-weight:600;color:var(--muted);margin-top:2px;}
+.dash-order-row{display:grid;grid-template-columns:38px 1fr auto;grid-template-rows:auto auto;gap:2px 10px;align-items:center;padding:10px 12px;margin-bottom:7px;background:linear-gradient(135deg,#faf7f2,#fff);border:1px solid rgba(196,168,130,0.4);border-radius:12px;animation:adminRowIn 0.28s cubic-bezier(0.16,1,0.3,1) both;transition:transform 0.16s,box-shadow 0.16s,border-color 0.16s;cursor:default;}
+.dash-order-row:last-child{margin-bottom:0;}
+.dash-order-row:hover{transform:translateX(4px);box-shadow:0 5px 16px rgba(61,36,16,0.1);border-color:var(--tan);}
+.dash-order-avatar{grid-row:1/span 2;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(123,79,46,0.14),rgba(196,168,130,0.22));display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:900;color:var(--brown-dark);border:1px solid rgba(123,79,46,0.12);}
+.dash-order-code{font-size:0.67rem;font-weight:900;color:var(--brown);font-family:ui-monospace,monospace;letter-spacing:0.2px;}
+.dash-order-name{font-size:0.82rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-order-status{justify-self:start;font-size:0.58rem;font-weight:900;padding:3px 9px;border-radius:20px;color:#fff;letter-spacing:0.35px;text-transform:uppercase;}
+.dash-order-total{grid-row:1/span 2;font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;color:var(--green);text-align:right;line-height:1.1;}
+.dash-alert-row{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:7px;border-radius:12px;border:1.5px solid;animation:adminRowIn 0.28s cubic-bezier(0.16,1,0.3,1) both;transition:transform 0.16s,box-shadow 0.16s;}
+.dash-alert-row:last-child{margin-bottom:0;}
+.dash-alert-row:hover{transform:translateX(4px);box-shadow:0 4px 14px rgba(0,0,0,0.06);}
+.dash-alert-row.critical{background:rgba(211,47,47,0.07);border-color:rgba(211,47,47,0.22);}
+.dash-alert-row.low{background:rgba(230,81,0,0.07);border-color:rgba(230,81,0,0.22);}
+.dash-alert-row.medium{background:rgba(21,101,192,0.06);border-color:rgba(21,101,192,0.2);}
+.dash-alert-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.88rem;flex-shrink:0;}
+.dash-alert-row.critical .dash-alert-icon{background:rgba(211,47,47,0.12);color:var(--red);}
+.dash-alert-row.low .dash-alert-icon{background:rgba(230,81,0,0.12);color:var(--orange);}
+.dash-alert-row.medium .dash-alert-icon{background:rgba(21,101,192,0.1);color:var(--blue);}
+.dash-alert-body{flex:1;min-width:0;}
+.dash-alert-name{font-size:0.82rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-alert-pill{font-size:0.6rem;font-weight:900;padding:3px 9px;border-radius:20px;margin-top:4px;display:inline-block;letter-spacing:0.3px;text-transform:uppercase;}
+.dash-alert-row.critical .dash-alert-pill{background:rgba(211,47,47,0.14);color:var(--red);}
+.dash-alert-row.low .dash-alert-pill{background:rgba(230,81,0,0.14);color:var(--orange);}
+.dash-alert-row.medium .dash-alert-pill{background:rgba(21,101,192,0.12);color:var(--blue);}
+.dash-alert-qty{text-align:right;flex-shrink:0;}
+.dash-alert-qty-val{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;line-height:1.1;}
+.dash-alert-qty-unit{font-size:0.62rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;}
+
+/* ══ FINANCE — EXPENSES ══ */
+.fin-exp-wrap{padding:0 12px 18px;}
+.fin-exp-card{background:var(--white);border:1.5px solid var(--cream-dark);border-radius:16px;box-shadow:0 4px 18px rgba(61,36,16,0.09);overflow:hidden;}
+.fin-exp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(180deg,rgba(245,239,230,0.95),#fff);border-bottom:1px solid var(--cream-dark);}
+.fin-exp-head-left{display:flex;align-items:center;gap:11px;}
+.fin-exp-head-icon{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,rgba(192,57,43,0.15),rgba(192,57,43,0.06));color:var(--red);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1px solid rgba(192,57,43,0.15);}
+.fin-exp-head-title{font-size:0.88rem;font-weight:900;color:var(--text);font-family:'Playfair Display',serif;}
+.fin-exp-head-sub{font-size:0.68rem;font-weight:600;color:var(--muted);margin-top:2px;}
+.fin-exp-total-pill{text-align:right;flex-shrink:0;}
+.fin-exp-total-lbl{font-size:0.6rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.fin-exp-total-val{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:900;color:var(--red);line-height:1.1;}
+.fin-exp-form{display:grid;grid-template-columns:1fr;gap:10px;padding:14px 16px;border-bottom:1px solid var(--cream-dark);background:var(--cream);}
+@media(min-width:520px){.fin-exp-form{grid-template-columns:1fr 130px;align-items:end;}}
+.fin-exp-field{display:flex;flex-direction:column;gap:5px;}
+.fin-exp-field .inp{margin-bottom:0;background:#fff;}
+.fin-exp-label{font-size:0.62rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.55px;display:flex;align-items:center;gap:5px;}
+.fin-exp-label i{font-size:0.68rem;color:var(--brown);}
+.fin-exp-form .btn-primary{margin:0;padding:11px 14px;width:100%;border-radius:11px;}
+@media(min-width:520px){.fin-exp-form .btn-primary{grid-column:1/-1;}}
+.fin-exp-list-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;}
+.fin-exp-list-title{font-size:0.72rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+.fin-exp-list-count{font-size:0.62rem;font-weight:800;color:var(--brown);background:rgba(123,79,46,0.1);padding:3px 9px;border-radius:20px;}
+.fin-exp-list-body{padding:0 10px 12px;max-height:min(360px,50vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(123,79,46,0.25) transparent;}
+.fin-exp-list-body::-webkit-scrollbar{width:4px;}
+.fin-exp-list-body::-webkit-scrollbar-thumb{background:rgba(123,79,46,0.25);border-radius:4px;}
+.fin-exp-row{display:flex;align-items:center;gap:12px;padding:11px 12px;margin-bottom:7px;background:linear-gradient(135deg,#faf7f2,#fff);border:1px solid rgba(196,168,130,0.38);border-radius:12px;animation:adminRowIn 0.25s cubic-bezier(0.16,1,0.3,1) both;}
+.fin-exp-row:last-child{margin-bottom:0;}
+.fin-exp-row-icon{width:34px;height:34px;border-radius:10px;background:rgba(192,57,43,0.1);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;}
+.fin-exp-row-body{flex:1;min-width:0;}
+.fin-exp-row-desc{font-size:0.83rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fin-exp-row-amt{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:900;color:var(--red);flex-shrink:0;white-space:nowrap;}
+.fin-exp-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 16px;text-align:center;}
+.fin-exp-empty i{font-size:1.6rem;color:var(--cream-dark);}
+.fin-exp-empty-txt{font-size:0.82rem;font-weight:700;color:var(--muted);}
 
 /* ══ ENHANCED MODAL SYSTEM ══ */
 .adm-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:9500;align-items:center;justify-content:center;padding:20px;}
@@ -12800,20 +12881,33 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </button>
     </div>
 
-    <div class="dash-section-title">📋 Recent Orders</div>
-    <div class="section card" style="margin-top:0;">
-      <div id="dash-recent-orders">
-        <div class="skeleton" style="margin-bottom:8px;height:14px;"></div>
-        <div class="skeleton" style="margin-bottom:8px;height:14px;width:80%;"></div>
-        <div class="skeleton" style="height:14px;width:60%;"></div>
+    <div class="dash-panels-grid">
+      <div class="dash-panel">
+        <div class="dash-panel-head">
+          <div class="dash-panel-title orders"><i class="fas fa-receipt"></i> Recent Orders</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="dash-panel-badge" id="dash-orders-badge">—</span>
+            <button type="button" class="dash-panel-link" onclick="goScreen('liveorders',document.getElementById('nb-liveorders'))">View all →</button>
+          </div>
+        </div>
+        <div class="dash-panel-body" id="dash-recent-orders">
+          <div class="skeleton" style="margin-bottom:8px;height:52px;border-radius:12px;"></div>
+          <div class="skeleton" style="margin-bottom:8px;height:52px;border-radius:12px;width:92%;"></div>
+          <div class="skeleton" style="height:52px;border-radius:12px;width:78%;"></div>
+        </div>
       </div>
-    </div>
-
-    <div class="dash-section-title">⚠️ Stock Alerts</div>
-    <div class="section card" style="margin-top:0;">
-      <div id="dash-stock-alerts">
-        <div class="skeleton" style="margin-bottom:8px;height:14px;"></div>
-        <div class="skeleton" style="height:14px;width:70%;"></div>
+      <div class="dash-panel">
+        <div class="dash-panel-head">
+          <div class="dash-panel-title alerts"><i class="fas fa-triangle-exclamation"></i> Stock Alerts</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="dash-panel-badge warn" id="dash-alerts-badge">—</span>
+            <button type="button" class="dash-panel-link" onclick="goScreen('inventory',document.getElementById('nb-inventory'))">Inventory →</button>
+          </div>
+        </div>
+        <div class="dash-panel-body" id="dash-stock-alerts">
+          <div class="skeleton" style="margin-bottom:8px;height:52px;border-radius:12px;"></div>
+          <div class="skeleton" style="height:52px;border-radius:12px;width:85%;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -12951,15 +13045,40 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
     <!-- ── EXPENSES TAB ── -->
     <div id="fin-expenses" class="fin-tabpane">
-      <div class="section card">
-        <div class="card-title">Log Expense</div>
-        <input type="text" class="inp" id="exp-desc" placeholder="Description (e.g. Ice, Packaging)">
-        <input type="number" class="inp" id="exp-amount" placeholder="Amount (₱)">
-        <button class="btn-primary" onclick="addExpense()"><i class="fas fa-plus"></i> Record Expense</button>
-      </div>
-      <div class="section card">
-        <div class="card-title">Expense Log</div>
-        <div id="exp-list"><div style="color:var(--muted);font-size:0.82rem;font-weight:600;">No expenses today.</div></div>
+      <div class="fin-exp-wrap">
+        <div class="fin-exp-card">
+          <div class="fin-exp-head">
+            <div class="fin-exp-head-left">
+              <div class="fin-exp-head-icon"><i class="fas fa-receipt"></i></div>
+              <div>
+                <div class="fin-exp-head-title">Today's Expenses</div>
+                <div class="fin-exp-head-sub">Log supplies, packaging &amp; daily costs</div>
+              </div>
+            </div>
+            <div class="fin-exp-total-pill">
+              <div class="fin-exp-total-lbl">Total today</div>
+              <div class="fin-exp-total-val" id="fin-exp-today-total">₱0.00</div>
+            </div>
+          </div>
+          <div class="fin-exp-form">
+            <div class="fin-exp-field">
+              <label class="fin-exp-label" for="exp-desc"><i class="fas fa-tag"></i> Description</label>
+              <input type="text" class="inp" id="exp-desc" placeholder="e.g. Ice, cups, packaging">
+            </div>
+            <div class="fin-exp-field">
+              <label class="fin-exp-label" for="exp-amount"><i class="fas fa-peso-sign"></i> Amount</label>
+              <input type="number" class="inp" id="exp-amount" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <button type="button" class="btn-primary" onclick="addExpense()"><i class="fas fa-plus-circle"></i> Record Expense</button>
+          </div>
+          <div class="fin-exp-list-head">
+            <span class="fin-exp-list-title">Expense log</span>
+            <span class="fin-exp-list-count" id="fin-exp-count">0 entries</span>
+          </div>
+          <div class="fin-exp-list-body" id="exp-list">
+            <div class="fin-exp-empty"><i class="fas fa-clipboard-list"></i><span class="fin-exp-empty-txt">No expenses recorded today.</span></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -14976,8 +15095,7 @@ async function fetchFinance(){
   document.getElementById('sys-total').innerText='₱'+data.system_total.toFixed(2);
   document.getElementById('net-profit').innerText='₱'+net.toFixed(2);
   document.getElementById('exp-total').innerText='₱'+data.expenses_total.toFixed(2);
-  const el=document.getElementById('exp-list');
-  el.innerHTML=data.expenses&&data.expenses.length?data.expenses.map(x=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--cream-dark);font-size:0.84rem;"><span>${escapeHTML(x.desc)}</span><b style="color:var(--red);">-₱${x.amount.toFixed(2)}</b></div>`).join(''):'<div style="color:var(--muted);font-size:0.81rem;font-weight:600;">No expenses today.</div>';}catch(e){}
+  renderFinExpenseList(data.expenses||[],data.expenses_total||0);}catch(e){}
 }
 async function addExpense(){
   const desc=document.getElementById('exp-desc').value.trim(),amount=document.getElementById('exp-amount').value;
@@ -16000,6 +16118,87 @@ function closeAdmModal(){
   if(overlay)overlay.classList.remove('open');
 }
 
+/* ══ DASHBOARD / FINANCE RENDER HELPERS ══ */
+function dashStatusChip(status){
+  const map={
+    'Waiting Confirmation':{cls:'status-waiting',lbl:'Waiting'},
+    'Preparing Order':{cls:'status-preparing',lbl:'Preparing'},
+    'Ready for Pick-up':{cls:'status-ready',lbl:'Ready'},
+    'Completed':{cls:'status-completed',lbl:'Done'},
+    'Cancelled':{cls:'status-cancelled',lbl:'Cancelled'}
+  };
+  return map[status]||{cls:'status-waiting',lbl:(status||'Pending').split(' ')[0]};
+}
+function renderDashRecentOrders(orders){
+  const el=document.getElementById('dash-recent-orders');
+  const badge=document.getElementById('dash-orders-badge');
+  if(badge)badge.textContent=orders.length?orders.length+' active':'0 active';
+  if(!el)return;
+  if(!orders.length){
+    el.innerHTML='<div class="dash-empty"><div class="dash-empty-icon"><i class="fas fa-mug-hot"></i></div><div class="dash-empty-title">No active orders</div><div class="dash-empty-sub">New orders will show up here in real time.</div></div>';
+    return;
+  }
+  el.innerHTML=orders.slice(0,5).map((o,i)=>{
+    const chip=dashStatusChip(o.status);
+    const initial=(o.name||'?').trim().charAt(0).toUpperCase();
+    return`<div class="dash-order-row" style="animation-delay:${i*0.06}s">
+      <div class="dash-order-avatar">${escapeHTML(initial)}</div>
+      <span class="dash-order-code">#${escapeHTML(o.code)}</span>
+      <span class="dash-order-total">₱${o.total.toFixed(2)}</span>
+      <span class="dash-order-name">${escapeHTML(o.name)}</span>
+      <span class="dash-order-status ${chip.cls}">${chip.lbl}</span>
+    </div>`;
+  }).join('');
+}
+function renderDashStockAlerts(alerts){
+  const el=document.getElementById('dash-stock-alerts');
+  const badge=document.getElementById('dash-alerts-badge');
+  if(badge){
+    if(!alerts.length){badge.textContent='All clear';badge.classList.remove('warn');}
+    else{badge.textContent=alerts.length+' alert'+(alerts.length!==1?'s':'');badge.classList.add('warn');}
+  }
+  if(!el)return;
+  if(!alerts.length){
+    el.innerHTML='<div class="dash-well-stocked"><i class="fas fa-check-circle"></i><div><div class="dash-well-stocked-text">All ingredients are well-stocked!</div><div class="dash-well-stocked-sub">No action needed right now.</div></div></div>';
+    return;
+  }
+  const levelLabel={critical:'Out of Stock',low:'Running Low',medium:'Getting Low'};
+  const levelIcon={critical:'fa-circle-xmark',low:'fa-triangle-exclamation',medium:'fa-circle-info'};
+  el.innerHTML=alerts.slice(0,6).map((item,i)=>{
+    const lbl=levelLabel[item.level]||item.level;
+    const qty=item.stock%1===0?item.stock:item.stock.toFixed(1);
+    return`<div class="dash-alert-row ${item.level}" style="animation-delay:${i*0.05}s">
+      <div class="dash-alert-icon"><i class="fas ${levelIcon[item.level]||'fa-box'}"></i></div>
+      <div class="dash-alert-body">
+        <div class="dash-alert-name">${escapeHTML(item.name)}</div>
+        <span class="dash-alert-pill">${lbl}</span>
+      </div>
+      <div class="dash-alert-qty" style="color:${invStockColor(item.level)}">
+        <div class="dash-alert-qty-val">${qty}</div>
+        <div class="dash-alert-qty-unit">${escapeHTML(item.unit)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderFinExpenseList(expenses,total){
+  const el=document.getElementById('exp-list');
+  const countEl=document.getElementById('fin-exp-count');
+  const totalEl=document.getElementById('fin-exp-today-total');
+  const list=expenses&&expenses.length?expenses:[];
+  if(totalEl)totalEl.textContent='₱'+(total||0).toFixed(2);
+  if(countEl)countEl.textContent=list.length+' entr'+(list.length===1?'y':'ies');
+  if(!el)return;
+  if(!list.length){
+    el.innerHTML='<div class="fin-exp-empty"><i class="fas fa-clipboard-list"></i><span class="fin-exp-empty-txt">No expenses recorded today.</span></div>';
+    return;
+  }
+  el.innerHTML=list.map((x,i)=>`<div class="fin-exp-row" style="animation-delay:${i*0.04}s">
+    <div class="fin-exp-row-icon"><i class="fas fa-receipt"></i></div>
+    <div class="fin-exp-row-body"><div class="fin-exp-row-desc">${escapeHTML(x.desc)}</div></div>
+    <div class="fin-exp-row-amt">−₱${x.amount.toFixed(2)}</div>
+  </div>`).join('');
+}
+
 /* ══ DASHBOARD DATA LOADER ══ */
 async function loadDashboard(){
   /* Clean up any orphaned ripple spans inside QA buttons (they pile up when
@@ -16035,32 +16234,12 @@ async function loadDashboard(){
     if(ordRes&&ordRes.ok){
       const ord=await ordRes.json();
       animateCount('dash-orders','',ord.orders.length,false);
-      const recentEl=document.getElementById('dash-recent-orders');
-      if(recentEl){
-        if(!ord.orders.length){recentEl.innerHTML='<div style="color:var(--muted);font-size:0.82rem;font-weight:600;text-align:center;padding:12px;">No active orders right now.</div>';}
-        else{recentEl.innerHTML=ord.orders.slice(0,5).map((o,i)=>`<div class="dash-order-row" style="animation-delay:${i*0.06}s"><span class="dash-order-code">#${escapeHTML(o.code)}</span><span class="dash-order-name">${escapeHTML(o.name)}</span><span class="dash-order-total">₱${o.total.toFixed(2)}</span></div>`).join('');}
-      }
+      renderDashRecentOrders(ord.orders||[]);
     }
     if(stockRes&&stockRes.ok){
       const alerts=await stockRes.json();
       animateCount('dash-alerts','',alerts.length,false);
-      const alertsEl=document.getElementById('dash-stock-alerts');
-      if(alertsEl){
-        if(!alerts.length){alertsEl.innerHTML='<div style="background:rgba(39,174,96,0.08);border:1.5px solid rgba(39,174,96,0.2);border-radius:10px;padding:13px;display:flex;align-items:center;gap:10px;font-size:0.82rem;font-weight:700;color:var(--green);"><i class="fas fa-check-circle"></i> All ingredients are well-stocked!</div>';}
-        else{
-          const levelLabel={critical:'Out of Stock',low:'Running Low',medium:'Getting Low'};
-          alertsEl.innerHTML=alerts.slice(0,6).map(i=>{
-            const color=invStockColor(i.level);
-            const lbl=levelLabel[i.level]||i.level;
-            return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);">
-              <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-              <span style="flex:1;font-size:0.81rem;font-weight:800;min-width:0;">${escapeHTML(i.name)}</span>
-              <span style="font-size:0.65rem;font-weight:800;color:${color};white-space:nowrap;">${lbl}</span>
-              <span style="font-size:0.75rem;font-weight:800;color:${color};white-space:nowrap;">${i.stock%1===0?i.stock:i.stock.toFixed(1)} ${escapeHTML(i.unit)}</span>
-            </div>`;
-          }).join('');
-        }
-      }
+      renderDashStockAlerts(alerts);
     }
   }catch(e){console.warn('Dashboard load error',e);}
 }
