@@ -11972,6 +11972,46 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .inv-progress-fill.critical{background:linear-gradient(90deg,var(--red),#e05555);}
 .inv-row-medium{background:rgba(21,101,192,0.04)!important;}
 
+/* ── Inventory: Low / Out of Stock panel ── */
+.inv-low-section{margin:14px 12px 8px;padding:0;background:transparent;border:none;box-shadow:none;}
+.inv-low-section:hover{transform:none;box-shadow:none;}
+.inv-low-panel{background:var(--white);border:1.5px solid rgba(245,124,0,0.28);border-radius:16px;box-shadow:0 4px 18px rgba(245,124,0,0.1);overflow:hidden;}
+.inv-low-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(135deg,rgba(245,124,0,0.12),rgba(255,255,255,0.95));border-bottom:1px solid rgba(245,124,0,0.18);}
+.inv-low-head-left{display:flex;align-items:center;gap:12px;min-width:0;}
+.inv-low-head-icon{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,rgba(245,124,0,0.2),rgba(245,124,0,0.08));color:var(--orange);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1px solid rgba(245,124,0,0.22);}
+.inv-low-head-title{font-size:0.88rem;font-weight:900;color:var(--text);font-family:'Playfair Display',serif;line-height:1.2;}
+.inv-low-head-sub{font-size:0.67rem;font-weight:600;color:var(--muted);margin-top:2px;}
+.inv-low-count-badge{font-size:0.62rem;font-weight:900;padding:5px 11px;border-radius:20px;background:rgba(245,124,0,0.15);color:var(--orange);letter-spacing:0.35px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;}
+.inv-low-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;}
+.inv-low-chip{display:inline-flex;align-items:center;gap:5px;font-size:0.62rem;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:0.25px;text-transform:uppercase;}
+.inv-low-chip.critical{background:rgba(211,47,47,0.12);color:var(--red);border:1px solid rgba(211,47,47,0.2);}
+.inv-low-chip.low{background:rgba(230,81,0,0.12);color:var(--orange);border:1px solid rgba(230,81,0,0.2);}
+.inv-low-chip.medium{background:rgba(21,101,192,0.1);color:var(--blue);border:1px solid rgba(21,101,192,0.18);}
+.inv-low-list-body{padding:10px 12px 14px;max-height:min(340px,45vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(123,79,46,0.25) transparent;}
+.inv-low-list-body::-webkit-scrollbar{width:4px;}
+.inv-low-list-body::-webkit-scrollbar-thumb{background:rgba(123,79,46,0.25);border-radius:4px;}
+.inv-low-row{display:flex;align-items:flex-start;gap:12px;padding:11px 12px;margin-bottom:8px;border-radius:12px;border:1.5px solid;animation:adminRowIn 0.28s cubic-bezier(0.16,1,0.3,1) both;transition:transform 0.16s,box-shadow 0.16s;}
+.inv-low-row:last-child{margin-bottom:0;}
+.inv-low-row:hover{transform:translateX(4px);box-shadow:0 4px 14px rgba(0,0,0,0.06);}
+.inv-low-row.critical{background:rgba(211,47,47,0.07);border-color:rgba(211,47,47,0.22);}
+.inv-low-row.low{background:rgba(230,81,0,0.07);border-color:rgba(230,81,0,0.22);}
+.inv-low-row.medium{background:rgba(21,101,192,0.06);border-color:rgba(21,101,192,0.2);}
+.inv-low-row-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.88rem;flex-shrink:0;margin-top:1px;}
+.inv-low-row.critical .inv-low-row-icon{background:rgba(211,47,47,0.12);color:var(--red);}
+.inv-low-row.low .inv-low-row-icon{background:rgba(230,81,0,0.12);color:var(--orange);}
+.inv-low-row.medium .inv-low-row-icon{background:rgba(21,101,192,0.1);color:var(--blue);}
+.inv-low-row-body{flex:1;min-width:0;}
+.inv-low-row-name{font-size:0.83rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.inv-low-row-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.inv-low-row-pill{font-size:0.58rem;font-weight:900;padding:2px 8px;border-radius:20px;letter-spacing:0.3px;text-transform:uppercase;}
+.inv-low-row.critical .inv-low-row-pill{background:rgba(211,47,47,0.14);color:var(--red);}
+.inv-low-row.low .inv-low-row-pill{background:rgba(230,81,0,0.14);color:var(--orange);}
+.inv-low-row.medium .inv-low-row-pill{background:rgba(21,101,192,0.12);color:var(--blue);}
+.inv-low-row-cat{font-size:0.62rem;font-weight:700;color:var(--muted);}
+.inv-low-row-right{text-align:right;flex-shrink:0;min-width:72px;}
+.inv-low-row-qty{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;line-height:1.1;}
+.inv-low-row-unit{font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.35px;margin-top:2px;}
+
 /* ── IMPROVED AUDIT LOG ── */
 .audit-toolbar{display:flex;gap:8px;padding:14px 14px 0;flex-wrap:wrap;align-items:center;}
 .audit-search-inp{flex:1;min-width:160px;padding:9px 13px 9px 36px;border:1.5px solid var(--cream-dark);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.84rem;font-weight:600;outline:none;color:var(--text);background:var(--white);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238D6E55' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;transition:border-color 0.2s;}
@@ -13022,9 +13062,21 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       </div>
 
       <!-- Low Stock Summary -->
-      <div class="section card" id="inv-low-stock-card" style="display:none;">
-        <div class="card-title" style="color:var(--orange);">⚠️ Low / Out of Stock</div>
-        <div id="inv-low-list"></div>
+      <div class="section inv-low-section" id="inv-low-stock-card" style="display:none;">
+        <div class="inv-low-panel">
+          <div class="inv-low-head">
+            <div class="inv-low-head-left">
+              <div class="inv-low-head-icon"><i class="fas fa-triangle-exclamation"></i></div>
+              <div>
+                <div class="inv-low-head-title">Low / Out of Stock</div>
+                <div class="inv-low-head-sub">Items that need restocking attention</div>
+              </div>
+            </div>
+            <span class="inv-low-count-badge" id="inv-low-count">0 items</span>
+          </div>
+          <div class="inv-low-chips" id="inv-low-chips"></div>
+          <div class="inv-low-list-body" id="inv-low-list"></div>
+        </div>
       </div>
 
     </div>
@@ -15024,8 +15076,6 @@ function invTab(name,btn){
 function renderInventoryTable(){
   const tbody=document.getElementById('inv-tbody');
   const countEl=document.getElementById('inv-count');
-  const lowCard=document.getElementById('inv-low-stock-card');
-  const lowList=document.getElementById('inv-low-list');
   const q=(document.getElementById('inv-search')||{}).value||'';
   const ql=q.trim().toLowerCase();
 
@@ -15035,7 +15085,7 @@ function renderInventoryTable(){
   if(!filtered.length){
     tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted);font-weight:600;">No items found.</td></tr>';
     if(countEl)countEl.innerText='';
-    if(lowCard)lowCard.style.display='none';
+    renderInvLowStock([]);
     return;
   }
 
@@ -15085,19 +15135,59 @@ function renderInventoryTable(){
 
   if(countEl)countEl.innerText=`${filtered.length} item${filtered.length!==1?'s':''}`;
 
-  const lowItems=filtered.filter(i=>invStockLevel(i.stock,i.unit)!=='ok');
-  if(lowItems.length&&lowCard&&lowList){
-    lowCard.style.display='block';
-    lowList.innerHTML=lowItems.map(i=>{
-      const level=invStockLevel(i.stock,i.unit);
-      const color=invStockColor(level);
-      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);">
-        <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-        <span style="flex:1;font-size:0.81rem;font-weight:800;color:var(--text);">${escapeHTML(i.name)}</span>
-        <span style="font-size:0.75rem;font-weight:800;color:${color};">${i.stock} ${escapeHTML(i.unit)}</span>
-      </div>`;
-    }).join('');
-  }else if(lowCard)lowCard.style.display='none';
+  renderInvLowStock(filtered.filter(i=>invStockLevel(i.stock,i.unit)!=='ok'));
+}
+
+function renderInvLowStock(lowItems){
+  const lowCard=document.getElementById('inv-low-stock-card');
+  const lowList=document.getElementById('inv-low-list');
+  const chipsEl=document.getElementById('inv-low-chips');
+  const countBadge=document.getElementById('inv-low-count');
+  if(!lowCard||!lowList)return;
+  if(!lowItems.length){
+    lowCard.style.display='none';
+    return;
+  }
+  lowCard.style.display='block';
+  const crit=lowItems.filter(i=>invStockLevel(i.stock,i.unit)==='critical').length;
+  const low=lowItems.filter(i=>invStockLevel(i.stock,i.unit)==='low').length;
+  const med=lowItems.filter(i=>invStockLevel(i.stock,i.unit)==='medium').length;
+  if(countBadge)countBadge.textContent=lowItems.length+' item'+(lowItems.length!==1?'s':'');
+  if(chipsEl){
+    let chips='';
+    if(crit)chips+=`<span class="inv-low-chip critical"><i class="fas fa-circle-xmark"></i> ${crit} Out</span>`;
+    if(low)chips+=`<span class="inv-low-chip low"><i class="fas fa-exclamation-triangle"></i> ${low} Low</span>`;
+    if(med)chips+=`<span class="inv-low-chip medium"><i class="fas fa-info-circle"></i> ${med} Monitor</span>`;
+    chipsEl.innerHTML=chips;
+  }
+  const order={critical:0,low:1,medium:2};
+  const sorted=[...lowItems].sort((a,b)=>order[invStockLevel(a.stock,a.unit)]-order[invStockLevel(b.stock,b.unit)]);
+  const levelLabel={critical:'Out of Stock',low:'Running Low',medium:'Getting Low'};
+  const levelIcon={critical:'fa-circle-xmark',low:'fa-triangle-exclamation',medium:'fa-info-circle'};
+  lowList.innerHTML=sorted.map((i,idx)=>{
+    const level=invStockLevel(i.stock,i.unit);
+    const color=invStockColor(level);
+    const threshold=invStockThreshold(i.unit);
+    const maxVal=Math.max(threshold*4,i.stock,1);
+    const pct=Math.min(100,Math.round((i.stock/maxVal)*100));
+    const qty=i.stock%1===0?i.stock:i.stock.toFixed(1);
+    return`<div class="inv-low-row ${level}" style="animation-delay:${idx*0.04}s">
+      <div class="inv-low-row-icon"><i class="fas ${levelIcon[level]}"></i></div>
+      <div class="inv-low-row-body">
+        <div class="inv-low-row-name">${escapeHTML(i.name)}</div>
+        <div class="inv-low-row-meta">
+          <span class="inv-low-row-pill">${levelLabel[level]}</span>
+          <span class="inv-low-row-cat">${escapeHTML(i.category)}</span>
+        </div>
+        <div class="inv-progress-wrap" style="margin-top:6px;"><div class="inv-progress-fill ${level}" style="width:${pct}%;"></div></div>
+      </div>
+      <div class="inv-low-row-right">
+        <div class="inv-low-row-qty" style="color:${color}">${qty}</div>
+        <div class="inv-low-row-unit">${escapeHTML(i.unit)}</div>
+        <button type="button" class="inv-action-btn restock" style="margin-top:6px;padding:4px 10px;" onclick="invRestock(${i.id})" title="Quick restock"><i class="fas fa-plus-circle"></i></button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // Alias for backward compat
