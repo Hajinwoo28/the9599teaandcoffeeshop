@@ -22284,6 +22284,48 @@ DEV_HTML = r"""<!DOCTYPE html>
   #toast.warn{border-left:3px solid var(--warn);}
   ::-webkit-scrollbar{width:5px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  /* ── IP Confirmation Tab ───────────────────────────────────────────── */
+  .ip-prog-step{width:30px;height:30px;border-radius:50%;background:var(--card);border:2px solid var(--border);color:var(--muted);font-size:.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;transition:all .35s;flex-shrink:0;}
+  .ip-prog-step.active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 12px rgba(0,229,160,.3);}
+  .ip-prog-step.done{border-color:var(--accent);background:var(--accent);color:#0a0e1a;box-shadow:0 0 10px rgba(0,229,160,.25);}
+  .ip-src-btn{background:var(--card);border:1.5px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:7px;}
+  .ip-src-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .ip-src-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.07);}
+  .ip-input-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 18px;transition:border-color .2s;}
+  .ip-input-wrap.warn{border-color:var(--warn);}
+  .ip-input-wrap.ok{border-color:var(--accent);}
+  .ip-tool-tab{background:var(--card);border:1.5px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:7px;}
+  .ip-tool-tab:hover{border-color:var(--accent2);color:var(--accent2);}
+  .ip-tool-tab.active{border-color:var(--accent2);color:var(--accent2);background:rgba(91,127,255,.08);}
+  .tool-result-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;min-height:130px;}
+  .tool-idle{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.78rem;padding:20px;justify-content:center;}
+  .tool-idle i{font-size:1.3rem;opacity:.4;}
+  .tool-loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.78rem;padding:20px;justify-content:center;}
+  .geo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;}
+  .geo-item{display:flex;flex-direction:column;gap:2px;}
+  .geo-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;}
+  .geo-val{font-size:.82rem;color:var(--bright);font-weight:600;}
+  .geo-flag{font-size:1.3rem;margin-right:6px;}
+  .bl-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(30,34,53,.5);font-size:.78rem;}
+  .bl-row:last-child{border-bottom:none;}
+  .bl-label{color:var(--muted);}
+  .bl-ok{color:var(--accent);font-weight:900;font-size:.72rem;}
+  .bl-bad{color:var(--danger);font-weight:900;font-size:.72rem;}
+  .bl-warn{color:var(--warn);font-weight:900;font-size:.72rem;}
+  .hist-line{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(30,34,53,.4);font-size:.72rem;align-items:flex-start;}
+  .hist-line:last-child{border-bottom:none;}
+  .hist-ts{color:var(--muted);flex-shrink:0;font-family:monospace;font-size:.67rem;width:130px;}
+  .hist-action{color:var(--accent2);font-weight:700;flex-shrink:0;width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hist-detail{color:var(--text);opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ip-summary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .ip-sum-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(30,34,53,.6);gap:12px;}
+  .ip-sum-row:last-child{border-bottom:none;}
+  .ip-sum-label{font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:7px;flex-shrink:0;min-width:160px;}
+  .ip-sum-label i{width:14px;text-align:center;color:var(--accent);}
+  .ip-sum-val{text-align:right;font-size:.8rem;}
+  .ip-recent-chip{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:4px 14px;font-family:monospace;font-size:.75rem;color:var(--bright);cursor:pointer;transition:all .15s;}
+  .ip-recent-chip:hover{border-color:var(--accent);color:var(--accent);}
+  @media(max-width:600px){.geo-grid{grid-template-columns:1fr;}.ip-sum-row{flex-direction:column;align-items:flex-start;}.ip-sum-label{min-width:unset;}}
 </style>
 </head>
 <body>
@@ -22310,7 +22352,7 @@ DEV_HTML = r"""<!DOCTYPE html>
     <aside class="sidebar">
       <div class="nav-section">System</div>
       <div class="nav-item active" onclick="openTab('overview')" data-tab="overview"><i class="fas fa-th-large"></i> Overview</div>
-      <div class="nav-item" onclick="openTab('access')" data-tab="access"><i class="fas fa-key"></i> Access Grant</div>
+      <div class="nav-item" onclick="openTab('access')" data-tab="access"><i class="fas fa-shield-alt"></i> IP Access Control</div>
       <div class="nav-section">Security</div>
       <div class="nav-item" onclick="openTab('security')" data-tab="security"><i class="fas fa-shield-alt"></i> Threat Control</div>
       <div class="nav-item" onclick="openTab('audit')" data-tab="audit"><i class="fas fa-scroll"></i> Audit Log</div>
@@ -22362,23 +22404,151 @@ DEV_HTML = r"""<!DOCTYPE html>
       </div>
       <div class="tab-panel" id="tab-access">
         <div class="section-header">
-          <div class="section-title">Access Grant</div>
-          <div class="section-sub">Inject session credentials without going through the normal login flow</div>
+          <div class="section-title"><i class="fas fa-shield-alt" style="color:var(--accent);margin-right:8px;"></i>IP Access Control</div>
+          <div class="section-sub">Verify and confirm IP address before granting access &mdash; includes geolocation, blacklist check &amp; access history</div>
         </div>
-        <div class="grant-cards">
-          <div class="grant-card" onclick="openGrantModal('admin')">
-            <i class="fas fa-user-shield"></i>
-            <div class="grant-card-title">Admin Panel</div>
-            <div class="grant-card-sub">Full access to orders, finance, security &amp; settings</div>
-          </div>
-          <div class="grant-card emp" onclick="openGrantModal('employee')">
-            <i class="fas fa-user-tie"></i>
-            <div class="grant-card-title">Employee Site</div>
-            <div class="grant-card-sub">POS station, walk-in orders, inventory updates</div>
+
+        <!-- ── Step 1: Choose Site ──────────────────────────────────────── -->
+        <div id="ip-step-choose" style="transition:opacity .25s;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;">Step 1 of 3 &mdash; Select target site</div>
+          <div class="grant-cards">
+            <div class="grant-card" onclick="ipConfirmStart('admin')">
+              <i class="fas fa-user-shield"></i>
+              <div class="grant-card-title">Admin Panel</div>
+              <div class="grant-card-sub">Full access to orders, finance, security &amp; settings</div>
+            </div>
+            <div class="grant-card emp" onclick="ipConfirmStart('employee')">
+              <i class="fas fa-user-tie"></i>
+              <div class="grant-card-title">Employee Site</div>
+              <div class="grant-card-sub">POS station, walk-in orders, inventory updates</div>
+            </div>
           </div>
         </div>
-        <div class="panel">
-          <div class="panel-head"><span><i class="fas fa-history"></i>Grant Log</span></div>
+
+        <!-- ── Step 2: IP Confirmation Panel ───────────────────────────── -->
+        <div id="ip-confirm-panel" style="display:none;">
+
+          <!-- Progress bar -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+            <div style="flex:1;display:flex;align-items:center;gap:0;">
+              <div class="ip-prog-step done" id="prog-1"><i class="fas fa-check"></i></div>
+              <div class="ip-prog-line" id="pline-12" style="flex:1;height:2px;background:var(--accent);transition:background .4s;"></div>
+              <div class="ip-prog-step active" id="prog-2">2</div>
+              <div class="ip-prog-line" id="pline-23" style="flex:1;height:2px;background:var(--border);transition:background .4s;"></div>
+              <div class="ip-prog-step" id="prog-3">3</div>
+            </div>
+          </div>
+
+          <!-- Step 2: IP Input & Detection -->
+          <div id="ip-sub-input">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;">Step 2 of 3 &mdash; Choose &amp; verify IP address</div>
+            <!-- IP source selector -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+              <button class="ip-src-btn active" id="ipsrc-mine" onclick="ipSrc('mine')"><i class="fas fa-laptop-code"></i> My Current IP</button>
+              <button class="ip-src-btn" id="ipsrc-manual" onclick="ipSrc('manual')"><i class="fas fa-keyboard"></i> Enter Manually</button>
+              <button class="ip-src-btn" id="ipsrc-recent" onclick="ipSrc('recent')"><i class="fas fa-history"></i> Recent Grants</button>
+            </div>
+            <!-- IP display/input -->
+            <div class="ip-input-wrap" id="ip-display-box">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div id="ip-detected-val" style="font-family:monospace;font-size:1.15rem;font-weight:900;color:var(--bright);letter-spacing:1px;">—</div>
+                <span id="ip-my-badge" style="background:rgba(100,255,218,0.12);color:var(--accent);border:1px solid var(--accent);padding:2px 10px;border-radius:20px;font-size:0.65rem;font-weight:900;">YOUR IP</span>
+              </div>
+              <div id="ip-detect-status" style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Detecting…</div>
+            </div>
+            <div id="ip-manual-box" style="display:none;margin-top:6px;">
+              <input type="text" class="dev-input-sm" id="ip-manual-input" placeholder="e.g. 192.168.1.50 or 103.12.56.200" style="font-family:monospace;font-size:0.95rem;letter-spacing:.5px;width:100%;max-width:340px;" oninput="ipManualChanged()">
+              <div id="ip-manual-err" style="font-size:0.7rem;color:var(--danger);margin-top:4px;display:none;">Invalid IP format</div>
+            </div>
+            <div id="ip-recent-box" style="display:none;margin-top:6px;">
+              <div id="ip-recent-list" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            </div>
+
+            <!-- 3 Verification Tools -->
+            <div style="margin-top:22px;">
+              <div style="font-size:0.72rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Verification Tools</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                <button class="ip-tool-tab active" id="tool-tab-geo" onclick="switchTool('geo')"><i class="fas fa-globe"></i> Geolocation</button>
+                <button class="ip-tool-tab" id="tool-tab-bl" onclick="switchTool('bl')"><i class="fas fa-ban"></i> Blacklist Check</button>
+                <button class="ip-tool-tab" id="tool-tab-hist" onclick="switchTool('hist')"><i class="fas fa-clock"></i> Access History</button>
+              </div>
+              <button class="btn-action" id="run-tools-btn" onclick="runAllTools()" style="margin-bottom:14px;"><i class="fas fa-search"></i> Run Verification</button>
+
+              <!-- Tool: Geolocation -->
+              <div class="tool-panel" id="tool-geo">
+                <div id="geo-result" class="tool-result-box">
+                  <div class="tool-idle"><i class="fas fa-globe"></i><span>Click <b>Run Verification</b> to check geolocation</span></div>
+                </div>
+              </div>
+              <!-- Tool: Blacklist Check -->
+              <div class="tool-panel" id="tool-bl" style="display:none;">
+                <div id="bl-result" class="tool-result-box">
+                  <div class="tool-idle"><i class="fas fa-ban"></i><span>Click <b>Run Verification</b> to check blacklists</span></div>
+                </div>
+              </div>
+              <!-- Tool: Access History -->
+              <div class="tool-panel" id="tool-hist" style="display:none;">
+                <div id="hist-result" class="tool-result-box">
+                  <div class="tool-idle"><i class="fas fa-clock"></i><span>Click <b>Run Verification</b> to load access history</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:22px;">
+              <button class="btn-action" onclick="ipConfirmBack()"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="btn-action primary" id="next-to-confirm-btn" onclick="ipGoConfirm()" disabled style="opacity:.5;cursor:not-allowed;"><i class="fas fa-arrow-right"></i> Proceed to Confirm</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Final Confirmation -->
+          <div id="ip-sub-confirm" style="display:none;">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;">Step 3 of 3 &mdash; Review &amp; grant access</div>
+            <div class="ip-summary-card">
+              <div class="ip-sum-row">
+                <span class="ip-sum-label"><i class="fas fa-network-wired"></i> Target IP</span>
+                <span class="ip-sum-val" id="sum-ip" style="font-family:monospace;font-weight:900;color:var(--bright);font-size:1.05rem;"></span>
+              </div>
+              <div class="ip-sum-row">
+                <span class="ip-sum-label"><i class="fas fa-user-cog"></i> Granting Access To</span>
+                <span class="ip-sum-val" id="sum-role" style="font-weight:900;color:var(--accent2);"></span>
+              </div>
+              <div class="ip-sum-row">
+                <span class="ip-sum-label"><i class="fas fa-map-marker-alt"></i> Location</span>
+                <span class="ip-sum-val" id="sum-loc" style="color:var(--muted);font-size:0.8rem;">—</span>
+              </div>
+              <div class="ip-sum-row">
+                <span class="ip-sum-label"><i class="fas fa-building"></i> ISP / Org</span>
+                <span class="ip-sum-val" id="sum-isp" style="color:var(--muted);font-size:0.8rem;">—</span>
+              </div>
+              <div class="ip-sum-row">
+                <span class="ip-sum-label"><i class="fas fa-shield-alt"></i> Threat Status</span>
+                <span class="ip-sum-val" id="sum-threat">—</span>
+              </div>
+              <div class="ip-sum-row">
+                <span class="ip-sum-label"><i class="fas fa-history"></i> Past Access Events</span>
+                <span class="ip-sum-val" id="sum-hist">—</span>
+              </div>
+            </div>
+            <div class="modal-warning" style="margin-top:16px;margin-bottom:16px;">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>This will immediately inject a <b id="sum-role-warn"></b> session for IP <b id="sum-ip-warn" style="font-family:monospace;"></b>. Verify the IP above is correct before proceeding.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+              <input type="checkbox" id="ip-confirm-check" onchange="ipCheckChanged()" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+              <label for="ip-confirm-check" style="font-size:0.82rem;color:var(--text);cursor:pointer;">I have verified the IP address and confirm this grant is intentional.</label>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-action" onclick="ipBackToVerify()"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="btn-action primary" id="final-grant-btn" onclick="ipFinalGrant()" disabled style="opacity:.5;cursor:not-allowed;">
+                <i class="fas fa-unlock-alt"></i> Grant Access Now
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grant Log -->
+        <div class="panel" style="margin-top:24px;">
+          <div class="panel-head"><span><i class="fas fa-history"></i>Grant Log</span><span id="grant-log-count" class="badge badge-gray">0</span></div>
           <div class="panel-body"><div class="log-stream" id="grant-log"><div class="empty-state"><i class="fas fa-key"></i>No grants yet this session.</div></div></div>
         </div>
       </div>
@@ -22500,7 +22670,7 @@ DEV_HTML = r"""<!DOCTYPE html>
   </div>
 </div>
 
-<!-- Grant Modal -->
+<!-- Grant Modal (lightweight — full flow is in-tab) -->
 <div class="modal-overlay" id="grant-modal">
   <div class="modal">
     <div class="modal-header">
@@ -22643,6 +22813,251 @@ function confirmReinit(){showConfirm('Re-initialize Database','This will run db.
 async function loadEnv(){const r=await devFetch('/api/dev/env');if(!r)return;const d=await r.json();document.getElementById('env-panel').innerHTML=d.map(e=>'<div class="env-row"><span class="env-key">'+escapeHTML(e.key)+'</span><span class="env-val '+(e.set?'accent':'')+'" title="'+escapeHTML(e.value)+'">'+escapeHTML(e.value)+'</span></div>').join('');}
 function openGrantModal(role){document.getElementById('grant-role').value=role;document.getElementById('grant-modal-title').textContent=role==='admin'?'Grant Admin Access':'Grant Employee Access';openModal('grant-modal');}
 async function confirmGrant(){const role=document.getElementById('grant-role').value;const r=await devFetch('/api/dev/grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});if(r?.ok){const d=await r.json();closeModal('grant-modal');const line='['+new Date().toLocaleTimeString()+'] Granted '+role+' session \u2192 redirecting\u2026';grantLogLines.unshift(line);document.getElementById('grant-log').innerHTML=grantLogLines.map(l=>'<div class="log-line ok"><span class="log-msg">'+l+'</span></div>').join('');toast(role+' access granted!');setTimeout(()=>window.open(d.redirect,'_blank'),400);}else toast('Grant failed.','err');}
+
+// ═══════════════════════════════════════════════════════════════
+//  IP CONFIRMATION TAB — 3-step verified access grant engine
+// ═══════════════════════════════════════════════════════════════
+let _ipRole='', _ipSelected='', _ipMyIp='', _ipGeoData=null, _ipBlData=null, _ipHistData=null;
+let _ipRecentGrants=JSON.parse(localStorage.getItem('_dev_recent_grants')||'[]');
+let _toolsRan=false;
+
+// ── Step 1: User clicks a site card ──
+async function ipConfirmStart(role){
+  _ipRole=role; _ipSelected=''; _toolsRan=false;
+  _ipGeoData=null; _ipBlData=null; _ipHistData=null;
+  document.getElementById('ip-step-choose').style.opacity='0';
+  await new Promise(r=>setTimeout(r,220));
+  document.getElementById('ip-step-choose').style.display='none';
+  document.getElementById('ip-confirm-panel').style.display='block';
+  document.getElementById('ip-sub-input').style.display='block';
+  document.getElementById('ip-sub-confirm').style.display='none';
+  setProg(2);
+  resetToolResults();
+  ipSrc('mine');
+  loadRecentGrants();
+  await detectMyIp();
+}
+
+async function detectMyIp(){
+  const box=document.getElementById('ip-detected-val');
+  const status=document.getElementById('ip-detect-status');
+  box.textContent='Detecting…';
+  status.textContent='';
+  try{
+    const r=await devFetch('/api/dev/sessions');
+    if(r&&r.ok){const d=await r.json();_ipMyIp=d.client_ip||'';box.textContent=_ipMyIp||'Unknown';status.textContent='Detected via server-side request context';document.getElementById('ip-display-box').classList.add('ok');}
+  }catch(e){box.textContent='Detection failed';status.textContent='Use Manual Entry instead';}
+  if(document.getElementById('ipsrc-mine').classList.contains('active')){
+    _ipSelected=_ipMyIp;
+    enableNextBtn();
+  }
+}
+
+function ipSrc(src){
+  ['mine','manual','recent'].forEach(s=>document.getElementById('ipsrc-'+s).classList.remove('active'));
+  document.getElementById('ipsrc-'+src).classList.add('active');
+  document.getElementById('ip-display-box').style.display=src==='mine'?'block':'none';
+  document.getElementById('ip-manual-box').style.display=src==='manual'?'block':'none';
+  document.getElementById('ip-recent-box').style.display=src==='recent'?'block':'none';
+  if(src==='mine'){_ipSelected=_ipMyIp;enableNextBtn();}
+  else if(src==='manual'){_ipSelected='';disableNextBtn();}
+  else{_ipSelected='';disableNextBtn();}
+  resetToolResults(); _toolsRan=false;
+}
+
+function ipManualChanged(){
+  const v=document.getElementById('ip-manual-input').value.trim();
+  const ok=isValidIP(v);
+  document.getElementById('ip-manual-err').style.display=ok||!v?'none':'block';
+  _ipSelected=ok?v:'';
+  if(ok){enableNextBtn();}else{disableNextBtn();}
+  _toolsRan=false;
+}
+
+function isValidIP(s){
+  const ipv4=/^(\d{1,3}\.){3}\d{1,3}$/.test(s);
+  if(ipv4){const parts=s.split('.');return parts.every(p=>parseInt(p)<=255);}
+  // basic ipv6 check
+  return /^[0-9a-fA-F:]{2,39}$/.test(s);
+}
+
+function loadRecentGrants(){
+  const el=document.getElementById('ip-recent-list');
+  if(!_ipRecentGrants.length){el.innerHTML='<span style="color:var(--muted);font-size:.75rem;">No recent grants.</span>';return;}
+  el.innerHTML=_ipRecentGrants.slice(0,8).map(g=>'<button class="ip-recent-chip" onclick="ipPickRecent(\''+escapeHTML(g.ip)+'\')">'+escapeHTML(g.ip)+'<span style="font-size:.62rem;color:var(--muted);margin-left:6px;">'+g.role+' &middot; '+g.ts+'</span></button>').join('');
+}
+
+function ipPickRecent(ip){
+  _ipSelected=ip;
+  document.getElementById('ip-manual-input').value=ip;
+  ipSrc('manual');
+  document.getElementById('ip-manual-input').value=ip;
+  enableNextBtn();
+}
+
+function enableNextBtn(){const b=document.getElementById('next-to-confirm-btn');b.disabled=false;b.style.opacity='1';b.style.cursor='pointer';}
+function disableNextBtn(){const b=document.getElementById('next-to-confirm-btn');b.disabled=true;b.style.opacity='.5';b.style.cursor='not-allowed';}
+
+// ── 3 Verification Tools ──────────────────────────────────────────────
+function switchTool(name){
+  ['geo','bl','hist'].forEach(t=>{
+    document.getElementById('tool-'+t).style.display=t===name?'block':'none';
+    document.getElementById('tool-tab-'+t).classList.toggle('active',t===name);
+  });
+}
+
+function resetToolResults(){
+  document.getElementById('geo-result').innerHTML='<div class="tool-idle"><i class="fas fa-globe"></i><span>Click <b>Run Verification</b> to check geolocation</span></div>';
+  document.getElementById('bl-result').innerHTML='<div class="tool-idle"><i class="fas fa-ban"></i><span>Click <b>Run Verification</b> to check blacklists</span></div>';
+  document.getElementById('hist-result').innerHTML='<div class="tool-idle"><i class="fas fa-clock"></i><span>Click <b>Run Verification</b> to load access history</span></div>';
+}
+
+async function runAllTools(){
+  if(!_ipSelected){toast('No IP selected.','warn');return;}
+  document.getElementById('run-tools-btn').innerHTML='<i class="fas fa-spinner fa-spin"></i> Running…';
+  document.getElementById('run-tools-btn').disabled=true;
+  document.getElementById('geo-result').innerHTML='<div class="tool-loading"><i class="fas fa-spinner fa-spin"></i> Fetching geolocation data…</div>';
+  document.getElementById('bl-result').innerHTML='<div class="tool-loading"><i class="fas fa-spinner fa-spin"></i> Checking blacklists…</div>';
+  document.getElementById('hist-result').innerHTML='<div class="tool-loading"><i class="fas fa-spinner fa-spin"></i> Loading access history…</div>';
+  try{
+    const [geoR,blR,histR]=await Promise.all([
+      devFetch('/api/dev/ip_geo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:_ipSelected})}),
+      devFetch('/api/dev/ip_check?ip='+encodeURIComponent(_ipSelected)),
+      devFetch('/api/dev/ip_history?ip='+encodeURIComponent(_ipSelected))
+    ]);
+    _ipGeoData=geoR?.ok?await geoR.json():null;
+    _ipBlData=blR?.ok?await blR.json():null;
+    _ipHistData=histR?.ok?await histR.json():null;
+    renderGeo(_ipGeoData);
+    renderBl(_ipBlData);
+    renderHist(_ipHistData);
+    _toolsRan=true;
+    enableNextBtn();
+  }catch(e){toast('Verification error: '+e.message,'err');}
+  document.getElementById('run-tools-btn').innerHTML='<i class="fas fa-search"></i> Run Verification';
+  document.getElementById('run-tools-btn').disabled=false;
+}
+
+function renderGeo(d){
+  const el=document.getElementById('geo-result');
+  if(!d||d.status==='fail'){el.innerHTML='<div style="color:var(--danger);padding:14px;font-size:.78rem;"><i class="fas fa-exclamation-triangle"></i> '+escapeHTML(d?.message||'Geolocation lookup failed. IP may be private/LAN.')+'</div>';return;}
+  const proxy=d.proxy?'<span style="background:rgba(255,152,0,.15);color:var(--warn);padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:900;margin-left:8px;">⚠ PROXY/VPN</span>':'';
+  const host=d.hosting?'<span style="background:rgba(91,127,255,.12);color:var(--accent2);padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:900;margin-left:4px;">HOSTING/DC</span>':'';
+  el.innerHTML='<div class="geo-grid">'+
+    '<div class="geo-item"><div class="geo-label">Country</div><div class="geo-val">'+escapeHTML(d.country||'—')+proxy+host+'</div></div>'+
+    '<div class="geo-item"><div class="geo-label">Region / City</div><div class="geo-val">'+escapeHTML((d.regionName||'')+(d.city?', '+d.city:''))+'</div></div>'+
+    '<div class="geo-item"><div class="geo-label">ISP</div><div class="geo-val" style="font-size:.75rem;">'+escapeHTML(d.isp||'—')+'</div></div>'+
+    '<div class="geo-item"><div class="geo-label">Organization</div><div class="geo-val" style="font-size:.75rem;">'+escapeHTML(d.org||'—')+'</div></div>'+
+    '<div class="geo-item"><div class="geo-label">Timezone</div><div class="geo-val">'+escapeHTML(d.timezone||'—')+'</div></div>'+
+    '<div class="geo-item"><div class="geo-label">Coordinates</div><div class="geo-val" style="font-size:.73rem;">'+escapeHTML(d.lat?d.lat+', '+d.lon:'—')+'</div></div>'+
+    '</div>';
+}
+
+function renderBl(d){
+  const el=document.getElementById('bl-result');
+  if(!d){el.innerHTML='<div style="color:var(--danger);padding:14px;font-size:.78rem;">Check failed.</div>';return;}
+  const isClient=d.is_client_ip;
+  const rows=[
+    {label:'Local Blacklist (this system)',val:d.local_blacklisted?'BLACKLISTED':'Clean',cls:d.local_blacklisted?'bl-bad':'bl-ok'},
+    {label:'Failed Login Attempts',val:d.failed_attempts>0?d.failed_attempts+' attempts'+(d.failed_attempts>=3?' ⚠':''):'0 — Clean',cls:d.failed_attempts>=3?'bl-warn':d.failed_attempts>0?'bl-warn':'bl-ok'},
+    {label:'Is Your Current IP',val:isClient?'✓ Yes — matches your session':'No',cls:isClient?'bl-ok':''},
+  ];
+  if(d.local_blacklisted&&d.blacklist_entry){rows.push({label:'Ban Reason',val:d.blacklist_entry.reason||'—',cls:''});}
+  el.innerHTML='<div>'+rows.map(r=>'<div class="bl-row"><span class="bl-label">'+escapeHTML(r.label)+'</span><span class="'+(r.cls||'')+'">'+escapeHTML(r.val)+'</span></div>').join('')+'</div>';
+}
+
+function renderHist(d){
+  const el=document.getElementById('hist-result');
+  if(!d||!Array.isArray(d)){el.innerHTML='<div style="color:var(--danger);padding:14px;font-size:.78rem;">History lookup failed.</div>';return;}
+  if(!d.length){el.innerHTML='<div class="empty-state" style="padding:20px;"><i class="fas fa-history"></i>No audit events found for this IP.</div>';return;}
+  el.innerHTML='<div style="max-height:220px;overflow-y:auto;">'+d.map(l=>'<div class="hist-line"><span class="hist-ts">'+escapeHTML(l.ts)+'</span><span class="hist-action">'+escapeHTML(l.action)+'</span><span class="hist-detail">'+escapeHTML(l.details||'')+'</span></div>').join('')+'</div>';
+}
+
+// ── Step navigation ────────────────────────────────────────────────────
+function ipGoConfirm(){
+  if(!_ipSelected){toast('Select an IP first.','warn');return;}
+  document.getElementById('ip-sub-input').style.display='none';
+  document.getElementById('ip-sub-confirm').style.display='block';
+  setProg(3);
+  const roleLabel=_ipRole==='admin'?'Admin Panel':'Employee Site';
+  document.getElementById('sum-ip').textContent=_ipSelected;
+  document.getElementById('sum-ip-warn').textContent=_ipSelected;
+  document.getElementById('sum-role').textContent=roleLabel;
+  document.getElementById('sum-role-warn').textContent=roleLabel+' access';
+  document.getElementById('sum-loc').textContent=_ipGeoData&&_ipGeoData.status==='success'?((_ipGeoData.city||'')+(_ipGeoData.country?', '+_ipGeoData.country:''))||'—':'Not checked';
+  document.getElementById('sum-isp').textContent=_ipGeoData&&_ipGeoData.status==='success'?(_ipGeoData.isp||'—'):'Not checked';
+  const bl=_ipBlData;
+  let threatHTML='<span style="color:var(--accent);font-weight:900;">✓ Clean</span>';
+  if(bl&&bl.local_blacklisted)threatHTML='<span style="color:var(--danger);font-weight:900;">⛔ BLACKLISTED</span>';
+  else if(bl&&bl.failed_attempts>=3)threatHTML='<span style="color:var(--warn);font-weight:900;">⚠ '+bl.failed_attempts+' failed attempts</span>';
+  document.getElementById('sum-threat').innerHTML=threatHTML;
+  const hist=_ipHistData;
+  document.getElementById('sum-hist').textContent=hist?(hist.length+' event'+(hist.length===1?'':'s')+' found'):'Not checked';
+  document.getElementById('ip-confirm-check').checked=false;
+  const fb=document.getElementById('final-grant-btn');
+  fb.disabled=true;fb.style.opacity='.5';fb.style.cursor='not-allowed';
+}
+
+function ipBackToVerify(){
+  document.getElementById('ip-sub-confirm').style.display='none';
+  document.getElementById('ip-sub-input').style.display='block';
+  setProg(2);
+}
+
+function ipConfirmBack(){
+  document.getElementById('ip-confirm-panel').style.display='none';
+  document.getElementById('ip-step-choose').style.display='block';
+  document.getElementById('ip-step-choose').style.opacity='1';
+  setProg(1); _ipRole=''; _ipSelected='';
+}
+
+function ipCheckChanged(){
+  const chk=document.getElementById('ip-confirm-check').checked;
+  const b=document.getElementById('final-grant-btn');
+  b.disabled=!chk; b.style.opacity=chk?'1':'.5'; b.style.cursor=chk?'pointer':'not-allowed';
+}
+
+async function ipFinalGrant(){
+  if(!_ipSelected||!_ipRole)return;
+  const b=document.getElementById('final-grant-btn');
+  b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Granting…'; b.disabled=true;
+  const r=await devFetch('/api/dev/grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:_ipRole,ip:_ipSelected})});
+  if(r?.ok){
+    const d=await r.json();
+    // Save to recent grants
+    _ipRecentGrants.unshift({ip:_ipSelected,role:_ipRole,ts:new Date().toLocaleTimeString()});
+    _ipRecentGrants=_ipRecentGrants.slice(0,10);
+    try{localStorage.setItem('_dev_recent_grants',JSON.stringify(_ipRecentGrants));}catch(e){}
+    // Log it
+    const line='['+new Date().toLocaleTimeString()+'] IP '+_ipSelected+' granted '+_ipRole+' \u2192 opening…';
+    grantLogLines.unshift(line);
+    const cnt=document.getElementById('grant-log-count');
+    if(cnt){cnt.textContent=grantLogLines.length;cnt.style.background=grantLogLines.length?'rgba(0,229,160,.15)':'';cnt.style.color='var(--accent)';}
+    document.getElementById('grant-log').innerHTML=grantLogLines.map(l=>'<div class="log-line ok"><span class="log-msg">'+escapeHTML(l)+'</span></div>').join('');
+    toast('✓ Access granted for IP '+_ipSelected,'ok');
+    setTimeout(()=>window.open(d.redirect,'_blank'),350);
+    // Return to step 1 after short delay
+    setTimeout(()=>{ipConfirmBack();},1600);
+  }else{
+    toast('Grant failed. Check the console.','err');
+    b.innerHTML='<i class="fas fa-unlock-alt"></i> Grant Access Now';
+    b.disabled=false; b.style.opacity='1';
+  }
+}
+
+function setProg(step){
+  [1,2,3].forEach(s=>{
+    const el=document.getElementById('prog-'+s);
+    if(!el)return;
+    el.className='ip-prog-step'+(s<step?' done':s===step?' active':'');
+    if(s<step)el.innerHTML='<i class="fas fa-check"></i>';
+    else el.textContent=s;
+  });
+  const l12=document.getElementById('pline-12');
+  const l23=document.getElementById('pline-23');
+  if(l12)l12.style.background=step>1?'var(--accent)':'var(--border)';
+  if(l23)l23.style.background=step>2?'var(--accent)':'var(--border)';
+}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function openBanModal(){document.getElementById('ban-ip-input').value='';document.getElementById('ban-reason-input').value='';openModal('ban-modal');}
@@ -22760,6 +23175,9 @@ def dev_logout_api():
 def dev_grant():
     data = request.get_json(silent=True) or {}
     role = data.get('role', '')
+    # Optional: confirmed_ip passed by the IP Confirmation Tab
+    confirmed_ip = (data.get('ip') or '').strip() or get_client_ip()
+
     if role == 'admin':
         session.permanent = True
         session['is_admin'] = True
@@ -22775,7 +23193,7 @@ def dev_grant():
         except Exception:
             try: db.session.rollback()
             except Exception: pass
-        log_audit("Dev Grant", f"Dev portal injected admin session from {get_client_ip()}")
+        log_audit("Dev Grant: Admin", f"IP-confirmed grant → {confirmed_ip} (request from {get_client_ip()})", ip=confirmed_ip)
         return jsonify({"status": "ok", "redirect": "/admin"})
     elif role == 'employee':
         session.permanent = True
@@ -22792,12 +23210,130 @@ def dev_grant():
         except Exception:
             try: db.session.rollback()
             except Exception: pass
-        log_audit("Dev Grant", f"Dev portal injected employee session from {get_client_ip()}")
+        log_audit("Dev Grant: Employee", f"IP-confirmed grant → {confirmed_ip} (request from {get_client_ip()})", ip=confirmed_ip)
         return jsonify({"status": "ok", "redirect": "/employee"})
     return jsonify({"error": "Invalid role"}), 400
 
 
-@app.route('/api/dev/stats')
+# ── Tool 1: IP Geolocation ────────────────────────────────────────────────────
+@app.route('/api/dev/ip_geo', methods=['POST'])
+@_dev_auth_required
+def dev_ip_geo():
+    """
+    Fetch IP geolocation data via ip-api.com (free, no API key needed).
+    Returns country, city, ISP, proxy/VPN detection, coordinates, and timezone.
+    """
+    data = request.get_json(silent=True) or {}
+    ip = (data.get('ip') or '').strip()
+    if not ip:
+        return jsonify({"status": "fail", "message": "No IP provided"}), 400
+
+    # Reject private/loopback IPs — ip-api can't geo-locate them
+    import ipaddress
+    try:
+        parsed = ipaddress.ip_address(ip)
+        if parsed.is_private or parsed.is_loopback or parsed.is_link_local:
+            return jsonify({
+                "status": "fail",
+                "message": f"Private/LAN IP ({ip}) — geolocation not available for local addresses.",
+                "query": ip
+            })
+    except ValueError:
+        return jsonify({"status": "fail", "message": "Invalid IP address format"}), 400
+
+    fields = "status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query"
+    try:
+        resp = requests.get(
+            f"http://ip-api.com/json/{ip}",
+            params={"fields": fields},
+            timeout=8
+        )
+        result = resp.json()
+        log_audit("Dev IP Geo", f"Geolocation lookup for {ip}", ip=get_client_ip())
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"status": "fail", "message": f"Lookup failed: {e}"}), 500
+
+
+# ── Tool 2: IP Blacklist / Reputation Check ───────────────────────────────────
+@app.route('/api/dev/ip_check')
+@_dev_auth_required
+def dev_ip_check():
+    """
+    Check a given IP against:
+      1. This system's local BlacklistedIP table
+      2. Recent FailedLoginAttempt counts
+      3. Whether it matches the requester's current session IP
+    """
+    ip = (request.args.get('ip') or '').strip()
+    if not ip:
+        return jsonify({"error": "No IP provided"}), 400
+
+    is_local_blacklisted = False
+    blacklist_entry = None
+    try:
+        entry = BlacklistedIP.query.filter_by(ip_address=ip).first()
+        if entry:
+            is_local_blacklisted = True
+            blacklist_entry = {
+                "reason": entry.reason or 'No reason recorded',
+                "manual": bool(getattr(entry, 'manual', False)),
+                "created_at": entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '—'
+            }
+    except Exception:
+        pass
+
+    failed_count = 0
+    try:
+        failed_count = FailedLoginAttempt.query.filter_by(ip_address=ip).count()
+    except Exception:
+        pass
+
+    client_ip = get_client_ip()
+    log_audit("Dev IP Check", f"Blacklist/reputation check for {ip}", ip=client_ip)
+    return jsonify({
+        "ip": ip,
+        "local_blacklisted": is_local_blacklisted,
+        "blacklist_entry": blacklist_entry,
+        "failed_attempts": failed_count,
+        "is_client_ip": (ip == client_ip)
+    })
+
+
+# ── Tool 3: IP Access History ─────────────────────────────────────────────────
+@app.route('/api/dev/ip_history')
+@_dev_auth_required
+def dev_ip_history():
+    """
+    Return the most recent audit log entries associated with the given IP address.
+    Useful for reviewing whether an IP has a history of legitimate access or suspicious activity.
+    """
+    ip = (request.args.get('ip') or '').strip()
+    if not ip:
+        return jsonify([])
+    try:
+        logs = (
+            AuditLog.query
+            .filter(AuditLog.ip_address == ip)
+            .order_by(AuditLog.created_at.desc())
+            .limit(25)
+            .all()
+        )
+        result = []
+        for l in logs:
+            result.append({
+                "ts": l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else '—',
+                "action": l.action or '',
+                "details": l.details or ''
+            })
+        log_audit("Dev IP History", f"Access history lookup for {ip}", ip=get_client_ip())
+        return jsonify(result)
+    except Exception as e:
+        app.logger.error(f"[dev_ip_history] Error: {e}")
+        return jsonify([])
+
+
+
 @_dev_auth_required
 def dev_stats():
     now = get_ph_time()
