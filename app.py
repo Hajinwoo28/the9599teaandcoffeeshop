@@ -15195,9 +15195,9 @@ function admUpdateDateButtons(){
   if(finLbl)finLbl.textContent=finActive?admFmtDateLabel(finD):'Today';
   if(finSub)finSub.textContent=finActive?('Viewing data for '+admFmtDateLabel(finD)):'Revenue, expenses & order history — today';
   const revLbl=document.getElementById('fin-lbl-revenue');
-  if(revLbl)revLbl.textContent=finActive?'Revenue':'Today\'s Revenue';
+  if(revLbl)revLbl.textContent=finActive?'Revenue':"Today's Revenue";
   const expTitle=document.querySelector('.fin-exp-head-title');
-  if(expTitle)expTitle.textContent=finActive?('Expenses · '+admFmtDateLabel(finD)):'Today\'s Expenses';
+  if(expTitle)expTitle.textContent=finActive?('Expenses · '+admFmtDateLabel(finD)):"Today's Expenses";
   const expTotLbl=document.querySelector('.fin-exp-total-lbl');
   if(expTotLbl)expTotLbl.textContent=finActive?'Day total':'Total today';
   const histLbl=document.getElementById('fin-history-date-lbl');
