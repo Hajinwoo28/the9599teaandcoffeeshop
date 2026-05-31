@@ -15259,9 +15259,15 @@ function admCalRenderGrid(){
     if(dateStr===today)cls.push('today');
     if(dateStr===admCalPickDate)cls.push('selected');
     if(isFuture)cls.push('future');
-    html+='<div class="'+cls.join(' ')+'" onclick="admCalSelectDay(\''+dateStr+'\','+(isFuture?'true':'false')+')">'+d+'</div>';
+    html+='<div class="'+cls.join(' ')+'" data-adm-cal="'+dateStr+'"'+(isFuture?' data-adm-future="1"':'')+'>'+d+'</div>';
   }
   grid.innerHTML=html;
+  grid.querySelectorAll('[data-adm-cal]').forEach(function(cell){
+    cell.addEventListener('click',function(){
+      if(this.getAttribute('data-adm-future')==='1')return;
+      admCalSelectDay(this.getAttribute('data-adm-cal'),false);
+    });
+  });
 }
 function admCalSelectDay(dateStr,isFuture){
   if(isFuture)return;
