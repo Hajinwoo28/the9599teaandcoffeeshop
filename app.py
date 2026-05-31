@@ -11661,10 +11661,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ══ ENHANCED PAGE HEADER ══ */
 .page-header{background:linear-gradient(135deg,#2A1505 0%,var(--brown-dark) 60%,var(--brown-mid) 100%) !important;border-bottom:none !important;position:relative;overflow:hidden;}
-.page-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 200px 150px at 90% 50%,rgba(196,168,130,0.08) 0%,transparent 70%);}
+.page-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 200px 150px at 90% 50%,rgba(196,168,130,0.08) 0%,transparent 70%);pointer-events:none;}
 .page-header h2{color:#fff !important;position:relative;z-index:2;text-shadow:0 1px 8px rgba(0,0,0,0.45);font-weight:900 !important;}
 .page-header p{color:rgba(220,196,160,0.88) !important;position:relative;z-index:2;}
-.page-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:20px;background:var(--cream);border-radius:16px 16px 0 0;z-index:1;}
+.page-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:20px;background:var(--cream);border-radius:16px 16px 0 0;z-index:1;pointer-events:none;}
 
 /* ══ TABLE ROW HOVER ══ */
 #inv-tbody tr,#kds-tbody tr{transition:background 0.18s,transform 0.15s;}
@@ -11727,7 +11727,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 
 /* ── PAGE HEADER ── */
 .page-header{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown-mid) 60%,var(--brown) 100%);padding:13px 16px 22px;position:relative;overflow:hidden;}
-.page-header::after{content:'';position:absolute;bottom:-16px;left:0;right:0;height:32px;background:var(--cream);border-radius:20px 20px 0 0;z-index:1;}
+.page-header::after{content:'';position:absolute;bottom:-16px;left:0;right:0;height:32px;background:var(--cream);border-radius:20px 20px 0 0;z-index:1;pointer-events:none;}
 .page-header h2{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:var(--cream);display:flex;align-items:center;gap:9px;}
 .page-header p{font-size:0.74rem;color:var(--tan);margin-top:2px;}
 
@@ -13091,7 +13091,7 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
             <h2 style="font-size:1rem;"><i class="fas fa-chart-line"></i> Finance</h2>
             <p style="font-size:0.7rem;margin-top:1px;" id="fin-date-subtitle">Revenue, expenses &amp; order history — today</p>
           </div>
-          <button type="button" class="adm-date-btn" id="fin-date-btn" onclick="openAdminCalendar('finance')" title="Pick a date">
+          <button type="button" class="adm-date-btn" id="fin-date-btn" onclick="openAdminCalendar('finance')" title="Pick a date" style="position:relative;z-index:2;">
             <i class="fas fa-calendar-alt"></i>
             <span id="fin-date-btn-label">Today</span>
           </button>
