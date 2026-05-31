@@ -11840,8 +11840,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .inv-progress-wrap{width:100%;background:var(--cream-dark);border-radius:4px;height:5px;margin-top:4px;overflow:hidden;}
 .inv-progress-fill{height:100%;border-radius:4px;transition:width 0.5s ease;}
 .inv-progress-fill.ok{background:linear-gradient(90deg,#27ae60,#52c77a);}
+.inv-progress-fill.medium{background:linear-gradient(90deg,#1976D2,#42a5f5);}
 .inv-progress-fill.low{background:linear-gradient(90deg,var(--orange),#ffa040);}
 .inv-progress-fill.critical{background:linear-gradient(90deg,var(--red),#e05555);}
+.inv-row-medium{background:rgba(21,101,192,0.04)!important;}
 
 /* ── IMPROVED AUDIT LOG ── */
 .audit-toolbar{display:flex;gap:8px;padding:14px 14px 0;flex-wrap:wrap;align-items:center;}
@@ -14743,6 +14745,27 @@ async function submitQO(){
   try{const r=await apiFetch('/api/admin/manual_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(r&&r.ok){showToast('Walk-in order saved!','success');qoCart=[];document.getElementById('qo-name').value='';renderQOCart();}else showToast('Error','error');}catch(e){showToast('Error','error');}
 }
 
+/* ══ INVENTORY — stock levels (must match /api/finance/low_stock) ══ */
+function invStockThreshold(unit){
+  if(unit==='pcs') return 50;
+  if(unit==='ml'||unit==='grams'||unit==='g') return 500;
+  return 200;
+}
+function invStockLevel(stock, unit){
+  const threshold=invStockThreshold(unit);
+  const pct=(Number(stock)/Math.max(threshold*4,1))*100;
+  if(stock<=0) return 'critical';
+  if(stock<=threshold) return 'low';
+  if(pct<=50) return 'medium';
+  return 'ok';
+}
+function invStockColor(level){
+  if(level==='critical') return 'var(--red)';
+  if(level==='low') return 'var(--orange)';
+  if(level==='medium') return 'var(--blue)';
+  return 'var(--green)';
+}
+
 /* ══ INVENTORY ══ */
 let invAllData=[], invActiveTab='All';
 
@@ -14761,10 +14784,10 @@ async function fetchInventory(){
 function updateInvStats(){
   let total=0,ok=0,low=0,critical=0;
   invAllData.forEach(i=>{
-    const t=i.unit==='pcs'?50:(i.unit==='ml'?500:200);
+    const level=invStockLevel(i.stock,i.unit);
     total++;
-    if(i.stock<=0)critical++;
-    else if(i.stock<=t)low++;
+    if(level==='critical')critical++;
+    else if(level==='low'||level==='medium')low++;
     else ok++;
   });
   const st=document.getElementById('inv-stat-total');const so=document.getElementById('inv-stat-ok');
@@ -14801,17 +14824,19 @@ function renderInventoryTable(){
 
   const catEmoji={'Teas & Bases':'🍵','Syrups & Flavors':'🍯','Dairy':'🥛','Add-ons':'🧋','Snacks':'🍟','Consumables & Packaging':'📦'};
   tbody.innerHTML=filtered.map(i=>{
-    const threshold=i.unit==='pcs'?50:(i.unit==='ml'?500:200);
+    const threshold=invStockThreshold(i.unit);
     const maxVal=Math.max(threshold*4,i.stock,1);
     const pct=Math.min(100,Math.round((i.stock/maxVal)*100));
-    const level=i.stock<=0?'critical':(i.stock<=threshold?'low':'ok');
-    const color=level==='critical'?'var(--red)':(level==='low'?'var(--orange)':'var(--green)');
-    const rowCls=level==='critical'?'inv-row-critical':(level==='low'?'inv-row-low':'');
+    const level=invStockLevel(i.stock,i.unit);
+    const color=invStockColor(level);
+    const rowCls=level==='critical'?'inv-row-critical':(level==='low'?'inv-row-low':(level==='medium'?'inv-row-medium':''));
     const statusBadge=level==='critical'
       ?`<span style="background:rgba(192,57,43,0.12);color:var(--red);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-times-circle" style="font-size:0.6rem;"></i> Out</span>`
       :(level==='low'
         ?`<span style="background:rgba(245,124,0,0.12);color:var(--orange);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-exclamation-triangle" style="font-size:0.6rem;"></i> Low</span>`
-        :`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> OK</span>`);
+        :(level==='medium'
+          ?`<span style="background:rgba(21,101,192,0.1);color:var(--blue);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-info-circle" style="font-size:0.6rem;"></i> Getting Low</span>`
+          :`<span style="background:rgba(39,174,96,0.12);color:var(--green);padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle" style="font-size:0.6rem;"></i> OK</span>`));
     const emoji=catEmoji[i.category]||'📦';
     return`<tr class="${rowCls}">
       <td>
@@ -14843,11 +14868,12 @@ function renderInventoryTable(){
 
   if(countEl)countEl.innerText=`${filtered.length} item${filtered.length!==1?'s':''}`;
 
-  const lowItems=filtered.filter(i=>{const t=i.unit==='pcs'?50:(i.unit==='ml'?500:200);return i.stock<=t;});
+  const lowItems=filtered.filter(i=>invStockLevel(i.stock,i.unit)!=='ok');
   if(lowItems.length&&lowCard&&lowList){
     lowCard.style.display='block';
     lowList.innerHTML=lowItems.map(i=>{
-      const isOut=i.stock<=0;const color=isOut?'var(--red)':'var(--orange)';
+      const level=invStockLevel(i.stock,i.unit);
+      const color=invStockColor(level);
       return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);">
         <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>
         <span style="flex:1;font-size:0.81rem;font-weight:800;color:var(--text);">${escapeHTML(i.name)}</span>
@@ -14869,8 +14895,7 @@ function invStep(id, delta) {
   // Update border color live
   const i = invAllData.find(x => x.id === id);
   if (i) {
-    const threshold = i.unit === 'pcs' ? 50 : (i.unit === 'ml' ? 500 : 200);
-    const color = newVal <= 0 ? 'var(--red)' : newVal <= threshold ? 'var(--orange)' : 'var(--green)';
+    const color = invStockColor(invStockLevel(newVal, i.unit));
     inp.style.borderColor = color;
     inp.style.color = color;
   }
@@ -14879,7 +14904,7 @@ function invStep(id, delta) {
 async function invRestock(id) {
   const i = invAllData.find(x => x.id === id);
   if (!i) return;
-  const threshold = i.unit === 'pcs' ? 50 : (i.unit === 'ml' ? 500 : 200);
+  const threshold = invStockThreshold(i.unit);
   const restockAmt = threshold * 4;
   const inp = document.querySelector(`.stock-inp[data-id="${id}"]`);
   if (!inp) return;
@@ -15996,10 +16021,10 @@ async function loadDashboard(){
     document.getElementById('s-dashboard').dataset.qaAnimated='1';
   }
   try{
-    const [finRes,ordRes,invRes]=await Promise.all([
+    const [finRes,ordRes,stockRes]=await Promise.all([
       apiFetch('/api/finance/daily'),
       apiFetch('/api/orders?_t='+Date.now()),
-      apiFetch('/api/inventory')
+      apiFetch('/api/finance/low_stock')
     ]);
     if(finRes&&finRes.ok){
       const fin=await finRes.json();
@@ -16016,15 +16041,25 @@ async function loadDashboard(){
         else{recentEl.innerHTML=ord.orders.slice(0,5).map((o,i)=>`<div class="dash-order-row" style="animation-delay:${i*0.06}s"><span class="dash-order-code">#${escapeHTML(o.code)}</span><span class="dash-order-name">${escapeHTML(o.name)}</span><span class="dash-order-total">₱${o.total.toFixed(2)}</span></div>`).join('');}
       }
     }
-    if(invRes&&invRes.ok){
-      const inv=await invRes.json();
-      const items=Array.isArray(inv)?inv:(inv.items||[]);
-      const alerts=items.filter(i=>{const t=i.unit==='pcs'?50:(i.unit==='ml'?500:200);return i.stock<=t;});
+    if(stockRes&&stockRes.ok){
+      const alerts=await stockRes.json();
       animateCount('dash-alerts','',alerts.length,false);
       const alertsEl=document.getElementById('dash-stock-alerts');
       if(alertsEl){
         if(!alerts.length){alertsEl.innerHTML='<div style="background:rgba(39,174,96,0.08);border:1.5px solid rgba(39,174,96,0.2);border-radius:10px;padding:13px;display:flex;align-items:center;gap:10px;font-size:0.82rem;font-weight:700;color:var(--green);"><i class="fas fa-check-circle"></i> All ingredients are well-stocked!</div>';}
-        else{alertsEl.innerHTML=alerts.slice(0,6).map(i=>{const isOut=i.stock<=0;const color=isOut?'var(--red)':'var(--orange)';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span><span style="flex:1;font-size:0.81rem;font-weight:800;">${escapeHTML(i.name)}</span><span style="font-size:0.75rem;font-weight:800;color:${color};">${i.stock} ${escapeHTML(i.unit)}</span></div>`;}).join('');}
+        else{
+          const levelLabel={critical:'Out of Stock',low:'Running Low',medium:'Getting Low'};
+          alertsEl.innerHTML=alerts.slice(0,6).map(i=>{
+            const color=invStockColor(i.level);
+            const lbl=levelLabel[i.level]||i.level;
+            return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cream-dark);">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+              <span style="flex:1;font-size:0.81rem;font-weight:800;min-width:0;">${escapeHTML(i.name)}</span>
+              <span style="font-size:0.65rem;font-weight:800;color:${color};white-space:nowrap;">${lbl}</span>
+              <span style="font-size:0.75rem;font-weight:800;color:${color};white-space:nowrap;">${i.stock%1===0?i.stock:i.stock.toFixed(1)} ${escapeHTML(i.unit)}</span>
+            </div>`;
+          }).join('');
+        }
       }
     }
   }catch(e){console.warn('Dashboard load error',e);}
