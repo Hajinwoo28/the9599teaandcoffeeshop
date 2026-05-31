@@ -385,6 +385,21 @@ def get_local_ip():
 def get_ph_time():
     return datetime.utcnow() + timedelta(hours=8)
 
+def _parse_day_bounds(date_str=None):
+    """PH-time start/end of a calendar day. date_str: YYYY-MM-DD or None for today."""
+    now = get_ph_time()
+    if date_str:
+        try:
+            parts = date_str.strip().split('-')
+            y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+            start = now.replace(year=y, month=m, day=d, hour=0, minute=0, second=0, microsecond=0)
+        except (ValueError, IndexError):
+            start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    return start, end, start.strftime('%Y-%m-%d')
+
 # ==========================================
 # STORE SCHEDULE (permanent, no token needed)
 # Mon–Fri: 10:00 AM – 7:00 PM
@@ -11583,6 +11598,37 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
 .fin-exp-empty i{font-size:1.6rem;color:var(--cream-dark);}
 .fin-exp-empty-txt{font-size:0.82rem;font-weight:700;color:var(--muted);}
 
+/* ══ ADMIN DATE PICKER + CALENDAR MODAL ══ */
+.adm-date-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:11px;border:1.5px solid var(--cream-dark);background:var(--white);color:var(--brown-dark);font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.18s;box-shadow:0 2px 8px rgba(61,36,16,0.06);flex-shrink:0;}
+.adm-date-btn i{font-size:0.78rem;color:var(--brown);}
+.adm-date-btn:hover{border-color:var(--tan);background:var(--cream);transform:translateY(-1px);box-shadow:0 4px 12px rgba(61,36,16,0.12);}
+.adm-date-btn.past-view{border-color:rgba(21,101,192,0.35);background:rgba(21,101,192,0.06);color:#1565C0;}
+.adm-date-btn.past-view i{color:#1565C0;}
+.fin-header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.lo-date-row{display:flex;justify-content:flex-end;padding:0 14px 8px;margin-top:-6px;}
+.adm-cal-modal{background:var(--white);border-radius:20px;padding:0;max-width:340px;width:100%;box-shadow:0 28px 90px rgba(0,0,0,0.28);overflow:hidden;animation:modalIn 0.35s cubic-bezier(0.34,1.56,0.64,1);position:relative;}
+.adm-cal-head{padding:16px 18px 12px;background:linear-gradient(135deg,#2A1505,var(--brown-dark));color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.adm-cal-head-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;}
+.adm-cal-head-sub{font-size:0.65rem;font-weight:600;color:rgba(196,168,130,0.85);margin-top:2px;}
+.adm-cal-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;}
+.adm-cal-nav button{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--cream-dark);background:var(--white);color:var(--brown);cursor:pointer;font-weight:900;font-family:'Nunito',sans-serif;transition:all 0.15s;}
+.adm-cal-nav button:hover{background:var(--cream);border-color:var(--tan);}
+.adm-cal-month{font-size:0.82rem;font-weight:900;color:var(--text);letter-spacing:0.5px;text-transform:uppercase;}
+.adm-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 12px 4px;font-size:0.58rem;font-weight:900;color:var(--muted);text-align:center;text-transform:uppercase;}
+.adm-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 12px 12px;}
+.adm-cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:0.78rem;font-weight:800;color:var(--text);cursor:pointer;border:1.5px solid transparent;transition:all 0.14s;background:transparent;font-family:'Nunito',sans-serif;}
+.adm-cal-day:hover:not(.empty):not(.future){background:var(--cream);border-color:var(--cream-dark);}
+.adm-cal-day.empty{cursor:default;pointer-events:none;}
+.adm-cal-day.future{opacity:0.35;cursor:not-allowed;}
+.adm-cal-day.today{border-color:var(--brown);color:var(--brown-dark);}
+.adm-cal-day.selected{background:linear-gradient(135deg,var(--brown-dark),var(--brown));color:var(--cream);border-color:transparent;box-shadow:0 3px 10px rgba(61,36,16,0.25);}
+.adm-cal-foot{display:flex;gap:8px;padding:12px 14px 16px;border-top:1px solid var(--cream-dark);background:var(--cream);}
+.adm-cal-foot .btn-secondary,.adm-cal-foot .btn-primary{flex:1;margin:0;padding:10px 12px;font-size:0.8rem;}
+.adm-cal-today-link{display:block;text-align:center;font-size:0.72rem;font-weight:800;color:var(--brown);cursor:pointer;padding:0 12px 10px;font-family:'Nunito',sans-serif;}
+.adm-cal-today-link:hover{text-decoration:underline;}
+.adm-date-banner{display:flex;align-items:center;gap:8px;margin:0 12px 10px;padding:9px 12px;border-radius:10px;background:rgba(21,101,192,0.08);border:1.5px solid rgba(21,101,192,0.2);font-size:0.72rem;font-weight:700;color:#1565C0;}
+.adm-date-banner i{flex-shrink:0;}
+
 /* ══ ENHANCED MODAL SYSTEM ══ */
 .adm-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:9500;align-items:center;justify-content:center;padding:20px;}
 .adm-modal-overlay.open{display:flex;animation:overlayIn 0.22s ease;}
@@ -12988,25 +13034,33 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <div id="s-finance" class="screen">
     <div class="fin-sticky-top">
       <div class="page-header" style="padding:10px 16px 16px;">
-        <h2 style="font-size:1rem;"><i class="fas fa-chart-line"></i> Finance</h2>
-        <p style="font-size:0.7rem;margin-top:1px;">Revenue, expenses &amp; order history</p>
+        <div class="fin-header-row" style="width:100%;">
+          <div>
+            <h2 style="font-size:1rem;"><i class="fas fa-chart-line"></i> Finance</h2>
+            <p style="font-size:0.7rem;margin-top:1px;" id="fin-date-subtitle">Revenue, expenses &amp; order history — today</p>
+          </div>
+          <button type="button" class="adm-date-btn" id="fin-date-btn" onclick="openAdminCalendar('finance')" title="Pick a date">
+            <i class="fas fa-calendar-alt"></i>
+            <span id="fin-date-btn-label">Today</span>
+          </button>
+        </div>
       </div>
       <div class="fin-stats">
         <div class="fin-stat" style="border-top:3px solid var(--brown);">
           <div>
-            <div class="fl">Today's Revenue</div>
+            <div class="fl" id="fin-lbl-revenue">Today's Revenue</div>
             <div class="fv" id="sys-total" style="color:var(--brown);">₱0.00</div>
           </div>
         </div>
         <div class="fin-stat" style="border-top:3px solid var(--green);">
           <div>
-            <div class="fl">Net Profit</div>
+            <div class="fl" id="fin-lbl-profit">Net Profit</div>
             <div class="fv" id="net-profit" style="color:var(--green);">₱0.00</div>
           </div>
         </div>
         <div class="fin-stat" style="border-top:3px solid var(--red);">
           <div>
-            <div class="fl">Expenses</div>
+            <div class="fl" id="fin-lbl-expenses">Expenses</div>
             <div class="fv" id="exp-total" style="color:var(--red);">₱0.00</div>
           </div>
         </div>
@@ -13032,7 +13086,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
       <div class="section card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <span class="card-title" style="margin:0;">Customer Records</span>
-          <button class="btn-secondary" onclick="fetchCustomerLogs()"><i class="fas fa-sync-alt"></i></button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button type="button" class="adm-date-btn" style="padding:6px 10px;font-size:0.68rem;" onclick="openAdminCalendar('finance')" title="Pick date"><i class="fas fa-calendar-alt"></i></button>
+            <button class="btn-secondary" onclick="fetchCustomerLogs()"><i class="fas fa-sync-alt"></i></button>
+          </div>
         </div>
         <div class="tbl-wrap">
           <table class="kds-table">
@@ -13055,9 +13112,12 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
                 <div class="fin-exp-head-sub">Log supplies, packaging &amp; daily costs</div>
               </div>
             </div>
-            <div class="fin-exp-total-pill">
-              <div class="fin-exp-total-lbl">Total today</div>
-              <div class="fin-exp-total-val" id="fin-exp-today-total">₱0.00</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <button type="button" class="adm-date-btn" style="padding:6px 10px;font-size:0.68rem;" onclick="openAdminCalendar('finance')" title="Pick date"><i class="fas fa-calendar-alt"></i></button>
+              <div class="fin-exp-total-pill">
+                <div class="fin-exp-total-lbl">Total today</div>
+                <div class="fin-exp-total-val" id="fin-exp-today-total">₱0.00</div>
+              </div>
             </div>
           </div>
           <div class="fin-exp-form">
@@ -13085,7 +13145,10 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
     <!-- ── ORDER HISTORY TAB ── -->
     <div id="fin-history" class="fin-tabpane">
       <div class="section card">
-        <div class="card-title">Order History</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div class="card-title" style="margin:0;">Order History</div>
+          <button type="button" class="adm-date-btn" style="padding:6px 10px;font-size:0.68rem;" onclick="openAdminCalendar('finance')" title="Pick date"><i class="fas fa-calendar-alt"></i> <span id="fin-history-date-lbl">Today</span></button>
+        </div>
         <div class="oh-search-row">
           <input type="text" class="oh-search-inp" id="oh-search" placeholder="🔍  Search by name or code…" oninput="ohDebounce()">
           <select class="oh-filter-sel" id="oh-status" onchange="loadOrderHistory(1)">
@@ -13322,10 +13385,19 @@ body{background:var(--cream);color:var(--text);display:flex;flex-direction:colum
   <div id="s-liveorders" class="screen lo-screen-flex">
     <!-- ── Frozen header (never scrolls) ── -->
     <div class="lo-frozen-header">
-      <div class="page-header" style="padding:10px 16px 16px;">
-        <h2 style="font-size:1rem;"><i class="fas fa-stream"></i> Live Orders <span class="dot-live" style="margin-left:6px;"></span></h2>
-        <p style="font-size:0.7rem;margin-top:1px;">Real-time order monitor — auto-refreshes every 10s</p>
+      <div class="page-header" style="padding:10px 16px 12px;">
+        <div class="fin-header-row" style="width:100%;">
+          <div>
+            <h2 style="font-size:1rem;"><i class="fas fa-stream"></i> Live Orders <span class="dot-live" id="lo-live-dot" style="margin-left:6px;"></span></h2>
+            <p style="font-size:0.7rem;margin-top:1px;" id="lo-date-subtitle">Real-time order monitor — auto-refreshes every 10s</p>
+          </div>
+          <button type="button" class="adm-date-btn" id="lo-date-btn" onclick="openAdminCalendar('liveorders')" title="Pick a date">
+            <i class="fas fa-calendar-alt"></i>
+            <span id="lo-date-btn-label">Today</span>
+          </button>
+        </div>
       </div>
+      <div id="lo-date-banner" class="adm-date-banner" style="display:none;margin:0 14px 8px;"></div>
 
       <div class="lo-stats-bar">
         <div class="lo-stat">
@@ -14130,6 +14202,32 @@ ens-wrap">
   </div>
 </div>
 
+
+<!-- ══ ADMIN DATE CALENDAR MODAL ══ -->
+<div class="adm-modal-overlay" id="adm-cal-overlay" onclick="if(event.target===this)closeAdminCalendar()">
+  <div class="adm-cal-modal" role="dialog" aria-labelledby="adm-cal-title">
+    <button class="adm-modal-close" type="button" onclick="closeAdminCalendar()" style="top:10px;right:10px;z-index:2;color:rgba(255,255,255,0.85);"><i class="fas fa-times"></i></button>
+    <div class="adm-cal-head">
+      <div>
+        <div class="adm-cal-head-title" id="adm-cal-title">Select Date</div>
+        <div class="adm-cal-head-sub" id="adm-cal-context-lbl">Finance</div>
+      </div>
+      <i class="fas fa-calendar-days" style="font-size:1.35rem;opacity:0.35;"></i>
+    </div>
+    <div class="adm-cal-nav">
+      <button type="button" onclick="admCalPrevMonth()" aria-label="Previous month">‹</button>
+      <span class="adm-cal-month" id="adm-cal-month-lbl">—</span>
+      <button type="button" onclick="admCalNextMonth()" aria-label="Next month">›</button>
+    </div>
+    <div class="adm-cal-weekdays"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+    <div class="adm-cal-grid" id="adm-cal-grid"></div>
+    <div class="adm-cal-today-link" onclick="admCalPickToday()">Jump to today</div>
+    <div class="adm-cal-foot">
+      <button type="button" class="btn-secondary" onclick="closeAdminCalendar()">Cancel</button>
+      <button type="button" class="btn-primary" onclick="admCalApply()"><i class="fas fa-check"></i> Apply</button>
+    </div>
+  </div>
+</div>
 
 <div class="adm-modal-overlay" id="ord-detail-overlay">
   <div class="adm-modal ord-detail-modal" id="ord-detail-box">
@@ -15058,6 +15156,147 @@ async function saveInventory(){
   }catch(e){showToast('Error saving','error');}
 }
 
+/* ══ ADMIN DATE CALENDAR (Finance + Live Orders) ══ */
+const ADM_CAL_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let admCalContext='finance';
+let admCalPickDate=null;
+let admCalYear=0, admCalMonth=0;
+let admViewDates={finance:null,liveorders:null};
+
+function admPhTodayStr(){
+  const n=new Date();
+  const utc=n.getTime()+n.getTimezoneOffset()*60000;
+  const ph=new Date(utc+8*3600000);
+  return ph.getFullYear()+'-'+String(ph.getMonth()+1).padStart(2,'0')+'-'+String(ph.getDate()).padStart(2,'0');
+}
+function admFmtDateLabel(dateStr){
+  if(!dateStr)return 'Today';
+  if(dateStr===admPhTodayStr())return 'Today';
+  const p=dateStr.split('-');
+  const d=new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10));
+  return d.toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+function admDateQuery(ctx){
+  const d=admViewDates[ctx];
+  return d?'?date='+encodeURIComponent(d):'';
+}
+function admDateAmp(ctx){
+  const d=admViewDates[ctx];
+  return d?'&date='+encodeURIComponent(d):'';
+}
+function admUpdateDateButtons(){
+  const today=admPhTodayStr();
+  const finD=admViewDates.finance;
+  const finActive=!!(finD&&finD!==today);
+  const finBtn=document.getElementById('fin-date-btn');
+  const finLbl=document.getElementById('fin-date-btn-label');
+  const finSub=document.getElementById('fin-date-subtitle');
+  if(finBtn)finBtn.classList.toggle('past-view',finActive);
+  if(finLbl)finLbl.textContent=finActive?admFmtDateLabel(finD):'Today';
+  if(finSub)finSub.textContent=finActive?('Viewing data for '+admFmtDateLabel(finD)):'Revenue, expenses & order history — today';
+  const revLbl=document.getElementById('fin-lbl-revenue');
+  if(revLbl)revLbl.textContent=finActive?'Revenue':'Today\'s Revenue';
+  const expTitle=document.querySelector('.fin-exp-head-title');
+  if(expTitle)expTitle.textContent=finActive?('Expenses · '+admFmtDateLabel(finD)):'Today\'s Expenses';
+  const expTotLbl=document.querySelector('.fin-exp-total-lbl');
+  if(expTotLbl)expTotLbl.textContent=finActive?'Day total':'Total today';
+  const histLbl=document.getElementById('fin-history-date-lbl');
+  if(histLbl)histLbl.textContent=finActive?admFmtDateLabel(finD):'Today';
+
+  const loD=admViewDates.liveorders;
+  const loActive=!!(loD&&loD!==today);
+  const loBtn=document.getElementById('lo-date-btn');
+  const loLbl=document.getElementById('lo-date-btn-label');
+  const loSub=document.getElementById('lo-date-subtitle');
+  const loBanner=document.getElementById('lo-date-banner');
+  const loDot=document.getElementById('lo-live-dot');
+  if(loBtn)loBtn.classList.toggle('past-view',loActive);
+  if(loLbl)loLbl.textContent=loActive?admFmtDateLabel(loD):'Today';
+  if(loSub)loSub.textContent=loActive?('Archived orders for '+admFmtDateLabel(loD)):'Real-time order monitor — auto-refreshes every 10s';
+  if(loDot)loDot.style.display=loActive?'none':'inline-block';
+  if(loBanner){
+    if(loActive){
+      loBanner.style.display='flex';
+      loBanner.innerHTML='<i class="fas fa-calendar-day"></i><span>Viewing <b>'+escapeHTML(admFmtDateLabel(loD))+'</b></span><span style="margin-left:auto;cursor:pointer;text-decoration:underline;font-weight:800;" onclick="admClearLoDate()">Back to live</span>';
+    }else loBanner.style.display='none';
+  }
+}
+function admClearLoDate(){
+  admViewDates.liveorders=null;
+  _loKnown.clear();
+  admRefreshDateContext('liveorders');
+}
+function openAdminCalendar(ctx){
+  admCalContext=ctx;
+  admCalPickDate=admViewDates[ctx]||admPhTodayStr();
+  const p=admCalPickDate.split('-');
+  admCalYear=parseInt(p[0],10);
+  admCalMonth=parseInt(p[1],10)-1;
+  const ctxLbl={finance:'Finance — Today, Expenses & Orders',liveorders:'Live Orders'};
+  const lbl=document.getElementById('adm-cal-context-lbl');
+  if(lbl)lbl.textContent=ctxLbl[ctx]||ctx;
+  admCalRenderGrid();
+  document.getElementById('adm-cal-overlay').classList.add('open');
+}
+function closeAdminCalendar(){
+  const o=document.getElementById('adm-cal-overlay');
+  if(o)o.classList.remove('open');
+}
+function admCalRenderGrid(){
+  const monthLbl=document.getElementById('adm-cal-month-lbl');
+  const grid=document.getElementById('adm-cal-grid');
+  if(monthLbl)monthLbl.textContent=ADM_CAL_MONTHS[admCalMonth]+' '+admCalYear;
+  if(!grid)return;
+  const today=admPhTodayStr();
+  const first=new Date(admCalYear,admCalMonth,1).getDay();
+  const days=new Date(admCalYear,admCalMonth+1,0).getDate();
+  let html='';
+  for(let i=0;i<first;i++)html+='<div class="adm-cal-day empty"></div>';
+  for(let d=1;d<=days;d++){
+    const dateStr=admCalYear+'-'+String(admCalMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isFuture=dateStr>today;
+    const cls=['adm-cal-day'];
+    if(dateStr===today)cls.push('today');
+    if(dateStr===admCalPickDate)cls.push('selected');
+    if(isFuture)cls.push('future');
+    html+='<div class="'+cls.join(' ')+'" onclick="admCalSelectDay(\''+dateStr+'\','+(isFuture?'true':'false')+')">'+d+'</div>';
+  }
+  grid.innerHTML=html;
+}
+function admCalSelectDay(dateStr,isFuture){
+  if(isFuture)return;
+  admCalPickDate=dateStr;
+  admCalRenderGrid();
+}
+function admCalPickToday(){
+  admCalPickDate=admPhTodayStr();
+  const p=admCalPickDate.split('-');
+  admCalYear=parseInt(p[0],10);
+  admCalMonth=parseInt(p[1],10)-1;
+  admCalRenderGrid();
+}
+function admCalPrevMonth(){admCalMonth--;if(admCalMonth<0){admCalMonth=11;admCalYear--;}admCalRenderGrid();}
+function admCalNextMonth(){admCalMonth++;if(admCalMonth>11){admCalMonth=0;admCalYear++;}admCalRenderGrid();}
+function admCalApply(){
+  const today=admPhTodayStr();
+  admViewDates[admCalContext]=(admCalPickDate===today)?null:admCalPickDate;
+  closeAdminCalendar();
+  admRefreshDateContext(admCalContext);
+}
+function admRefreshDateContext(ctx){
+  admUpdateDateButtons();
+  if(ctx==='finance'){
+    fetchFinance();
+    const todayPane=document.getElementById('fin-today');
+    if(todayPane&&todayPane.classList.contains('active'))fetchCustomerLogs();
+    const histPane=document.getElementById('fin-history');
+    if(histPane&&histPane.classList.contains('active')){ohPage=1;loadOrderHistory(1);}
+  }else if(ctx==='liveorders'){
+    _loKnown.clear();
+    fetchLiveOrders();
+  }
+}
+
 /* ══ FINANCE TABS ══ */
 function finTab(name,btn){
   var financeRoot=document.getElementById('s-finance');
@@ -15086,11 +15325,12 @@ function finTab(name,btn){
   if(name==='history'){ohPage=1;loadOrderHistory(1);}
   if(name==='today'){fetchCustomerLogs();}
   // 'expenses' data is already covered by fetchFinance() above
+  admUpdateDateButtons();
 }
 
 /* ══ FINANCE ══ */
 async function fetchFinance(){
-  try{const r=await apiFetch('/api/finance/daily');if(!r||!r.ok)return;
+  try{const r=await apiFetch('/api/finance/daily'+admDateQuery('finance'));if(!r||!r.ok)return;
   const data=await r.json();const net=data.system_total-data.expenses_total;
   document.getElementById('sys-total').innerText='₱'+data.system_total.toFixed(2);
   document.getElementById('net-profit').innerText='₱'+net.toFixed(2);
@@ -15105,7 +15345,7 @@ async function addExpense(){
 async function fetchCustomerLogs(){
   const tbody=document.getElementById('cust-tbody');
   if(!tbody)return; // today tab not visible yet
-  try{const r=await apiFetch('/api/customer_logs');if(!r||!r.ok){tbody.innerHTML='<tr><td colspan="8" class="error-state">DB Error</td></tr>';return;}
+  try{const r=await apiFetch('/api/customer_logs'+admDateQuery('finance'));if(!r||!r.ok){tbody.innerHTML='<tr><td colspan="8" class="error-state">DB Error</td></tr>';return;}
   const data=await r.json();
   tbody.innerHTML=data.length?data.map(l=>{
     const dateStr=escapeHTML(l.time.split(' ')[0]);
@@ -15252,7 +15492,9 @@ async function loadOrderHistory(page){
   const status=statusEl?statusEl.value:'';
   tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
   try{
-    const r=await apiFetch(`/api/orders/history?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page}`);
+    let ohUrl=`/api/orders/history?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page}`;
+    if(admViewDates.finance)ohUrl+=`&date=${encodeURIComponent(admViewDates.finance)}`;
+    const r=await apiFetch(ohUrl);
     if(!r||!r.ok)return;
     const data=await r.json();
     const statusColors={'Waiting Confirmation':'var(--orange)','Preparing Order':'var(--blue)','Ready for Pick-up':'var(--green)','Completed':'#388E3C','Cancelled':'var(--red)'};
@@ -16065,6 +16307,7 @@ setInterval(()=>{if(document.getElementById('s-audit')&&document.getElementById(
 
 // Initial data load on page open
 fetchInventory();
+if(typeof admUpdateDateButtons==='function')admUpdateDateButtons();
 
 /* ══ RIPPLE EFFECT ══ */
 document.addEventListener('click',function(e){
@@ -16329,22 +16572,24 @@ function setLoFilter(f,btn){
 
 async function fetchLiveOrders(){
   try{
-    const r=await apiFetch('/api/orders?_t='+Date.now());
+    const r=await apiFetch('/api/orders?_t='+Date.now()+admDateAmp('liveorders'));
     if(!r||!r.ok)return;
     const data=await r.json();
     const orders=data.orders||[];
-    // New order detection
-    const newOnes=orders.filter(o=>!_loKnown.has(o.id));
-    if(newOnes.length&&_loKnown.size>0){
+    const isLiveDay=!admViewDates.liveorders;
+    // New order detection (live today only)
+    const newOnes=isLiveDay?orders.filter(o=>!_loKnown.has(o.id)):[];
+    if(newOnes.length&&_loKnown.size>0&&isLiveDay){
       playBeep();
       showToast(`${newOnes.length} new order${newOnes.length>1?'s':''} arrived!`,'success');
       const badge=document.getElementById('adm-live-badge');
       if(badge){badge.style.display='flex';badge.textContent=newOnes.length;badge.className=badge.className;badge.style.animation='none';requestAnimationFrame(()=>{badge.style.animation='badgeBounce 0.4s cubic-bezier(0.34,1.56,0.64,1)';});}
     }
-    orders.forEach(o=>_loKnown.add(o.id));
+    if(isLiveDay)orders.forEach(o=>_loKnown.add(o.id));
     _loOrders=orders;
     renderLoCards();
     renderLoStats();
+    admUpdateDateButtons();
   // Animate brand-new cards
   requestAnimationFrame(()=>{
     if(typeof _loNewIds!=='undefined'&&_loNewIds.size){
@@ -20019,7 +20264,14 @@ def customer_sse_stream():
 def api_orders():
     if not session.get('is_admin') and not session.get('is_employee'): return jsonify({"status": "error"}), 403
     try:
-        res = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook').order_by(Reservation.created_at.desc()).limit(50).all()
+        date_arg = request.args.get('date', '').strip()
+        base_q = Reservation.query.filter(Reservation.order_source != 'Legacy Notebook')
+        if date_arg:
+            s, e, day_key = _parse_day_bounds(date_arg)
+            res = base_q.filter(Reservation.created_at >= s, Reservation.created_at <= e).order_by(Reservation.created_at.desc()).limit(200).all()
+        else:
+            day_key = get_ph_time().strftime('%Y-%m-%d')
+            res = base_q.order_by(Reservation.created_at.desc()).limit(50).all()
         def _fmt_order(r):
             try:
                 meta = OrderMeta.query.filter_by(reservation_id=r.id).first()
@@ -20063,7 +20315,7 @@ def api_orders():
                 orders_list.append(_fmt_order(r))
             except Exception as row_err:
                 print(f"api_orders: skipping order id={r.id} due to error: {row_err}")
-        return jsonify({'orders': orders_list})
+        return jsonify({'orders': orders_list, 'date': day_key, 'is_today': not date_arg or day_key == get_ph_time().strftime('%Y-%m-%d')})
     except Exception as e:
         print(f"api_orders error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -20113,12 +20365,14 @@ def admin_manual_order():
 def daily_finance():
     if not session.get('is_admin'): return jsonify({"error": "Unauthorized"}), 403
     try:
-        now = get_ph_time()
-        s = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        e = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        date_arg = request.args.get('date', '').strip()
+        s, e, day_key = _parse_day_bounds(date_arg or None)
+        today_key = get_ph_time().strftime('%Y-%m-%d')
         ords = Reservation.query.filter(Reservation.created_at >= s, Reservation.created_at <= e).all()
         exps = Expense.query.filter(Expense.created_at >= s, Expense.created_at <= e).all()
         return jsonify({
+            "date": day_key,
+            "is_today": day_key == today_key,
             "system_total": round(sum(o.total_investment or 0.0 for o in ords), 2),
             "expenses_total": round(sum(x.amount or 0.0 for x in exps), 2),
             "expenses": [{"desc": x.description, "amount": x.amount or 0.0} for x in exps]
@@ -20206,7 +20460,11 @@ def order_history():
         status_filter = request.args.get('status', '')
         page = max(1, int(request.args.get('page', 1)))
         per_page = 20
+        date_arg = request.args.get('date', '').strip()
         query = Reservation.query
+        if date_arg:
+            s, e, _ = _parse_day_bounds(date_arg)
+            query = query.filter(Reservation.created_at >= s, Reservation.created_at <= e)
         if q:
             query = query.filter(db.or_(
                 Reservation.patron_name.ilike(f'%{q}%'),
@@ -20251,7 +20509,12 @@ def add_expense():
 def get_customer_logs():
     if not session.get('is_admin'): return jsonify([]), 403
     try:
-        logs = CustomerLog.query.order_by(CustomerLog.created_at.desc()).limit(200).all()
+        date_arg = request.args.get('date', '').strip()
+        log_q = CustomerLog.query
+        if date_arg:
+            s, e, _ = _parse_day_bounds(date_arg)
+            log_q = log_q.filter(CustomerLog.created_at >= s, CustomerLog.created_at <= e)
+        logs = log_q.order_by(CustomerLog.created_at.desc()).limit(200).all()
         return jsonify([{
             "id":          l.id,
             "name":        l.full_name or '',
