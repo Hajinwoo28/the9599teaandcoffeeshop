@@ -28,6 +28,26 @@ from flask_limiter import Limiter  # type: ignore[import-untyped]
 from flask_limiter.util import get_remote_address  # type: ignore[import-untyped]
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+# ── Reliability utilities (error handling, retry, logging, health checks) ──────
+try:
+    from reliability_utils import (
+        app_logger,
+        LogLevel,
+        retry_on_exception,
+        RetryConfig,
+        AppError,
+        ValidationError as AppValidationError,
+        ExternalAPIError,
+        system_health,
+        HealthStatus,
+        CircuitBreaker,
+    )
+    _RELIABILITY_UTILS_LOADED = True
+except ImportError:
+    _RELIABILITY_UTILS_LOADED = False
+    app_logger = None
+    print("[WARNING] reliability_utils.py not found — advanced reliability features disabled.")
+
 # ── Load .env file (for local development) ────────────────────────────────────
 # Create a .env file in the same folder as app.py with:
 #   GMAIL_SENDER=yourgmail@gmail.com
@@ -126,29 +146,63 @@ HCAPTCHA_VERIFY_URL  = 'https://api.hcaptcha.com/siteverify'
 # Submissions faster than this are rejected as bots.
 BOT_MIN_FORM_SECONDS = 3
 
+# hCaptcha circuit breaker — opens after 5 consecutive failures, resets after 2 min
+_hcaptcha_circuit = CircuitBreaker(failure_threshold=5, timeout=120) if _RELIABILITY_UTILS_LOADED else None
+
+def _verify_hcaptcha_once(token: str) -> tuple:
+    """Single attempt at hCaptcha verification (called with retry wrapper)."""
+    resp = requests.post(
+        HCAPTCHA_VERIFY_URL,
+        data={'secret': HCAPTCHA_SECRET_KEY, 'response': token},
+        timeout=8,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if data.get('success'):
+        return True, ''
+    codes = data.get('error-codes', [])
+    return False, f"CAPTCHA verification failed ({', '.join(codes)}). Please refresh and try again."
+
+
 def verify_hcaptcha(token: str) -> tuple:
     """
-    Verify an hCaptcha token server-side.
+    Verify an hCaptcha token server-side with automatic retry on transient errors.
     Returns (ok: bool, error_msg: str).
+    Retries up to 3 times with exponential back-off on network/timeout errors.
+    Falls back to allowing the request if the hCaptcha service is unreachable.
     """
     if not HCAPTCHA_SECRET_KEY:
         return True, ''
     if not token:
         return False, 'CAPTCHA token missing. Please refresh and try again.'
-    try:
-        resp = requests.post(
-            HCAPTCHA_VERIFY_URL,
-            data={'secret': HCAPTCHA_SECRET_KEY, 'response': token},
-            timeout=8,
-        )
-        data = resp.json()
-        if data.get('success'):
-            return True, ''
-        codes = data.get('error-codes', [])
-        return False, f"CAPTCHA verification failed ({', '.join(codes)}). Please refresh and try again."
-    except Exception as e:
-        print(f"[hCaptcha] Verification request failed: {e}")
+
+    # Circuit breaker: if hCaptcha has been failing repeatedly, skip check
+    if _hcaptcha_circuit and not _hcaptcha_circuit.is_available():
+        print("[hCaptcha] Circuit breaker OPEN — skipping verification (service unavailable)")
         return True, ''
+
+    last_exc = None
+    for attempt in range(3):
+        try:
+            result = _verify_hcaptcha_once(token)
+            if _hcaptcha_circuit:
+                _hcaptcha_circuit.record_success()
+            return result
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last_exc = e
+            wait = (2 ** attempt) * 0.5  # 0.5s, 1s, 2s
+            print(f"[hCaptcha] Attempt {attempt + 1}/3 failed ({type(e).__name__}), retrying in {wait}s…")
+            import time as _t; _t.sleep(wait)
+        except Exception as e:
+            last_exc = e
+            break
+
+    # All attempts exhausted or non-retryable error
+    if _hcaptcha_circuit:
+        _hcaptcha_circuit.record_failure()
+    print(f"[hCaptcha] Verification request failed after retries: {last_exc}")
+    # Fail OPEN so a transient hCaptcha outage doesn't block real customers
+    return True, ''
 
 # ── PayMongo GCash Payment Gateway ────────────────────────────────────────────
 # Sign up free at https://dashboard.paymongo.com
@@ -370,6 +424,22 @@ if database_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# ── Connection pooling — prevents "too many connections" under load ────────────
+# pool_pre_ping=True tests each connection before use, recovering from stale
+# connections after network hiccups or database restarts automatically.
+if database_url.startswith('postgresql'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 10,       # persistent connections kept open
+        'max_overflow': 20,    # extra connections allowed under burst load
+        'pool_recycle': 3600,  # recycle connections older than 1 hour
+        'pool_pre_ping': True, # verify connection health before every use
+    }
+else:
+    # SQLite: just enable pre-ping so stale connections are detected
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+    }
+
 db = SQLAlchemy(app)
 
 def get_local_ip():
@@ -473,20 +543,42 @@ def get_store_status():
     }
 
 def log_audit(action, details="", ip=None):
+    """Persist an audit event. Falls back to file log if the DB is unavailable."""
+    # Auto-capture the request IP when called within a request context
+    if ip is None:
+        try:
+            forwarded = request.headers.get('X-Forwarded-For', '')
+            ip = forwarded.split(',')[0].strip() if forwarded else (request.remote_addr or '')
+        except RuntimeError:
+            ip = ''
+
+    # Truncate details to prevent DB column overflow
+    safe_details = (details or '')[:255]
+
     try:
-        # Auto-capture the request IP when called within a request context
-        if ip is None:
-            try:
-                forwarded = request.headers.get('X-Forwarded-For', '')
-                ip = forwarded.split(',')[0].strip() if forwarded else (request.remote_addr or '')
-            except RuntimeError:
-                ip = ''
-        new_log = AuditLog(action=action, details=details, ip_address=(ip or ''))  # type: ignore[call-arg]
+        new_log = AuditLog(action=action, details=safe_details, ip_address=(ip or ''))  # type: ignore[call-arg]
         db.session.add(new_log)
         db.session.commit()
+        # Mirror to structured log file for redundancy
+        if _RELIABILITY_UTILS_LOADED and app_logger:
+            app_logger.log(
+                LogLevel.INFO,
+                f"AUDIT: {action}",
+                {"details": safe_details, "ip": ip or ''},
+            )
     except Exception as e:
-        db.session.rollback()
-        print(f"Audit Log Failed: {str(e)}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        # Write to file log even when DB is unavailable — guarantees audit trail
+        print(f"Audit Log Failed (DB): {str(e)} | Action: {action} | Details: {safe_details}")
+        if _RELIABILITY_UTILS_LOADED and app_logger:
+            app_logger.log(
+                LogLevel.ERROR,
+                f"AUDIT DB WRITE FAILED: {action}",
+                {"details": safe_details, "ip": ip or '', "db_error": str(e)},
+            )
 
 # ── Customer-facing error logger ─────────────────────────────────────────────
 
