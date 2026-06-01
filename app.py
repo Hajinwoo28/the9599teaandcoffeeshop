@@ -6807,6 +6807,68 @@ STOREFRONT_HTML = """
         .loc-nav-btn:active { opacity: 0.9; }
         .loc-nav-btn.gmaps { background: #1a73e8; }
         .loc-close-btn { width: 100%; padding: 12px; border-radius: 14px; border: 1.5px solid #D7CCC8; background: #fff; color: #8D6E63; font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
+        /* ── Welcome Modal ── */
+        .welcome-modal-overlay { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(30,16,6,0.82); backdrop-filter: blur(6px); }
+        .welcome-modal { background: linear-gradient(160deg, #3E2010 0%, #5C3317 50%, #6F4E37 100%); border-radius: 28px; max-width: 400px; width: 100%; padding: 0; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(200,155,60,0.18); animation: wm-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes wm-pop { from { transform: scale(0.82) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .wm-hero { position: relative; height: 170px; background: linear-gradient(135deg, #2b1206, #3d2010); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .wm-hero-bg { position: absolute; inset: 0; opacity: 0.12; background: radial-gradient(ellipse at 30% 50%, #f5c842 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #c8922a 0%, transparent 55%); }
+        .wm-hero-steam { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: flex-end; }
+        .wm-steam-line { width: 4px; border-radius: 4px; background: linear-gradient(to top, rgba(245,200,130,0.7), transparent); animation: wm-steam 2.4s ease-in-out infinite; }
+        .wm-steam-line:nth-child(1) { height: 38px; animation-delay: 0s; }
+        .wm-steam-line:nth-child(2) { height: 54px; animation-delay: 0.4s; }
+        .wm-steam-line:nth-child(3) { height: 42px; animation-delay: 0.8s; }
+        @keyframes wm-steam { 0%, 100% { transform: scaleX(1) translateY(0); opacity: 0.7; } 50% { transform: scaleX(1.5) translateY(-10px); opacity: 0.3; } }
+        .wm-logo-ring { width: 80px; height: 80px; border-radius: 50%; border: 2.5px solid rgba(200,155,60,0.55); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); box-shadow: 0 0 0 8px rgba(200,155,60,0.08), 0 0 30px rgba(200,155,60,0.18); position: relative; z-index: 2; }
+        .wm-logo-ring img { width: 68px; height: 68px; border-radius: 50%; object-fit: cover; }
+        .wm-logo-ring i { font-size: 2.2rem; color: #f5c842; }
+        .wm-body { padding: 28px 32px 32px; text-align: center; }
+        .wm-title { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 900; color: #f5e6c8; line-height: 1.15; margin-bottom: 6px; }
+        .wm-tagline { font-size: 0.72rem; font-weight: 900; color: #c8922a; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 14px; }
+        .wm-desc { font-size: 0.88rem; color: rgba(245,230,200,0.78); line-height: 1.7; margin-bottom: 24px; }
+        .wm-enter-btn { width: 100%; padding: 15px 20px; border-radius: 14px; background: linear-gradient(135deg, #c8922a, #f5c842); color: #3E2010; border: none; font-family: inherit; font-size: 1rem; font-weight: 900; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 6px 20px rgba(200,155,60,0.38); transition: transform 0.18s, box-shadow 0.18s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .wm-enter-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(200,155,60,0.48); }
+        .wm-enter-btn:active { transform: translateY(0); }
+        .wm-note { margin-top: 14px; font-size: 0.72rem; color: rgba(245,230,200,0.45); font-weight: 600; letter-spacing: 0.3px; }
+
+        /* ── Promo Code Modal ── */
+        .promo-modal-overlay { position: fixed; inset: 0; z-index: 10002; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(20,10,3,0.75); backdrop-filter: blur(8px); }
+        .promo-modal-overlay.show { display: flex; }
+        .promo-modal { background: var(--card-bg, #fff); border-radius: 26px; max-width: 390px; width: 100%; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,0.22), 0 0 0 1.5px rgba(200,155,60,0.14); animation: pm-slide 0.42s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes pm-slide { from { transform: scale(0.88) translateY(24px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .pm-header { background: linear-gradient(135deg, #5C3317, #8B5E3C); padding: 22px 28px 20px; text-align: center; }
+        .pm-tag { display: inline-block; background: rgba(245,200,66,0.18); border: 1.5px solid rgba(245,200,66,0.38); color: #f5c842; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; }
+        .pm-title { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 900; color: #f5e6c8; margin-bottom: 4px; }
+        .pm-sub { font-size: 0.78rem; color: rgba(245,230,200,0.65); font-weight: 600; }
+        .pm-body { padding: 26px 28px 28px; }
+        .pm-input-wrap { position: relative; margin-bottom: 12px; }
+        .pm-code-input { width: 100%; padding: 14px 50px 14px 16px; border: 2px solid var(--border-color, #e8d9c4); border-radius: 14px; font-size: 1.05rem; font-family: 'DM Mono', 'Courier New', monospace; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dark, #3E2010); background: #fff; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
+        .pm-code-input:focus { border-color: #c8922a; box-shadow: 0 0 0 4px rgba(200,146,42,0.13); }
+        .pm-code-input.valid { border-color: #2e7d32; background: #f0fdf4; }
+        .pm-code-input.invalid { border-color: #c62828; background: #fff5f5; }
+        .pm-clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #bbb; cursor: pointer; font-size: 1rem; padding: 4px; display: none; }
+        .pm-validate-btn { width: 100%; padding: 13px; border-radius: 12px; background: linear-gradient(135deg, #5C3317, #8B5E3C); color: #fff; border: none; font-family: inherit; font-size: 0.92rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s, transform 0.15s; letter-spacing: 0.3px; margin-bottom: 10px; }
+        .pm-validate-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .pm-validate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .pm-feedback { min-height: 36px; border-radius: 10px; padding: 0 12px; font-size: 0.82rem; font-weight: 700; display: none; align-items: center; gap: 7px; margin-bottom: 10px; }
+        .pm-feedback.success { display: flex; background: #e8f5e9; color: #1b5e20; border: 1.5px solid #a5d6a7; }
+        .pm-feedback.error { display: flex; background: #fff0f0; color: #c62828; border: 1.5px solid #f5c6c6; }
+        .pm-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+        .pm-divider span { font-size: 0.68rem; font-weight: 700; color: #bbb; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+        .pm-divider::before, .pm-divider::after { content: ''; flex: 1; height: 1px; background: #e8d9c4; }
+        .pm-continue-btn { width: 100%; padding: 14px; border-radius: 13px; background: linear-gradient(135deg, #8B5E3C, #5C3317); color: #fff; border: none; font-family: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; letter-spacing: 0.3px; box-shadow: 0 4px 16px rgba(92,51,23,0.28); transition: transform 0.15s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .pm-continue-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(92,51,23,0.35); }
+        .pm-skip-link { width: 100%; text-align: center; margin-top: 12px; font-size: 0.78rem; color: #aaa; font-weight: 600; cursor: pointer; display: block; background: none; border: none; font-family: inherit; transition: color 0.18s; }
+        .pm-skip-link:hover { color: #8B5E3C; }
+        .pm-applied-badge { display: none; background: linear-gradient(135deg, #e8f5e9, #d4edda); border: 1.5px solid #a5d6a7; border-radius: 12px; padding: 11px 15px; margin-bottom: 14px; align-items: center; gap: 10px; }
+        .pm-applied-badge.show { display: flex; }
+        .pm-applied-badge-icon { font-size: 1.3rem; }
+        .pm-applied-badge-text { flex: 1; }
+        .pm-applied-badge-code { font-size: 0.9rem; font-weight: 900; color: #1b5e20; font-family: monospace; letter-spacing: 2px; }
+        .pm-applied-badge-desc { font-size: 0.75rem; color: #388e3c; font-weight: 600; margin-top: 2px; }
+
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
         .gate-card { background: var(--card-bg); padding: 50px 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; border: 1px solid var(--border-color); }
 
         /* ── OTP Digit Boxes ── */
@@ -6907,8 +6969,86 @@ function playGrantedSound() {
 </script>
 
 {% if not session.get('customer_verified') %}
+
+<!-- ══════════ WELCOME MODAL ══════════ -->
+<div id="welcome-modal" class="welcome-modal-overlay">
+    <div class="welcome-modal">
+        <div class="wm-hero">
+            <div class="wm-hero-bg"></div>
+            <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;">
+                <div class="wm-logo-ring">
+                    <img src="/static/images/9599.jpg" alt="9599 logo" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-mug-hot\\'></i>'">
+                </div>
+                <div class="wm-hero-steam">
+                    <div class="wm-steam-line"></div>
+                    <div class="wm-steam-line"></div>
+                    <div class="wm-steam-line"></div>
+                </div>
+            </div>
+        </div>
+        <div class="wm-body">
+            <div class="wm-tagline">Welcome</div>
+            <div class="wm-title">9599 Tea &amp; Coffee</div>
+            <p class="wm-desc">Crafted with love, served with warmth. ☕<br>Your favourite brews are just a few taps away — let's get your order started.</p>
+            <button class="wm-enter-btn" onclick="showPromoModal()">
+                <i class="fas fa-mug-hot"></i> Start My Order
+            </button>
+            <div class="wm-note">By continuing you agree to our ordering terms &amp; store policies.</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ PROMO CODE MODAL ══════════ -->
+<div id="promo-modal" class="promo-modal-overlay">
+    <div class="promo-modal">
+        <div class="pm-header">
+            <div class="pm-tag"><i class="fas fa-tag"></i> &nbsp;Optional</div>
+            <div class="pm-title">🎉 Got a Promo Code?</div>
+            <div class="pm-sub">Enter it now to save on your order — or skip and browse the menu.</div>
+        </div>
+        <div class="pm-body">
+            <!-- Applied badge (shown after successful validation) -->
+            <div class="pm-applied-badge" id="pm-applied-badge">
+                <div class="pm-applied-badge-icon">✅</div>
+                <div class="pm-applied-badge-text">
+                    <div class="pm-applied-badge-code" id="pm-badge-code">SAVE20</div>
+                    <div class="pm-applied-badge-desc" id="pm-badge-desc">Discount will be applied at checkout</div>
+                </div>
+                <button onclick="clearPromoCode()" style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px;"><i class="fas fa-times-circle"></i></button>
+            </div>
+
+            <!-- Input area -->
+            <div id="pm-input-area">
+                <div class="pm-input-wrap">
+                    <input id="pm-code-input" class="pm-code-input" type="text"
+                        placeholder="e.g. SAVE20"
+                        maxlength="30"
+                        autocomplete="off"
+                        spellcheck="false"
+                        oninput="pmOnInput()"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();validatePromoCode();}">
+                    <button class="pm-clear-btn" id="pm-clear-btn" onclick="pmClearInput()" tabindex="-1"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="pm-feedback" id="pm-feedback"></div>
+                <button class="pm-validate-btn" id="pm-validate-btn" onclick="validatePromoCode()">
+                    <i class="fas fa-check-circle"></i> Apply Code
+                </button>
+            </div>
+
+            <div class="pm-divider"><span>then</span></div>
+
+            <button class="pm-continue-btn" id="pm-continue-btn" onclick="proceedFromPromo()">
+                <i class="fas fa-arrow-right"></i> Continue to Order
+            </button>
+            <button class="pm-skip-link" onclick="proceedFromPromo(true)">
+                Skip — I don't have a promo code
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- SIGN-IN GATEKEEPER -->
-<div id="login-gatekeeper" class="gate-wrapper">
+<div id="login-gatekeeper" class="gate-wrapper" style="display:none;">
     <div class="gate-card">
         <div style="width:70px; height:70px; border-radius:50%; border:2px solid var(--gold); display:flex; justify-content:center; align-items:center; margin: 0 auto 15px;">
             <img src="/static/images/9599.jpg" style="width:60px; height:60px; border-radius:50%; object-fit:cover;" alt="9599 Tea &amp; Coffee logo" onerror="this.style.display='none'">
@@ -7186,6 +7326,8 @@ function playGrantedSound() {
         const lat   = document.getElementById('gate-lat').value.trim();
         const lng   = document.getElementById('gate-lng').value.trim();
         const btn   = document.getElementById('gate-btn');
+        // Pick up applied promo code (set by the promo modal)
+        const promoCode = (window._appliedPromoCode && window._appliedPromoCode.code) ? window._appliedPromoCode.code : '';
         try {
             const res = await fetch('/api/auth/manual', {
                 method: 'POST',
@@ -7193,11 +7335,16 @@ function playGrantedSound() {
                 body: JSON.stringify({
                     name, email, phone, lat, lng,
                     address: _gateGeoAddr || (lat && lng ? `${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}` : ''),
-                    'h-captcha-response': captchaToken
+                    'h-captcha-response': captchaToken,
+                    promo_code: promoCode
                 })
             });
             const d = await res.json();
             if (res.ok && d.status === 'success') {
+                // Persist promo to sessionStorage so checkout can pick it up after reload
+                if (promoCode) {
+                    try { sessionStorage.setItem('_pendingPromo', JSON.stringify(window._appliedPromoCode)); } catch(_) {}
+                }
                 location.reload();
             } else if (res.ok && d.status === 'email_sent') {
                 // Show "check your email" screen
@@ -7261,6 +7408,155 @@ function playGrantedSound() {
             });
         });
     });
+
+    // ══════════ WELCOME & PROMO MODAL CONTROLLERS ══════════
+
+    // Stores the validated promo code for use at checkout
+    window._appliedPromoCode = null;
+
+    function showPromoModal() {
+        // Hide welcome modal with fade-out, show promo modal
+        const wm = document.getElementById('welcome-modal');
+        wm.style.transition = 'opacity 0.28s';
+        wm.style.opacity = '0';
+        setTimeout(() => {
+            wm.style.display = 'none';
+            const pm = document.getElementById('promo-modal');
+            pm.classList.add('show');
+            // Auto-focus the promo input
+            const input = document.getElementById('pm-code-input');
+            if (input) setTimeout(() => input.focus(), 120);
+        }, 260);
+    }
+
+    function proceedFromPromo(skip) {
+        // Hide promo modal, show the gatekeeper form
+        const pm = document.getElementById('promo-modal');
+        pm.style.transition = 'opacity 0.25s';
+        pm.style.opacity = '0';
+        setTimeout(() => {
+            pm.classList.remove('show');
+            pm.style.opacity = '';
+            // Show the gatekeeper with a nice entry animation
+            const gk = document.getElementById('login-gatekeeper');
+            gk.style.display = 'flex';
+            gk.style.opacity = '0';
+            gk.style.transition = 'opacity 0.35s';
+            requestAnimationFrame(() => { gk.style.opacity = '1'; });
+            // Show promo banner inside gate card if a code was applied
+            if (window._appliedPromoCode) {
+                const banner = document.createElement('div');
+                banner.id = 'gate-promo-banner';
+                banner.style.cssText = 'background:linear-gradient(135deg,#e8f5e9,#d4edda);border:1.5px solid #a5d6a7;border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:0.83rem;font-weight:700;color:#1b5e20;animation:fadeSlideIn 0.38s ease;';
+                banner.innerHTML = `<i class="fas fa-tag" style="color:#2e7d32;font-size:1rem;"></i> <span>Promo <b style="font-family:monospace;letter-spacing:2px;">${escapeHTML(window._appliedPromoCode.code)}</b> applied — ${escapeHTML(window._appliedPromoCode.desc)}</span>`;
+                const form = document.getElementById('manual-signin-form');
+                if (form && !document.getElementById('gate-promo-banner')) {
+                    form.insertBefore(banner, form.firstChild);
+                }
+            }
+        }, 220);
+    }
+
+    // ── Promo Input helpers ──────────────────────────────────────────────
+    function pmOnInput() {
+        const inp = document.getElementById('pm-code-input');
+        const clr = document.getElementById('pm-clear-btn');
+        const fb  = document.getElementById('pm-feedback');
+        if (!inp) return;
+        inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9\-_]/g, '');
+        if (clr) clr.style.display = inp.value ? 'block' : 'none';
+        // Reset state on new input
+        inp.classList.remove('valid', 'invalid');
+        if (fb) { fb.className = 'pm-feedback'; fb.innerHTML = ''; }
+        // Hide badge if user clears code
+        if (!inp.value) { window._appliedPromoCode = null; _pmHideBadge(); }
+    }
+
+    function pmClearInput() {
+        const inp = document.getElementById('pm-code-input');
+        const clr = document.getElementById('pm-clear-btn');
+        const fb  = document.getElementById('pm-feedback');
+        if (inp) { inp.value = ''; inp.classList.remove('valid', 'invalid'); inp.focus(); }
+        if (clr) clr.style.display = 'none';
+        if (fb)  { fb.className = 'pm-feedback'; fb.innerHTML = ''; }
+        window._appliedPromoCode = null;
+        _pmHideBadge();
+    }
+
+    function _pmShowBadge(code, desc) {
+        const badge = document.getElementById('pm-applied-badge');
+        const bc    = document.getElementById('pm-badge-code');
+        const bd    = document.getElementById('pm-badge-desc');
+        const area  = document.getElementById('pm-input-area');
+        if (badge) { if (bc) bc.textContent = code; if (bd) bd.textContent = desc; badge.classList.add('show'); }
+        if (area)  area.style.display = 'none';
+    }
+
+    function _pmHideBadge() {
+        const badge = document.getElementById('pm-applied-badge');
+        const area  = document.getElementById('pm-input-area');
+        if (badge) badge.classList.remove('show');
+        if (area)  area.style.display = 'block';
+    }
+
+    async function validatePromoCode() {
+        const inp = document.getElementById('pm-code-input');
+        const btn = document.getElementById('pm-validate-btn');
+        const fb  = document.getElementById('pm-feedback');
+        if (!inp) return;
+        const code = inp.value.trim().toUpperCase();
+        if (!code) {
+            if (fb) { fb.className = 'pm-feedback error'; fb.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter a promo code.'; }
+            inp.focus();
+            return;
+        }
+        // Disable button while checking
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…'; }
+        if (fb)  { fb.className = 'pm-feedback'; fb.innerHTML = ''; }
+        try {
+            const res  = await fetch('/api/promo/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, order_total: 0 })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                // Success
+                inp.classList.add('valid');
+                const discDesc = data.discount_type === 'percent'
+                    ? `${data.discount_value}% off your order`
+                    : `₱${data.discount_value.toFixed(2)} off your order`;
+                const fullDesc = (data.description ? data.description + ' — ' : '') + discDesc;
+                if (fb) { fb.className = 'pm-feedback success'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
+                window._appliedPromoCode = { code: data.code, desc: fullDesc };
+                setTimeout(() => { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); }, 600);
+            } else {
+                // Error
+                inp.classList.add('invalid');
+                if (fb) { fb.className = 'pm-feedback error'; fb.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHTML(data.error || 'Invalid promo code. Please try again.')}`; }
+                // Shake animation
+                inp.style.animation = 'otpShake 0.45s ease';
+                setTimeout(() => { inp.style.animation = ''; }, 500);
+            }
+        } catch(e) {
+            if (fb) { fb.className = 'pm-feedback error'; fb.innerHTML = '<i class="fas fa-wifi"></i> Connection error. Please check your internet.'; }
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Apply Code'; }
+        }
+    }
+
+    function clearPromoCode() {
+        window._appliedPromoCode = null;
+        _pmHideBadge();
+        const inp = document.getElementById('pm-code-input');
+        if (inp) { inp.value = ''; inp.classList.remove('valid', 'invalid'); }
+        const clr = document.getElementById('pm-clear-btn');
+        if (clr) clr.style.display = 'none';
+    }
+
+    // ── Expose promo code to checkout (accessible via window._appliedPromoCode) ──
+    // The promo code is stored in window._appliedPromoCode = { code, desc }
+    // and should be included when building the cart payload in renderCart() / placeOrder().
 
     /* ── CUSTOMER SITE ANNOUNCEMENTS ─────────────────────────────────────── */
     (async function loadGateAnnouncements() {
