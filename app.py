@@ -1374,6 +1374,58 @@ def build_order_meta(reservation_id, flags, total, email):
             pass
 
     return meta
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HEALTH CHECKS & MONITORING
+# Registered here (after all models) so the DB check finds the tables.
+# ══════════════════════════════════════════════════════════════════════════════
+
+if _RELIABILITY_UTILS_LOADED:
+    def _health_check_database():
+        """Verify the database is reachable and responding."""
+        result = db.session.execute(db.text("SELECT 1"))
+        assert result is not None, "DB returned no result"
+
+    def _health_check_hcaptcha():
+        """Verify hCaptcha secret is configured (not a live API call)."""
+        if HCAPTCHA_SECRET_KEY:
+            return
+        raise Exception("HCAPTCHA_SECRET_KEY not configured (bot protection inactive)")
+
+    def _health_check_secret_key():
+        """Verify the Flask secret key is not the insecure default."""
+        if app.secret_key in ('', '9599isthesecretkey'):
+            raise Exception("SECRET_KEY is using the default value — set a strong key in production")
+
+    system_health.register_check("database",    _health_check_database)
+    system_health.register_check("hcaptcha",    _health_check_hcaptcha)
+    system_health.register_check("secret_key",  _health_check_secret_key)
+
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Public health-check endpoint.
+    Returns 200 when all checks pass, 503 when any check fails.
+    Used by Render/Vercel uptime monitors and load balancers.
+    """
+    if _RELIABILITY_UTILS_LOADED:
+        status, checks = system_health.get_status()
+        http_code = 200 if status == HealthStatus.HEALTHY else 503
+        return jsonify({
+            "status":    status.value,
+            "timestamp": get_ph_time().strftime('%Y-%m-%d %H:%M:%S'),
+            "checks":    checks,
+        }), http_code
+    else:
+        # reliability_utils not loaded — do a simple DB ping
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            return jsonify({"status": "healthy", "timestamp": get_ph_time().strftime('%Y-%m-%d %H:%M:%S')}), 200
+        except Exception as e:
+            return jsonify({"status": "unhealthy", "error": str(e)}), 503
+
+
 # ==========================================
 
 LOGIN_HTML = """
