@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>POS System Security Enhancement Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0f1117;
+    --ink2: #3a3d4a;
+    --ink3: #6b6f7d;
+    --page: #f7f6f2;
+    --card: #ffffff;
+    --accent: #1a3cff;
+    --accent-bg: #eef1ff;
+    --danger: #c82020;
+    --danger-bg: #fff0f0;
+    --warn: #c46e00;
+    --warn-bg: #fff8ec;
+    --ok: #0a7a3e;
+    --ok-bg: #edfaf3;
+    --border: #e0dfd9;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --tag-h: 22px;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--page);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.65;
+    padding: 0;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 3.5rem 2.5rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent, transparent 60px,
+      rgba(255,255,255,0.02) 60px, rgba(255,255,255,0.02) 61px
+    );
+  }
+  .header-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #9aa0b3;
+    margin-bottom: 1rem;
+  }
+  header h1 {
+    font-size: clamp(1.5rem, 4vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.15;
+    max-width: 640px;
+    letter-spacing: -.02em;
+    margin-bottom: .75rem;
+  }
+  .header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.5rem;
+    color: #9aa0b3;
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+
+  /* ── SCORE BAND ─────────────────────────────────────────── */
+  .score-band {
+    background: var(--ink);
+    border-top: 1px solid rgba(255,255,255,.07);
+    padding: 1.25rem 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+  .score-item { text-align: center; }
+  .score-num {
+    font-size: 2rem;
+    font-weight: 600;
+    font-family: var(--mono);
+    display: block;
+  }
+  .score-lbl {
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #9aa0b3;
+  }
+  .score-item .score-num.before { color: #ff6b6b; }
+  .score-item .score-num.after  { color: #5cf5a0; }
+  .score-arrow { color: #5a6082; font-size: 1.8rem; margin-top: .4rem; }
+
+  /* ── LAYOUT ─────────────────────────────────────────────── */
+  .container { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+  /* ── INTRO ──────────────────────────────────────────────── */
+  .intro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+  }
+  @media (max-width: 600px) { .intro-grid { grid-template-columns: 1fr; } }
+
+  .intro-card {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+  }
+  .intro-card h3 {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    font-family: var(--mono);
+    margin-bottom: .6rem;
+  }
+  .intro-card p { font-size: 14px; color: var(--ink2); }
+
+  /* ── SECTION TITLE ──────────────────────────────────────── */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin: 2.5rem 0 1.25rem;
+  }
+  .section-head h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .section-head .rule {
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+  }
+
+  /* ── FEATURE CARDS ──────────────────────────────────────── */
+  .feature {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+  .feature-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.5rem;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 0.5px solid transparent;
+    transition: background .15s;
+  }
+  .feature-header:hover { background: #fafaf8; }
+  .feature.open .feature-header { border-bottom-color: var(--border); }
+
+  .feat-num {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    flex-shrink: 0;
+    background: var(--ink); color: #fff;
+  }
+  .feat-title { flex: 1; }
+  .feat-title strong { font-weight: 600; font-size: 15px; display: block; }
+  .feat-title span { font-size: 12px; color: var(--ink3); font-family: var(--mono); }
+  .feat-badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .badge {
+    font-family: var(--mono); font-size: 10px;
+    padding: 3px 8px; border-radius: 4px;
+    font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .badge-free   { background: #e9faf1; color: #0a7a3e; border: 0.5px solid #b3eacb; }
+  .badge-critical{ background: #fff0f0; color: #c82020; border: 0.5px solid #f5b8b8; }
+  .badge-high   { background: #fff8ec; color: #c46e00; border: 0.5px solid #f5d890; }
+  .badge-medium { background: #eef1ff; color: #1a3cff; border: 0.5px solid #c5ccf5; }
+
+  .feat-chevron {
+    width: 20px; height: 20px; color: var(--ink3);
+    transition: transform .25s;
+    flex-shrink: 0;
+  }
+  .feature.open .feat-chevron { transform: rotate(180deg); }
+
+  .feature-body {
+    display: none;
+    padding: 1.5rem;
+  }
+  .feature.open .feature-body { display: block; }
+
+  /* ── FEATURE BODY CONTENT ───────────────────────────────── */
+  .fb-overview {
+    background: #f9f8f5;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: 14px;
+    color: var(--ink2);
+    margin-bottom: 1.25rem;
+    border-left: 3px solid var(--ink);
+  }
+
+  .fb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  @media (max-width: 600px) { .fb-cols { grid-template-columns: 1fr; } }
+
+  .fb-box { background: #f9f8f5; border-radius: 8px; padding: 1rem 1.25rem; }
+  .fb-box h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--ink3);
+    font-family: var(--mono);
+    margin-bottom: .75rem;
+  }
+  .fb-box ol, .fb-box ul {
+    padding-left: 1.2rem;
+    font-size: 13.5px;
+    color: var(--ink2);
+  }
+  .fb-box li { margin-bottom: .35rem; }
+
+  .code-block {
+    background: var(--ink);
+    color: #c9d1e0;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin-top: 1rem;
+  }
+  .code-block .cm { color: #5c6b8a; }
+  .code-block .ck { color: #7ec3ff; }
+  .code-block .cs { color: #b2f0a0; }
+  .code-block .cn { color: #ffcc88; }
+  .code-block .cv { color: #ff9999; }
+
+  .risk-row {
+    display: flex;
+    gap: .75rem;
+    align-items: flex-start;
+    padding: .5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13.5px;
+  }
+  .risk-row:last-child { border: none; }
+  .risk-icon { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+  .risk-text strong { display: block; color: var(--ink); font-weight: 500; }
+  .risk-text span { color: var(--ink3); font-size: 12.5px; }
+
+  /* ── INSTALL TABLE ──────────────────────────────────────── */
+  .install-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .install-table th {
+    text-align: left;
+    padding: .75rem 1.1rem;
+    background: #f3f2ee;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--ink3);
+    font-family: var(--mono);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .install-table td {
+    padding: .7rem 1.1rem;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--ink2);
+    vertical-align: middle;
+  }
+  .install-table tr:last-child td { border-bottom: none; }
+  .install-table .pkg { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+
+  /* ── SUMMARY GRID ───────────────────────────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+  .sum-card {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    text-align: center;
+  }
+  .sum-card .num {
+    font-size: 2.2rem;
+    font-weight: 600;
+    font-family: var(--mono);
+    color: var(--ink);
+    display: block;
+  }
+  .sum-card .lbl { font-size: 12px; color: var(--ink3); }
+
+  /* ── CHECKLIST ──────────────────────────────────────────── */
+  .checklist { list-style: none; }
+  .checklist li {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .55rem 0;
+    font-size: 14px;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--ink2);
+  }
+  .checklist li:last-child { border: none; }
+  .chk { width: 18px; height: 18px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .chk.ok   { background: var(--ok-bg);   color: var(--ok);   border: 0.5px solid #b3eacb; }
+  .chk.warn { background: var(--warn-bg); color: var(--warn); border: 0.5px solid #f5d890; }
+
+  footer {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    font-size: 12px;
+    color: var(--ink3);
+    font-family: var(--mono);
+    border-top: 0.5px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  @media print {
+    .feature-body { display: block !important; }
+    .feat-chevron { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="header-tag">Security Enhancement Report — POS & Store Management System</p>
+  <h1>Free Security Feature Implementation Guide</h1>
+  <p class="header-meta">
+    <span>Group No. 5</span>
+    <span>Course/Year: 20</span>
+    <span>Date: 06/01/2026</span>
+    <span>Evaluator Recommendation: Sir Aliwalas</span>
+  </p>
+</header>
+
+<div class="score-band">
+  <div class="score-item">
+    <span class="score-num before">7 / 10</span>
+    <span class="score-lbl">Security (Before)</span>
+  </div>
+  <div class="score-item">
+    <span class="score-arrow">→</span>
+  </div>
+  <div class="score-item">
+    <span class="score-num after">10 / 10</span>
+    <span class="score-lbl">Security (Target)</span>
+  </div>
+  <div class="score-item" style="margin-left:auto">
+    <span class="score-num" style="color:#fff">8</span>
+    <span class="score-lbl">Features Added</span>
+  </div>
+  <div class="score-item">
+    <span class="score-num" style="color:#5cf5a0">₱0</span>
+    <span class="score-lbl">Total Cost</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- INTRO -->
+  <div class="intro-grid">
+    <div class="intro-card">
+      <h3>Objective</h3>
+      <p>Implement all recommended free security features into the POS & Store Management System to raise the Security criterion score from 7/10 to a full 10/10, improving system reliability and protection against common attack vectors.</p>
+    </div>
+    <div class="intro-card">
+      <h3>Scope</h3>
+      <p>Eight (8) free, open-source security enhancements covering authentication, session management, input handling, request protection, logging, and network-layer defenses — all compatible with the existing Flask/Python stack.</p>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="section-head">
+    <h2>Security Features</h2>
+    <div class="rule"></div>
+  </div>
+
+  <!-- ── FEATURE 1 ── -->
+  <div class="feature open">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">01</div>
+      <div class="feat-title">
+        <strong>CSRF Protection</strong>
+        <span>Flask-WTF · Cross-Site Request Forgery Defense</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-critical">Critical</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        CSRF attacks trick authenticated users into unknowingly submitting malicious requests. Flask-WTF's <code>CSRFProtect</code> automatically generates and validates a signed token on every state-changing form submission (POST, PUT, DELETE). Without this, an attacker on another website could submit a form to your POS as the logged-in cashier.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Implementation Steps</h4>
+          <ol>
+            <li>Install: <code>pip install Flask-WTF</code></li>
+            <li>Initialize: <code>CSRFProtect(app)</code> after app creation</li>
+            <li>Set <code>WTF_CSRF_ENABLED = True</code> and a strong <code>SECRET_KEY</code></li>
+            <li>Add <code>{{ csrf_token() }}</code> hidden input to every HTML form</li>
+            <li>For AJAX: include <code>X-CSRFToken</code> header in fetch/axios calls</li>
+            <li>Set <code>WTF_CSRF_TIME_LIMIT = 3600</code> (tokens expire in 1 hour)</li>
+          </ol>
+        </div>
+        <div class="fb-box">
+          <h4>Risks &amp; Mitigations</h4>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: Breaks API endpoints</strong><span>JSON APIs don't send form tokens by default.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Exempt API routes</strong><span>Use <code>@csrf.exempt</code> on stateless JSON routes protected by session auth.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: Token expiry logs users out mid-session</strong><span>Long-open tabs may exceed the time limit.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Refresh token via JS</strong><span>Ping <code>/csrf-token</code> on activity to refresh before expiry.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="code-block">
+<span class="cm"># In app.py</span>
+<span class="ck">from</span> flask_wtf.csrf <span class="ck">import</span> CSRFProtect
+csrf = CSRFProtect(app)
+
+<span class="cm"># In every HTML form template:</span>
+&lt;input type=<span class="cs">"hidden"</span> name=<span class="cs">"csrf_token"</span> value=<span class="cs">"{{ csrf_token() }}"</span>&gt;
+
+<span class="cm"># For AJAX (JavaScript):</span>
+<span class="cn">fetch</span>(<span class="cs">'/api/transaction'</span>, {
+  method: <span class="cs">'POST'</span>,
+  headers: { <span class="cs">'X-CSRFToken'</span>: <span class="cn">getCsrfToken()</span> },
+  body: <span class="cn">JSON.stringify(cart)</span>
+});
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 2 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">02</div>
+      <div class="feat-title">
+        <strong>Rate Limiting</strong>
+        <span>Flask-Limiter · Brute-Force &amp; DoS Prevention</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-critical">Critical</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Without rate limiting, an attacker can attempt thousands of passwords per second (brute-force), flood endpoints with requests (DoS), or enumerate valid usernames. Flask-Limiter enforces per-IP request ceilings on sensitive routes such as <code>/login</code>, <code>/api/transaction</code>, and <code>/verify-2fa</code>.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Implementation Steps</h4>
+          <ol>
+            <li>Install: <code>pip install Flask-Limiter</code></li>
+            <li>Initialize with <code>Limiter(app, key_func=get_remote_address)</code></li>
+            <li>Apply global defaults: <code>"300 per day", "60 per hour"</code></li>
+            <li>Apply strict limits to login: <code>@limiter.limit("10 per minute")</code></li>
+            <li>Apply to 2FA: <code>@limiter.limit("5 per minute")</code></li>
+            <li>Return HTTP 429 with a clear message on limit exceeded</li>
+          </ol>
+        </div>
+        <div class="fb-box">
+          <h4>Risks &amp; Mitigations</h4>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: Legitimate users get blocked</strong><span>Staff on the same IP as previous attacker may be locked out.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Generous global limits</strong><span>Only login/sensitive routes use strict limits. Normal use is unaffected.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: NAT hides multiple users</strong><span>A shared office IP may hit limits faster.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Per-user limits in prod</strong><span>Swap <code>get_remote_address</code> for a logged-in user ID key function.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 3 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">03</div>
+      <div class="feat-title">
+        <strong>HTTP Security Headers</strong>
+        <span>Flask-Talisman · HSTS, CSP, X-Frame-Options &amp; More</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-high">High</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Flask-Talisman adds a suite of HTTP security response headers that instruct browsers to enforce security policies. This single library addresses six separate attack categories simultaneously — all for free — including protocol downgrade attacks, clickjacking, MIME-type confusion, and XSS via injected scripts.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Headers Added &amp; What They Do</h4>
+          <ul>
+            <li><strong>Strict-Transport-Security:</strong> Forces HTTPS for 1 year (HSTS)</li>
+            <li><strong>Content-Security-Policy:</strong> Blocks scripts from unknown origins</li>
+            <li><strong>X-Frame-Options: DENY:</strong> Prevents clickjacking in iframes</li>
+            <li><strong>X-Content-Type-Options:</strong> Stops MIME-type sniffing</li>
+            <li><strong>Referrer-Policy:</strong> Limits URL leakage to third parties</li>
+            <li><strong>Permissions-Policy:</strong> Disables camera, mic, geolocation</li>
+          </ul>
+        </div>
+        <div class="fb-box">
+          <h4>Risks &amp; Mitigations</h4>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: CSP breaks inline scripts</strong><span>Any <code>&lt;script&gt;</code> tag in templates will be blocked.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Move JS to .js files</strong><span>All JavaScript must be in external files referenced by <code>script src</code>.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: HSTS cannot be undone</strong><span>If SSL cert expires, users cannot access the site at all.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Use auto-renew certs</strong><span>Deploy with Let's Encrypt (Certbot) for automatic SSL renewal.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 4 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">04</div>
+      <div class="feat-title">
+        <strong>Audit Trail Logging</strong>
+        <span>Python logging + SQLAlchemy · Full Forensic Record</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-high">High</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Every security-relevant action — logins, failed attempts, product changes, transactions, access denials — is logged with a timestamp, username, IP address, and event type. Logs are stored both in rotating files (for off-system backup) and a dedicated database table (for in-app audit review). This is essential for incident response and regulatory compliance.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Implementation Steps</h4>
+          <ol>
+            <li>Create an <code>AuditLog</code> database model with timestamp, event_type, user_id, ip_address, details, severity</li>
+            <li>Create a <code>RotatingFileHandler</code> (10 MB max, 5 backups) targeting <code>logs/audit.log</code></li>
+            <li>Write a central <code>audit(event, details, severity)</code> helper function</li>
+            <li>Call <code>audit()</code> on: login success/fail, logout, product CRUD, transaction creation, access denied, account lockout</li>
+            <li>Create <code>/audit-logs</code> route (admin-only) for viewing the log database</li>
+            <li>Set log directory permissions to restrict access (Linux: <code>chmod 640</code>)</li>
+          </ol>
+        </div>
+        <div class="fb-box">
+          <h4>Events Logged</h4>
+          <ul>
+            <li><code>LOGIN_OK</code> / <code>LOGIN_FAIL</code> / <code>LOGIN_BLOCKED</code></li>
+            <li><code>LOGOUT</code> / <code>2FA_OK</code> / <code>2FA_FAIL</code></li>
+            <li><code>ACCOUNT_LOCKED</code> / <code>ACCOUNT_UNLOCKED</code></li>
+            <li><code>PRODUCT_ADD</code> / <code>EDIT</code> / <code>DELETE</code></li>
+            <li><code>TXN_CREATED</code></li>
+            <li><code>USER_ADD</code> / <code>USER_DEACTIVATED</code></li>
+            <li><code>AUTHZ_DENIED</code> / <code>RATE_LIMITED</code></li>
+            <li><code>PW_CHANGED</code> / <code>2FA_ENROLLED</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 5 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">05</div>
+      <div class="feat-title">
+        <strong>Input Validation &amp; XSS Prevention</strong>
+        <span>bleach · Sanitize All User-Supplied Data</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-critical">Critical</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Cross-Site Scripting (XSS) allows attackers to inject malicious JavaScript into pages viewed by other users. A cashier entering <code>&lt;script&gt;...&lt;/script&gt;</code> in a product name field could compromise every manager's session. The <code>bleach</code> library strips all HTML tags from user inputs before they are stored or displayed. Combined with SQLAlchemy's parameterized queries, this also prevents SQL injection.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Implementation Steps</h4>
+          <ol>
+            <li>Install: <code>pip install bleach</code></li>
+            <li>Create a central <code>_sanitize(text, max_len)</code> helper</li>
+            <li>Run every <code>request.form.get()</code> and <code>request.args.get()</code> through <code>_sanitize()</code> before use</li>
+            <li>Never pass raw user input to database queries — always use SQLAlchemy ORM</li>
+            <li>Validate numeric fields with explicit <code>float()</code> / <code>int()</code> casting</li>
+            <li>Whitelist allowed values for <code>role</code>, <code>payment_method</code> using Python sets</li>
+          </ol>
+        </div>
+        <div class="fb-box">
+          <h4>What the Sanitizer Does</h4>
+          <div class="code-block" style="margin-top:0">
+<span class="ck">import</span> bleach
+
+<span class="cn">def</span> <span class="cs">_sanitize</span>(text, max_len=255):
+  <span class="cm"># Strip ALL HTML tags</span>
+  clean = bleach.<span class="cv">clean</span>(
+    str(text),
+    tags=[],       <span class="cm"># no tags allowed</span>
+    strip=<span class="ck">True</span>    <span class="cm"># remove, don't escape</span>
+  )
+  <span class="ck">return</span> clean[:max_len]
+
+<span class="cm"># Input:  "&lt;script&gt;evil()&lt;/script&gt;"</span>
+<span class="cm"># Output: ""  (tag stripped)</span>
+<span class="cm"># Input:  "Coca Cola 1L &amp; 2L"</span>
+<span class="cm"># Output: "Coca Cola 1L &amp;amp; 2L" (safe)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 6 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">06</div>
+      <div class="feat-title">
+        <strong>Account Lockout Policy</strong>
+        <span>Custom Implementation · Max Attempts + Timed Lockout</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-high">High</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Even with rate limiting, a slow persistent attacker could eventually guess a weak password. Account lockout is a secondary defense: after 5 consecutive failed login attempts, the account is locked for 15 minutes automatically. The lockout state is stored in the database and is not dependent on the browser session.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Implementation Steps</h4>
+          <ol>
+            <li>Add <code>failed_attempts</code>, <code>is_locked</code>, <code>locked_until</code> columns to the User model</li>
+            <li>On each failed login, call <code>user.record_failed_attempt()</code></li>
+            <li>Lock account when <code>failed_attempts >= MAX_LOGIN_ATTEMPTS</code> (default: 5)</li>
+            <li>Set <code>locked_until = now + 15 minutes</code> on lock</li>
+            <li>On each login attempt, call <code>user.is_account_locked()</code> first</li>
+            <li>Auto-unlock by checking if <code>locked_until</code> has passed</li>
+            <li>Add admin route <code>/users/&lt;id&gt;/unlock</code> for manual override</li>
+          </ol>
+        </div>
+        <div class="fb-box">
+          <h4>Risks &amp; Mitigations</h4>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: Denial of service via lockouts</strong><span>Attacker deliberately locks legitimate accounts.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Auto-unlock + admin override</strong><span>15-minute auto-unlock. Admin can immediately unlock any account.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">⚠️</span>
+            <div class="risk-text"><strong>Risk: Exposing lockout state</strong><span>Error message reveals if a username is valid.</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">✅</span>
+            <div class="risk-text"><strong>Mitigation: Generic error messages</strong><span>Show "Invalid credentials" even for locked accounts to prevent enumeration.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 7 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">07</div>
+      <div class="feat-title">
+        <strong>Two-Factor Authentication (2FA)</strong>
+        <span>pyotp · TOTP Compatible with Google/Microsoft Authenticator</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-high">High</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Even if a password is compromised through phishing or data breach, 2FA ensures the attacker still cannot log in without also having the user's physical phone. The <code>pyotp</code> library generates TOTP (Time-based One-Time Password) secrets compatible with Google Authenticator, Microsoft Authenticator, and Authy — all free apps available on any smartphone.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Implementation Steps</h4>
+          <ol>
+            <li>Install: <code>pip install pyotp qrcode[pil] Pillow</code></li>
+            <li>Add <code>totp_secret</code> and <code>totp_enabled</code> columns to User model</li>
+            <li>Create <code>/setup-2fa</code> route that generates a QR code</li>
+            <li>On login success: if <code>user.totp_enabled</code>, redirect to <code>/verify-2fa</code></li>
+            <li>Store pre-2FA user ID in session (<code>session['_2fa_uid']</code>)</li>
+            <li>Verify token with <code>pyotp.TOTP(secret).verify(token, valid_window=1)</code></li>
+            <li>Only call <code>login_user()</code> after successful 2FA verification</li>
+          </ol>
+        </div>
+        <div class="fb-box">
+          <h4>Setup Flow for Users</h4>
+          <ol style="font-size:13.5px;color:var(--ink2)">
+            <li>User goes to Profile → Enable 2FA</li>
+            <li>System generates a secret key and displays a QR code</li>
+            <li>User scans QR code with their Authenticator app</li>
+            <li>User enters the 6-digit code shown in the app to confirm</li>
+            <li>2FA is now active — required on every login</li>
+            <li>On each login: enter password → enter 6-digit code from app</li>
+          </ol>
+          <p style="font-size:12px;color:var(--ink3);margin-top:.75rem">Compatible apps: Google Authenticator, Microsoft Authenticator, Authy (all free)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURE 8 ── -->
+  <div class="feature">
+    <div class="feature-header" onclick="toggle(this)">
+      <div class="feat-num">08</div>
+      <div class="feat-title">
+        <strong>Secure Session Management</strong>
+        <span>Flask Configuration · HTTPOnly, SameSite, Expiry &amp; Strong Protection</span>
+      </div>
+      <div class="feat-badges">
+        <span class="badge badge-free">Free</span>
+        <span class="badge badge-medium">Medium</span>
+      </div>
+      <svg class="feat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="feature-body">
+      <div class="fb-overview">
+        Session cookies are the keys to the kingdom — if stolen, an attacker can impersonate any user without knowing their password. Flask's built-in session system becomes secure through proper configuration: marking cookies as HTTPS-only, inaccessible to JavaScript, and short-lived. Flask-Login's <code>session_protection = 'strong'</code> mode also invalidates sessions if the user's IP or browser fingerprint changes mid-session.
+      </div>
+      <div class="fb-cols">
+        <div class="fb-box">
+          <h4>Configuration Settings</h4>
+          <div class="code-block" style="margin-top:0">
+app.config.update(
+  <span class="cm"># Only sent over HTTPS (no plain HTTP)</span>
+  <span class="cn">SESSION_COOKIE_SECURE</span>=<span class="ck">True</span>,
+
+  <span class="cm"># JS cannot read the cookie (XSS protection)</span>
+  <span class="cn">SESSION_COOKIE_HTTPONLY</span>=<span class="ck">True</span>,
+
+  <span class="cm"># Blocks cross-origin cookie submission</span>
+  <span class="cn">SESSION_COOKIE_SAMESITE</span>=<span class="cs">'Lax'</span>,
+
+  <span class="cm"># Sessions expire after 8 hours</span>
+  <span class="cn">PERMANENT_SESSION_LIFETIME</span>=
+    timedelta(hours=<span class="cn">8</span>),
+)
+<span class="cm"># Invalidate on IP/UA change:</span>
+login_manager.session_protection = <span class="cs">'strong'</span>
+          </div>
+        </div>
+        <div class="fb-box">
+          <h4>What Each Setting Prevents</h4>
+          <div class="risk-row">
+            <span class="risk-icon">🔒</span>
+            <div class="risk-text"><strong>SESSION_COOKIE_SECURE</strong><span>Prevents interception over unencrypted Wi-Fi (man-in-the-middle)</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">🔒</span>
+            <div class="risk-text"><strong>SESSION_COOKIE_HTTPONLY</strong><span>Prevents XSS attacks from reading the session token</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">🔒</span>
+            <div class="risk-text"><strong>SESSION_COOKIE_SAMESITE</strong><span>Secondary CSRF defense — blocks cross-site cookie use</span></div>
+          </div>
+          <div class="risk-row">
+            <span class="risk-icon">🔒</span>
+            <div class="risk-text"><strong>session_protection='strong'</strong><span>Detects session hijacking by IP/browser fingerprint change</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSTALL -->
+  <div class="section-head">
+    <h2>Installation &amp; Dependencies</h2>
+    <div class="rule"></div>
+  </div>
+
+  <table class="install-table">
+    <thead>
+      <tr>
+        <th>Package</th>
+        <th>Version</th>
+        <th>Purpose</th>
+        <th>Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="pkg">Flask-WTF</td><td>1.2.1</td><td>CSRF Protection</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">Flask-Limiter</td><td>3.7.0</td><td>Rate Limiting</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">Flask-Talisman</td><td>1.1.0</td><td>HTTP Security Headers</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">Flask-Login</td><td>0.6.3</td><td>Session Management</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">bleach</td><td>6.1.0</td><td>Input Sanitization / XSS Prevention</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">pyotp</td><td>2.9.0</td><td>Two-Factor Authentication (TOTP)</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">qrcode[pil]</td><td>7.4.2</td><td>QR Code Generation for 2FA Setup</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">Werkzeug</td><td>(Flask dep)</td><td>PBKDF2-SHA256 Password Hashing</td><td><span class="badge badge-free">Free</span></td></tr>
+      <tr><td class="pkg">SQLAlchemy</td><td>(Flask dep)</td><td>SQL Injection Prevention (parameterized queries)</td><td><span class="badge badge-free">Free</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="code-block" style="margin-top:1rem">
+<span class="cm"># Single command to install all security dependencies:</span>
+pip install Flask-WTF Flask-Limiter Flask-Talisman Flask-Login bleach pyotp qrcode[pil] Pillow
+  </div>
+
+  <!-- PRODUCTION CHECKLIST -->
+  <div class="section-head">
+    <h2>Production Deployment Checklist</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="intro-card">
+    <ul class="checklist">
+      <li><span class="chk ok">✓</span> Set <code>SECRET_KEY</code> via environment variable — never hardcode</li>
+      <li><span class="chk ok">✓</span> Set <code>SESSION_COOKIE_SECURE = True</code> (requires HTTPS)</li>
+      <li><span class="chk ok">✓</span> Set <code>debug = False</code> in <code>app.run()</code> — NEVER True in production</li>
+      <li><span class="chk ok">✓</span> Use a WSGI server: <code>gunicorn app:app</code> or <code>waitress-serve</code></li>
+      <li><span class="chk ok">✓</span> Install SSL certificate (free via Let's Encrypt / Certbot)</li>
+      <li><span class="chk ok">✓</span> Set <code>force_https=True</code> in Flask-Talisman configuration</li>
+      <li><span class="chk ok">✓</span> Restrict <code>logs/</code> directory permissions: <code>chmod 640 logs/audit.log</code></li>
+      <li><span class="chk ok">✓</span> Back up the audit log database table regularly</li>
+      <li><span class="chk ok">✓</span> Change default admin password on first launch</li>
+      <li><span class="chk warn">!</span> Enable 2FA for all admin and manager accounts (recommended)</li>
+      <li><span class="chk warn">!</span> Switch from SQLite to PostgreSQL for production deployments</li>
+      <li><span class="chk warn">!</span> Set <code>SQLALCHEMY_DATABASE_URI</code> via environment variable</li>
+    </ul>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="section-head">
+    <h2>Impact Summary</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="sum-card">
+      <span class="num">8</span>
+      <span class="lbl">Security Features Added</span>
+    </div>
+    <div class="sum-card">
+      <span class="num">₱0</span>
+      <span class="lbl">Total Implementation Cost</span>
+    </div>
+    <div class="sum-card">
+      <span class="num">6</span>
+      <span class="lbl">Attack Types Blocked</span>
+    </div>
+    <div class="sum-card">
+      <span class="num">18+</span>
+      <span class="lbl">Audit Event Types Logged</span>
+    </div>
+    <div class="sum-card">
+      <span class="num">10/10</span>
+      <span class="lbl">Target Security Score</span>
+    </div>
+    <div class="sum-card">
+      <span class="num">1</span>
+      <span class="lbl">pip install command</span>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  POS &amp; Store Management System — Group 5 · Course/Year 20 · 06/01/2026<br>
+  Security Enhancement per Sir Aliwalas Recommendations · All features are free and open-source
+</footer>
+
+<script>
+function toggle(header) {
+  const feature = header.closest('.feature');
+  feature.classList.toggle('open');
+}
+</script>
+</body>
+</html>

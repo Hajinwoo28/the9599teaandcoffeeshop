@@ -7463,7 +7463,7 @@ function playGrantedSound() {
         const clr = document.getElementById('pm-clear-btn');
         const fb  = document.getElementById('pm-feedback');
         if (!inp) return;
-        inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9\-_]/g, '');
+        inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');
         if (clr) clr.style.display = inp.value ? 'block' : 'none';
         // Reset state on new input
         inp.classList.remove('valid', 'invalid');
