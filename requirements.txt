@@ -28,7 +28,7 @@ bleach==6.1.0
 # --- [FEATURE 7] Two-Factor Authentication (TOTP) ---
 pyotp==2.9.0
 qrcode[pil]==7.4.2
-Pillow==10.6.0
+Pillow==12.2.0
 
 # --- [FEATURE 8] Secure Sessions / Signed Cookies ---
 # Built into Flask via itsdangerous — no extra install needed
