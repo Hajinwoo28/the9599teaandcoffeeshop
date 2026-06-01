@@ -18762,6 +18762,26 @@ def _is_customer_route(path):
 
 # ── Global error handlers ─────────────────────────────────────────────────────
 
+@app.errorhandler(400)
+def handle_400(exc):
+  return jsonify({"error": "Bad request", "message": str(exc)}), 400
+
+
+@app.errorhandler(401)
+def handle_401(exc):
+  return jsonify({"error": "Unauthorized", "message": str(exc)}), 401
+
+
+@app.errorhandler(403)
+def handle_403(exc):
+  return jsonify({"error": "Forbidden", "message": str(exc)}), 403
+
+
+@app.errorhandler(429)
+def handle_429(exc):
+  return jsonify({"error": "Too many requests", "message": str(exc)}), 429
+
+
 @app.errorhandler(500)
 def handle_500(exc):
     path = request.path
