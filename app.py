@@ -10679,34 +10679,68 @@ function playGrantedSound() {
 </div>
 
 <!-- ── Rating Detail Modal (Admin: full feedback view) ── -->
-<div id="rat-detail-modal" onclick="if(event.target===this)closeRatingDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9750;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 28px 70px rgba(0,0,0,0.2);animation:ratingSlideIn 0.3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;position:relative;">
-    <!-- Header bar -->
-    <div style="padding:20px 24px 16px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+<style>
+@keyframes rfdSlideUp{from{opacity:0;transform:translateY(32px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+#rat-detail-modal .rfd-card{animation:rfdSlideUp 0.32s cubic-bezier(.34,1.56,.64,1);}
+.rfd-header-stripe{height:6px;width:100%;border-radius:0;transition:background 0.3s;}
+.rfd-meta-chip{display:inline-flex;align-items:center;gap:7px;background:#f4f6f8;border-radius:10px;padding:8px 13px;font-size:0.74rem;font-weight:700;color:#555;flex:1;min-width:0;}
+.rfd-meta-chip i{font-size:0.68rem;color:#aaa;flex-shrink:0;}
+.rfd-meta-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rfd-star-row{display:flex;justify-content:center;gap:5px;margin:4px 0;}
+.rfd-star-row .rfd-star{font-size:1.55rem;line-height:1;transition:transform 0.2s;}
+.rfd-close-btn{width:100%;padding:12px;border-radius:13px;border:none;background:#f4f6f8;color:#666;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:background 0.2s,color 0.2s;margin-top:2px;}
+.rfd-close-btn:hover{background:#e8eaed;color:#333;}
+</style>
+<div id="rat-detail-modal" onclick="if(event.target===this)closeRatingDetail()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);z-index:9750;align-items:center;justify-content:center;padding:20px;">
+  <div class="rfd-card" style="background:#fff;border-radius:22px;max-width:460px;width:100%;padding:0;box-shadow:0 32px 80px rgba(0,0,0,0.22);overflow:hidden;position:relative;">
+
+    <!-- Colored accent stripe (color set via JS) -->
+    <div id="rfd-stripe" class="rfd-header-stripe"></div>
+
+    <!-- Header -->
+    <div style="padding:18px 22px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
       <div>
-        <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Customer Review</div>
-        <div style="font-family:monospace;font-weight:900;font-size:1rem;color:#0D7A6A;" id="rfd-code">#—</div>
+        <div style="font-size:0.58rem;font-weight:800;color:#bbb;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px;">Customer Review</div>
+        <div style="font-family:monospace;font-weight:900;font-size:1.05rem;color:#0D7A6A;background:rgba(13,122,106,0.07);padding:3px 10px;border-radius:8px;display:inline-block;" id="rfd-code">#—</div>
       </div>
-      <button onclick="closeRatingDetail()" style="background:none;border:none;font-size:1.1rem;color:#bbb;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;">✕</button>
+      <button onclick="closeRatingDetail()" style="background:#f4f6f8;border:none;width:32px;height:32px;border-radius:50%;font-size:0.9rem;color:#888;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s;" onmouseover="this.style.background='#e8eaed'" onmouseout="this.style.background='#f4f6f8'">✕</button>
     </div>
+
     <!-- Body -->
-    <div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px;">
-      <!-- Star badge -->
-      <div style="display:flex;align-items:center;justify-content:center;">
-        <span id="rfd-badge" style="font-size:1.1rem;font-weight:900;padding:8px 22px;border-radius:30px;letter-spacing:2px;"></span>
+    <div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Star rating display -->
+      <div style="background:linear-gradient(135deg,#fafbfc,#f4f6f8);border-radius:16px;padding:18px 16px 14px;text-align:center;">
+        <div class="rfd-star-row" id="rfd-stars-row"></div>
+        <div id="rfd-badge" style="font-size:1rem;font-weight:900;margin-top:8px;letter-spacing:0.5px;"></div>
+        <div id="rfd-rating-label" style="font-size:0.7rem;font-weight:700;color:#aaa;margin-top:3px;text-transform:uppercase;letter-spacing:0.8px;"></div>
       </div>
-      <!-- Meta row -->
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:0.75rem;color:#888;">
-        <span><i class="fas fa-envelope" style="margin-right:5px;font-size:0.68rem;"></i><span id="rfd-email">—</span></span>
-        <span><i class="fas fa-calendar-alt" style="margin-right:5px;font-size:0.68rem;"></i><span id="rfd-date">—</span></span>
+
+      <!-- Meta chips: email + date -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="rfd-meta-chip" style="flex:2;min-width:160px;">
+          <i class="fas fa-envelope"></i>
+          <span id="rfd-email">—</span>
+        </div>
+        <div class="rfd-meta-chip" style="flex:1;min-width:120px;">
+          <i class="fas fa-calendar-alt"></i>
+          <span id="rfd-date">—</span>
+        </div>
       </div>
-      <!-- Feedback message -->
-      <div style="background:#f8f9fa;border-radius:14px;padding:16px 18px;">
-        <div style="font-size:0.62rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Feedback Message</div>
-        <div id="rfd-message" style="font-size:0.88rem;line-height:1.65;color:var(--text,#2d3a3a);border-left:3px solid #ddd;padding-left:12px;white-space:pre-wrap;word-break:break-word;"></div>
+
+      <!-- Feedback message box -->
+      <div id="rfd-msg-wrap" style="border-radius:14px;padding:16px 18px;border:1.5px solid #eee;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px;">
+          <i class="fas fa-comment-alt" style="font-size:0.68rem;color:#aaa;"></i>
+          <span style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Feedback Message</span>
+        </div>
+        <div id="rfd-message" style="font-size:0.88rem;line-height:1.7;color:#2d3a3a;border-left:3px solid #ddd;padding-left:13px;white-space:pre-wrap;word-break:break-word;"></div>
       </div>
+
       <!-- Close button -->
-      <button onclick="closeRatingDetail()" style="width:100%;padding:11px;border-radius:13px;border:1.5px solid #e0e0e0;background:none;color:#888;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.84rem;cursor:pointer;margin-top:2px;">Close</button>
+      <button class="rfd-close-btn" onclick="closeRatingDetail()">
+        <i class="fas fa-times" style="margin-right:6px;font-size:0.78rem;"></i>Close
+      </button>
     </div>
   </div>
 </div>
@@ -14654,7 +14688,7 @@ function renderRatingCards(rows) {
     const preview = hasFeedback
       ? (row.feedback.length > 100 ? escapeHTML(row.feedback.slice(0,100)) + '…' : escapeHTML(row.feedback))
       : null;
-    return `<div onclick="openRatingDetail(${idx})" style="border:1.5px solid var(--border-color);border-radius:14px;padding:13px 15px;margin-bottom:9px;background:var(--card-bg,#fff);cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.09)';this.style.borderColor='var(--teal-dark)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border-color)'">
+    return `<div onclick="openRatingDetail(${idx})" style="border:1.5px solid var(--border-color);border-radius:14px;padding:13px 15px;margin-bottom:9px;background:var(--card-bg,#fff);cursor:pointer;transition:box-shadow 0.18s ease,border-color 0.18s ease,transform 0.12s ease;" onmousedown="this.style.transform='scale(0.985)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'" onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,0.1)';this.style.borderColor='var(--teal-dark)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border-color)'">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span style="font-family:monospace;font-weight:800;font-size:0.78rem;color:var(--teal-dark);background:rgba(13,122,106,0.08);padding:2px 8px;border-radius:8px;">#${escapeHTML(row.code)}</span>
@@ -14665,11 +14699,11 @@ function renderRatingCards(rows) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <span style="font-size:0.68rem;color:var(--muted);font-weight:600;white-space:nowrap;">${escapeHTML(row.date)}</span>
-          <i class="fas fa-chevron-right" style="font-size:0.62rem;color:var(--muted);"></i>
+          <i class="fas fa-chevron-right" style="font-size:0.62rem;color:var(--teal-dark,#0D7A6A);opacity:0.6;"></i>
         </div>
       </div>
       ${preview
-        ? `<div style="margin-top:9px;font-size:0.8rem;color:var(--text);line-height:1.5;border-left:3px solid ${STAR_COLOR[row.stars]};padding-left:10px;">${preview}</div>`
+        ? `<div style="margin-top:9px;font-size:0.8rem;color:var(--text);line-height:1.55;border-left:3px solid ${STAR_COLOR[row.stars]};padding-left:10px;">${preview}</div>`
         : `<div style="margin-top:7px;font-size:0.74rem;color:var(--muted);font-style:italic;">No written comment. Tap to view details.</div>`}
     </div>`;
   }).join('');
@@ -14678,29 +14712,70 @@ function renderRatingCards(rows) {
 function openRatingDetail(idx) {
   const row = _ratCardStore[idx];
   if(!row) return;
-  const STAR_COLOR = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
-  const STAR_BG    = ['','#fdf0ee','#fef5ec','#fefbe8','#edfaf3','#e8f8f5'];
-  const LABELS     = ['','😞 Poor','😕 Fair','😊 Good','😃 Great','🤩 Excellent'];
-  const stars = '★'.repeat(row.stars) + '☆'.repeat(5-row.stars);
-  // Populate modal fields
-  document.getElementById('rfd-code').textContent  = '#' + row.code;
-  document.getElementById('rfd-date').textContent  = row.date;
-  document.getElementById('rfd-email').textContent = row.email || '—';
-  document.getElementById('rfd-badge').textContent = stars + '  ' + LABELS[row.stars];
-  document.getElementById('rfd-badge').style.color      = STAR_COLOR[row.stars];
-  document.getElementById('rfd-badge').style.background = STAR_BG[row.stars];
-  const msgEl = document.getElementById('rfd-message');
-  if(row.feedback && row.feedback.trim()) {
-    msgEl.textContent = row.feedback;
-    msgEl.style.fontStyle = 'normal';
-    msgEl.style.color = 'var(--text)';
-    msgEl.style.borderLeftColor = STAR_COLOR[row.stars];
-  } else {
-    msgEl.textContent = 'No written comment was provided.';
-    msgEl.style.fontStyle = 'italic';
-    msgEl.style.color = 'var(--muted)';
-    msgEl.style.borderLeftColor = '#ddd';
+
+  const STAR_COLOR  = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
+  const STAR_BG     = ['','#fff0ee','#fef6ec','#fffce8','#edfaf3','#e8f8f5'];
+  const STRIPE_CLR  = ['','#e74c3c','#e67e22','#f1c40f','#2ecc71','#1a9e82'];
+  const EMOJIS      = ['','😞','😕','😊','😃','🤩'];
+  const LABELS      = ['','Poor','Fair','Good','Great','Excellent'];
+
+  // ── Accent stripe (rating color at top of card) ──
+  const stripe = document.getElementById('rfd-stripe');
+  if(stripe) stripe.style.background = `linear-gradient(90deg, ${STRIPE_CLR[row.stars]}, ${STAR_COLOR[row.stars]}99)`;
+
+  // ── Order code ──
+  document.getElementById('rfd-code').textContent = '#' + row.code;
+
+  // ── Star row (individual animated stars) ──
+  const starsRow = document.getElementById('rfd-stars-row');
+  if(starsRow) {
+    starsRow.innerHTML = [1,2,3,4,5].map(n => {
+      const filled = n <= row.stars;
+      return `<span class="rfd-star" style="color:${filled ? STAR_COLOR[row.stars] : '#ddd'};filter:${filled ? 'drop-shadow(0 1px 3px '+STAR_COLOR[row.stars]+'66)' : 'none'};transform:scale(${filled ? 1 : 0.85});">${filled ? '★' : '☆'}</span>`;
+    }).join('');
   }
+
+  // ── Rating badge (emoji + label) ──
+  const badge = document.getElementById('rfd-badge');
+  if(badge) {
+    badge.textContent = EMOJIS[row.stars] + '  ' + LABELS[row.stars];
+    badge.style.color = STAR_COLOR[row.stars];
+  }
+
+  // ── Rating sub-label (x out of 5 stars) ──
+  const lbl = document.getElementById('rfd-rating-label');
+  if(lbl) lbl.textContent = row.stars + ' out of 5 stars';
+
+  // ── Email + date chips ──
+  document.getElementById('rfd-email').textContent = row.email || '—';
+  document.getElementById('rfd-date').textContent  = row.date  || '—';
+
+  // ── Feedback message box ──
+  const msgEl   = document.getElementById('rfd-message');
+  const wrapEl  = document.getElementById('rfd-msg-wrap');
+  const hasFb   = row.feedback && row.feedback.trim();
+  if(msgEl) {
+    if(hasFb) {
+      msgEl.textContent = row.feedback;
+      msgEl.style.fontStyle       = 'normal';
+      msgEl.style.color           = '#2d3a3a';
+      msgEl.style.borderLeftColor = STAR_COLOR[row.stars];
+    } else {
+      msgEl.textContent = 'No written comment was provided.';
+      msgEl.style.fontStyle       = 'italic';
+      msgEl.style.color           = '#aaa';
+      msgEl.style.borderLeftColor = '#e0e0e0';
+    }
+  }
+  if(wrapEl) {
+    wrapEl.style.background   = hasFb ? STAR_BG[row.stars] : '#fafafa';
+    wrapEl.style.borderColor  = hasFb ? STAR_COLOR[row.stars] + '44' : '#eee';
+  }
+
+  // ── Re-trigger animation ──
+  const card = document.querySelector('#rat-detail-modal .rfd-card');
+  if(card){ card.style.animation='none'; void card.offsetWidth; card.style.animation=''; }
+
   document.getElementById('rat-detail-modal').style.display = 'flex';
 }
 
