@@ -6666,6 +6666,22 @@ STOREFRONT_HTML = """
         .admin-sc-btn:hover { background: #D7CCC8; }
         .admin-sc-val { font-size: 1.2rem; font-weight: 900; color: #3E2723; min-width: 36px; text-align: center; font-family: 'Playfair Display', serif; }
         .admin-sc-sep { font-size: 1.2rem; font-weight: 900; color: #3E2723; align-self: center; }
+        /* ── Desktop: permanent docked cart sidebar ── */
+        @media (min-width: 769px) {
+            .main-container { margin-right: 320px; }
+            .sidebar {
+                transform: translateX(0) !important;
+                transition: none !important;
+                box-shadow: -2px 0 12px rgba(44,26,18,0.07);
+                z-index: 10;
+            }
+            #sheet-backdrop  { display: none !important; }
+            #sticky-bar      { right: 320px !important; }
+            .sheet-handle-chevron            { display: none !important; }
+            .sheet-handle-bar > button       { display: none !important; }
+            .sheet-handle-bar                { cursor: default; }
+        }
+
         @media (max-width: 768px) {
             body { height: auto; min-height: 100vh; overflow-y: auto; }
             .main-container { flex-direction: column; height: auto; overflow: visible; }
@@ -9069,7 +9085,7 @@ function playGrantedSound() {
         pendingPrice = item.price - (item.addons ? item.addons.length * 10 : 0);
 
         // Close the order sheet and hide Track Order FAB so only the modal is visible
-        closeOrderSheet();
+        if(window.innerWidth < 769) closeOrderSheet();
         const fab = document.getElementById('track-order-fab');
         if (fab) fab.style.display = 'none';
 
@@ -9130,7 +9146,7 @@ function playGrantedSound() {
             empty.style.display = 'block';
             count.style.display = 'none';
             if(stickyBar) stickyBar.classList.remove('bar-visible');
-            closeOrderSheet();
+            if(window.innerWidth < 769) closeOrderSheet();
         } else {
             empty.style.display = 'none';
             count.style.display = 'flex'; count.innerText = cart.length;
@@ -9189,6 +9205,7 @@ function playGrantedSound() {
 
     // ── Order Sheet controls ──────────────────────────────────────────────
     function openOrderSheet() {
+        if (window.innerWidth >= 769) return; // permanently docked on desktop
         const sidebar = document.getElementById('sidebar');
         const backdrop = document.getElementById('sheet-backdrop');
         const chevron = document.getElementById('sheet-chevron');
@@ -9201,6 +9218,7 @@ function playGrantedSound() {
     }
 
     function closeOrderSheet() {
+        if (window.innerWidth >= 769) return; // permanently docked on desktop
         const sidebar = document.getElementById('sidebar');
         const backdrop = document.getElementById('sheet-backdrop');
         const chevron = document.getElementById('sheet-chevron');
