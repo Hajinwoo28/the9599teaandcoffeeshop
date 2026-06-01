@@ -5,6 +5,8 @@
 # --- Core Framework ---
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
+requests==2.31.0
+python-dotenv==1.0.0
 
 # --- [FEATURE 1] CSRF Protection ---
 Flask-WTF==1.2.1
