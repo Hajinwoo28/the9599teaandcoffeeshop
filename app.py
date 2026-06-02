@@ -6706,7 +6706,9 @@ STOREFRONT_HTML = """
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-base); color: var(--text-dark); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        html { width: 100%; max-width: 100%; overflow-x: hidden; }
+        body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-base); color: var(--text-dark); display: flex; flex-direction: column; width: 100%; max-width: 100%; height: 100vh; overflow: hidden; overflow-x: hidden; }
+        img { max-width: 100%; height: auto; }
         h1, h2, h3, .serif-font { font-family: 'Playfair Display', serif; }
 
         .promo-ticker { background: #1A110D; color: var(--gold); padding: 5px 0; overflow: hidden; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
@@ -7287,6 +7289,18 @@ STOREFRONT_HTML = """
             }
         }
 
+        @media (max-width: 520px) {
+            .welcome-modal-overlay,
+            .promo-modal-overlay,
+            .gate-wrapper { padding: 12px; align-items: flex-start; }
+            .welcome-modal { border-radius: 22px; }
+            .gate-card { padding: 28px 18px; border-radius: 20px; max-height: calc(100vh - 24px); }
+            .gate-card h1 { font-size: 1.55rem !important; }
+            .gate-card img,
+            .wm-logo-ring img,
+            .logo-img { max-width: 100%; object-fit: cover; }
+        }
+
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .geo-btn {
             width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -7352,7 +7366,7 @@ STOREFRONT_HTML = """
         .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600; color: var(--text-dark); }
         .notif-item .notif-time { font-size: 0.7rem; color: var(--text-light); margin-top: 2px; }
         .notif-empty { padding: 20px 16px; text-align: center; color: var(--text-light); font-size: 0.82rem; font-weight: 600; }
-        .gate-wrapper { display: flex; position: fixed; inset: 0; z-index: 9999; justify-content: center; align-items: center; background: var(--bg-base); padding: 20px; flex-direction: column; overflow-y: auto; }
+        .gate-wrapper { display: flex; position: fixed; inset: 0; z-index: 9999; justify-content: center; align-items: center; background: var(--bg-base); width: 100%; max-width: 100vw; padding: 20px; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
 
         /* ── Location Banner ── */
         .location-banner { background: linear-gradient(90deg, #6F4E37, #A67B5B); color: #fff; padding: 6px 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; flex-shrink: 0; transition: opacity 0.2s; }
@@ -7384,8 +7398,8 @@ STOREFRONT_HTML = """
         .loc-nav-btn.gmaps { background: #1a73e8; }
         .loc-close-btn { width: 100%; padding: 12px; border-radius: 14px; border: 1.5px solid #D7CCC8; background: #fff; color: #8D6E63; font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
         /* ── Welcome Modal ── */
-        .welcome-modal-overlay { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(30,16,6,0.82); backdrop-filter: blur(6px); }
-        .welcome-modal { background: linear-gradient(160deg, #3E2010 0%, #5C3317 50%, #6F4E37 100%); border-radius: 28px; max-width: 400px; width: 100%; padding: 0; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(200,155,60,0.18); animation: wm-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+        .welcome-modal-overlay { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 100vw; padding: 20px; background: rgba(30,16,6,0.82); backdrop-filter: blur(6px); overflow-x: hidden; overflow-y: auto; }
+        .welcome-modal { background: linear-gradient(160deg, #3E2010 0%, #5C3317 50%, #6F4E37 100%); border-radius: 28px; max-width: 400px; width: min(100%, 400px); padding: 0; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(200,155,60,0.18); animation: wm-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
         @keyframes wm-pop { from { transform: scale(0.82) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
         .wm-hero { position: relative; height: 170px; background: linear-gradient(135deg, #2b1206, #3d2010); display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .wm-hero-bg { position: absolute; inset: 0; opacity: 0.12; background: radial-gradient(ellipse at 30% 50%, #f5c842 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #c8922a 0%, transparent 55%); }
@@ -7445,7 +7459,7 @@ STOREFRONT_HTML = """
 
         @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
-        .gate-card { background: var(--card-bg); padding: 50px 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; border: 1px solid var(--border-color); }
+        .gate-card { background: var(--card-bg); padding: 50px 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: min(100%, 420px); max-width: 420px; max-height: calc(100vh - 40px); overflow-y: auto; text-align: center; border: 1px solid var(--border-color); }
 
         /* ── OTP Digit Boxes ── */
         @keyframes otpBadgePop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
@@ -18997,7 +19011,7 @@ def storefront():
     # ── Closed / Not Configured pages ───────────────────────────────────
     def closed_page(title, icon, headline, sub, extra=''):
         # icon param kept for compatibility but logo image is always used
-        return """<!DOCTYPE html><html><head>
+        return f"""<!DOCTYPE html><html><head>
         <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" type="image/jpeg" href="/static/images/9599.jpg">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
@@ -19005,7 +19019,9 @@ def storefront():
         <title>{title} | 9599 Tea & Coffee</title>
         <style>
             *{{box-sizing:border-box;margin:0;padding:0;}}
+            html,body{{width:100%;max-width:100%;overflow-x:hidden;}}
             body{{font-family:'DM Sans',sans-serif;background:#F5EFE6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}}
+            img{{max-width:100%;height:auto;}}
             .card{{background:white;border-radius:20px;padding:50px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.08);border:1px solid #EFEBE4;}}
             .logo-wrap{{margin-bottom:20px;}}
             .logo-wrap img{{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #D7CCC8;box-shadow:0 4px 16px rgba(111,78,55,0.15);}}
@@ -19013,6 +19029,10 @@ def storefront():
             h2{{font-family:'Playfair Display',serif;font-size:1.8rem;color:#3E2723;margin-bottom:12px;}}
             p{{color:#8D6E63;font-size:0.95rem;line-height:1.6;}}
             .badge{{display:inline-block;background:#F5EFE6;color:#6F4E37;font-weight:700;font-size:0.85rem;padding:8px 18px;border-radius:50px;margin-top:18px;border:1px solid #D7CCC8;}}
+            @media (max-width:520px){{
+                .card{{padding:34px 22px;border-radius:18px;}}
+                h2{{font-size:1.55rem;}}
+            }}
         </style></head><body>
         <div class="card">
             <div class="logo-wrap">
