@@ -1,8 +1,5 @@
-Flask==3.0.3
-Werkzeug==3.0.3
-flask-limiter==3.7.0
-limits==3.13.0
-Flask-SQLAlchemy==3.1.1
-itsdangerous==2.2.0
-hcaptcha==0.2.0
-requests==2.32.3
+flask
+flask-sqlalchemy
+flask-login
+werkzeug
+python-dotenv
