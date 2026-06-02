@@ -259,6 +259,46 @@ def master_pin_matches(submitted_pin):
         return False
     return check_password_hash(ADMIN_PIN_HASH, s)
 
+
+# ── Code Name + Password credentials for multi-step login ─────────────────────
+# Step 0: Code Name + Password → Step 1: PIN → Step 2: CAPTCHA
+# Defaults can be overridden via Vercel environment variables.
+ADMIN_CODE_NAME     = os.environ.get('ADMIN_CODE_NAME', 'codename_admin').strip()
+ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get('ADMIN_PASSWORD', 'verified_admin'))
+EMPLOYEE_CODE_NAME  = os.environ.get('EMPLOYEE_CODE_NAME', 'staff').strip()
+EMPLOYEE_PASSWORD_HASH = generate_password_hash(os.environ.get('EMPLOYEE_PASSWORD', '9599_T&CS'))
+DEV_CODE_NAME       = os.environ.get('DEV_CODE_NAME', 'Hajinwoo28').strip()
+DEV_PASSWORD_HASH   = generate_password_hash(os.environ.get('DEV_PASSWORD', 'buunjaxpucca'))
+
+
+def _validate_code_credentials(code_name: str, password: str, role: str = 'admin') -> bool:
+    """
+    Validate code name + password for the given role.
+    Returns True if credentials match, False otherwise.
+    Uses constant-time comparison to prevent timing attacks.
+    """
+    if not code_name or not password:
+        return False
+    cn = code_name.strip().lower()
+    pw = password.strip()
+    if role == 'admin':
+        expected_cn = ADMIN_CODE_NAME.lower()
+        expected_hash = ADMIN_PASSWORD_HASH
+    elif role == 'employee':
+        expected_cn = EMPLOYEE_CODE_NAME.lower()
+        expected_hash = EMPLOYEE_PASSWORD_HASH
+    elif role == 'dev':
+        expected_cn = DEV_CODE_NAME.lower()
+        expected_hash = DEV_PASSWORD_HASH
+    else:
+        return False
+    if not expected_cn or not expected_hash:
+        return False
+    if not hmac.compare_digest(cn, expected_cn):
+        return False
+    return check_password_hash(expected_hash, pw)
+
+
 token_serializer = URLSafeTimedSerializer(str(app.secret_key or ''))
 
 # ── OTP hashing helpers ───────────────────────────────────────────────────────
@@ -1718,6 +1758,44 @@ h2{
 }
 .captcha-status-bar i{font-size:0.85rem;color:rgba(230,185,85,1);}
 @keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
+
+/* ── Step 0: Code Name + Password (Admin) ── */
+.step0-form{animation:fadeUp 0.6s 0.2s cubic-bezier(0.22,1,0.36,1) both;}
+.input-group{position:relative;margin-bottom:18px;}
+.input-group i.field-icon{
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  color:var(--gold-dim);font-size:0.9rem;transition:color 0.25s;z-index:1;
+}
+.input-group .field-input{
+  width:100%;padding:14px 14px 14px 44px;
+  border:1.5px solid var(--inp-border);border-radius:14px;
+  font-size:0.95rem;font-weight:600;outline:none;
+  color:var(--cream);background:var(--inp-bg);
+  font-family:'DM Sans',sans-serif;
+  transition:border-color 0.25s,box-shadow 0.25s,background 0.25s;
+}
+.input-group .field-input::placeholder{color:var(--text-muted);font-weight:400;}
+.input-group .field-input:focus{
+  border-color:rgba(232,201,138,0.6);background:rgba(255,248,240,0.09);
+  box-shadow:0 0 0 4px var(--inp-focus);
+}
+.input-group .field-input:focus ~ i.field-icon,
+.input-group .field-input:not(:placeholder-shown) ~ i.field-icon{color:var(--gold);}
+.input-group .toggle-pw{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--text-muted);cursor:pointer;
+  font-size:0.9rem;padding:4px;transition:color 0.2s;z-index:1;
+}
+.input-group .toggle-pw:hover{color:var(--gold);}
+.step-indicator{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+.step-dot.active{background:var(--gold);box-shadow:0 0 10px rgba(232,201,138,0.5);width:24px;border-radius:4px;}
+.step-dot.done{background:var(--green);}
+.step-line{width:20px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px;transition:background 0.3s;}
+.step-line.done{background:var(--green);}
+.err-step0{background:rgba(255,107,107,0.12);color:#FF9999;padding:10px 14px;border-radius:12px;
+  font-size:0.82rem;font-weight:600;margin-bottom:16px;border:1px solid rgba(255,107,107,0.3);
+  display:flex;align-items:center;gap:8px;animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
 </style>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
@@ -1743,14 +1821,48 @@ h2{
   <div class="card">
     <div class="pill"><i class="fas fa-shield-halved"></i>&ensp;Admin Portal</div>
     <h2>Welcome Back</h2>
-    <p class="sub">Enter your 5-digit master PIN to access the admin panel.</p>
+    <p class="sub">Secure login — code name, PIN, then verification.</p>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator" id="stepIndicator">
+      <div class="step-dot active" id="stepDot0"></div>
+      <div class="step-line" id="stepLine01"></div>
+      <div class="step-dot" id="stepDot1"></div>
+      <div class="step-line" id="stepLine12"></div>
+      <div class="step-dot" id="stepDot2"></div>
+    </div>
 
     {% if error %}
     <div class="err"><i class="fas fa-circle-exclamation"></i> {{ error }}</div>
     {% endif %}
 
+    <!-- Step 0: Code Name + Password -->
+    <div id="loginStep0" class="step0-form">
+      <label class="lbl">Code Name</label>
+      <div class="input-group">
+        <input type="text" class="field-input" id="codeNameInput"
+               placeholder="Enter your code name" autocomplete="username" autofocus>
+        <i class="fas fa-user-shield field-icon"></i>
+      </div>
+      <label class="lbl">Password</label>
+      <div class="input-group">
+        <input type="password" class="field-input" id="codePasswordInput"
+               placeholder="Enter your password" autocomplete="current-password">
+        <i class="fas fa-lock field-icon"></i>
+        <button type="button" class="toggle-pw" onclick="togglePwVisibility('codePasswordInput', this)">
+          <i class="fas fa-eye"></i>
+        </button>
+      </div>
+      <div id="step0Err" style="display:none;" class="err-step0">
+        <i class="fas fa-circle-exclamation"></i> <span id="step0ErrMsg"></span>
+      </div>
+      <button type="button" class="btn" id="step0Btn" onclick="validateStep0()">
+        <i class="fas fa-arrow-right"></i>&ensp;Continue
+      </button>
+    </div>
+
     <!-- Step 1: PIN Entry -->
-    <div id="loginStepPin">
+    <div id="loginStepPin" style="display:none;">
       <input type="text" name="_email_confirm"
              style="display:none;position:absolute;left:-9999px;"
              tabindex="-1" autocomplete="off">
@@ -1807,6 +1919,100 @@ window._bubbleColors = [
   'rgba(200,130,58,0.05)',
   'rgba(255,248,240,0.04)'
 ];
+
+/* ── Step 0: Code Name + Password ── */
+var step0Validated = false;
+var step0Checking = false;
+
+function togglePwVisibility(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  var icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fas fa-eye';
+  }
+}
+
+function validateStep0() {
+  if (step0Checking) return;
+  var codeName = document.getElementById('codeNameInput').value.trim();
+  var password = document.getElementById('codePasswordInput').value.trim();
+  var errBox = document.getElementById('step0Err');
+  var errMsg = document.getElementById('step0ErrMsg');
+  var btn = document.getElementById('step0Btn');
+
+  if (!codeName || !password) {
+    errMsg.textContent = 'Please enter both code name and password.';
+    errBox.style.display = 'flex';
+    return;
+  }
+
+  step0Checking = true;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&ensp;Verifying…';
+  errBox.style.display = 'none';
+
+  fetch('/api/validate-credentials', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({code_name: codeName, password: password, role: 'admin'})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,data:d}; }); })
+  .then(function(res){
+    step0Checking = false;
+    if (res.ok && res.data.valid) {
+      step0Validated = true;
+      transitionToStep1();
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-arrow-right"></i>&ensp;Continue';
+      errMsg.textContent = res.data.error || 'Invalid credentials.';
+      errBox.style.display = 'flex';
+      document.getElementById('codePasswordInput').value = '';
+      document.getElementById('codePasswordInput').focus();
+    }
+  })
+  .catch(function(){
+    step0Checking = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-arrow-right"></i>&ensp;Continue';
+    errMsg.textContent = 'Connection error. Please try again.';
+    errBox.style.display = 'flex';
+  });
+}
+
+function transitionToStep1() {
+  var step0 = document.getElementById('loginStep0');
+  var step1 = document.getElementById('loginStepPin');
+  var dot0 = document.getElementById('stepDot0');
+  var dot1 = document.getElementById('stepDot1');
+  var line01 = document.getElementById('stepLine01');
+
+  step0.style.animation = 'fadeOut 0.3s ease both';
+  dot0.classList.remove('active');
+  dot0.classList.add('done');
+  dot1.classList.add('active');
+  line01.classList.add('done');
+
+  setTimeout(function(){
+    step0.style.display = 'none';
+    step1.style.display = 'block';
+    step1.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
+    document.getElementById('pinInput').focus();
+  }, 280);
+}
+
+/* Enter key to submit Step 0 */
+document.getElementById('codePasswordInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') validateStep0();
+});
+document.getElementById('codeNameInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') document.getElementById('codePasswordInput').focus();
+});
+
 /* ── State ── */
 var loginPinVerified = false;
 var loginPinChecking = false;
@@ -19282,6 +19488,42 @@ def public_announcements():
         "priority": a.priority,
         "created_at": a.created_at.strftime('%b %d, %I:%M %p')
     } for a in rows])
+
+
+@app.route('/api/validate-credentials', methods=['POST'])
+@limiter.limit("5 per minute")
+def validate_credentials():
+    """
+    Step 0: Validate code name + password before revealing the PIN step.
+    Expects JSON: { code_name: str, password: str, role: 'admin'|'employee' }
+    Returns JSON: { valid: bool, error?: str }
+    """
+    client_ip = get_client_ip()
+    if is_ip_blacklisted(client_ip):
+        return jsonify({'valid': False, 'error': 'Access denied.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    code_name = (data.get('code_name') or '').strip()
+    password = (data.get('password') or '').strip()
+    role = (data.get('role') or 'admin').strip().lower()
+
+    if not code_name or not password:
+        return jsonify({'valid': False, 'error': 'Code name and password are required.'}), 400
+
+    # Sanitize code name (alphanumeric + underscore + hyphen only)
+    if not re.fullmatch(r'[A-Za-z0-9_-]{2,50}', code_name):
+        record_failed_attempt(client_ip, role)
+        return jsonify({'valid': False, 'error': 'Invalid code name format.'}), 400
+
+    if _validate_code_credentials(code_name, password, role):
+        log_audit(f"Step 0 Passed ({role.title()})", f"Code name '{code_name}' validated from {client_ip}")
+        # Mark session as having passed Step 0
+        session[f'step0_{role}_passed'] = True
+        return jsonify({'valid': True})
+
+    record_failed_attempt(client_ip, role)
+    log_audit(f"Step 0 Failed ({role.title()})", f"Invalid credentials for code name '{code_name}' from {client_ip}")
+    return jsonify({'valid': False, 'error': 'Invalid code name or password.'}), 401
 
 
 @app.route('/api/check-takeover-pin', methods=['POST'])
