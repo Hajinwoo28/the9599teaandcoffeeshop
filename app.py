@@ -531,6 +531,23 @@ else:
 
 db = SQLAlchemy(app)
 
+def _is_postgres_url() -> bool:
+    """Return True when the configured database is PostgreSQL."""
+    return str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('postgresql')
+
+def _can_use_database() -> bool:
+    """Probe the SQLAlchemy engine without letting startup/runtime imports crash Vercel."""
+    try:
+        _ = db.engine.url
+        return True
+    except Exception as exc:
+        print(f"[Database] Engine unavailable: {exc}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False
+
 def get_local_ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -22287,6 +22304,8 @@ def _initialize_db():
     """Run DB creation + seeding inside an app context.
     Called once at module load (local/Render) and also lazily on first request
     on Vercel so a startup crash does not produce a blank 500."""
+    if not _can_use_database():
+        return
     try:
         db.create_all()
     except Exception as _e:
@@ -22325,12 +22344,14 @@ def _ensure_schema():
     global _schema_ok
     if _schema_ok:
         return
+    if not _can_use_database():
+        return
     try:
         db.create_all()   # creates completely missing tables (idempotent)
     except Exception as e:
         print(f"_ensure_schema: db.create_all() warning: {e}")
 
-    is_pg = 'postgresql' in str(db.engine.url)
+    is_pg = _is_postgres_url()
 
     def _col_exists(table, col):
         try:
