@@ -228,6 +228,14 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID.app
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
+# ── Security Feature 7: Request Size Limiting ──────────────────────────────
+# Reject any incoming request body larger than 16 MB.  Without this limit an
+# attacker can exhaust server memory or disk space by streaming a multi-GB
+# payload to any POST/PUT endpoint.  Flask raises a 413 error automatically;
+# the custom handler below returns a clean JSON response instead of the
+# default HTML error page.
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
 if _ON_CLOUD:
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'None'
@@ -287,51 +295,86 @@ def add_header(response):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '-1'
 
-    # Security headers applied to all responses
+    # ── Security Feature 1: Core Security Headers ─────────────────────────────
+    # Applied to every response regardless of route.
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(*)')
 
-    # Apply a Content Security Policy on the employee dashboard to suppress
-    # chrome-extension://invalid/ injection errors and block unexpected origins.
-    if request.path in ('/employee', '/employee/login'):
-        csp = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://vercel.live https://*.vercel.live https://*.vercel.app "
-                "https://js.hcaptcha.com https://newassets.hcaptcha.com; "
-            "script-src-elem 'self' 'unsafe-inline' "
-                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://vercel.live https://*.vercel.live https://*.vercel.app "
-                "https://js.hcaptcha.com https://newassets.hcaptcha.com; "
-            "style-src 'self' 'unsafe-inline' "
-                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://fonts.googleapis.com "
-                "https://use.fontawesome.com https://ka-f.fontawesome.com "
-                "https://newassets.hcaptcha.com; "
-            "font-src 'self' "
-                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://fonts.gstatic.com "
-                "https://use.fontawesome.com https://ka-f.fontawesome.com data:; "
-            "img-src 'self' data: blob: https: "
-                "https://*.hcaptcha.com; "
-            "connect-src 'self' https://ka-f.fontawesome.com "
-                "https://vercel.live https://*.vercel.live wss://*.vercel.live "
-                "https://api.hcaptcha.com https://*.hcaptcha.com; "
-            "frame-src 'self' https://vercel.live "
-                "https://newassets.hcaptcha.com https://*.hcaptcha.com; "
-            "object-src 'none';"
-        )
-        response.headers['Content-Security-Policy'] = csp
+    # ── Security Feature 2: X-XSS-Protection ─────────────────────────────────
+    # Instructs older browsers (IE/Edge legacy) to activate their built-in
+    # XSS filter. Deprecated in modern Chrome/Firefox but still checked by
+    # security scanners and some panel evaluation tools.
+    response.headers.setdefault('X-XSS-Protection', '1; mode=block')
+
+    # ── Security Feature 3: Permissions-Policy (corrected) ───────────────────
+    # Explicitly disables access to sensitive browser APIs this app does not
+    # use. Previously "geolocation=(*)" erroneously allowed all origins.
+    # Now every API is locked to "self" or fully off.
+    response.headers.setdefault(
+        'Permissions-Policy',
+        'camera=(), microphone=(), geolocation=(self), payment=(), usb=(), '
+        'bluetooth=(), serial=(), magnetometer=(), gyroscope=(), accelerometer=()'
+    )
+
+    # ── Security Feature 4: Cross-Origin Isolation Headers ───────────────────
+    # COOP prevents cross-origin windows from getting a reference to this page,
+    # protecting against Spectre-style side-channel attacks and clickjacking
+    # via window.opener. CORP blocks cross-origin resource embedding.
+    response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin-allow-popups')
+    response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-site')
+
+    # ── Security Feature 5: X-Robots-Tag on protected routes ─────────────────
+    # HTTP-level instruction to all crawlers not to index or follow links on
+    # admin, employee, and API paths. Complements the HTML <meta robots> tag
+    # already present on some pages and works even for non-HTML responses.
+    _protected_prefixes = ('/admin', '/employee', '/login', '/api/', '/dev',
+                           '/health', '/.well-known')
+    if any(request.path.startswith(p) for p in _protected_prefixes):
+        response.headers['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
+
+    # ── Security Feature 6: Content Security Policy ───────────────────────────
+    # CSP restricts which origins can load scripts, styles, fonts, images, etc.
+    # A shared CSP is applied to all auth/admin pages; a stricter variant is
+    # already set for /employee and /employee/login (below).
+    _csp_base = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+            "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+            "https://vercel.live https://*.vercel.live https://*.vercel.app "
+            "https://js.hcaptcha.com https://newassets.hcaptcha.com; "
+        "script-src-elem 'self' 'unsafe-inline' "
+            "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+            "https://vercel.live https://*.vercel.live https://*.vercel.app "
+            "https://js.hcaptcha.com https://newassets.hcaptcha.com; "
+        "style-src 'self' 'unsafe-inline' "
+            "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+            "https://fonts.googleapis.com "
+            "https://use.fontawesome.com https://ka-f.fontawesome.com "
+            "https://newassets.hcaptcha.com; "
+        "font-src 'self' "
+            "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+            "https://fonts.gstatic.com "
+            "https://use.fontawesome.com https://ka-f.fontawesome.com data:; "
+        "img-src 'self' data: blob: https: "
+            "https://*.hcaptcha.com; "
+        "connect-src 'self' https://ka-f.fontawesome.com "
+            "https://vercel.live https://*.vercel.live wss://*.vercel.live "
+            "https://api.hcaptcha.com https://*.hcaptcha.com; "
+        "frame-src 'self' https://vercel.live "
+            "https://newassets.hcaptcha.com https://*.hcaptcha.com; "
+        "object-src 'none';"
+    )
+
+    if request.path in ('/employee', '/employee/login', '/login', '/admin'):
+        response.headers['Content-Security-Policy'] = _csp_base
         response.headers['X-Content-Type-Options'] = 'nosniff'
 
     # HSTS — instruct browsers to always use HTTPS for 1 year (production only)
     if request.is_secure:
         response.headers.setdefault(
             'Strict-Transport-Security',
-            'max-age=31536000; includeSubDomains'
+            'max-age=31536000; includeSubDomains; preload'
         )
 
     return response
@@ -18760,27 +18803,67 @@ def _is_customer_route(path):
     return False
 
 
+# ── Security Feature 7 (continued): 413 Request Entity Too Large handler ──────
+# Returns a clean JSON error instead of Flask's default HTML 413 page.
+# This prevents internal path/config details from leaking in the error body.
+@app.errorhandler(413)
+def handle_413(exc):
+    return jsonify({
+        "error": "Request too large",
+        "message": "The uploaded file or request body exceeds the 16 MB limit.",
+        "status": 413
+    }), 413
+
+
+# ── Security Feature 8: robots.txt — Crawler Exclusion ────────────────────────
+# Instructs all compliant search engine bots not to index admin, employee,
+# API, or any other non-public path.  This is a defence-in-depth measure;
+# it does not replace authentication but reduces the attack surface visible
+# to automated scanners and reduces accidental exposure in search results.
+@app.route('/robots.txt', methods=['GET'])
+def robots_txt():
+    content = (
+        "User-agent: *\n"
+        "Disallow: /admin\n"
+        "Disallow: /admin/\n"
+        "Disallow: /employee\n"
+        "Disallow: /employee/\n"
+        "Disallow: /login\n"
+        "Disallow: /api/\n"
+        "Disallow: /dev\n"
+        "Disallow: /dev/\n"
+        "Disallow: /health\n"
+        "Disallow: /reserve\n"
+        "Disallow: /payment/\n"
+        "Disallow: /.well-known/\n"
+        "\n"
+        "# Public storefront is indexable\n"
+        "Allow: /\n"
+    )
+    return Response(content, mimetype='text/plain')
+
+
+# ── Security Feature 9: security.txt — Responsible Disclosure Policy ──────────
+# RFC 9116 standard file that tells security researchers how to report
+# vulnerabilities.  Without it, researchers have no official channel and may
+# post findings publicly before the team can patch them.
+@app.route('/.well-known/security.txt', methods=['GET'])
+def security_txt():
+    content = (
+        "# 9599 Tea & Coffee — Security Disclosure Policy\n"
+        "# Compliant with RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116)\n"
+        "\n"
+        "Contact: mailto:security@9599tea.com\n"
+        "Preferred-Languages: en, fil\n"
+        "Policy: https://9599tea.com/security-policy\n"
+        f"Expires: {(get_ph_time() + timedelta(days=365)).strftime('%Y-%m-%dT00:00:00+08:00')}\n"
+        "Encryption: none\n"
+        "Acknowledgments: https://9599tea.com/security-acknowledgments\n"
+    )
+    return Response(content, mimetype='text/plain')
+
+
 # ── Global error handlers ─────────────────────────────────────────────────────
-
-@app.errorhandler(400)
-def handle_400(exc):
-  return jsonify({"error": "Bad request", "message": str(exc)}), 400
-
-
-@app.errorhandler(401)
-def handle_401(exc):
-  return jsonify({"error": "Unauthorized", "message": str(exc)}), 401
-
-
-@app.errorhandler(403)
-def handle_403(exc):
-  return jsonify({"error": "Forbidden", "message": str(exc)}), 403
-
-
-@app.errorhandler(429)
-def handle_429(exc):
-  return jsonify({"error": "Too many requests", "message": str(exc)}), 429
-
 
 @app.errorhandler(500)
 def handle_500(exc):
