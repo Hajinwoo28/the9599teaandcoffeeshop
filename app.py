@@ -496,9 +496,15 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # On Vercel the project root is read-only; /tmp is the only writable directory.
 # Locally the DB sits next to app.py as before.
-_IS_VERCEL = bool(os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'))
+# Use multiple Vercel runtime environment variables for compatibility.
+_IS_VERCEL = bool(
+    os.environ.get('VERCEL') or
+    os.environ.get('VERCEL_ENV') or
+    os.environ.get('VERCEL_URL') or
+    os.environ.get('NOW_REGION')
+)
 _default_db_dir = '/tmp' if _IS_VERCEL else BASE_DIR
-DEFAULT_DB_PATH = os.path.join(_default_db_dir, 'milktea_system.db')
+DEFAULT_DB_PATH = '/tmp/milktea_system.db' if _IS_VERCEL else os.path.join(_default_db_dir, 'milktea_system.db')
 
 database_url = os.environ.get('DATABASE_URL', f'sqlite:///{DEFAULT_DB_PATH}')
 if database_url.startswith("postgres://"):
