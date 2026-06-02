@@ -2342,6 +2342,28 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
 }
 @keyframes scaleIn{from{opacity:0;transform:scale(0.8) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
 @keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
+
+/* ── Step 0: Code Name + Password ── */
+.step0-form{animation:fadeUp 0.6s 0.2s cubic-bezier(0.22,1,0.36,1) both;}
+.input-group{position:relative;margin-bottom:14px;}
+.field-input{width:100%;padding:14px 14px 14px 42px;border:1.5px solid var(--inp-border);border-radius:12px;
+  font-size:0.88rem;outline:none;color:var(--cream);background:var(--inp-bg);
+  font-family:'DM Sans',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;}
+.field-input::placeholder{color:var(--text-muted);}
+.field-input:focus{border-color:rgba(62,207,173,0.5);box-shadow:0 0 0 4px var(--inp-focus);}
+.field-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--teal-dim);font-size:0.85rem;pointer-events:none;}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;
+  color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:4px;}
+.toggle-pw:hover{color:var(--teal);}
+.step-indicator{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:rgba(220,255,248,0.15);transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+.step-dot.active{background:var(--teal);box-shadow:0 0 10px rgba(62,207,173,0.5);width:24px;border-radius:4px;}
+.step-dot.done{background:var(--teal-bright);}
+.step-line{width:32px;height:2px;background:rgba(220,255,248,0.12);border-radius:2px;transition:background 0.35s;}
+.step-line.done{background:var(--teal);}
+.err-step0{background:rgba(255,107,107,0.1);color:#FF9999;padding:8px 12px;border-radius:10px;
+  font-size:0.72rem;font-weight:600;margin-bottom:12px;border:1px solid rgba(255,107,107,0.25);
+  display:flex;align-items:center;gap:6px;animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
 </style>
 <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
@@ -2378,8 +2400,42 @@ h2{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:700;
              style="display:none;position:absolute;left:-9999px;"
              tabindex="-1" autocomplete="off">
 
+      <!-- Step Indicator -->
+      <div class="step-indicator" id="stepIndicator">
+        <div class="step-dot active" id="stepDot0"></div>
+        <div class="step-line" id="stepLine01"></div>
+        <div class="step-dot" id="stepDot1"></div>
+        <div class="step-line" id="stepLine12"></div>
+        <div class="step-dot" id="stepDot2"></div>
+      </div>
+
+      <!-- Step 0: Code Name + Password -->
+      <div id="empStep0" class="step0-form">
+        <label class="lbl">Code Name</label>
+        <div class="input-group">
+          <input type="text" class="field-input" id="empCodeNameInput"
+                 placeholder="Enter your code name" autocomplete="username" autofocus>
+          <i class="fas fa-user-shield field-icon"></i>
+        </div>
+        <label class="lbl">Password</label>
+        <div class="input-group">
+          <input type="password" class="field-input" id="empCodePasswordInput"
+                 placeholder="Enter your password" autocomplete="current-password">
+          <i class="fas fa-lock field-icon"></i>
+          <button type="button" class="toggle-pw" onclick="toggleEmpPwVisibility()">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div id="empStep0Err" style="display:none;" class="err-step0">
+          <i class="fas fa-circle-exclamation"></i> <span id="empStep0ErrMsg"></span>
+        </div>
+        <button type="button" class="btn" id="empStep0Btn" onclick="validateEmpStep0()">
+          <i class="fas fa-arrow-right"></i>&ensp;Continue
+        </button>
+      </div>
+
       <!-- Step 1: PIN Entry -->
-      <div id="empStepPin">
+      <div id="empStepPin" style="display:none;">
         <label class="lbl">Staff PIN</label>
         <div class="pin-wrap">
           <div class="pin-dots">
@@ -2437,6 +2493,8 @@ window._bubbleColors = [
 
 var empPinVerified  = false;
 var empPinChecking  = false;
+var empStep0Checking = false;
+var empStep0Validated = false;
 var pinInput        = document.getElementById('pinInput');
 var dots            = [document.getElementById('d1'),document.getElementById('d2'),
                        document.getElementById('d3'),document.getElementById('d4'),
@@ -2445,6 +2503,96 @@ var empVerifyBtn    = document.getElementById('empVerifyPinBtn');
 var empStepPin      = document.getElementById('empStepPin');
 var empStepCaptcha  = document.getElementById('empStepCaptcha');
 var empCaptchaSt    = document.getElementById('empCaptchaStatus');
+
+/* ── Step 0: Code Name + Password ── */
+function validateEmpStep0() {
+  if (empStep0Checking) return;
+  var codeName = document.getElementById('empCodeNameInput').value.trim();
+  var password = document.getElementById('empCodePasswordInput').value.trim();
+  var errBox = document.getElementById('empStep0Err');
+  var errMsg = document.getElementById('empStep0ErrMsg');
+  var btn = document.getElementById('empStep0Btn');
+
+  if (!codeName || !password) {
+    errMsg.textContent = 'Please enter both code name and password.';
+    errBox.style.display = 'flex';
+    return;
+  }
+
+  empStep0Checking = true;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&ensp;Verifying…';
+  errBox.style.display = 'none';
+
+  fetch('/api/validate-credentials', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({code_name: codeName, password: password, role: 'employee'})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,data:d}; }); })
+  .then(function(res){
+    empStep0Checking = false;
+    if (res.ok && res.data.valid) {
+      empStep0Validated = true;
+      transitionToEmpStep1();
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-arrow-right"></i>&ensp;Continue';
+      errMsg.textContent = res.data.error || 'Invalid credentials.';
+      errBox.style.display = 'flex';
+      document.getElementById('empCodePasswordInput').value = '';
+      document.getElementById('empCodePasswordInput').focus();
+    }
+  })
+  .catch(function(){
+    empStep0Checking = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-arrow-right"></i>&ensp;Continue';
+    errMsg.textContent = 'Connection error. Please try again.';
+    errBox.style.display = 'flex';
+  });
+}
+
+function transitionToEmpStep1() {
+  var step0 = document.getElementById('empStep0');
+  var step1 = document.getElementById('empStepPin');
+  var dot0 = document.getElementById('stepDot0');
+  var dot1 = document.getElementById('stepDot1');
+  var line01 = document.getElementById('stepLine01');
+
+  step0.style.animation = 'fadeOut 0.3s ease both';
+  dot0.classList.remove('active');
+  dot0.classList.add('done');
+  dot1.classList.add('active');
+  line01.classList.add('done');
+
+  setTimeout(function(){
+    step0.style.display = 'none';
+    step1.style.display = 'block';
+    step1.style.animation = 'fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both';
+    document.getElementById('pinInput').focus();
+  }, 280);
+}
+
+function toggleEmpPwVisibility() {
+  var inp = document.getElementById('empCodePasswordInput');
+  var icon = inp.parentElement.querySelector('.toggle-pw i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fas fa-eye';
+  }
+}
+
+/* Enter key to submit Step 0 */
+document.getElementById('empCodePasswordInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') validateEmpStep0();
+});
+document.getElementById('empCodeNameInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') document.getElementById('empCodePasswordInput').focus();
+});
 
 /* PIN dot display */
 pinInput.addEventListener('input', function(){
@@ -2479,6 +2627,12 @@ function checkEmpPin(pin){
     if(res.ok && res.data.valid){
       empPinVerified = true;
       document.getElementById('empHiddenPin').value = pin;
+      var dot1 = document.getElementById('stepDot1');
+      var dot2 = document.getElementById('stepDot2');
+      var line12 = document.getElementById('stepLine12');
+      if (dot1) { dot1.classList.remove('active'); dot1.classList.add('done'); }
+      if (dot2) { dot2.classList.add('active'); }
+      if (line12) { line12.classList.add('done'); }
       empStepPin.style.animation = 'fadeOut 0.3s ease both';
       setTimeout(function(){
         empStepPin.style.display = 'none';
