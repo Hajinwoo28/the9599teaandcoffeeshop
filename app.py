@@ -7403,12 +7403,13 @@ STOREFRONT_HTML = """
 
         /* Floating promo panel */
         .promo-float-panel {
-            position: absolute; top: calc(100% + 10px); right: 0;
+            position: fixed; /* fixed breaks out of header stacking context (backdrop-filter) */
+            top: 60px; right: 16px; /* fallback; JS sets exact coords on open */
             width: 320px; background: #fff;
             border-radius: 20px;
             border: 2px solid rgba(200,146,42,0.45);
             box-shadow: 0 20px 60px rgba(44,26,18,0.22), 0 6px 20px rgba(200,146,42,0.10);
-            overflow: hidden; z-index: 9999;
+            overflow: hidden; z-index: 100000; /* high enough to clear all page layers */
             display: none;
             animation: promo-panel-drop 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
@@ -8436,6 +8437,11 @@ function playGrantedSound() {
         const notifDrop = document.getElementById('notif-dropdown');
         if (notifDrop) notifDrop.style.display = 'none';
         if (isOpen) { panel.classList.remove('open'); } else {
+            // Position with fixed coords so it escapes header stacking context
+            const rect = btn.getBoundingClientRect();
+            panel.style.top  = (rect.bottom + 10) + 'px';
+            panel.style.right = (window.innerWidth - rect.right) + 'px';
+            panel.style.left = 'auto';
             panel.classList.add('open');
             _pfpSyncState();
             setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
@@ -8538,7 +8544,7 @@ function playGrantedSound() {
         const btn   = document.getElementById('promo-header-btn');
         const panel = document.getElementById('promo-float-panel');
         if (!btn || !panel) return;
-        if (!btn.contains(e.target)) { panel.classList.remove('open'); }
+        if (!btn.contains(e.target) && !panel.contains(e.target)) { panel.classList.remove('open'); }
     });
 
     // ── Expose promo code to checkout (accessible via window._appliedPromoCode) ──
@@ -9705,6 +9711,11 @@ function playGrantedSound() {
         const notifDrop = document.getElementById('notif-dropdown');
         if (notifDrop) notifDrop.style.display = 'none';
         if (isOpen) { panel.classList.remove('open'); } else {
+            // Position with fixed coords so it escapes header stacking context
+            const rect = btn.getBoundingClientRect();
+            panel.style.top  = (rect.bottom + 10) + 'px';
+            panel.style.right = (window.innerWidth - rect.right) + 'px';
+            panel.style.left = 'auto';
             panel.classList.add('open');
             _pfpSyncState();
             setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
@@ -9798,7 +9809,7 @@ function playGrantedSound() {
         const promoBtn   = document.getElementById('promo-header-btn');
         const promoPanel = document.getElementById('promo-float-panel');
         if (!promoBtn || !promoPanel) return;
-        if (!promoBtn.contains(e.target)) { promoPanel.classList.remove('open'); }
+        if (!promoBtn.contains(e.target) && !promoPanel.contains(e.target)) { promoPanel.classList.remove('open'); }
     });
 
     const IMAGE_MAP = {
