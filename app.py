@@ -7405,7 +7405,7 @@ STOREFRONT_HTML = """
         .promo-float-panel {
             position: fixed; /* fixed breaks out of header stacking context (backdrop-filter) */
             top: 60px; right: 16px; /* fallback; JS sets exact coords on open */
-            width: 320px; background: #fff;
+            width: 340px; max-width: calc(100vw - 24px); background: #fff;
             border-radius: 20px;
             border: 2px solid rgba(200,146,42,0.45);
             box-shadow: 0 20px 60px rgba(44,26,18,0.22), 0 6px 20px rgba(200,146,42,0.10);
@@ -7446,7 +7446,7 @@ STOREFRONT_HTML = """
             margin-bottom: 9px; display: flex; align-items: center; gap: 6px;
         }
         .pfp-code-input {
-            flex: 1; padding: 12px 14px;
+            flex: 1; min-width: 0; padding: 12px 14px;
             border: 2.5px solid #5C3317 !important;
             border-radius: 10px; font-size: 0.92rem;
             font-family: 'DM Mono', 'Courier New', monospace;
@@ -7462,7 +7462,7 @@ STOREFRONT_HTML = """
         .pfp-code-input.invalid { border-color: #c62828 !important; background: #fff5f5 !important; }
         .pfp-apply-btn {
             padding: 12px 16px; border-radius: 10px;
-            background: #5C3317;
+            background: #5C3317; min-width: 84px;
             color: #F5E6C8; border: 2px solid #3D2010; font-family: inherit;
             font-size: 0.82rem; font-weight: 900; cursor: pointer;
             transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
