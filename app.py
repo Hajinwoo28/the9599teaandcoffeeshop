@@ -7423,7 +7423,13 @@ STOREFRONT_HTML = """
         .pfp-header-sub { font-size: 0.68rem; color: rgba(245,230,200,0.65); font-weight: 600; margin-top: 1px; }
         .pfp-close { background: none; border: none; color: rgba(245,230,200,0.6); font-size: 1rem; cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.15s, color 0.15s; line-height: 1; }
         .pfp-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
-        .pfp-body { padding: 16px 18px 18px; }
+        .pfp-body { padding: 0; }
+        /* ── Promo panel: tinted entry zone ── */
+        .pfp-zone {
+            background: linear-gradient(160deg, #FBF0DF 0%, #F5E4C2 100%);
+            border-top: 2px solid #D4A040;
+            padding: 14px 16px 16px;
+        }
         .pfp-applied-badge {
             display: none; background: linear-gradient(135deg, #e8f5e9, #d4edda);
             border: 1.5px solid #a5d6a7; border-radius: 12px;
@@ -7434,44 +7440,49 @@ STOREFRONT_HTML = """
         .pfp-badge-desc { font-size: 0.72rem; color: #388e3c; font-weight: 600; margin-top: 2px; }
         .pfp-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .pfp-input-label {
-            font-size: 0.7rem; font-weight: 800; color: #7B4F2E;
-            text-transform: uppercase; letter-spacing: 1.2px;
-            margin-bottom: 7px; display: flex; align-items: center; gap: 5px;
+            font-size: 0.72rem; font-weight: 900; color: #5C3317;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 9px; display: flex; align-items: center; gap: 6px;
         }
         .pfp-code-input {
-            flex: 1; padding: 10px 13px; border: 2px solid #C8922A;
-            border-radius: 11px; font-size: 0.9rem;
+            flex: 1; padding: 12px 14px;
+            border: 2.5px solid #5C3317 !important;
+            border-radius: 10px; font-size: 0.92rem;
             font-family: 'DM Mono', 'Courier New', monospace;
             font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
-            color: var(--text-dark); background: #FDFAF4; outline: none;
+            color: #2C1A12; background: #fff !important; outline: none;
+            box-shadow: 0 2px 8px rgba(92,51,23,0.15), inset 0 1px 3px rgba(92,51,23,0.06);
             transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
         }
-        .pfp-code-input::placeholder { color: #B8956A; letter-spacing: 1.5px; opacity: 1; }
-        .pfp-code-input:focus { border-color: #a06a1a; box-shadow: 0 0 0 3px rgba(200,146,42,0.18); background: #fff; }
-        .pfp-code-input.valid { border-color: #2e7d32; background: #f0fdf4; }
-        .pfp-code-input.invalid { border-color: #c62828; background: #fff5f5; }
+        .pfp-code-input::placeholder { color: #A07840; letter-spacing: 1.5px; opacity: 1; font-style: italic; }
+        .pfp-code-input:focus { border-color: #3D2010 !important; box-shadow: 0 0 0 3px rgba(92,51,23,0.22), inset 0 1px 3px rgba(92,51,23,0.08); }
+        .pfp-code-input.valid { border-color: #2e7d32 !important; background: #f0fdf4 !important; }
+        .pfp-code-input.invalid { border-color: #c62828 !important; background: #fff5f5 !important; }
         .pfp-apply-btn {
-            padding: 10px 16px; border-radius: 11px;
-            background: linear-gradient(135deg, #7B4F2E, #C8922A);
-            color: #fff; border: none; font-family: inherit;
-            font-size: 0.82rem; font-weight: 800; cursor: pointer;
-            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            padding: 12px 16px; border-radius: 10px;
+            background: #5C3317;
+            color: #F5E6C8; border: 2px solid #3D2010; font-family: inherit;
+            font-size: 0.82rem; font-weight: 900; cursor: pointer;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
             white-space: nowrap; flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(200,146,42,0.35);
+            box-shadow: 0 3px 10px rgba(61,32,16,0.35);
+            letter-spacing: 0.3px;
         }
-        .pfp-apply-btn:hover { opacity: 1; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(200,146,42,0.5); }
-        .pfp-apply-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+        .pfp-apply-btn:hover { background: #7B4F2E; transform: translateY(-1px); box-shadow: 0 5px 14px rgba(61,32,16,0.45); }
+        .pfp-apply-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .pfp-footer { padding: 12px 16px 14px; background: #fff; }
         .pfp-feedback {
             font-size: 0.78rem; font-weight: 700; min-height: 0; border-radius: 8px;
             padding: 0; display: none; align-items: center; gap: 6px;
-            transition: all 0.2s;
+            transition: all 0.2s; margin-top: 4px;
         }
-        .pfp-feedback.show { display: flex; padding: 8px 11px; margin-bottom: 6px; }
+        .pfp-feedback.show { display: flex; padding: 8px 11px; margin-bottom: 4px; }
         .pfp-feedback.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
         .pfp-feedback.error { background: #fff0f0; color: #c62828; border: 1px solid #f5c6c6; }
         .pfp-clear-link {
-            font-size: 0.72rem; font-weight: 700; color: #c62828; cursor: pointer;
-            text-align: center; display: none; margin-top: 4px;
+            font-size: 0.75rem; font-weight: 700; color: #c62828; cursor: pointer;
+            text-align: center; display: none;
             transition: color 0.15s;
         }
         .pfp-clear-link:hover { color: #8B1A1A; }
@@ -7667,21 +7678,28 @@ STOREFRONT_HTML = """
         .pm-tag { display: inline-block; background: rgba(245,200,66,0.18); border: 1.5px solid rgba(245,200,66,0.38); color: #f5c842; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; }
         .pm-title { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 900; color: #f5e6c8; margin-bottom: 4px; }
         .pm-sub { font-size: 0.78rem; color: rgba(245,230,200,0.65); font-weight: 600; }
-        .pm-body { padding: 26px 28px 28px; }
+        .pm-body { padding: 0; }
+        /* ── Promo modal entry zone ── */
+        .pm-zone {
+            background: linear-gradient(160deg, #FBF0DF 0%, #F5E4C2 100%);
+            border-top: 2px solid #D4A040;
+            padding: 22px 28px 20px;
+        }
+        .pm-actions { padding: 20px 28px 28px; }
         .pm-input-wrap { position: relative; margin-bottom: 12px; }
         .pm-input-label-row {
-            font-size: 0.72rem; font-weight: 800; color: #7B4F2E;
-            text-transform: uppercase; letter-spacing: 1.2px;
-            margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+            font-size: 0.72rem; font-weight: 900; color: #5C3317;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
         }
-        .pm-code-input { width: 100%; padding: 14px 50px 14px 16px; border: 2px solid #C8922A; border-radius: 14px; font-size: 1.05rem; font-family: 'DM Mono', 'Courier New', monospace; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dark, #3E2010); background: #FDFAF4; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
-        .pm-code-input::placeholder { color: #B8956A; opacity: 1; letter-spacing: 2px; }
-        .pm-code-input:focus { border-color: #a06a1a; box-shadow: 0 0 0 4px rgba(200,146,42,0.16); background: #fff; }
-        .pm-code-input.valid { border-color: #2e7d32; background: #f0fdf4; }
-        .pm-code-input.invalid { border-color: #c62828; background: #fff5f5; }
+        .pm-code-input { width: 100%; padding: 15px 50px 15px 16px; border: 2.5px solid #5C3317 !important; border-radius: 12px; font-size: 1.05rem; font-family: 'DM Mono', 'Courier New', monospace; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #2C1A12; background: #fff !important; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(92,51,23,0.15), inset 0 1px 3px rgba(92,51,23,0.06); }
+        .pm-code-input::placeholder { color: #A07840; opacity: 1; letter-spacing: 2px; font-style: italic; }
+        .pm-code-input:focus { border-color: #3D2010 !important; box-shadow: 0 0 0 4px rgba(92,51,23,0.18), inset 0 1px 3px rgba(92,51,23,0.08); }
+        .pm-code-input.valid { border-color: #2e7d32 !important; background: #f0fdf4 !important; }
+        .pm-code-input.invalid { border-color: #c62828 !important; background: #fff5f5 !important; }
         .pm-clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #bbb; cursor: pointer; font-size: 1rem; padding: 4px; display: none; }
-        .pm-validate-btn { width: 100%; padding: 13px; border-radius: 12px; background: linear-gradient(135deg, #5C3317, #8B5E3C); color: #fff; border: none; font-family: inherit; font-size: 0.92rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s, transform 0.15s; letter-spacing: 0.3px; margin-bottom: 10px; }
-        .pm-validate-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .pm-validate-btn { width: 100%; padding: 14px; border-radius: 12px; background: #5C3317; color: #F5E6C8; border: 2px solid #3D2010; font-family: inherit; font-size: 0.92rem; font-weight: 900; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; letter-spacing: 0.3px; margin-bottom: 10px; box-shadow: 0 4px 14px rgba(61,32,16,0.35); }
+        .pm-validate-btn:hover { background: #7B4F2E; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(61,32,16,0.45); }
         .pm-validate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .pm-feedback { min-height: 36px; border-radius: 10px; padding: 0 12px; font-size: 0.82rem; font-weight: 700; display: none; align-items: center; gap: 7px; margin-bottom: 10px; }
         .pm-feedback.success { display: flex; background: #e8f5e9; color: #1b5e20; border: 1.5px solid #a5d6a7; }
@@ -7850,43 +7868,50 @@ function playGrantedSound() {
             <div class="pm-sub">Enter it now to save on your order — or skip and browse the menu.</div>
         </div>
         <div class="pm-body">
-            <!-- Applied badge (shown after successful validation) -->
-            <div class="pm-applied-badge" id="pm-applied-badge">
-                <div class="pm-applied-badge-icon">✅</div>
-                <div class="pm-applied-badge-text">
-                    <div class="pm-applied-badge-code" id="pm-badge-code">SAVE20</div>
-                    <div class="pm-applied-badge-desc" id="pm-badge-desc">Discount will be applied at checkout</div>
+            <!-- ── Warm entry zone ── -->
+            <div class="pm-zone">
+                <!-- Applied badge (shown after successful validation) -->
+                <div class="pm-applied-badge" id="pm-applied-badge">
+                    <div class="pm-applied-badge-icon">✅</div>
+                    <div class="pm-applied-badge-text">
+                        <div class="pm-applied-badge-code" id="pm-badge-code">SAVE20</div>
+                        <div class="pm-applied-badge-desc" id="pm-badge-desc">Discount will be applied at checkout</div>
+                    </div>
+                    <button onclick="clearPromoCode()" style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px;"><i class="fas fa-times-circle"></i></button>
                 </div>
-                <button onclick="clearPromoCode()" style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px;"><i class="fas fa-times-circle"></i></button>
+
+                <!-- Input area -->
+                <div id="pm-input-area">
+                    <div class="pm-input-label-row">🏷️ Enter your promo code</div>
+                    <div class="pm-input-wrap">
+                        <input id="pm-code-input" class="pm-code-input" type="text"
+                            placeholder="e.g. SAVE20"
+                            maxlength="30"
+                            autocomplete="off"
+                            spellcheck="false"
+                            style="border:2.5px solid #5C3317 !important;background:#fff !important;box-shadow:0 2px 8px rgba(92,51,23,0.15);"
+                            oninput="pmOnInput()"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();validatePromoCode();}">
+                        <button class="pm-clear-btn" id="pm-clear-btn" onclick="pmClearInput()" tabindex="-1"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="pm-feedback" id="pm-feedback"></div>
+                    <button class="pm-validate-btn" id="pm-validate-btn" onclick="validatePromoCode()"
+                        style="background:#5C3317;border:2px solid #3D2010;color:#F5E6C8;box-shadow:0 4px 14px rgba(61,32,16,0.35);">
+                        <i class="fas fa-check-circle"></i> Apply Code
+                    </button>
+                </div>
             </div>
 
-            <!-- Input area -->
-            <div id="pm-input-area">
-                <div class="pm-input-label-row">🏷️ Enter your promo code</div>
-                <div class="pm-input-wrap">
-                    <input id="pm-code-input" class="pm-code-input" type="text"
-                        placeholder="e.g. SAVE20"
-                        maxlength="30"
-                        autocomplete="off"
-                        spellcheck="false"
-                        oninput="pmOnInput()"
-                        onkeydown="if(event.key==='Enter'){event.preventDefault();validatePromoCode();}">
-                    <button class="pm-clear-btn" id="pm-clear-btn" onclick="pmClearInput()" tabindex="-1"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="pm-feedback" id="pm-feedback"></div>
-                <button class="pm-validate-btn" id="pm-validate-btn" onclick="validatePromoCode()">
-                    <i class="fas fa-check-circle"></i> Apply Code
+            <!-- ── Continue/Skip actions ── -->
+            <div class="pm-actions">
+                <div class="pm-divider"><span>then</span></div>
+                <button class="pm-continue-btn" id="pm-continue-btn" onclick="proceedFromPromo()">
+                    <i class="fas fa-arrow-right"></i> Continue to Order
+                </button>
+                <button class="pm-skip-link" onclick="proceedFromPromo(true)">
+                    Skip — I don't have a promo code
                 </button>
             </div>
-
-            <div class="pm-divider"><span>then</span></div>
-
-            <button class="pm-continue-btn" id="pm-continue-btn" onclick="proceedFromPromo()">
-                <i class="fas fa-arrow-right"></i> Continue to Order
-            </button>
-            <button class="pm-skip-link" onclick="proceedFromPromo(true)">
-                Skip — I don't have a promo code
-            </button>
         </div>
     </div>
 </div>
@@ -8653,31 +8678,39 @@ function playGrantedSound() {
                     <button class="pfp-close" onclick="closePromoPanel()" title="Close"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="pfp-body">
-                    <!-- Applied badge -->
-                    <div class="pfp-applied-badge" id="pfp-applied-badge">
-                        <div style="font-size:1.1rem;">✅</div>
-                        <div style="flex:1;">
-                            <div class="pfp-badge-code" id="pfp-badge-code">—</div>
-                            <div class="pfp-badge-desc" id="pfp-badge-desc">Applied at checkout</div>
+                    <!-- Warm entry zone with all interactive elements -->
+                    <div class="pfp-zone">
+                        <!-- Applied badge (shown after success) -->
+                        <div class="pfp-applied-badge" id="pfp-applied-badge">
+                            <div style="font-size:1.1rem;">✅</div>
+                            <div style="flex:1;">
+                                <div class="pfp-badge-code" id="pfp-badge-code">—</div>
+                                <div class="pfp-badge-desc" id="pfp-badge-desc">Applied at checkout</div>
+                            </div>
+                        </div>
+                        <!-- Input row -->
+                        <div id="pfp-input-area">
+                            <div class="pfp-input-label">🏷️ Enter your promo code</div>
+                            <div class="pfp-input-row">
+                                <input id="pfp-code-input" class="pfp-code-input" type="text"
+                                    placeholder="e.g. SAVE20" maxlength="30"
+                                    autocomplete="off" spellcheck="false"
+                                    style="border:2.5px solid #5C3317 !important;background:#fff !important;box-shadow:0 2px 8px rgba(92,51,23,0.15);"
+                                    oninput="pfpOnInput()"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();pfpValidate();}">
+                                <button class="pfp-apply-btn" id="pfp-apply-btn" onclick="pfpValidate()"
+                                    style="background:#5C3317;border:2px solid #3D2010;color:#F5E6C8;box-shadow:0 3px 10px rgba(61,32,16,0.35);">
+                                    <i class="fas fa-check-circle"></i> Apply
+                                </button>
+                            </div>
+                            <div class="pfp-feedback" id="pfp-feedback"></div>
                         </div>
                     </div>
-                    <!-- Input row -->
-                    <div id="pfp-input-area">
-                        <div class="pfp-input-label">🏷️ Enter your promo code</div>
-                        <div class="pfp-input-row">
-                            <input id="pfp-code-input" class="pfp-code-input" type="text"
-                                placeholder="e.g. SAVE20" maxlength="30"
-                                autocomplete="off" spellcheck="false"
-                                oninput="pfpOnInput()"
-                                onkeydown="if(event.key==='Enter'){event.preventDefault();pfpValidate();}">
-                            <button class="pfp-apply-btn" id="pfp-apply-btn" onclick="pfpValidate()">
-                                <i class="fas fa-check-circle"></i> Apply
-                            </button>
+                    <!-- Footer: remove link -->
+                    <div class="pfp-footer">
+                        <div class="pfp-clear-link" id="pfp-clear-link" onclick="pfpClear()">
+                            <i class="fas fa-times-circle"></i> Remove promo code
                         </div>
-                        <div class="pfp-feedback" id="pfp-feedback"></div>
-                    </div>
-                    <div class="pfp-clear-link" id="pfp-clear-link" onclick="pfpClear()">
-                        <i class="fas fa-times-circle"></i> Remove promo code
                     </div>
                 </div>
             </div>
