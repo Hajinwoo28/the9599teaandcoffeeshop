@@ -6711,11 +6711,30 @@ STOREFRONT_HTML = """
         img { max-width: 100%; height: auto; }
         h1, h2, h3, .serif-font { font-family: 'Playfair Display', serif; }
 
-        .promo-ticker { background: #1A110D; color: var(--gold); padding: 5px 0; overflow: hidden; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+        .promo-ticker {
+            background: linear-gradient(135deg, #1A110D 0%, #2a1a0e 50%, #1A110D 100%);
+            background-size: 200% auto;
+            color: var(--gold); padding: 6px 0; overflow: hidden;
+            font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;
+            white-space: nowrap; flex-shrink: 0;
+            border-bottom: 1px solid rgba(200,146,42,0.15);
+            animation: promo-ticker-bg 6s linear infinite;
+        }
+        @keyframes promo-ticker-bg { 0%{background-position:0% center;} 100%{background-position:200% center;} }
         .ticker-inner { display: inline-block; animation: ticker 25s linear infinite; }
         @keyframes ticker { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 
-        header { background: var(--bg-base); padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        header {
+            background: rgba(250,248,245,0.97);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 9px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            box-shadow: 0 1px 8px rgba(44,26,18,0.06);
+            animation: g-fadeDown 0.4s cubic-bezier(0.16,1,0.3,1) both;
+        }
         .logo-area { display: flex; align-items: center; gap: 10px; }
         .logo-ring { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold); display: flex; justify-content: center; align-items: center; }
         .logo-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
@@ -7354,6 +7373,102 @@ STOREFRONT_HTML = """
         .header-icon-btn:nth-child(1) { animation-delay: 0.08s; }
         .header-icon-btn:nth-child(2) { animation-delay: 0.18s; }
         .header-icon-btn:nth-child(3) { animation-delay: 0.28s; }
+        .header-icon-btn:nth-child(4) { animation-delay: 0.36s; }
+
+        /* ── Promo Code Header Icon + Floating Panel ── */
+        @keyframes promo-icon-wiggle { 0%,100%{transform:rotate(0deg);} 20%{transform:rotate(-14deg);} 40%{transform:rotate(12deg);} 60%{transform:rotate(-8deg);} 80%{transform:rotate(6deg);} }
+        @keyframes promo-panel-drop { from{opacity:0;transform:translateY(-10px) scale(0.96);} to{opacity:1;transform:translateY(0) scale(1);} }
+        @keyframes promo-applied-pop { from{transform:scale(0.7);opacity:0;} to{transform:scale(1);opacity:1;} }
+
+        .promo-icon-btn {
+            position: relative;
+            width: 38px; height: 38px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(200,146,42,0.12), rgba(245,200,66,0.18));
+            border: 1.5px solid rgba(200,146,42,0.35);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.22s, border-color 0.22s, transform 0.2s;
+            flex-shrink: 0;
+        }
+        .promo-icon-btn:hover { background: rgba(200,146,42,0.22); border-color: rgba(200,146,42,0.6); }
+        .promo-icon-btn i { color: var(--gold); font-size: 15px; transition: transform 0.22s; }
+        .promo-icon-btn:hover i { animation: promo-icon-wiggle 0.55s ease-in-out; }
+        .promo-icon-btn.applied { background: linear-gradient(135deg, rgba(46,125,50,0.12), rgba(76,175,80,0.18)); border-color: rgba(46,125,50,0.45); }
+        .promo-icon-btn.applied i { color: #2e7d32; }
+        .promo-applied-dot {
+            position: absolute; top: 0; right: 0;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #2e7d32; border: 2px solid var(--bg-base);
+            display: none; animation: promo-applied-pop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .promo-icon-btn.applied .promo-applied-dot { display: block; }
+
+        /* Floating promo panel */
+        .promo-float-panel {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            width: 310px; background: #fff;
+            border-radius: 20px;
+            border: 1.5px solid rgba(200,146,42,0.18);
+            box-shadow: 0 16px 50px rgba(44,26,18,0.18), 0 4px 16px rgba(44,26,18,0.08);
+            overflow: hidden; z-index: 9999;
+            display: none;
+            animation: promo-panel-drop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .promo-float-panel.open { display: block; }
+        .pfp-header {
+            background: linear-gradient(135deg, #5C3317, #8B5E3C);
+            padding: 14px 18px 12px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .pfp-header-left { display: flex; align-items: center; gap: 9px; }
+        .pfp-header-icon { font-size: 1.1rem; }
+        .pfp-header-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 900; color: #f5e6c8; }
+        .pfp-header-sub { font-size: 0.68rem; color: rgba(245,230,200,0.65); font-weight: 600; margin-top: 1px; }
+        .pfp-close { background: none; border: none; color: rgba(245,230,200,0.6); font-size: 1rem; cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.15s, color 0.15s; line-height: 1; }
+        .pfp-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+        .pfp-body { padding: 16px 18px 18px; }
+        .pfp-applied-badge {
+            display: none; background: linear-gradient(135deg, #e8f5e9, #d4edda);
+            border: 1.5px solid #a5d6a7; border-radius: 12px;
+            padding: 10px 13px; margin-bottom: 12px; align-items: center; gap: 9px;
+        }
+        .pfp-applied-badge.show { display: flex; animation: promo-applied-pop 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+        .pfp-badge-code { font-size: 0.88rem; font-weight: 900; color: #1b5e20; font-family: monospace; letter-spacing: 2px; }
+        .pfp-badge-desc { font-size: 0.72rem; color: #388e3c; font-weight: 600; margin-top: 2px; }
+        .pfp-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .pfp-code-input {
+            flex: 1; padding: 10px 13px; border: 2px solid var(--border-color);
+            border-radius: 11px; font-size: 0.9rem;
+            font-family: 'DM Mono', 'Courier New', monospace;
+            font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+            color: var(--text-dark); background: #fff; outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .pfp-code-input:focus { border-color: #c8922a; box-shadow: 0 0 0 3px rgba(200,146,42,0.12); }
+        .pfp-code-input.valid { border-color: #2e7d32; background: #f0fdf4; }
+        .pfp-code-input.invalid { border-color: #c62828; background: #fff5f5; }
+        .pfp-apply-btn {
+            padding: 10px 14px; border-radius: 11px;
+            background: linear-gradient(135deg, #5C3317, #8B5E3C);
+            color: #fff; border: none; font-family: inherit;
+            font-size: 0.82rem; font-weight: 800; cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s; white-space: nowrap; flex-shrink: 0;
+        }
+        .pfp-apply-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .pfp-apply-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .pfp-feedback {
+            font-size: 0.78rem; font-weight: 700; min-height: 0; border-radius: 8px;
+            padding: 0; display: none; align-items: center; gap: 6px;
+            transition: all 0.2s;
+        }
+        .pfp-feedback.show { display: flex; padding: 8px 11px; margin-bottom: 6px; }
+        .pfp-feedback.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        .pfp-feedback.error { background: #fff0f0; color: #c62828; border: 1px solid #f5c6c6; }
+        .pfp-clear-link {
+            font-size: 0.72rem; font-weight: 700; color: #c62828; cursor: pointer;
+            text-align: center; display: none; margin-top: 4px;
+            transition: color 0.15s;
+        }
+        .pfp-clear-link:hover { color: #8B1A1A; }
+        .pfp-clear-link.show { display: block; }
 
         .notif-bell { cursor: pointer; position: relative; padding: 10px; border-radius: 50%; background: var(--gold-light); color: var(--gold); border: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); transition: background 0.2s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1); }
         .notif-bell:hover { background: var(--border-color); transform: scale(1.12); }
@@ -7397,29 +7512,144 @@ STOREFRONT_HTML = """
         .loc-nav-btn:active { opacity: 0.9; }
         .loc-nav-btn.gmaps { background: #1a73e8; }
         .loc-close-btn { width: 100%; padding: 12px; border-radius: 14px; border: 1.5px solid #D7CCC8; background: #fff; color: #8D6E63; font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
-        /* ── Welcome Modal ── */
-        .welcome-modal-overlay { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 100vw; padding: 20px; background: rgba(30,16,6,0.82); backdrop-filter: blur(6px); overflow-x: hidden; overflow-y: auto; }
-        .welcome-modal { background: linear-gradient(160deg, #3E2010 0%, #5C3317 50%, #6F4E37 100%); border-radius: 28px; max-width: 400px; width: min(100%, 400px); padding: 0; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(200,155,60,0.18); animation: wm-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
-        @keyframes wm-pop { from { transform: scale(0.82) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        .wm-hero { position: relative; height: 170px; background: linear-gradient(135deg, #2b1206, #3d2010); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .wm-hero-bg { position: absolute; inset: 0; opacity: 0.12; background: radial-gradient(ellipse at 30% 50%, #f5c842 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #c8922a 0%, transparent 55%); }
-        .wm-hero-steam { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: flex-end; }
-        .wm-steam-line { width: 4px; border-radius: 4px; background: linear-gradient(to top, rgba(245,200,130,0.7), transparent); animation: wm-steam 2.4s ease-in-out infinite; }
-        .wm-steam-line:nth-child(1) { height: 38px; animation-delay: 0s; }
-        .wm-steam-line:nth-child(2) { height: 54px; animation-delay: 0.4s; }
-        .wm-steam-line:nth-child(3) { height: 42px; animation-delay: 0.8s; }
-        @keyframes wm-steam { 0%, 100% { transform: scaleX(1) translateY(0); opacity: 0.7; } 50% { transform: scaleX(1.5) translateY(-10px); opacity: 0.3; } }
-        .wm-logo-ring { width: 80px; height: 80px; border-radius: 50%; border: 2.5px solid rgba(200,155,60,0.55); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); box-shadow: 0 0 0 8px rgba(200,155,60,0.08), 0 0 30px rgba(200,155,60,0.18); position: relative; z-index: 2; }
-        .wm-logo-ring img { width: 68px; height: 68px; border-radius: 50%; object-fit: cover; }
-        .wm-logo-ring i { font-size: 2.2rem; color: #f5c842; }
-        .wm-body { padding: 28px 32px 32px; text-align: center; }
-        .wm-title { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 900; color: #f5e6c8; line-height: 1.15; margin-bottom: 6px; }
-        .wm-tagline { font-size: 0.72rem; font-weight: 900; color: #c8922a; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 14px; }
-        .wm-desc { font-size: 0.88rem; color: rgba(245,230,200,0.78); line-height: 1.7; margin-bottom: 24px; }
-        .wm-enter-btn { width: 100%; padding: 15px 20px; border-radius: 14px; background: linear-gradient(135deg, #c8922a, #f5c842); color: #3E2010; border: none; font-family: inherit; font-size: 1rem; font-weight: 900; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 6px 20px rgba(200,155,60,0.38); transition: transform 0.18s, box-shadow 0.18s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .wm-enter-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(200,155,60,0.48); }
-        .wm-enter-btn:active { transform: translateY(0); }
-        .wm-note { margin-top: 14px; font-size: 0.72rem; color: rgba(245,230,200,0.45); font-weight: 600; letter-spacing: 0.3px; }
+        /* ══════════════════════════════════════════
+           WELCOME MODAL — ENHANCED ANIMATED VERSION
+        ══════════════════════════════════════════ */
+        @keyframes wm-bg-pulse { 0%,100%{opacity:0.55;} 50%{opacity:0.72;} }
+        @keyframes wm-orb-float1 { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(18px,-22px) scale(1.08);} 66%{transform:translate(-12px,14px) scale(0.94);} }
+        @keyframes wm-orb-float2 { 0%,100%{transform:translate(0,0) scale(1);} 40%{transform:translate(-24px,16px) scale(1.1);} 75%{transform:translate(14px,-18px) scale(0.92);} }
+        @keyframes wm-orb-float3 { 0%,100%{transform:translate(0,0);} 50%{transform:translate(10px,20px);} }
+        @keyframes wm-particle-rise { 0%{transform:translateY(0) translateX(0) scale(1);opacity:0.8;} 100%{transform:translateY(-120px) translateX(var(--px,0px)) scale(0.3);opacity:0;} }
+        @keyframes wm-pop { from { transform: scale(0.80) translateY(36px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes wm-float-card { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-5px);} }
+        @keyframes wm-ring-pulse { 0%,100%{box-shadow:0 0 0 8px rgba(200,155,60,0.08),0 0 30px rgba(200,155,60,0.18);} 50%{box-shadow:0 0 0 14px rgba(200,155,60,0.12),0 0 50px rgba(200,155,60,0.28);} }
+        @keyframes wm-steam { 0%,100%{transform:scaleX(1) translateY(0);opacity:0.7;} 50%{transform:scaleX(1.6) translateY(-14px);opacity:0.2;} }
+        @keyframes wm-btn-shimmer { 0%{background-position:200% center;} 100%{background-position:-200% center;} }
+        @keyframes wm-glow-ring { 0%,100%{opacity:0.3;} 50%{opacity:0.7;} }
+
+        .welcome-modal-overlay {
+            position: fixed; inset: 0; z-index: 10001;
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; max-width: 100vw; padding: 20px;
+            background: radial-gradient(ellipse at 50% 40%, rgba(80,35,5,0.92) 0%, rgba(20,8,2,0.96) 70%);
+            backdrop-filter: blur(8px);
+            overflow-x: hidden; overflow-y: auto;
+            animation: wm-bg-pulse 4s ease-in-out infinite;
+        }
+
+        /* Ambient floating orbs in the background */
+        .welcome-modal-overlay::before {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(ellipse 340px 280px at 18% 28%, rgba(200,146,42,0.14) 0%, transparent 70%),
+                radial-gradient(ellipse 280px 340px at 82% 72%, rgba(111,78,55,0.18) 0%, transparent 65%),
+                radial-gradient(ellipse 200px 200px at 50% 85%, rgba(245,200,66,0.08) 0%, transparent 60%);
+            animation: wm-orb-float1 9s ease-in-out infinite;
+        }
+        .welcome-modal-overlay::after {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(circle 180px at 75% 22%, rgba(200,146,42,0.10) 0%, transparent 65%),
+                radial-gradient(circle 120px at 25% 78%, rgba(245,200,66,0.09) 0%, transparent 55%);
+            animation: wm-orb-float2 12s ease-in-out infinite;
+        }
+
+        .welcome-modal {
+            background: linear-gradient(162deg, #3E2010 0%, #5C3317 42%, #6F4E37 78%, #7A5540 100%);
+            border-radius: 30px;
+            max-width: 400px; width: min(100%, 400px);
+            padding: 0; overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(200,155,60,0.22), 0 0 80px rgba(200,146,42,0.12);
+            animation: wm-pop 0.55s cubic-bezier(0.34,1.56,0.64,1), wm-float-card 5s ease-in-out 0.6s infinite;
+            position: relative; z-index: 1;
+        }
+
+        /* Subtle top-edge glow ring */
+        .welcome-modal::before {
+            content: '';
+            position: absolute; top: 0; left: 10%; right: 10%; height: 1.5px;
+            background: linear-gradient(90deg, transparent, rgba(245,200,66,0.6), rgba(200,146,42,0.8), rgba(245,200,66,0.6), transparent);
+            border-radius: 2px; z-index: 3;
+            animation: wm-glow-ring 3s ease-in-out infinite;
+        }
+
+        .wm-hero {
+            position: relative; height: 186px;
+            background: linear-gradient(145deg, #1e0d04, #2f1408, #3d2010);
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .wm-hero-bg {
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse 65% 55% at 28% 55%, rgba(245,200,66,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 55% 65% at 72% 40%, rgba(200,146,42,0.14) 0%, transparent 55%),
+                radial-gradient(ellipse 40% 40% at 50% 90%, rgba(245,200,66,0.10) 0%, transparent 50%);
+            animation: wm-orb-float3 7s ease-in-out infinite;
+        }
+
+        /* Floating tea particles */
+        .wm-particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+        .wm-particle {
+            position: absolute; bottom: 0; border-radius: 50%;
+            background: radial-gradient(circle, rgba(245,200,130,0.9), rgba(200,146,42,0.4));
+            animation: wm-particle-rise var(--pd,3.5s) ease-out var(--delay,0s) infinite;
+            opacity: 0;
+        }
+        .wm-p1{width:5px;height:5px;left:20%;--pd:3.2s;--delay:0s;--px:-8px;}
+        .wm-p2{width:3px;height:3px;left:35%;--pd:4.1s;--delay:0.6s;--px:6px;}
+        .wm-p3{width:6px;height:6px;left:50%;--pd:3.7s;--delay:1.1s;--px:-4px;}
+        .wm-p4{width:4px;height:4px;left:65%;--pd:4.5s;--delay:0.3s;--px:10px;}
+        .wm-p5{width:3px;height:3px;left:78%;--pd:3.0s;--delay:1.8s;--px:-6px;}
+        .wm-p6{width:4px;height:4px;left:12%;--pd:4.8s;--delay:2.3s;--px:4px;}
+        .wm-p7{width:2px;height:2px;left:88%;--pd:3.6s;--delay:0.9s;--px:-3px;}
+
+        .wm-hero-steam {
+            position: absolute; bottom: -2px; left: 50%;
+            transform: translateX(-50%); display: flex; gap: 14px; align-items: flex-end; z-index: 2;
+        }
+        .wm-steam-line {
+            width: 5px; border-radius: 5px;
+            background: linear-gradient(to top, rgba(245,200,130,0.75), rgba(245,200,130,0.1), transparent);
+            animation: wm-steam 2.6s ease-in-out infinite;
+            filter: blur(0.8px);
+        }
+        .wm-steam-line:nth-child(1) { height: 42px; animation-delay: 0s; }
+        .wm-steam-line:nth-child(2) { height: 60px; animation-delay: 0.45s; }
+        .wm-steam-line:nth-child(3) { height: 46px; animation-delay: 0.9s; }
+
+        .wm-logo-ring {
+            width: 86px; height: 86px; border-radius: 50%;
+            border: 2.5px solid rgba(200,155,60,0.6);
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.4);
+            box-shadow: 0 0 0 8px rgba(200,155,60,0.08), 0 0 30px rgba(200,155,60,0.2);
+            position: relative; z-index: 2;
+            animation: wm-ring-pulse 3.5s ease-in-out infinite;
+        }
+        .wm-logo-ring img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+        .wm-logo-ring i { font-size: 2.4rem; color: #f5c842; }
+
+        .wm-body { padding: 30px 34px 34px; text-align: center; }
+        .wm-title { font-family: 'Playfair Display', serif; font-size: 1.78rem; font-weight: 900; color: #f5e6c8; line-height: 1.15; margin-bottom: 6px; }
+        .wm-tagline { font-size: 0.7rem; font-weight: 900; color: #c8922a; text-transform: uppercase; letter-spacing: 4.5px; margin-bottom: 16px; }
+        .wm-desc { font-size: 0.88rem; color: rgba(245,230,200,0.76); line-height: 1.75; margin-bottom: 26px; }
+
+        .wm-enter-btn {
+            width: 100%; padding: 16px 20px; border-radius: 15px;
+            background: linear-gradient(135deg, #c8922a 0%, #f5c842 40%, #e8b830 60%, #c8922a 100%);
+            background-size: 300% auto;
+            color: #3E2010; border: none; font-family: inherit;
+            font-size: 1rem; font-weight: 900; cursor: pointer; letter-spacing: 0.6px;
+            box-shadow: 0 6px 24px rgba(200,155,60,0.42), 0 2px 8px rgba(200,155,60,0.25);
+            transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            animation: wm-btn-shimmer 4s linear infinite;
+        }
+        .wm-enter-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 32px rgba(200,155,60,0.55); }
+        .wm-enter-btn:active { transform: translateY(0) scale(0.97); }
+        .wm-note { margin-top: 15px; font-size: 0.7rem; color: rgba(245,230,200,0.4); font-weight: 600; letter-spacing: 0.3px; }
 
         /* ── Promo Code Modal ── */
         .promo-modal-overlay { position: fixed; inset: 0; z-index: 10002; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(20,10,3,0.75); backdrop-filter: blur(8px); }
@@ -7565,6 +7795,16 @@ function playGrantedSound() {
     <div class="welcome-modal">
         <div class="wm-hero">
             <div class="wm-hero-bg"></div>
+            <!-- Floating micro-particles -->
+            <div class="wm-particles">
+                <div class="wm-particle wm-p1"></div>
+                <div class="wm-particle wm-p2"></div>
+                <div class="wm-particle wm-p3"></div>
+                <div class="wm-particle wm-p4"></div>
+                <div class="wm-particle wm-p5"></div>
+                <div class="wm-particle wm-p6"></div>
+                <div class="wm-particle wm-p7"></div>
+            </div>
             <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;">
                 <div class="wm-logo-ring">
                     <img src="/static/images/9599.jpg" alt="9599 logo" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-mug-hot\\'></i>'">
@@ -8142,7 +8382,125 @@ function playGrantedSound() {
         if (inp) { inp.value = ''; inp.classList.remove('valid', 'invalid'); }
         const clr = document.getElementById('pm-clear-btn');
         if (clr) clr.style.display = 'none';
+        // Sync header promo panel state
+        _pfpSyncState();
     }
+
+    // ══════════ HEADER PROMO FLOAT PANEL CONTROLLERS ══════════
+
+    // Toggle the floating promo panel open/close
+    function togglePromoPanel(btn) {
+        const panel = document.getElementById('promo-float-panel');
+        if (!panel) return;
+        const isOpen = panel.classList.contains('open');
+        // Close notif dropdown if open
+        const notifDrop = document.getElementById('notif-dropdown');
+        if (notifDrop) notifDrop.style.display = 'none';
+        if (isOpen) { panel.classList.remove('open'); } else {
+            panel.classList.add('open');
+            _pfpSyncState();
+            setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
+        }
+    }
+
+    function closePromoPanel() {
+        const panel = document.getElementById('promo-float-panel');
+        if (panel) panel.classList.remove('open');
+    }
+
+    // Keep the float panel state in sync with window._appliedPromoCode
+    function _pfpSyncState() {
+        const btn      = document.getElementById('promo-header-btn');
+        const badge    = document.getElementById('pfp-applied-badge');
+        const badgeCode= document.getElementById('pfp-badge-code');
+        const badgeDesc= document.getElementById('pfp-badge-desc');
+        const inputArea= document.getElementById('pfp-input-area');
+        const clearLnk = document.getElementById('pfp-clear-link');
+        const fb       = document.getElementById('pfp-feedback');
+        if (window._appliedPromoCode) {
+            if (btn)       { btn.classList.add('applied'); }
+            if (badge)     { badge.classList.add('show'); }
+            if (badgeCode) { badgeCode.textContent = window._appliedPromoCode.code; }
+            if (badgeDesc) { badgeDesc.textContent = '🎉 ' + window._appliedPromoCode.desc; }
+            if (inputArea) { inputArea.style.display = 'none'; }
+            if (clearLnk)  { clearLnk.classList.add('show'); }
+        } else {
+            if (btn)       { btn.classList.remove('applied'); }
+            if (badge)     { badge.classList.remove('show'); }
+            if (inputArea) { inputArea.style.display = 'block'; }
+            if (clearLnk)  { clearLnk.classList.remove('show'); }
+            if (fb)        { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
+        }
+    }
+
+    function pfpOnInput() {
+        const inp = document.getElementById('pfp-code-input');
+        const fb  = document.getElementById('pfp-feedback');
+        if (!inp) return;
+        inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        inp.classList.remove('valid','invalid');
+        if (fb) { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
+    }
+
+    async function pfpValidate() {
+        const inp = document.getElementById('pfp-code-input');
+        const btn = document.getElementById('pfp-apply-btn');
+        const fb  = document.getElementById('pfp-feedback');
+        if (!inp) return;
+        const code = inp.value.trim().toUpperCase();
+        if (!code) {
+            if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = '<i class="fas fa-exclamation-circle"></i> Enter a promo code first.'; }
+            inp.focus(); return;
+        }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        if (fb)  { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
+        try {
+            const res  = await fetch('/api/promo/validate', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ code, order_total: 0 })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                inp.classList.add('valid');
+                const discDesc = data.discount_type === 'percent'
+                    ? `${data.discount_value}% off your order`
+                    : `₱${data.discount_value.toFixed(2)} off your order`;
+                const fullDesc = (data.description ? data.description + ' — ' : '') + discDesc;
+                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
+                window._appliedPromoCode = { code: data.code, desc: fullDesc };
+                // Sync promo modal state too
+                try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
+                setTimeout(() => _pfpSyncState(), 500);
+            } else {
+                inp.classList.add('invalid');
+                if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHTML(data.error || 'Invalid promo code.')}`; }
+                inp.style.animation = 'otpShake 0.45s ease';
+                setTimeout(() => { inp.style.animation = ''; }, 500);
+            }
+        } catch(e) {
+            if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = '<i class="fas fa-wifi"></i> Connection error. Try again.'; }
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Apply'; }
+        }
+    }
+
+    function pfpClear() {
+        window._appliedPromoCode = null;
+        _pmHideBadge();
+        const inp = document.getElementById('pfp-code-input');
+        if (inp) { inp.value = ''; inp.classList.remove('valid','invalid'); }
+        const clr = document.getElementById('pm-clear-btn');
+        if (clr) clr.style.display = 'none';
+        _pfpSyncState();
+    }
+
+    // Close floating panel when clicking outside
+    document.addEventListener('click', function(e) {
+        const btn   = document.getElementById('promo-header-btn');
+        const panel = document.getElementById('promo-float-panel');
+        if (!btn || !panel) return;
+        if (!btn.contains(e.target)) { panel.classList.remove('open'); }
+    });
 
     // ── Expose promo code to checkout (accessible via window._appliedPromoCode) ──
     // The promo code is stored in window._appliedPromoCode = { code, desc }
@@ -8263,6 +8621,51 @@ function playGrantedSound() {
     <div class="notif-container" style="display:flex; align-items:center; gap:10px; position:relative;">
         <div title="Find Us" onclick="triggerPopClick(this); openLocModal();" class="header-icon-btn" style="cursor:pointer; width:38px; height:38px; border-radius:50%; background:var(--gold-light); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
             <i class="fas fa-map-marker-alt" style="color:var(--gold); font-size:16px;"></i>
+        </div>
+        <!-- Promo Code Icon -->
+        <div class="promo-icon-btn header-icon-btn" id="promo-header-btn" title="Promo Code" onclick="togglePromoPanel(this)">
+            <i class="fas fa-ticket-alt"></i>
+            <span class="promo-applied-dot"></span>
+            <!-- Floating promo panel -->
+            <div class="promo-float-panel" id="promo-float-panel" onclick="event.stopPropagation()">
+                <div class="pfp-header">
+                    <div class="pfp-header-left">
+                        <span class="pfp-header-icon">🎉</span>
+                        <div>
+                            <div class="pfp-header-title">Promo Code</div>
+                            <div class="pfp-header-sub">Save on your next order</div>
+                        </div>
+                    </div>
+                    <button class="pfp-close" onclick="closePromoPanel()" title="Close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="pfp-body">
+                    <!-- Applied badge -->
+                    <div class="pfp-applied-badge" id="pfp-applied-badge">
+                        <div style="font-size:1.1rem;">✅</div>
+                        <div style="flex:1;">
+                            <div class="pfp-badge-code" id="pfp-badge-code">—</div>
+                            <div class="pfp-badge-desc" id="pfp-badge-desc">Applied at checkout</div>
+                        </div>
+                    </div>
+                    <!-- Input row -->
+                    <div id="pfp-input-area">
+                        <div class="pfp-input-row">
+                            <input id="pfp-code-input" class="pfp-code-input" type="text"
+                                placeholder="e.g. SAVE20" maxlength="30"
+                                autocomplete="off" spellcheck="false"
+                                oninput="pfpOnInput()"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();pfpValidate();}">
+                            <button class="pfp-apply-btn" id="pfp-apply-btn" onclick="pfpValidate()">
+                                <i class="fas fa-check-circle"></i> Apply
+                            </button>
+                        </div>
+                        <div class="pfp-feedback" id="pfp-feedback"></div>
+                    </div>
+                    <div class="pfp-clear-link" id="pfp-clear-link" onclick="pfpClear()">
+                        <i class="fas fa-times-circle"></i> Remove promo code
+                    </div>
+                </div>
+            </div>
         </div>
         <button class="notif-bell header-icon-btn" id="basket-btn" onclick="triggerPopClick(this); cart.length > 0 ? openOrderSheet() : toggleMobileCart();" title="View Your Order" style="position:relative;">
             <i class="fas fa-shopping-basket" style="font-size:15px;"></i>
