@@ -8437,11 +8437,14 @@ function playGrantedSound() {
         const notifDrop = document.getElementById('notif-dropdown');
         if (notifDrop) notifDrop.style.display = 'none';
         if (isOpen) { panel.classList.remove('open'); } else {
-            // Position with fixed coords so it escapes header stacking context
+            // CRITICAL: move panel to <body> so it escapes the header's backdrop-filter
+            // containing block (backdrop-filter makes fixed children relative to the header,
+            // not the viewport, in both Chromium and WebKit — regardless of z-index).
+            if (panel.parentNode !== document.body) document.body.appendChild(panel);
             const rect = btn.getBoundingClientRect();
-            panel.style.top  = (rect.bottom + 10) + 'px';
+            panel.style.top   = (rect.bottom + 10) + 'px';
             panel.style.right = (window.innerWidth - rect.right) + 'px';
-            panel.style.left = 'auto';
+            panel.style.left  = 'auto';
             panel.classList.add('open');
             _pfpSyncState();
             setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
@@ -9711,11 +9714,12 @@ function playGrantedSound() {
         const notifDrop = document.getElementById('notif-dropdown');
         if (notifDrop) notifDrop.style.display = 'none';
         if (isOpen) { panel.classList.remove('open'); } else {
-            // Position with fixed coords so it escapes header stacking context
+            // Move to <body> to escape header's backdrop-filter containing block
+            if (panel.parentNode !== document.body) document.body.appendChild(panel);
             const rect = btn.getBoundingClientRect();
-            panel.style.top  = (rect.bottom + 10) + 'px';
+            panel.style.top   = (rect.bottom + 10) + 'px';
             panel.style.right = (window.innerWidth - rect.right) + 'px';
-            panel.style.left = 'auto';
+            panel.style.left  = 'auto';
             panel.classList.add('open');
             _pfpSyncState();
             setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
