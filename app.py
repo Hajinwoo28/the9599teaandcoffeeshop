@@ -9632,127 +9632,6 @@ function playGrantedSound() {
 
     function escapeHTML(str) { let div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
 
-    // ══════════ HEADER PROMO FLOAT PANEL CONTROLLERS ══════════
-    // NOTE: Defined here (storefront scope) so they're available after customer_verified.
-
-    function _pmShowBadge(code, desc) {
-        const badge = document.getElementById('pm-applied-badge');
-        const bc    = document.getElementById('pm-badge-code');
-        const bd    = document.getElementById('pm-badge-desc');
-        const area  = document.getElementById('pm-input-area');
-        if (badge) { if (bc) bc.textContent = code; if (bd) bd.textContent = desc; badge.classList.add('show'); }
-        if (area)  area.style.display = 'none';
-    }
-    function _pmHideBadge() {
-        const badge = document.getElementById('pm-applied-badge');
-        const area  = document.getElementById('pm-input-area');
-        if (badge) badge.classList.remove('show');
-        if (area)  area.style.display = 'block';
-    }
-    function togglePromoPanel(btn) {
-        const panel = document.getElementById('promo-float-panel');
-        if (!panel) return;
-        const isOpen = panel.classList.contains('open');
-        const notifDrop = document.getElementById('notif-dropdown');
-        if (notifDrop) notifDrop.style.display = 'none';
-        if (isOpen) { panel.classList.remove('open'); } else {
-            panel.classList.add('open');
-            _pfpSyncState();
-            setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
-        }
-    }
-    function closePromoPanel() {
-        const panel = document.getElementById('promo-float-panel');
-        if (panel) panel.classList.remove('open');
-    }
-    function _pfpSyncState() {
-        const btn      = document.getElementById('promo-header-btn');
-        const badge    = document.getElementById('pfp-applied-badge');
-        const badgeCode= document.getElementById('pfp-badge-code');
-        const badgeDesc= document.getElementById('pfp-badge-desc');
-        const inputArea= document.getElementById('pfp-input-area');
-        const clearLnk = document.getElementById('pfp-clear-link');
-        const fb       = document.getElementById('pfp-feedback');
-        if (window._appliedPromoCode) {
-            if (btn)       { btn.classList.add('applied'); }
-            if (badge)     { badge.classList.add('show'); }
-            if (badgeCode) { badgeCode.textContent = window._appliedPromoCode.code; }
-            if (badgeDesc) { badgeDesc.textContent = '🎉 ' + window._appliedPromoCode.desc; }
-            if (inputArea) { inputArea.style.display = 'none'; }
-            if (clearLnk)  { clearLnk.classList.add('show'); }
-        } else {
-            if (btn)       { btn.classList.remove('applied'); }
-            if (badge)     { badge.classList.remove('show'); }
-            if (inputArea) { inputArea.style.display = 'block'; }
-            if (clearLnk)  { clearLnk.classList.remove('show'); }
-            if (fb)        { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
-        }
-    }
-    function pfpOnInput() {
-        const inp = document.getElementById('pfp-code-input');
-        const fb  = document.getElementById('pfp-feedback');
-        if (!inp) return;
-        inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-        inp.classList.remove('valid','invalid');
-        if (fb) { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
-    }
-    async function pfpValidate() {
-        const inp = document.getElementById('pfp-code-input');
-        const btn = document.getElementById('pfp-apply-btn');
-        const fb  = document.getElementById('pfp-feedback');
-        if (!inp) return;
-        const code = inp.value.trim().toUpperCase();
-        if (!code) {
-            if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = '<i class="fas fa-exclamation-circle"></i> Enter a promo code first.'; }
-            inp.focus(); return;
-        }
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-        if (fb)  { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
-        try {
-            const res  = await fetch('/api/promo/validate', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code, order_total: 0 })
-            });
-            const data = await res.json();
-            if (res.ok && data.ok) {
-                inp.classList.add('valid');
-                const discDesc = data.discount_type === 'percent'
-                    ? `${data.discount_value}% off your order`
-                    : `\u20b1${data.discount_value.toFixed(2)} off your order`;
-                const fullDesc = (data.description ? data.description + ' \u2014 ' : '') + discDesc;
-                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
-                window._appliedPromoCode = { code: data.code, desc: fullDesc };
-                try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
-                setTimeout(() => _pfpSyncState(), 500);
-            } else {
-                inp.classList.add('invalid');
-                if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHTML(data.error || 'Invalid promo code.')}`; }
-                inp.style.animation = 'otpShake 0.45s ease';
-                setTimeout(() => { inp.style.animation = ''; }, 500);
-            }
-        } catch(e) {
-            if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = '<i class="fas fa-wifi"></i> Connection error. Try again.'; }
-        } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Apply'; }
-        }
-    }
-    function pfpClear() {
-        window._appliedPromoCode = null;
-        _pmHideBadge();
-        const inp = document.getElementById('pfp-code-input');
-        if (inp) { inp.value = ''; inp.classList.remove('valid','invalid'); }
-        const clr = document.getElementById('pm-clear-btn');
-        if (clr) clr.style.display = 'none';
-        _pfpSyncState();
-    }
-    // Close floating promo panel when clicking outside
-    document.addEventListener('click', function(e) {
-        const promoBtn   = document.getElementById('promo-header-btn');
-        const promoPanel = document.getElementById('promo-float-panel');
-        if (!promoBtn || !promoPanel) return;
-        if (!promoBtn.contains(e.target)) { promoPanel.classList.remove('open'); }
-    });
-
     const IMAGE_MAP = {
         'Lychee Mogu Soda':            '/static/images/lychee_mogu_soda.jpg',
         'Strawberry Soda':             '/static/images/strawberry_soda.jpg',
@@ -23032,7 +22911,14 @@ def _lazy_db_init():
         except Exception as _init_err:
             print(f"_lazy_db_init error (will retry): {_init_err}")
 
-try:
+# On Vercel, skip the module-level DB init entirely.
+# db.create_all() + 13 ALTER TABLE migrations run over the network to Neon
+# and take 3-6 s — long enough to push cold starts past Vercel's init timeout,
+# which leaves the deployment permanently stuck at "Initializing".
+# @before_request _lazy_db_init() + _ensure_schema() handle everything lazily
+# on the first request instead, which is after Vercel marks the function ready.
+if not _IS_VERCEL:
+ try:
   with app.app_context():
     try:
         db.create_all()
@@ -23746,9 +23632,9 @@ try:
             db.session.rollback()
         except Exception:
             pass  # Rollback can fail if the engine never connected; swallow safely
-except Exception as _module_init_err:
-    print(f"[Startup] DB init block failed at module level: {_module_init_err}")
-    # App will still serve requests; lazy init will retry on first request.
+ except Exception as _module_init_err:
+     print(f"[Startup] DB init block failed at module level: {_module_init_err}")
+     # App will still serve requests; lazy init will retry on first request.
 
 
 # ==========================================
