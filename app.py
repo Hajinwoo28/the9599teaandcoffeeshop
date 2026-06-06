@@ -9633,8 +9633,7 @@ function playGrantedSound() {
 
     // ══════════ PROMO FLOAT PANEL — storefront scope ══════════
     // Duplicated here so functions are available after customer_verified.
-    // (The gate-screen copy lives inside {% if not customer_verified %} and
-    //  never loads for verified customers who see the storefront.)
+    // (The gate-screen copy only loads on the verification screen, not here.)
 
     function _pmShowBadge(code, desc) {
         const badge = document.getElementById('pm-applied-badge');
