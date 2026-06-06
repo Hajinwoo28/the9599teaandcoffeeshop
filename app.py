@@ -5800,11 +5800,14 @@ function addToCart(){
   if(!currentItem) return;
   const sizeSur=SIZE_SURCHARGE[currentOpts.size]||0;
   const addonSur=currentOpts.addons.length*ADD_ON_PRICE;
-  const price=currentItem.price+sizeSur+addonSur;
+  const unitPrice=currentItem.price+sizeSur+addonSur;
   const isFries=FRIES_FLAVOR_ITEMS.includes(currentItem.name);
   const foundationName=isFries?`${currentItem.name} (${currentOpts.flavor})`:currentItem.name;
-  cart.push({id:Date.now(),menuId:currentItem.id,foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price});
-  // Trigger flying bubble from the Add to Cart button to the cart badge
+  const addonsStr=currentOpts.addons.join(', ');
+  const waterTempVal=currentOpts.waterTemp||'';
+  const existing=cart.find(i=>i.menuId===currentItem.id&&i.foundation===foundationName&&i.size===currentOpts.size&&i.sugar===currentOpts.sugar&&i.ice===currentOpts.ice&&i.waterTemp===waterTempVal&&i.addons===addonsStr);
+  if(existing){existing.qty+=1;existing.price=existing.unitPrice*existing.qty;}
+  else{cart.push({id:Date.now(),menuId:currentItem.id,foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:waterTempVal,addons:addonsStr,unitPrice,price:unitPrice,qty:1});}
   const addBtn = document.querySelector('#customize-modal .btn-modal-add');
   if (addBtn) flyToCartAnimation(addBtn);
   closeCustomizeModal();
@@ -5817,7 +5820,7 @@ function renderCart(){
   const count=document.getElementById('cart-count');
   const totalEl=document.getElementById('cart-total');
   const btn=document.getElementById('checkout-btn');
-  count.textContent=cart.length;
+  count.textContent=cart.reduce((s,i)=>s+(i.qty||1),0);
   if(!cart.length){
     el.innerHTML='<div class="cart-empty"><i class="fas fa-shopping-bag"></i>Cart is empty.<br>Tap items to add.</div>';
     totalEl.textContent='₱0.00';btn.disabled=true;return;
@@ -5826,11 +5829,17 @@ function renderCart(){
   el.innerHTML=cart.map(i=>{
     const mods=[i.sugar,i.ice,i.waterTemp].filter(v=>v&&v!=='N/A').join(', ');
     const addons=i.addons?` • ${i.addons}`:'';
+    const qty=i.qty||1;
     return `<div class="cart-item">
       <div class="cart-item-info">
         <div class="cart-item-name">${escapeHTML(i.foundation)} ${i.size&&i.size!=='16 oz'?'('+escapeHTML(i.size)+')':''}</div>
         ${mods||addons?`<div class="cart-item-mods">${escapeHTML(mods+addons)}</div>`:''}
-        <div class="cart-item-price">₱${i.price.toFixed(2)}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
+          <button onclick="changeCartQty(${i.id},-1)" style="background:var(--cream-dark,#e8e0d5);border:none;border-radius:5px;width:20px;height:20px;font-size:0.85rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
+          <span style="font-size:0.74rem;font-weight:900;color:var(--teal-dark);min-width:14px;text-align:center;">${qty}</span>
+          <button onclick="changeCartQty(${i.id},1)" style="background:var(--cream-dark,#e8e0d5);border:none;border-radius:5px;width:20px;height:20px;font-size:0.85rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+          <div class="cart-item-price">₱${i.price.toFixed(2)}</div>
+        </div>
       </div>
       <div class="cart-item-actions">
         <button class="cart-item-edit" onclick="editCartItem(${i.id})" title="Edit"><i class="fas fa-pen"></i></button>
@@ -5844,6 +5853,7 @@ function renderCart(){
 }
 
 function removeFromCart(id){cart=cart.filter(i=>i.id!==id);renderCart();}
+function changeCartQty(id,d){const item=cart.find(i=>i.id===id);if(!item)return;item.qty+=d;if(item.qty<=0){cart=cart.filter(i=>i.id!==id);}else{item.price=(item.unitPrice||item.price/Math.max(item.qty-d,1))*item.qty;}renderCart();}
 function clearCart(){cart=[];renderCart();}
 
 let _editingCartId=null;
@@ -5904,7 +5914,7 @@ function saveEditedCartItem(){
   const price=currentItem.price+sizeSur+addonSur;
   const isFries=FRIES_FLAVOR_ITEMS.includes(currentItem.name);
   const foundationName=isFries?`${currentItem.name} (${currentOpts.flavor})`:currentItem.name;
-  cart[idx]={...cart[idx],foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),price};
+  cart[idx]={...cart[idx],foundation:foundationName,size:currentOpts.size,sugar:currentOpts.sugar,ice:currentOpts.ice,waterTemp:currentOpts.waterTemp||'',addons:currentOpts.addons.join(', '),unitPrice:price,price:price*(cart[idx].qty||1)};
   _editingCartId=null;
   // Restore Add button
   const addBtn=document.querySelector('#customize-modal .btn-modal-add');
@@ -5936,7 +5946,7 @@ async function checkout(){
   }catch(e){/* If status check fails, let the server guard catch it */}
   // ── End store hours check ──────────────────────────────────────
   const total=cart.reduce((s,i)=>s+i.price,0);
-  const payload={customer_name:name,total,items:cart.map(i=>({foundation:i.foundation,size:i.size,sugar:i.sugar,ice:i.ice,waterTemp:i.waterTemp||'',addons:i.addons,price:i.price}))};
+  const payload={customer_name:name,total,items:cart.flatMap(i=>Array.from({length:i.qty||1},()=>({foundation:i.foundation,size:i.size,sugar:i.sugar,ice:i.ice,waterTemp:i.waterTemp||'',addons:i.addons,price:i.unitPrice||i.price})))};
   try{
     const r=await empFetch('/api/admin/manual_order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!r){btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Checkout';return;}
@@ -7263,20 +7273,9 @@ STOREFRONT_HTML = """
         .admin-sc-btn:hover { background: #D7CCC8; }
         .admin-sc-val { font-size: 1.2rem; font-weight: 900; color: #3E2723; min-width: 36px; text-align: center; font-family: 'Playfair Display', serif; }
         .admin-sc-sep { font-size: 1.2rem; font-weight: 900; color: #3E2723; align-self: center; }
-        /* ── Desktop: permanent docked cart sidebar ── */
+        /* ── Desktop: order sheet slides in on demand (not permanently docked) ── */
         @media (min-width: 769px) {
-            .main-container { margin-right: 320px; }
-            .sidebar {
-                transform: translateX(0) !important;
-                transition: none !important;
-                box-shadow: -2px 0 12px rgba(44,26,18,0.07);
-                z-index: 10;
-            }
-            #sheet-backdrop  { display: none !important; }
-            #sticky-bar      { right: 320px !important; }
-            .sheet-handle-chevron            { display: none !important; }
-            .sheet-handle-bar > button       { display: none !important; }
-            .sheet-handle-bar                { cursor: default; }
+            .sidebar { z-index: 300; }
         }
 
         @media (max-width: 768px) {
@@ -9632,6 +9631,128 @@ function playGrantedSound() {
 
     function escapeHTML(str) { let div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
 
+    // ══════════ PROMO FLOAT PANEL — storefront scope ══════════
+    // Duplicated here so functions are available after customer_verified.
+    // (The gate-screen copy lives inside {% if not customer_verified %} and
+    //  never loads for verified customers who see the storefront.)
+
+    function _pmShowBadge(code, desc) {
+        const badge = document.getElementById('pm-applied-badge');
+        const bc    = document.getElementById('pm-badge-code');
+        const bd    = document.getElementById('pm-badge-desc');
+        const area  = document.getElementById('pm-input-area');
+        if (badge) { if (bc) bc.textContent = code; if (bd) bd.textContent = desc; badge.classList.add('show'); }
+        if (area)  area.style.display = 'none';
+    }
+    function _pmHideBadge() {
+        const badge = document.getElementById('pm-applied-badge');
+        const area  = document.getElementById('pm-input-area');
+        if (badge) badge.classList.remove('show');
+        if (area)  area.style.display = 'block';
+    }
+    function togglePromoPanel(btn) {
+        const panel = document.getElementById('promo-float-panel');
+        if (!panel) return;
+        const isOpen = panel.classList.contains('open');
+        const notifDrop = document.getElementById('notif-dropdown');
+        if (notifDrop) notifDrop.style.display = 'none';
+        if (isOpen) { panel.classList.remove('open'); } else {
+            panel.classList.add('open');
+            _pfpSyncState();
+            setTimeout(() => { const inp = document.getElementById('pfp-code-input'); if (inp && !window._appliedPromoCode) inp.focus(); }, 80);
+        }
+    }
+    function closePromoPanel() {
+        const panel = document.getElementById('promo-float-panel');
+        if (panel) panel.classList.remove('open');
+    }
+    function _pfpSyncState() {
+        const btn      = document.getElementById('promo-header-btn');
+        const badge    = document.getElementById('pfp-applied-badge');
+        const badgeCode= document.getElementById('pfp-badge-code');
+        const badgeDesc= document.getElementById('pfp-badge-desc');
+        const inputArea= document.getElementById('pfp-input-area');
+        const clearLnk = document.getElementById('pfp-clear-link');
+        const fb       = document.getElementById('pfp-feedback');
+        if (window._appliedPromoCode) {
+            if (btn)       { btn.classList.add('applied'); }
+            if (badge)     { badge.classList.add('show'); }
+            if (badgeCode) { badgeCode.textContent = window._appliedPromoCode.code; }
+            if (badgeDesc) { badgeDesc.textContent = '🎉 ' + window._appliedPromoCode.desc; }
+            if (inputArea) { inputArea.style.display = 'none'; }
+            if (clearLnk)  { clearLnk.classList.add('show'); }
+        } else {
+            if (btn)       { btn.classList.remove('applied'); }
+            if (badge)     { badge.classList.remove('show'); }
+            if (inputArea) { inputArea.style.display = 'block'; }
+            if (clearLnk)  { clearLnk.classList.remove('show'); }
+            if (fb)        { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
+        }
+    }
+    function pfpOnInput() {
+        const inp = document.getElementById('pfp-code-input');
+        const fb  = document.getElementById('pfp-feedback');
+        if (!inp) return;
+        inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        inp.classList.remove('valid','invalid');
+        if (fb) { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
+    }
+    async function pfpValidate() {
+        const inp = document.getElementById('pfp-code-input');
+        const btn = document.getElementById('pfp-apply-btn');
+        const fb  = document.getElementById('pfp-feedback');
+        if (!inp) return;
+        const code = inp.value.trim().toUpperCase();
+        if (!code) {
+            if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = '<i class="fas fa-exclamation-circle"></i> Enter a promo code first.'; }
+            inp.focus(); return;
+        }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        if (fb)  { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
+        try {
+            const res  = await fetch('/api/promo/validate', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ code, order_total: 0 })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                inp.classList.add('valid');
+                const discDesc = data.discount_type === 'percent'
+                    ? `${data.discount_value}% off your order`
+                    : `\u20b1${data.discount_value.toFixed(2)} off your order`;
+                const fullDesc = (data.description ? data.description + ' \u2014 ' : '') + discDesc;
+                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
+                window._appliedPromoCode = { code: data.code, desc: fullDesc };
+                try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
+                setTimeout(() => _pfpSyncState(), 500);
+            } else {
+                inp.classList.add('invalid');
+                if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHTML(data.error || 'Invalid promo code.')}`; }
+                inp.style.animation = 'otpShake 0.45s ease';
+                setTimeout(() => { inp.style.animation = ''; }, 500);
+            }
+        } catch(e) {
+            if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = '<i class="fas fa-wifi"></i> Connection error. Try again.'; }
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Apply'; }
+        }
+    }
+    function pfpClear() {
+        window._appliedPromoCode = null;
+        _pmHideBadge();
+        const inp = document.getElementById('pfp-code-input');
+        if (inp) { inp.value = ''; inp.classList.remove('valid','invalid'); }
+        const clr = document.getElementById('pm-clear-btn');
+        if (clr) clr.style.display = 'none';
+        _pfpSyncState();
+    }
+    document.addEventListener('click', function(e) {
+        const promoBtn   = document.getElementById('promo-header-btn');
+        const promoPanel = document.getElementById('promo-float-panel');
+        if (!promoBtn || !promoPanel) return;
+        if (!promoBtn.contains(e.target)) { promoPanel.classList.remove('open'); }
+    });
+
     const IMAGE_MAP = {
         'Lychee Mogu Soda':            '/static/images/lychee_mogu_soda.jpg',
         'Strawberry Soda':             '/static/images/strawberry_soda.jpg',
@@ -10374,7 +10495,7 @@ function playGrantedSound() {
         pendingPrice = item.price - (item.addons ? item.addons.length * 10 : 0);
 
         // Close the order sheet and hide Track Order FAB so only the modal is visible
-        if(window.innerWidth < 769) closeOrderSheet();
+        closeOrderSheet();
         const fab = document.getElementById('track-order-fab');
         if (fab) fab.style.display = 'none';
 
@@ -10435,7 +10556,7 @@ function playGrantedSound() {
             empty.style.display = 'block';
             count.style.display = 'none';
             if(stickyBar) stickyBar.classList.remove('bar-visible');
-            if(window.innerWidth < 769) closeOrderSheet();
+            closeOrderSheet();
         } else {
             empty.style.display = 'none';
             count.style.display = 'flex'; count.innerText = cart.length;
@@ -10494,7 +10615,6 @@ function playGrantedSound() {
 
     // ── Order Sheet controls ──────────────────────────────────────────────
     function openOrderSheet() {
-        if (window.innerWidth >= 769) return; // permanently docked on desktop
         const sidebar = document.getElementById('sidebar');
         const backdrop = document.getElementById('sheet-backdrop');
         const chevron = document.getElementById('sheet-chevron');
@@ -10507,7 +10627,6 @@ function playGrantedSound() {
     }
 
     function closeOrderSheet() {
-        if (window.innerWidth >= 769) return; // permanently docked on desktop
         const sidebar = document.getElementById('sidebar');
         const backdrop = document.getElementById('sheet-backdrop');
         const chevron = document.getElementById('sheet-chevron');
@@ -22911,12 +23030,9 @@ def _lazy_db_init():
         except Exception as _init_err:
             print(f"_lazy_db_init error (will retry): {_init_err}")
 
-# On Vercel, skip the module-level DB init entirely.
-# db.create_all() + 13 ALTER TABLE migrations run over the network to Neon
-# and take 3-6 s — long enough to push cold starts past Vercel's init timeout,
-# which leaves the deployment permanently stuck at "Initializing".
-# @before_request _lazy_db_init() + _ensure_schema() handle everything lazily
-# on the first request instead, which is after Vercel marks the function ready.
+# On Vercel, skip module-level DB init — @before_request _lazy_db_init() handles it.
+# Running 13+ Neon roundtrips at import time exceeds Vercel's init timeout and
+# leaves the deployment permanently stuck at "Initializing".
 if not _IS_VERCEL:
  try:
   with app.app_context():
