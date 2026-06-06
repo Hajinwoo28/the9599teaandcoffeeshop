@@ -7404,10 +7404,10 @@ STOREFRONT_HTML = """
         /* Floating promo panel */
         .promo-float-panel {
             position: absolute; top: calc(100% + 10px); right: 0;
-            width: 310px; background: #fff;
+            width: 320px; background: #fff;
             border-radius: 20px;
-            border: 1.5px solid rgba(200,146,42,0.18);
-            box-shadow: 0 16px 50px rgba(44,26,18,0.18), 0 4px 16px rgba(44,26,18,0.08);
+            border: 2px solid rgba(200,146,42,0.45);
+            box-shadow: 0 20px 60px rgba(44,26,18,0.22), 0 6px 20px rgba(200,146,42,0.10);
             overflow: hidden; z-index: 9999;
             display: none;
             animation: promo-panel-drop 0.3s cubic-bezier(0.34,1.56,0.64,1);
@@ -7433,26 +7433,34 @@ STOREFRONT_HTML = """
         .pfp-badge-code { font-size: 0.88rem; font-weight: 900; color: #1b5e20; font-family: monospace; letter-spacing: 2px; }
         .pfp-badge-desc { font-size: 0.72rem; color: #388e3c; font-weight: 600; margin-top: 2px; }
         .pfp-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .pfp-input-label {
+            font-size: 0.7rem; font-weight: 800; color: #7B4F2E;
+            text-transform: uppercase; letter-spacing: 1.2px;
+            margin-bottom: 7px; display: flex; align-items: center; gap: 5px;
+        }
         .pfp-code-input {
-            flex: 1; padding: 10px 13px; border: 2px solid var(--border-color);
+            flex: 1; padding: 10px 13px; border: 2px solid #C8922A;
             border-radius: 11px; font-size: 0.9rem;
             font-family: 'DM Mono', 'Courier New', monospace;
             font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
-            color: var(--text-dark); background: #fff; outline: none;
+            color: var(--text-dark); background: #FDFAF4; outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .pfp-code-input:focus { border-color: #c8922a; box-shadow: 0 0 0 3px rgba(200,146,42,0.12); }
+        .pfp-code-input::placeholder { color: #B8956A; letter-spacing: 1.5px; opacity: 1; }
+        .pfp-code-input:focus { border-color: #a06a1a; box-shadow: 0 0 0 3px rgba(200,146,42,0.18); background: #fff; }
         .pfp-code-input.valid { border-color: #2e7d32; background: #f0fdf4; }
         .pfp-code-input.invalid { border-color: #c62828; background: #fff5f5; }
         .pfp-apply-btn {
-            padding: 10px 14px; border-radius: 11px;
-            background: linear-gradient(135deg, #5C3317, #8B5E3C);
+            padding: 10px 16px; border-radius: 11px;
+            background: linear-gradient(135deg, #7B4F2E, #C8922A);
             color: #fff; border: none; font-family: inherit;
             font-size: 0.82rem; font-weight: 800; cursor: pointer;
-            transition: opacity 0.2s, transform 0.15s; white-space: nowrap; flex-shrink: 0;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            white-space: nowrap; flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(200,146,42,0.35);
         }
-        .pfp-apply-btn:hover { opacity: 0.88; transform: translateY(-1px); }
-        .pfp-apply-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .pfp-apply-btn:hover { opacity: 1; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(200,146,42,0.5); }
+        .pfp-apply-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
         .pfp-feedback {
             font-size: 0.78rem; font-weight: 700; min-height: 0; border-radius: 8px;
             padding: 0; display: none; align-items: center; gap: 6px;
@@ -7661,8 +7669,14 @@ STOREFRONT_HTML = """
         .pm-sub { font-size: 0.78rem; color: rgba(245,230,200,0.65); font-weight: 600; }
         .pm-body { padding: 26px 28px 28px; }
         .pm-input-wrap { position: relative; margin-bottom: 12px; }
-        .pm-code-input { width: 100%; padding: 14px 50px 14px 16px; border: 2px solid var(--border-color, #e8d9c4); border-radius: 14px; font-size: 1.05rem; font-family: 'DM Mono', 'Courier New', monospace; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dark, #3E2010); background: #fff; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
-        .pm-code-input:focus { border-color: #c8922a; box-shadow: 0 0 0 4px rgba(200,146,42,0.13); }
+        .pm-input-label-row {
+            font-size: 0.72rem; font-weight: 800; color: #7B4F2E;
+            text-transform: uppercase; letter-spacing: 1.2px;
+            margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+        }
+        .pm-code-input { width: 100%; padding: 14px 50px 14px 16px; border: 2px solid #C8922A; border-radius: 14px; font-size: 1.05rem; font-family: 'DM Mono', 'Courier New', monospace; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dark, #3E2010); background: #FDFAF4; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
+        .pm-code-input::placeholder { color: #B8956A; opacity: 1; letter-spacing: 2px; }
+        .pm-code-input:focus { border-color: #a06a1a; box-shadow: 0 0 0 4px rgba(200,146,42,0.16); background: #fff; }
         .pm-code-input.valid { border-color: #2e7d32; background: #f0fdf4; }
         .pm-code-input.invalid { border-color: #c62828; background: #fff5f5; }
         .pm-clear-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #bbb; cursor: pointer; font-size: 1rem; padding: 4px; display: none; }
@@ -7848,6 +7862,7 @@ function playGrantedSound() {
 
             <!-- Input area -->
             <div id="pm-input-area">
+                <div class="pm-input-label-row">🏷️ Enter your promo code</div>
                 <div class="pm-input-wrap">
                     <input id="pm-code-input" class="pm-code-input" type="text"
                         placeholder="e.g. SAVE20"
@@ -8648,6 +8663,7 @@ function playGrantedSound() {
                     </div>
                     <!-- Input row -->
                     <div id="pfp-input-area">
+                        <div class="pfp-input-label">🏷️ Enter your promo code</div>
                         <div class="pfp-input-row">
                             <input id="pfp-code-input" class="pfp-code-input" type="text"
                                 placeholder="e.g. SAVE20" maxlength="30"
