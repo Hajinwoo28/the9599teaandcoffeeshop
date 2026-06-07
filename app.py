@@ -8384,10 +8384,12 @@ function playGrantedSound() {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…'; }
         if (fb)  { fb.className = 'pm-feedback'; fb.innerHTML = ''; }
         try {
+            const cartEl = document.getElementById('cart-total') || document.getElementById('cart-total-amount');
+            const order_total = cartEl ? parseFloat(cartEl.textContent.replace(/[^0-9.]/g, '')) || 0 : 0;
             const res  = await fetch('/api/promo/validate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, order_total: 0 })
+                body: JSON.stringify({ code, order_total })
             });
             const data = await res.json();
             if (res.ok && data.ok) {
@@ -8397,7 +8399,8 @@ function playGrantedSound() {
                     ? `${data.discount_value}% off your order`
                     : `₱${data.discount_value.toFixed(2)} off your order`;
                 const fullDesc = (data.description ? data.description + ' — ' : '') + discDesc;
-                if (fb) { fb.className = 'pm-feedback success'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
+                const warnNote = data.min_order_warning ? ` (${data.min_order_warning})` : '';
+                if (fb) { fb.className = 'pm-feedback success'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc + warnNote)}</span>`; }
                 window._appliedPromoCode = { code: data.code, desc: fullDesc };
                 setTimeout(() => { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); }, 600);
             } else {
@@ -8503,9 +8506,11 @@ function playGrantedSound() {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
         if (fb)  { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
         try {
+            const cartEl = document.getElementById('cart-total') || document.getElementById('cart-total-amount');
+            const order_total = cartEl ? parseFloat(cartEl.textContent.replace(/[^0-9.]/g, '')) || 0 : 0;
             const res  = await fetch('/api/promo/validate', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code, order_total: 0 })
+                body: JSON.stringify({ code, order_total })
             });
             const data = await res.json();
             if (res.ok && data.ok) {
@@ -8514,7 +8519,8 @@ function playGrantedSound() {
                     ? `${data.discount_value}% off your order`
                     : `₱${data.discount_value.toFixed(2)} off your order`;
                 const fullDesc = (data.description ? data.description + ' — ' : '') + discDesc;
-                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
+                const warnNote = data.min_order_warning ? ` (${data.min_order_warning})` : '';
+                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc + warnNote)}</span>`; }
                 window._appliedPromoCode = { code: data.code, desc: fullDesc };
                 // Sync promo modal state too
                 try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
@@ -9773,9 +9779,11 @@ function playGrantedSound() {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
         if (fb)  { fb.className = 'pfp-feedback'; fb.innerHTML = ''; }
         try {
+            const cartEl = document.getElementById('cart-total') || document.getElementById('cart-total-amount');
+            const order_total = cartEl ? parseFloat(cartEl.textContent.replace(/[^0-9.]/g, '')) || 0 : 0;
             const res  = await fetch('/api/promo/validate', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code, order_total: 0 })
+                body: JSON.stringify({ code, order_total })
             });
             const data = await res.json();
             if (res.ok && data.ok) {
@@ -9784,7 +9792,8 @@ function playGrantedSound() {
                     ? `${data.discount_value}% off your order`
                     : `\u20b1${data.discount_value.toFixed(2)} off your order`;
                 const fullDesc = (data.description ? data.description + ' \u2014 ' : '') + discDesc;
-                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc)}</span>`; }
+                const warnNote = data.min_order_warning ? ` (${data.min_order_warning})` : '';
+                if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc + warnNote)}</span>`; }
                 window._appliedPromoCode = { code: data.code, desc: fullDesc };
                 try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
                 setTimeout(() => _pfpSyncState(), 500);
@@ -22517,10 +22526,20 @@ def promo_validate():
         return jsonify({"error": "This promo code has expired"}), 400
     if p.max_uses is not None and p.used_count >= p.max_uses:
         return jsonify({"error": "This promo code has reached its usage limit"}), 400
-    if order_total < p.min_order:
-        return jsonify({"error": f"Minimum order of ₱{p.min_order:.2f} required for this promo"}), 400
     discount = (order_total * p.discount_value / 100) if p.discount_type == 'percent' else p.discount_value
     discount = min(discount, order_total)
+    # min_order not met → code is valid but return a soft warning (not 400)
+    if order_total < p.min_order:
+        return jsonify({
+            "ok": True,
+            "code": p.code,
+            "description": p.description,
+            "discount_type": p.discount_type,
+            "discount_value": p.discount_value,
+            "discount_amount": 0,
+            "new_total": round(order_total, 2),
+            "min_order_warning": f"Minimum order of \u20b1{p.min_order:.0f} required to apply this code"
+        })
     return jsonify({
         "ok": True,
         "code": p.code,
