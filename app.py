@@ -8401,8 +8401,9 @@ function playGrantedSound() {
                 const fullDesc = (data.description ? data.description + ' — ' : '') + discDesc;
                 const warnNote = data.min_order_warning ? ` (${data.min_order_warning})` : '';
                 if (fb) { fb.className = 'pm-feedback success'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc + warnNote)}</span>`; }
-                window._appliedPromoCode = { code: data.code, desc: fullDesc };
+                window._appliedPromoCode = { code: data.code, desc: fullDesc, discount_type: data.discount_type, discount_value: data.discount_value };
                 setTimeout(() => { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); }, 600);
+                updateCartUI();
             } else {
                 // Error
                 inp.classList.add('invalid');
@@ -8521,10 +8522,10 @@ function playGrantedSound() {
                 const fullDesc = (data.description ? data.description + ' — ' : '') + discDesc;
                 const warnNote = data.min_order_warning ? ` (${data.min_order_warning})` : '';
                 if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc + warnNote)}</span>`; }
-                window._appliedPromoCode = { code: data.code, desc: fullDesc };
+                window._appliedPromoCode = { code: data.code, desc: fullDesc, discount_type: data.discount_type, discount_value: data.discount_value };
                 // Sync promo modal state too
                 try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
-                setTimeout(() => _pfpSyncState(), 500);
+                setTimeout(() => { _pfpSyncState(); updateCartUI(); }, 500);
             } else {
                 inp.classList.add('invalid');
                 if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHTML(data.error || 'Invalid promo code.')}`; }
@@ -9794,9 +9795,9 @@ function playGrantedSound() {
                 const fullDesc = (data.description ? data.description + ' \u2014 ' : '') + discDesc;
                 const warnNote = data.min_order_warning ? ` (${data.min_order_warning})` : '';
                 if (fb) { fb.className = 'pfp-feedback success show'; fb.innerHTML = `<i class="fas fa-check-circle"></i> <span>${escapeHTML(fullDesc + warnNote)}</span>`; }
-                window._appliedPromoCode = { code: data.code, desc: fullDesc };
+                window._appliedPromoCode = { code: data.code, desc: fullDesc, discount_type: data.discount_type, discount_value: data.discount_value };
                 try { _pmShowBadge(data.code, '🎉 ' + fullDesc + ' — applied at checkout!'); } catch(_){}
-                setTimeout(() => _pfpSyncState(), 500);
+                setTimeout(() => { _pfpSyncState(); updateCartUI(); }, 500);
             } else {
                 inp.classList.add('invalid');
                 if (fb) { fb.className = 'pfp-feedback error show'; fb.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHTML(data.error || 'Invalid promo code.')}`; }
@@ -10622,8 +10623,20 @@ function playGrantedSound() {
         const stickyCount = document.getElementById('sticky-count');
         const stickyTotal = document.getElementById('sticky-total');
         const totalEl = document.getElementById('cart-total');
-        let total = 0; list.innerHTML = '';
-        
+        let rawTotal = 0; list.innerHTML = '';
+
+        // ── Promo helpers ────────────────────────────────────────────────────
+        const promo = window._appliedPromoCode;
+        const hasPromo = promo && promo.discount_type && promo.discount_value;
+
+        function discountedItemPrice(originalPrice) {
+            if (!hasPromo) return originalPrice;
+            if (promo.discount_type === 'percent') {
+                return Math.max(0, originalPrice * (1 - promo.discount_value / 100));
+            }
+            return originalPrice; // fixed: applied at total level
+        }
+
         if(cart.length === 0) {
             empty.style.display = 'block';
             count.style.display = 'none';
@@ -10637,7 +10650,8 @@ function playGrantedSound() {
             count.offsetWidth; // reflow
             count.style.animation = 'custBadgePop 0.35s cubic-bezier(0.34,1.56,0.64,1)';
             cart.forEach((c, i) => {
-                total += c.price;
+                rawTotal += c.price;
+                const dPrice = discountedItemPrice(c.price);
                 const SIZED_CATS = ['Milktea','Coffee','Milk Series','Matcha Series','Fruit Soda','Frappe'];
                 let subParts = [];
                 if (SIZED_CATS.includes(c.cat)) {
@@ -10648,6 +10662,10 @@ function playGrantedSound() {
                 }
                 let sub = subParts.join(' · ');
                 let adds = c.addons && c.addons.length ? `<br>+ ${c.addons.join(', ')}` : '';
+                // Price display — show discounted price for % promos
+                const priceHTML = (hasPromo && promo.discount_type === 'percent')
+                    ? `<span style="text-decoration:line-through;color:#aaa;font-size:0.75rem;margin-right:3px;">₱${c.price}</span><span style="color:#2e7d32;font-weight:900;">₱${dPrice.toFixed(2)}</span>`
+                    : `<span>₱${c.price}</span>`;
                 list.innerHTML += `
                 <div class="cart-item" style="animation-delay:${i*0.04}s">
                     <div>
@@ -10655,7 +10673,7 @@ function playGrantedSound() {
                         <div class="cart-item-sub">${sub}${adds}</div>
                     </div>
                     <div class="cart-item-right">
-                        <div class="cart-item-price">₱${c.price}</div>
+                        <div class="cart-item-price">${priceHTML}</div>
                         <div class="cart-item-actions-row">
                             <div class="cart-item-edit-btn" onclick="editCartItemCustomer(${i})" title="Edit"><i class="fas fa-pen"></i></div>
                             <div class="cart-item-del" onclick="removeFromCart(${i})"><i class="fas fa-trash-alt"></i></div>
@@ -10663,11 +10681,46 @@ function playGrantedSound() {
                     </div>
                 </div>`;
             });
+
+            // ── Promo discount row ───────────────────────────────────────────
+            if (hasPromo) {
+                let discountAmt = 0;
+                if (promo.discount_type === 'percent') {
+                    discountAmt = rawTotal * promo.discount_value / 100;
+                } else {
+                    discountAmt = Math.min(rawTotal, promo.discount_value);
+                }
+                list.innerHTML += `
+                <div class="cart-item" style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:1.5px dashed #66bb6a;border-radius:10px;margin-top:6px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:1rem;">🏷️</span>
+                        <div>
+                            <div class="cart-item-name" style="color:#2e7d32;font-size:0.8rem;">Promo: ${escapeHTML(promo.code)}</div>
+                            <div class="cart-item-sub" style="color:#388e3c;">${escapeHTML(promo.desc)}</div>
+                        </div>
+                    </div>
+                    <div class="cart-item-right">
+                        <div class="cart-item-price" style="color:#2e7d32;font-weight:900;">-₱${discountAmt.toFixed(2)}</div>
+                    </div>
+                </div>`;
+            }
+
             if(stickyBar) stickyBar.classList.add('bar-visible');
         }
 
+        // ── Compute final total ─────────────────────────────────────────────
+        let finalTotal = rawTotal;
+        if (hasPromo) {
+            if (promo.discount_type === 'percent') {
+                finalTotal = rawTotal * (1 - promo.discount_value / 100);
+            } else {
+                finalTotal = Math.max(0, rawTotal - promo.discount_value);
+            }
+        }
+        finalTotal = Math.max(0, finalTotal);
+
         if(stickyCount) stickyCount.innerText = cart.length === 1 ? '1 item' : `${cart.length} items`;
-        if(stickyTotal) stickyTotal.innerText = `₱${total.toFixed(2)}`;
+        if(stickyTotal) stickyTotal.innerText = `₱${finalTotal.toFixed(2)}`;
 
         // Animate total pop
         if (totalEl) {
@@ -10675,7 +10728,7 @@ function playGrantedSound() {
             totalEl.offsetWidth;
             totalEl.style.animation = 'custTotalPop 0.3s cubic-bezier(0.34,1.56,0.64,1)';
         }
-        document.getElementById('cart-total').innerText = `₱${total.toFixed(2)}`;
+        document.getElementById('cart-total').innerText = `₱${finalTotal.toFixed(2)}`;
         const basketBadge = document.getElementById('basket-badge');
         if (basketBadge) {
             basketBadge.innerText = cart.length;
@@ -11517,7 +11570,11 @@ function playGrantedSound() {
 
         // ── Partial payment validation ────────────────────────────────────────
         if (paymentMethod === 'partial') {
-            const orderTotal = cart.reduce((s,i)=>s+i.price, 0);
+            const rawOrderTotal = cart.reduce((s,i)=>s+i.price, 0);
+            const _p = window._appliedPromoCode;
+            const orderTotal = _p && _p.discount_type
+                ? (_p.discount_type === 'percent' ? Math.max(0, rawOrderTotal*(1-_p.discount_value/100)) : Math.max(0, rawOrderTotal-_p.discount_value))
+                : rawOrderTotal;
             if (!partialAmount || partialAmount <= 0) {
                 showToast('Please enter how much you are sending now.', 'error');
                 btn.innerHTML = '<i class="fas fa-plane"></i> Place My Order'; btn.disabled = false;
@@ -11537,7 +11594,14 @@ function playGrantedSound() {
             email:        document.getElementById('customer-gmail').value,
             phone:        document.getElementById('customer-phone').value,
             pickup_time:  tStr,
-            total:        cart.reduce((s,i)=>s+i.price, 0),
+            total:        (() => {
+                const raw = cart.reduce((s,i)=>s+i.price, 0);
+                const p = window._appliedPromoCode;
+                if (!p || !p.discount_type) return raw;
+                if (p.discount_type === 'percent') return Math.max(0, raw * (1 - p.discount_value / 100));
+                return Math.max(0, raw - p.discount_value);
+            })(),
+            promo_code:   (window._appliedPromoCode && window._appliedPromoCode.code) ? window._appliedPromoCode.code : '',
             customer_lat: document.getElementById('customer-lat').value || null,
             customer_lng: document.getElementById('customer-lng').value || null,
             address:      _capturedGeoAddress || document.getElementById('customer-address').value || '',
