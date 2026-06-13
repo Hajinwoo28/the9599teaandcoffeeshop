@@ -7373,6 +7373,7 @@ STOREFRONT_HTML = """
         .header-icon-btn:nth-child(2) { animation-delay: 0.18s; }
         .header-icon-btn:nth-child(3) { animation-delay: 0.28s; }
         .header-icon-btn:nth-child(4) { animation-delay: 0.36s; }
+        .header-icon-btn:nth-child(5) { animation-delay: 0.44s; }
 
         /* ── Promo Code Header Icon + Floating Panel ── */
         @keyframes promo-icon-wiggle { 0%,100%{transform:rotate(0deg);} 20%{transform:rotate(-14deg);} 40%{transform:rotate(12deg);} 60%{transform:rotate(-8deg);} 80%{transform:rotate(6deg);} }
@@ -7531,6 +7532,23 @@ STOREFRONT_HTML = """
         .loc-nav-btn:active { opacity: 0.9; }
         .loc-nav-btn.gmaps { background: #1a73e8; }
         .loc-close-btn { width: 100%; padding: 12px; border-radius: 14px; border: 1.5px solid #D7CCC8; background: #fff; color: #8D6E63; font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
+
+        /* ── Mail / Announcements Modal ── */
+        .mail-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-end; justify-content: center; z-index: 9999; }
+        .mail-modal-overlay.show { display: flex; }
+        .mail-modal-sheet { background: #fff; width: 100%; max-width: 520px; border-radius: 24px 24px 0 0; padding: 24px 24px 28px; animation: slideUpLoc 0.3s ease; max-height: 86vh; overflow-y: auto; display: flex; flex-direction: column; box-sizing: border-box; }
+        .mail-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+        .mail-modal-close-btn { background: #F5F0E8; border: none; width: 34px; height: 34px; border-radius: 50%; color: #8D6E63; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s, transform 0.15s; }
+        .mail-modal-close-btn:hover { background: #EDE0CC; }
+        .mail-modal-close-btn:active { transform: scale(0.9); }
+        .mail-modal-body { display: flex; flex-direction: column; gap: 10px; }
+        .mail-item { border-radius: 14px; padding: 13px 15px; border: 1.5px solid; animation: fadeSlideIn 0.35s ease; }
+        .mail-item-head { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+        .mail-item-title { font-size: 0.88rem; font-weight: 900; flex: 1; line-height: 1.35; }
+        .mail-item-msg { font-size: 0.82rem; color: #444; font-weight: 600; line-height: 1.6; white-space: pre-wrap; }
+        .mail-item-time { font-size: 0.68rem; color: #A1887F; margin-top: 7px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+        .mail-empty-state { text-align: center; color: #A1887F; padding: 50px 16px; font-size: 0.85rem; font-weight: 700; line-height: 1.6; }
+        .mail-empty-state i { font-size: 2.2rem; opacity: 0.25; display: block; margin-bottom: 12px; }
         /* ══════════════════════════════════════════
            WELCOME MODAL — ENHANCED ANIMATED VERSION
         ══════════════════════════════════════════ */
@@ -8738,6 +8756,9 @@ function playGrantedSound() {
         <button class="notif-bell header-icon-btn" id="notif-bell-btn" onclick="triggerPopClick(this); toggleNotifDropdown();" title="Order Notifications">
             <i class="fas fa-bell" style="font-size:15px;"></i><span class="notif-badge" id="notif-badge">0</span>
         </button>
+        <button class="notif-bell header-icon-btn" id="mail-btn" onclick="triggerPopClick(this); openMailModal();" title="Announcements" style="position:relative;">
+            <i class="fas fa-envelope" style="font-size:15px;"></i><span class="notif-badge" id="mail-badge" style="display:none;">0</span>
+        </button>
         <div class="notif-dropdown" id="notif-dropdown">
             <div class="notif-dropdown-header">🔔 Order Updates</div>
             <div class="notif-list" id="notif-list">
@@ -8746,6 +8767,23 @@ function playGrantedSound() {
         </div>
     </div>
 </header>
+
+<!-- Mail / Announcements Modal -->
+<div class="mail-modal-overlay" id="mail-modal" onclick="if(event.target===this)closeMailModal()">
+    <div class="mail-modal-sheet">
+        <div class="loc-handle"></div>
+        <div class="mail-modal-head">
+            <div class="loc-title" style="margin-bottom:0;">
+                <i class="fas fa-envelope-open-text" style="color:var(--gold); font-size:1.2rem;"></i>
+                Announcements
+            </div>
+            <button class="mail-modal-close-btn" onclick="closeMailModal()" title="Close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mail-modal-body" id="mail-modal-body">
+            <div class="mail-empty-state"><i class="fas fa-spinner fa-spin"></i>Loading announcements…</div>
+        </div>
+    </div>
+</div>
 
 <!-- Location Modal -->
 <div class="loc-modal-overlay" id="loc-modal" onclick="if(event.target===this)closeLocModal()">
@@ -9695,6 +9733,84 @@ function playGrantedSound() {
     const STORE_CLOSE_TIME = "{{ close_time }}";
 
     function escapeHTML(str) { let div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
+
+    // ── Mail / Announcements Modal ────────────────────────────────────────
+    let _mailAnnouncements = null;
+    const MAIL_PRIORITY = {
+        urgent: { color:'#C62828', bg:'#FFEBEE', border:'#FFCDD2', emoji:'🚨' },
+        high:   { color:'#BF360C', bg:'#FFF3E0', border:'#FFCCBC', emoji:'🔴' },
+        normal: { color:'#1565C0', bg:'#E3F2FD', border:'#BBDEFB', emoji:'📣' },
+        low:    { color:'#4A4A4A', bg:'#F5F5F5', border:'#E0E0E0', emoji:'ℹ️' }
+    };
+    function openMailModal() {
+        document.getElementById('mail-modal').classList.add('show');
+        const badge = document.getElementById('mail-badge');
+        if (badge) badge.style.display = 'none';
+        loadMailAnnouncements();
+    }
+    function closeMailModal() {
+        const mm = document.getElementById('mail-modal');
+        if (mm) mm.classList.remove('show');
+    }
+    async function loadMailAnnouncements() {
+        const body = document.getElementById('mail-modal-body');
+        try {
+            const res = await fetch('/api/public/announcements');
+            const data = await res.json();
+            _mailAnnouncements = data;
+            renderMailList(data);
+            if (data.length) {
+                try { localStorage.setItem('lastSeenAnnouncementId', String(data[0].id)); } catch(e) {}
+            }
+        } catch(e) {
+            if (body) body.innerHTML = '<div class="mail-empty-state"><i class="fas fa-exclamation-circle"></i>Couldn\'t load announcements.<br>Please try again later.</div>';
+        }
+    }
+    function renderMailList(data) {
+        const body = document.getElementById('mail-modal-body');
+        if (!body) return;
+        if (!data || !data.length) {
+            body.innerHTML = '<div class="mail-empty-state"><i class="fas fa-envelope-open"></i>No announcements yet.<br>Check back soon for news from us!</div>';
+            return;
+        }
+        body.innerHTML = data.map(a => {
+            const p = MAIL_PRIORITY[a.priority] || MAIL_PRIORITY.normal;
+            return `<div class="mail-item" style="background:${p.bg};border-color:${p.border};">
+                <div class="mail-item-head">
+                    <span>${p.emoji}</span>
+                    <span class="mail-item-title" style="color:${p.color};">${escapeHTML(a.title)}</span>
+                </div>
+                <div class="mail-item-msg">${escapeHTML(a.message)}</div>
+                <div class="mail-item-time"><i class="fas fa-clock"></i>${a.created_at}</div>
+            </div>`;
+        }).join('');
+    }
+    async function checkMailBadge() {
+        try {
+            const res = await fetch('/api/public/announcements');
+            if (!res.ok) return;
+            const data = await res.json();
+            _mailAnnouncements = data;
+            if (!data.length) return;
+            let lastSeen = 0;
+            try { lastSeen = parseInt(localStorage.getItem('lastSeenAnnouncementId') || '0', 10); } catch(e) {}
+            const unread = data.filter(a => a.id > lastSeen).length;
+            if (unread > 0) {
+                const badge = document.getElementById('mail-badge');
+                if (badge) {
+                    badge.textContent = unread > 9 ? '9+' : unread;
+                    badge.style.display = 'flex';
+                }
+            }
+        } catch(e) {}
+    }
+    checkMailBadge();
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const mm = document.getElementById('mail-modal');
+            if (mm && mm.classList.contains('show')) closeMailModal();
+        }
+    });
 
     // ══════════ PROMO FLOAT PANEL — storefront scope ══════════
     // Duplicated here so functions are available after customer_verified.
