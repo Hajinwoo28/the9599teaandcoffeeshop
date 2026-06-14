@@ -9763,7 +9763,7 @@ function playGrantedSound() {
                 try { localStorage.setItem('lastSeenAnnouncementId', String(data[0].id)); } catch(e) {}
             }
         } catch(e) {
-            if (body) body.innerHTML = '<div class="mail-empty-state"><i class="fas fa-exclamation-circle"></i>Couldn\'t load announcements.<br>Please try again later.</div>';
+            if (body) body.innerHTML = '<div class="mail-empty-state"><i class="fas fa-exclamation-circle"></i>Unable to load announcements.<br>Please try again later.</div>';
         }
     }
     function renderMailList(data) {
